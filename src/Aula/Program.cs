@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Html2Markdown;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using Slack.Webhooks;
 
 namespace Aula;
 
@@ -13,21 +15,34 @@ public class Program
 
 		var configuration = builder.Build();
 
-		var username = configuration["AulaCredentials:Username"];
-		if (username == null) throw new Exception("Username Required");
-		var password = configuration["AulaCredentials:Password"];
-		if (password == null) throw new Exception("Password Required");
+		var username = configuration["AulaCredentials:Username"] ?? "";
+		if (username == "") throw new Exception("Username Required");
+		var password = configuration["AulaCredentials:Password"] ?? "";
+		if (password == "") throw new Exception("Password Required");
+		var slackWebHookUrl = configuration["Slack:WebhookUrl"] ?? "";
+		if (slackWebHookUrl == "") throw new Exception("Slack Web hook URL Required");
 
+		var slackBot = new SlackBot(slackWebHookUrl);
 
 		var minUddannelseClient = new MinUddannelseClient(username, password);
-		if (await minUddannelseClient.LoginAsync()) 
+		if (await minUddannelseClient.LoginAsync())
 			Console.WriteLine("Login to MinUddannelse successful.");
 		else
 			Console.WriteLine("Login to MinUddannelse failed.");
 
-		var test = await minUddannelseClient.GetWeekPlanMail();
-		Console.WriteLine("Ugeplan");
-		Console.WriteLine(PrettifyJson(test));
+		var weekLetter = await minUddannelseClient.GetWeekLetter();
+		await slackBot.PushWeekLetter(weekLetter);
+
+		//var converter = new Converter();
+		//var content = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
+		//var markdown = converter.Convert(content).Replace("**", "*");
+		//var message = new SlackMessage
+		//{
+		//	Text = markdown,
+		//	Markdown = true
+		//};
+
+		//await slackClient.PostAsync(message);
 
 		//var test = await minUddannelseClient.TestMinUddannelseApi();
 		//Console.WriteLine("Test min uddanelse: ");
