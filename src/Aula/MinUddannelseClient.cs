@@ -1,21 +1,19 @@
 ﻿using System.Net;
+using System.Net.Http.Headers;
 using System.Web;
 using HtmlAgilityPack;
-using static System.Net.WebRequestMethods;
 
 namespace Aula;
 
-public class AulaClient
+public class MinUddannelseClient
 {
-	private const string _aulaApi = "https://www.aula.dk/api/v17/";
-	private const string _minUddannelseApi = "https://www.minuddannelse.net/api/";
 	private readonly HttpClient _httpClient;
 	private readonly HttpClientHandler _httpClientHandler;
 	private readonly string _password;
 	private readonly string _username;
 	private bool _loggedIn;
 
-	public AulaClient(string username, string password)
+	public MinUddannelseClient(string username, string password)
 	{
 		_httpClientHandler = new HttpClientHandler
 		{
@@ -28,38 +26,25 @@ public class AulaClient
 		_password = password ?? throw new ArgumentNullException(nameof(password));
 	}
 
-	public async Task<string> GetProfile()
+	public async Task<string> GetWeekPlanMail()
 	{
-		var response = await _httpClient.GetAsync(_aulaApi + "?method=profiles.getProfilesByLogin");
-		response.EnsureSuccessStatusCode();
-		return await response.Content.ReadAsStringAsync();
-	}
-
-	public async Task<string> GetProfileContext()
-	{
-		var response = await _httpClient.GetAsync(_aulaApi + "?method=profiles.getProfileContext");
-		response.EnsureSuccessStatusCode();
-		return await response.Content.ReadAsStringAsync();
-	}
-
-	public async Task<string> TestMinUddannelseApi()
-	{
+		// hardcoded URL just to test that it works
 		var url = "https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt=2024-W2&elevId=2643430&_=" +
 		          DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-		Console.WriteLine("URL" + DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 		var response = await _httpClient.GetAsync(url);
 		response.EnsureSuccessStatusCode();
 		return await response.Content.ReadAsStringAsync();
 	}
 
- public async Task<bool> LoginAsync()
+	public async Task<bool> LoginAsync()
 	{
-		var loginUrl = "https://www.aula.dk/auth/login.php?type=unilogin";
+		var loginUrl = "https://www.minuddannelse.net/KmdIdentity/Login?domainHint=unilogin-idp-prod&toFa=False";
 		var response = await _httpClient.GetAsync(loginUrl);
 		var content = await response.Content.ReadAsStringAsync();
 
 		return await ProcessLoginResponseAsync(content);
 	}
+
 
 	private async Task<bool> ProcessLoginResponseAsync(string content)
 	{
@@ -74,7 +59,11 @@ public class AulaClient
 
 				success = CheckIfLoginSuccessful(response);
 				if (success)
+				{
+					_httpClient.DefaultRequestHeaders.Accept.Add(
+						new MediaTypeWithQualityHeaderValue("application/json"));
 					return true;
+				}
 			}
 			catch (Exception)
 			{
@@ -83,7 +72,7 @@ public class AulaClient
 
 		return success;
 	}
-	
+
 
 	private Tuple<string, Dictionary<string, string>> ExtractFormData(string htmlContent)
 	{
@@ -133,7 +122,7 @@ public class AulaClient
 
 	private bool CheckIfLoginSuccessful(HttpResponseMessage response)
 	{
-		_loggedIn = response.RequestMessage?.RequestUri?.ToString() == "https://www.aula.dk/portal/";
+		_loggedIn = response.RequestMessage?.RequestUri?.ToString() == "https://www.minuddannelse.net/Node/";
 
 		return _loggedIn;
 	}
