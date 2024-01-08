@@ -31,7 +31,7 @@ public class Program
 			Console.WriteLine("Login to MinUddannelse failed.");
 
 		var weekLetter = await minUddannelseClient.GetWeekLetter();
-		await slackBot.PushWeekLetter(weekLetter);
+		await slackBot.PushWeekLetterFancy(weekLetter);
 
 		//var converter = new Converter();
 		//var content = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
