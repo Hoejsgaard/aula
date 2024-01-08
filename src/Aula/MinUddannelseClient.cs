@@ -2,6 +2,7 @@
 using System.Net.Http.Headers;
 using System.Web;
 using HtmlAgilityPack;
+using Newtonsoft.Json.Linq;
 
 namespace Aula;
 
@@ -26,14 +27,15 @@ public class MinUddannelseClient
 		_password = password ?? throw new ArgumentNullException(nameof(password));
 	}
 
-	public async Task<string> GetWeekPlanMail()
+	public async Task<JObject> GetWeekLetter()
 	{
 		// hardcoded URL just to test that it works
 		var url = "https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt=2024-W2&elevId=2643430&_=" +
 		          DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 		var response = await _httpClient.GetAsync(url);
 		response.EnsureSuccessStatusCode();
-		return await response.Content.ReadAsStringAsync();
+		var json = await response.Content.ReadAsStringAsync();
+		return  JObject.Parse(json);
 	}
 
 	public async Task<bool> LoginAsync()
