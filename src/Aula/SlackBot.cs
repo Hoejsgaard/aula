@@ -45,7 +45,7 @@ public class SlackBot
 			    {
 				  MarkdownIn = new List<string>() {"text"},
 				  Color = child.Colour,
-				  Pretext = string.Format("Ugebrev for {0} uge {1}", @class, week), // To be fixed kid and week
+				  Pretext = $"Ugebrev for {@class} uge {week}",
 				  AuthorName = "MinUddannelse",
 				  AuthorLink = "https://www.minuddannelse.net/Node/minuge/fromwhereid?",
 				  Text = letterText

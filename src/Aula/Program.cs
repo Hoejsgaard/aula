@@ -16,38 +16,52 @@ public class Program
 		var configuration = builder.Build();
 		var config = new Config();
 		configuration.Bind(config);
-		
+
+
+
 		var slackBot = new SlackBot(config.Slack.WebhookUrl);
 
-		//var minUddannelseClient =
-		//	new MinUddannelseClient(config.AulaCredentials.Username, config.AulaCredentials.Password);
-		//if (await minUddannelseClient.LoginAsync())
-		//	Console.WriteLine("Login to MinUddannelse successful.");
-		//else
-		//	Console.WriteLine("Login to MinUddannelse failed.");
+		var minUddannelseClient =
+			new MinUddannelseClient(config.AulaCredentials.Username, config.AulaCredentials.Password);
+		if (await minUddannelseClient.LoginAsync())
+			Console.WriteLine("Login to MinUddannelse successful.");
+		else
+			Console.WriteLine("Login to MinUddannelse failed.");
 
-		//Child child = config.Children[0];
+		Child child = config.Children[0];
 
 		//var weekLetter = await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today));
 		//await slackBot.PushWeekLetterFancy(weekLetter, child);
 
-		var aulaClient = new AulaClient(config.AulaCredentials.Username, config.AulaCredentials.Password);
-		if (await aulaClient.LoginAsync())
-			Console.WriteLine("Login to Aula successful.");
-		else
-			Console.WriteLine("Login to Aula failed.");
-
-		var profile = await aulaClient.GetProfile();
-		var profileContext = await aulaClient.GetProfileContext();
+		var schedule = await minUddannelseClient.GetWeekSchedule(child, DateOnly.FromDateTime(DateTime.Today));
+		//Console.WriteLine("Schedule json");
+		//Console.WriteLine(PrettifyJson(schedule.ToString()));
 
 
-		Console.WriteLine("Profile: ");
-		Console.WriteLine(PrettifyJson(profile.ToString()));
+		var calendar = new GoogleCalendar(config.GoogleServiceAccount, "[skole]");
+		var hest = await calendar.GetEventsThisWeeek(config.Children[0].GoogleCalendarId);
+		//await calendar.CreateEventTEST(config.Children[0].GoogleCalendarId);
 
-		Console.WriteLine();
-		Console.WriteLine("Profile Context: ");
-		Console.WriteLine(PrettifyJson(profileContext.ToString()));
-		Console.WriteLine();
+		bool success = await calendar.SynchronizeWeek(config.Children[0].GoogleCalendarId,
+			DateOnly.FromDateTime(DateTime.Today), schedule);
+		//AULA
+		//var aulaClient = new AulaClient(config.AulaCredentials.Username, config.AulaCredentials.Password);
+		//if (await aulaClient.LoginAsync())
+		//	Console.WriteLine("Login to Aula successful.");
+		//else
+		//	Console.WriteLine("Login to Aula failed.");
+
+		//var profile = await aulaClient.GetProfile();
+		//var profileContext = await aulaClient.GetProfileContext();
+
+
+		//Console.WriteLine("Profile: ");
+		//Console.WriteLine(PrettifyJson(profile.ToString()));
+
+		//Console.WriteLine();
+		//Console.WriteLine("Profile Context: ");
+		//Console.WriteLine(PrettifyJson(profileContext.ToString()));
+		//Console.WriteLine();
 	}
 
 	public static string PrettifyJson(string json)
