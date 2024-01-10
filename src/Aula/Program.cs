@@ -30,7 +30,7 @@ public class Program
 
 		Child child = config.Children[0];
 
-		//var weekLetter = await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today));
+		var weekLetter = await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today));
 		//await slackBot.PushWeekLetterFancy(weekLetter, child);
 
 		var schedule = await minUddannelseClient.GetWeekSchedule(child, DateOnly.FromDateTime(DateTime.Today));
@@ -39,11 +39,15 @@ public class Program
 
 
 		var calendar = new GoogleCalendar(config.GoogleServiceAccount, "[skole]");
-		var hest = await calendar.GetEventsThisWeeek(config.Children[0].GoogleCalendarId);
+		//var hest = await calendar.GetEventsThisWeeek(config.Children[0].GoogleCalendarId);
 		//await calendar.CreateEventTEST(config.Children[0].GoogleCalendarId);
 
-		bool success = await calendar.SynchronizeWeek(config.Children[0].GoogleCalendarId,
-			DateOnly.FromDateTime(DateTime.Today), schedule);
+		//bool success = await calendar.SynchronizeWeek(config.Children[0].GoogleCalendarId,
+		//	DateOnly.FromDateTime(DateTime.Today), schedule);
+
+		var telegram = new TelegramClient(config.Telegram.Token);
+		await telegram.SendWeekLetterFancy(config.Telegram.ChannelId, weekLetter);
+
 		//AULA
 		//var aulaClient = new AulaClient(config.AulaCredentials.Username, config.AulaCredentials.Password);
 		//if (await aulaClient.LoginAsync())

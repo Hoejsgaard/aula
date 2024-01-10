@@ -69,12 +69,12 @@ public class GoogleCalendar
 	public async Task<IList<Event>> GetEventsThisWeeek(string calendarId)
 	{
 		var events = await GetEventsForCurrentWeek(calendarId);
-		Console.WriteLine("Events this week:");
+		//Console.WriteLine("Events this week:");
 		foreach (var eventItem in events.Items)
 		{
 			var dateTimeOffset = eventItem.Start.DateTimeDateTimeOffset?.ToString() ?? "no date time offset";
 
-			Console.WriteLine($"{eventItem.Summary} ({dateTimeOffset})");
+			//Console.WriteLine($"{eventItem.Summary} ({dateTimeOffset})");
 		}
 
 		return events.Items;
@@ -102,7 +102,7 @@ public class GoogleCalendar
 		{
 			var request = _calendarService.Events.Insert(newEvent, calendarId);
 			var createdEvent = await request.ExecuteAsync();
-			Console.WriteLine("Event created: {0}", createdEvent.HtmlLink);
+			//Console.WriteLine("Event created: {0}", createdEvent.HtmlLink);
 
 			return true;
 		}
