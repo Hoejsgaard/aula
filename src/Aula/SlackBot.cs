@@ -29,22 +29,26 @@ public class SlackBot
 		return _slackClient.PostAsync(message);
 	}
 
-	public Task<bool> PushWeekLetterFancy(JObject weekLetter)
+	public Task<bool> PushWeekLetterFancy(JObject weekLetter, Child child)
 	{
-		var markdown = _html2MarkdownConverter.Convert(weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "").Replace("**", "*");
+		Console.WriteLine(Program.PrettifyJson(weekLetter.ToString()));
+
+		var @class = weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? "";
+		var week = weekLetter["ugebreve"]?[0]?["uge"]?.ToString() ?? "";
+		var letterText = _html2MarkdownConverter.Convert(weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "").Replace("**", "*");
 		
 		SlackMessage message = new SlackMessage()
 		{
 			Attachments = new List<SlackAttachment>()
 			{
-				new SlackAttachment()
+				new()
 			    {
 				  MarkdownIn = new List<string>() {"text"},
-				  Color = "36a64f", // Kid's color
-				  Pretext = "Baggegårdsskolen 3.C ugebrev", // To be fixed kid and week
+				  Color = child.Colour,
+				  Pretext = string.Format("Ugebrev for {0} uge {1}", @class, week), // To be fixed kid and week
 				  AuthorName = "MinUddannelse",
 				  AuthorLink = "https://www.minuddannelse.net/Node/minuge/fromwhereid?",
-				  Text = markdown
+				  Text = letterText
 				}
 			},
 			Markdown = true

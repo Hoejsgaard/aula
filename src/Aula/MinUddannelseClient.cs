@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Globalization;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Web;
 using HtmlAgilityPack;
@@ -9,25 +10,25 @@ namespace Aula;
 public class MinUddannelseClient
 {
 	private readonly HttpClient _httpClient;
-	private readonly HttpClientHandler _httpClientHandler;
 	private readonly string _password;
 	private readonly string _username;
 	private bool _loggedIn;
+	private JObject _userProfile = new();
 
 	public MinUddannelseClient(string username, string password)
 	{
-		_httpClientHandler = new HttpClientHandler
+		var httpClientHandler = new HttpClientHandler
 		{
 			CookieContainer = new CookieContainer(),
 			UseCookies = true,
 			AllowAutoRedirect = true
 		};
-		_httpClient = new HttpClient(_httpClientHandler);
+		_httpClient = new HttpClient(httpClientHandler);
 		_username = username ?? throw new ArgumentNullException(nameof(username));
 		_password = password ?? throw new ArgumentNullException(nameof(password));
 	}
 
-	public async Task<JObject> GetWeekLetter()
+	public async Task<JObject> GetWeekLetter(Child? find)
 	{
 		// hardcoded URL just to test that it works
 		var url = "https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt=2024-W2&elevId=2643430&_=" +
@@ -35,7 +36,46 @@ public class MinUddannelseClient
 		var response = await _httpClient.GetAsync(url);
 		response.EnsureSuccessStatusCode();
 		var json = await response.Content.ReadAsStringAsync();
-		return  JObject.Parse(json);
+		return JObject.Parse(json);
+	}
+
+	public async Task<JObject> GetWeekLetter(Child child, DateOnly date)
+	{
+		var url = string.Format("https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt={0}-W{1}&elevId={2}&_={3}"
+			, date.Year, GetIsoWeekNumber(date), GetChildId(child), DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+		var response = await _httpClient.GetAsync(url);
+		response.EnsureSuccessStatusCode();
+		var json = await response.Content.ReadAsStringAsync();
+		return JObject.Parse(json);
+	}
+
+	private string? GetChildId(Child child)
+	{
+		if (_userProfile == null) throw new Exception("User profile not loaded");
+		//		var content = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
+		var kids = _userProfile["boern"];
+		if (kids == null) throw new Exception("No children found in user profile");
+		string id = "";
+		foreach (var kid in kids)
+		{
+			if (kid["fornavn"]?.ToString() == child.FirstName)
+			{
+				id = kid["id"]?.ToString() ?? "";
+			}
+		}
+
+		if (id == "") throw new Exception("Child not found");
+		
+		return id;
+
+	}
+
+	private int GetIsoWeekNumber(DateOnly date)
+	{
+		var cultureInfo = CultureInfo.CurrentCulture;
+		var calendarWeekRule = cultureInfo.DateTimeFormat.CalendarWeekRule;
+		var firstDayOfWeek = cultureInfo.DateTimeFormat.FirstDayOfWeek;
+		return cultureInfo.Calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue), calendarWeekRule, firstDayOfWeek);
 	}
 
 	public async Task<bool> LoginAsync()
@@ -59,11 +99,17 @@ public class MinUddannelseClient
 				var response = await _httpClient.PostAsync(formData.Item1, new FormUrlEncodedContent(formData.Item2));
 				content = await response.Content.ReadAsStringAsync();
 
+
 				success = CheckIfLoginSuccessful(response);
 				if (success)
 				{
 					_httpClient.DefaultRequestHeaders.Accept.Add(
 						new MediaTypeWithQualityHeaderValue("application/json"));
+					_userProfile = ExtractUserProfile(content);
+
+					//Console.WriteLine("MinUddannelse Profile");
+					//Console.WriteLine(Program.PrettifyJson(_userProfile.ToString()));
+
 					return true;
 				}
 			}
@@ -73,6 +119,31 @@ public class MinUddannelseClient
 			}
 
 		return success;
+	}
+
+	/// <summary>
+	///  Read profile data out of the front page. I can't find the api call, if it exist, that give me this data
+	/// </summary>
+	private JObject ExtractUserProfile(string html)
+	{
+		var doc = new HtmlDocument();
+		doc.LoadHtml(html);
+
+		// Find the script node that contains __tempcontext__
+		var script = doc.DocumentNode.Descendants("script")
+			.FirstOrDefault(n => n.InnerText.Contains("__tempcontext__"));
+
+		if (script == null)
+			throw new Exception("No UserProfile found");
+
+		var scriptText = script.InnerText;
+		var startIndex = scriptText.IndexOf("window.__tempcontext__['currentUser'] = ") +
+		                 "window.__tempcontext__['currentUser'] = ".Length;
+		var endIndex = scriptText.IndexOf(";", startIndex);
+
+		var jsonText = scriptText.Substring(startIndex, endIndex - startIndex).Trim();
+
+		return JObject.Parse(jsonText);
 	}
 
 

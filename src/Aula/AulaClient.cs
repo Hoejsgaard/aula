@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Web;
 using HtmlAgilityPack;
-using static System.Net.WebRequestMethods;
+using Newtonsoft.Json.Linq;
 
 namespace Aula;
 
@@ -28,18 +28,20 @@ public class AulaClient
 		_password = password ?? throw new ArgumentNullException(nameof(password));
 	}
 
-	public async Task<string> GetProfile()
+	public async Task<JObject> GetProfile()
 	{
 		var response = await _httpClient.GetAsync(_aulaApi + "?method=profiles.getProfilesByLogin");
 		response.EnsureSuccessStatusCode();
-		return await response.Content.ReadAsStringAsync();
+		var json = await response.Content.ReadAsStringAsync();
+		return JObject.Parse(json);
 	}
 
-	public async Task<string> GetProfileContext()
+	public async Task<JObject> GetProfileContext()
 	{
 		var response = await _httpClient.GetAsync(_aulaApi + "?method=profiles.getProfileContext");
 		response.EnsureSuccessStatusCode();
-		return await response.Content.ReadAsStringAsync();
+		var json = await response.Content.ReadAsStringAsync();
+		return JObject.Parse(json);
 	}
 
 	public async Task<string> TestMinUddannelseApi()
@@ -52,7 +54,7 @@ public class AulaClient
 		return await response.Content.ReadAsStringAsync();
 	}
 
- public async Task<bool> LoginAsync()
+	public async Task<bool> LoginAsync()
 	{
 		var loginUrl = "https://www.aula.dk/auth/login.php?type=unilogin";
 		var response = await _httpClient.GetAsync(loginUrl);
@@ -83,7 +85,7 @@ public class AulaClient
 
 		return success;
 	}
-	
+
 
 	private Tuple<string, Dictionary<string, string>> ExtractFormData(string htmlContent)
 	{
