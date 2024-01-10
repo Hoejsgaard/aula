@@ -14,60 +14,43 @@ public class Program
 			.AddJsonFile("appsettings.json", true, true);
 
 		var configuration = builder.Build();
+		var config = new Config();
+		configuration.Bind(config);
+		
+		var slackBot = new SlackBot(config.Slack.WebhookUrl);
 
-		var username = configuration["AulaCredentials:Username"] ?? "";
-		if (username == "") throw new Exception("Username Required");
-		var password = configuration["AulaCredentials:Password"] ?? "";
-		if (password == "") throw new Exception("Password Required");
-		var slackWebHookUrl = configuration["Slack:WebhookUrl"] ?? "";
-		if (slackWebHookUrl == "") throw new Exception("Slack Web hook URL Required");
-
-		var slackBot = new SlackBot(slackWebHookUrl);
-
-		var minUddannelseClient = new MinUddannelseClient(username, password);
+		var minUddannelseClient =
+			new MinUddannelseClient(config.AulaCredentials.Username, config.AulaCredentials.Password);
 		if (await minUddannelseClient.LoginAsync())
 			Console.WriteLine("Login to MinUddannelse successful.");
 		else
 			Console.WriteLine("Login to MinUddannelse failed.");
 
-		var weekLetter = await minUddannelseClient.GetWeekLetter();
-		await slackBot.PushWeekLetterFancy(weekLetter);
+		Child child = config.Children[0];
 
-		//var converter = new Converter();
-		//var content = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
-		//var markdown = converter.Convert(content).Replace("**", "*");
-		//var message = new SlackMessage
-		//{
-		//	Text = markdown,
-		//	Markdown = true
-		//};
+		var weekLetter = await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today));
+		await slackBot.PushWeekLetterFancy(weekLetter, child);
 
-		//await slackClient.PostAsync(message);
-
-		//var test = await minUddannelseClient.TestMinUddannelseApi();
-		//Console.WriteLine("Test min uddanelse: ");
-		//Console.WriteLine(PrettifyJson(test));
-
-		//var aulaClient = new AulaClient(username, password);
-		//if (await aulaClient.LoginAsync())
-		//	Console.WriteLine("Login to Aula successful.");
-		//else
-		//	Console.WriteLine("Login to Aula failed.");
+		var aulaClient = new AulaClient(config.AulaCredentials.Username, config.AulaCredentials.Password);
+		if (await aulaClient.LoginAsync())
+			Console.WriteLine("Login to Aula successful.");
+		else
+			Console.WriteLine("Login to Aula failed.");
 
 		//var profile = await aulaClient.GetProfile();
 		//var profileContext = await aulaClient.GetProfileContext();
 
 
-		//Console.WriteLine("Profile: ");
-		//Console.WriteLine(PrettifyJson(profile));
+	//	Console.WriteLine("Profile: ");
+	//	Console.WriteLine(PrettifyJson(profile.ToString()));
 
-		//Console.WriteLine();
-		//Console.WriteLine("Profile Context: ");
-		//Console.WriteLine(PrettifyJson(profileContext));
-		//Console.WriteLine();
+	//	Console.WriteLine();
+	//	Console.WriteLine("Profile Context: ");
+	//	Console.WriteLine(PrettifyJson(profileContext.ToString()));
+	//	Console.WriteLine();
 	}
 
-	private static string PrettifyJson(string json)
+	public static string PrettifyJson(string json)
 	{
 		return JsonConvert.SerializeObject(JsonConvert.DeserializeObject(json), Formatting.Indented);
 	}
