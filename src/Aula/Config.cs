@@ -6,6 +6,7 @@ public class Config
 	public Slack Slack { get; set; } = new Slack();
 	public List<Child> Children { get; set; } = new List<Child>();
 	public GoogleServiceAccount GoogleServiceAccount { get; set; } = new GoogleServiceAccount();
+	public Telegram Telegram { get; set; } = new Telegram();
 }
 
 
@@ -43,4 +44,12 @@ public class GoogleServiceAccount
 	public string AuthProviderX509CertUrl { get; set;} = string.Empty;
 	public string ClientX509CertUrl { get; set;} = string.Empty;
 	public string UniverseDomain { get; set;} = string.Empty;
+}
+
+public class Telegram
+{
+	public string BotName { get; set; } = string.Empty;
+	public string Token { get; set; } = string.Empty;
+	public string ChannelId { get; set; } = string.Empty;
+
 }
