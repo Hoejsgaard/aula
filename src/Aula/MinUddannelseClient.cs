@@ -15,17 +15,6 @@ public class MinUddannelseClient : UniLoginClient
 	{
 	}
 
-	public async Task<JObject> GetWeekLetter(Child? find)
-	{
-		// hardcoded URL just to test that it works
-		var url = "https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt=2024-W2&elevId=2643430&_=" +
-		          DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-		var response = await HttpClient.GetAsync(url);
-		response.EnsureSuccessStatusCode();
-		var json = await response.Content.ReadAsStringAsync();
-		return JObject.Parse(json);
-	}
-
 	public async Task<JObject> GetWeekLetter(Child child, DateOnly date)
 	{
 		var url = string.Format(
@@ -37,10 +26,21 @@ public class MinUddannelseClient : UniLoginClient
 		return JObject.Parse(json);
 	}
 
+	public async Task<JObject> GetWeekSchedule(Child child, DateOnly date)
+	{
+		var url = string.Format(
+			"https://www.minuddannelse.net/api/stamdata/aulaskema/getElevSkema?elevId={0}&tidspunkt={1}-W{2}&_={3}",
+		GetChildId(child), date.Year, GetIsoWeekNumber(date),  DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+		var response = await HttpClient.GetAsync(url);
+		response.EnsureSuccessStatusCode();
+		var json = await response.Content.ReadAsStringAsync();
+		return JObject.Parse(json);
+	}
+	
+
 	private string? GetChildId(Child child)
 	{
 		if (_userProfile == null) throw new Exception("User profile not loaded");
-		//		var content = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
 		var kids = _userProfile["boern"];
 		if (kids == null) throw new Exception("No children found in user profile");
 		var id = "";
