@@ -31,7 +31,7 @@ public class Program
 		Child child = config.Children[0];
 
 		var weekLetter = await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today));
-		//await slackBot.PushWeekLetterFancy(weekLetter, child);
+		await slackBot.PushWeekLetterFancy(weekLetter, child);
 
 		var schedule = await minUddannelseClient.GetWeekSchedule(child, DateOnly.FromDateTime(DateTime.Today));
 		//Console.WriteLine("Schedule json");
@@ -66,10 +66,5 @@ public class Program
 		//Console.WriteLine("Profile Context: ");
 		//Console.WriteLine(PrettifyJson(profileContext.ToString()));
 		//Console.WriteLine();
-	}
-
-	public static string PrettifyJson(string json)
-	{
-		return JsonConvert.SerializeObject(JsonConvert.DeserializeObject(json), Formatting.Indented);
 	}
 }
