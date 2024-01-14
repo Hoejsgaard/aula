@@ -16,9 +16,9 @@ public class Functions
 
 	[Function("TestSlack")]
 	[FixedDelayRetry(5, "00:00:10")]
-	public async Task<bool> Run([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer)
+	public async Task<bool> Run([TimerTrigger("0 30 3 * * Mon")] TimerInfo myTimer)
 	{
 		var slackBot = new SlackBot(_config.Slack.WebhookUrl);
-		return await slackBot.SendTestMessage("Hey from Rune's function");
+		return await slackBot.SendTestMessage("Hey from Rune's function running in Azure - It's now " + "Monday at 03:30");
 	}
 }
