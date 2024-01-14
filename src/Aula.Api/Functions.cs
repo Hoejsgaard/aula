@@ -1,5 +1,6 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace Aula.Api;
 
@@ -21,4 +22,34 @@ public class Functions
 		var slackBot = new SlackBot(_config.Slack.WebhookUrl);
 		return await slackBot.SendTestMessage("Hey from Rune's function running in Azure - It's now " + "Monday at 03:30");
 	}
+
+	[Function("PublishWeekLetters")]
+	[FixedDelayRetry(5, "00:10:00")]
+	public async Task<bool> PublishWeekLetters([TimerTrigger("0 30 11 * * Sun")] TimerInfo myTimer)
+	{
+		try
+		{
+			var minUddannelseClient = new MinUddannelseClient(_config.AulaCredentials.Username, _config.AulaCredentials.Password);
+			
+			var slackBot = new SlackBot(_config.Slack.WebhookUrl);
+			var telegram = new TelegramClient(_config.Telegram.Token);
+			
+			foreach (var child in _config.Children)
+			{
+				var weekLetter = await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today.AddDays(2)));
+				await telegram.PostWeekLetter(_config.Telegram.ChannelId, weekLetter);
+				await slackBot.PostWeekLetter(weekLetter, child);
+			}
+
+			return true;
+		}
+		catch (Exception e)
+		{
+			_logger.LogError(e, "Error publishing week letters");
+			return false;
+		}
+	}
+
+
+
 }

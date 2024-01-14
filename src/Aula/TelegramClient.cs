@@ -40,7 +40,7 @@ namespace Aula
 			return false;
 		}
 
-		public async Task<bool> SendWeekLetterFancy(string channelId, JObject weekLetter)
+		public async Task<bool> PostWeekLetter(string channelId, JObject weekLetter)
 		{
 			var @class = weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? "";
 			var week = weekLetter["ugebreve"]?[0]?["uge"]?.ToString() ?? "";

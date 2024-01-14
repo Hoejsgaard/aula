@@ -29,7 +29,7 @@ public class SlackBot
 		return _slackClient.PostAsync(message);
 	}
 
-	public Task<bool> PushWeekLetterFancy(JObject weekLetter, Child child)
+	public Task<bool> PostWeekLetter(JObject weekLetter, Child child)
 	{
 		Console.WriteLine(JsonFormatter.Prettify(weekLetter.ToString()));
 

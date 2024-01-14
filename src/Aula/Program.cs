@@ -31,7 +31,7 @@ public class Program
 		Child child = config.Children[0];
 
 		var weekLetter = await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today));
-		await slackBot.PushWeekLetterFancy(weekLetter, child);
+		await slackBot.PostWeekLetter(weekLetter, child);
 
 		var schedule = await minUddannelseClient.GetWeekSchedule(child, DateOnly.FromDateTime(DateTime.Today));
 		//Console.WriteLine("Schedule json");
@@ -46,7 +46,7 @@ public class Program
 		//	DateOnly.FromDateTime(DateTime.Today), schedule);
 
 		var telegram = new TelegramClient(config.Telegram.Token);
-		await telegram.SendWeekLetterFancy(config.Telegram.ChannelId, weekLetter);
+		await telegram.PostWeekLetter(config.Telegram.ChannelId, weekLetter);
 
 		//AULA
 		//var aulaClient = new AulaClient(config.AulaCredentials.Username, config.AulaCredentials.Password);
