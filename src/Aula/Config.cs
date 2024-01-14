@@ -2,7 +2,7 @@
 
 public interface IConfig
 {
-	AulaCredentials AulaCredentials { get; set; }
+	UniLogin UniLogin { get; set; }
 	Slack Slack { get; set; }
 	List<Child> Children { get; set; }
 	GoogleServiceAccount GoogleServiceAccount { get; set; }
@@ -11,7 +11,7 @@ public interface IConfig
 
 public class Config : IConfig
 {
-	public AulaCredentials AulaCredentials { get; set; } = new AulaCredentials();
+	public UniLogin UniLogin { get; set; } = new UniLogin();
 	public Slack Slack { get; set; } = new Slack();
 	public List<Child> Children { get; set; } = new List<Child>();
 	public GoogleServiceAccount GoogleServiceAccount { get; set; } = new GoogleServiceAccount();
@@ -19,7 +19,7 @@ public class Config : IConfig
 }
 
 
-public class AulaCredentials
+public class UniLogin
 {
 	public string Username { get; set; } = string.Empty;
 	public string Password { get; set; } = string.Empty;

@@ -22,7 +22,7 @@ public class Program
 		var slackBot = new SlackBot(config.Slack.WebhookUrl);
 
 		var minUddannelseClient =
-			new MinUddannelseClient(config.AulaCredentials.Username, config.AulaCredentials.Password);
+			new MinUddannelseClient(config.UniLogin.Username, config.UniLogin.Password);
 		if (await minUddannelseClient.LoginAsync())
 			Console.WriteLine("Login to MinUddannelse successful.");
 		else
@@ -49,7 +49,7 @@ public class Program
 		await telegram.PostWeekLetter(config.Telegram.ChannelId, weekLetter);
 
 		//AULA
-		//var aulaClient = new AulaClient(config.AulaCredentials.Username, config.AulaCredentials.Password);
+		//var aulaClient = new AulaClient(config.UniLogin.Username, config.UniLogin.Password);
 		//if (await aulaClient.LoginAsync())
 		//	Console.WriteLine("Login to Aula successful.");
 		//else

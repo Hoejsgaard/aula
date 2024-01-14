@@ -29,7 +29,7 @@ public class Functions
 	{
 		try
 		{
-			var minUddannelseClient = new MinUddannelseClient(_config.AulaCredentials.Username, _config.AulaCredentials.Password);
+			var minUddannelseClient = new MinUddannelseClient(_config.UniLogin.Username, _config.UniLogin.Password);
 			
 			var slackBot = new SlackBot(_config.Slack.WebhookUrl);
 			var telegram = new TelegramClient(_config.Telegram.Token);
