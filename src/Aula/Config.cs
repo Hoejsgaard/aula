@@ -1,6 +1,15 @@
 ﻿namespace Aula;
 
-public class Config
+public interface IConfig
+{
+	AulaCredentials AulaCredentials { get; set; }
+	Slack Slack { get; set; }
+	List<Child> Children { get; set; }
+	GoogleServiceAccount GoogleServiceAccount { get; set; }
+	Telegram Telegram { get; set; }
+}
+
+public class Config : IConfig
 {
 	public AulaCredentials AulaCredentials { get; set; } = new AulaCredentials();
 	public Slack Slack { get; set; } = new Slack();

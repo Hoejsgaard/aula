@@ -29,8 +29,7 @@ public class GoogleCalendar
 
 		// Your calendar management logic here
 	}
-
-
+	
 	private string GetJsonKey(GoogleServiceAccount serviceAccount)
 	{
 		return $@"{{
@@ -79,40 +78,7 @@ public class GoogleCalendar
 
 		return events.Items;
 	}
-
-	public async Task<bool> CreateEventTEST(string calendarId)
-	{
-		var newEvent = new Event
-		{
-			Summary = "TEST Testing event creation",
-			Location = "TEST Bakkegårdsskolen",
-			Start = new EventDateTime
-			{
-				DateTimeDateTimeOffset = new DateTime(2024, 1, 10, 15, 0, 0),
-				TimeZone = "Europe/Copenhagen"
-			},
-			End = new EventDateTime
-			{
-				DateTimeDateTimeOffset = new DateTime(2024, 1, 10, 16, 0, 0),
-				TimeZone = "Europe/Copenhagen"
-			}
-		};
-
-		try
-		{
-			var request = _calendarService.Events.Insert(newEvent, calendarId);
-			var createdEvent = await request.ExecuteAsync();
-			//Console.WriteLine("Event created: {0}", createdEvent.HtmlLink);
-
-			return true;
-		}
-		catch
-		{
-			return false;
-		}
-	}
-
-
+	
 	public async Task<bool> SynchronizeWeek(string googleCalendarId, DateOnly dateInWeek, JObject jsonEvents)
 	{
 		// Calculate start and end of the week

@@ -31,7 +31,7 @@ public class SlackBot
 
 	public Task<bool> PushWeekLetterFancy(JObject weekLetter, Child child)
 	{
-		Console.WriteLine(Program.PrettifyJson(weekLetter.ToString()));
+		Console.WriteLine(JsonFormatter.Prettify(weekLetter.ToString()));
 
 		var @class = weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? "";
 		var week = weekLetter["ugebreve"]?[0]?["uge"]?.ToString() ?? "";
@@ -55,5 +55,13 @@ public class SlackBot
 		};
 
 		return _slackClient.PostAsync(message);
+	}
+
+	public Task<bool> SendTestMessage(string message)
+	{
+		return _slackClient.PostAsync(new SlackMessage()
+		{ 
+			Text = message
+		});
 	}
 }
