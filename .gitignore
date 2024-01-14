@@ -16,6 +16,7 @@ nupkg/
 *.user
 *.userosscache
 *.sln.docstates
+*.pubxml
 appsettings.json
 
 # Build results
