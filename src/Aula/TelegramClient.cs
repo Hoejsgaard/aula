@@ -34,13 +34,13 @@ public class TelegramClient
 		return false;
 	}
 
-	public async Task<bool> PostWeekLetter(string channelId, JObject weekLetter)
+	public async Task<bool> PostWeekLetter(string channelId, JObject weekLetter, Child child)
 	{
 		var @class = weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? "";
 		var week = weekLetter["ugebreve"]?[0]?["uge"]?.ToString() ?? "";
 		var letterText = _markdownConverter.Convert(weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "")
 			.Replace("**", "*");
-		var message = string.Format(@$"*Ugebrev for {@class} uge {2}*
+		var message = string.Format(@$"*Ugebrev for {child.FirstName} ({@class}) uge {week}*
 {letterText}
 			");
 

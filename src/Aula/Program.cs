@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using System.Reflection;
+using System.Text;
+using Microsoft.Extensions.Configuration;
 
 namespace Aula;
 
@@ -6,61 +8,40 @@ public class Program
 {
 	private static async Task Main()
 	{
-		var builder = new ConfigurationBuilder()
-			.SetBasePath(Directory.GetCurrentDirectory())
-			.AddJsonFile("appsettings.json", true, true);
+		var builder = new ConfigurationBuilder();
 
+		var assembly = Assembly.GetExecutingAssembly();
+		var resourceName = "Aula.appsettings.json";
+
+		await using (var stream = assembly.GetManifestResourceStream(resourceName))
+		{
+			if (stream != null)
+				using (var reader = new StreamReader(stream))
+				{
+					var jsonConfig = await reader.ReadToEndAsync();
+					builder.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(jsonConfig)));
+				}
+		}
 		var configuration = builder.Build();
 		var config = new Config();
 		configuration.Bind(config);
 
 
 		var slackBot = new SlackBot(config.Slack.WebhookUrl);
+		var telegramBot = new TelegramClient(config.Telegram.Token);
 
 		var minUddannelseClient =
 			new MinUddannelseClient(config.UniLogin.Username, config.UniLogin.Password);
-		if (await minUddannelseClient.LoginAsync())
-			Console.WriteLine("Login to MinUddannelse successful.");
-		else
-			Console.WriteLine("Login to MinUddannelse failed.");
+		var loggedIn = await minUddannelseClient.LoginAsync();
 
-		var child = config.Children[0];
-
-		var weekLetter = await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today));
-		await slackBot.PostWeekLetter(weekLetter, child);
-
-		var schedule = await minUddannelseClient.GetWeekSchedule(child, DateOnly.FromDateTime(DateTime.Today));
-		//Console.WriteLine("Schedule json");
-		//Console.WriteLine(PrettifyJson(schedule.ToString()));
-
-
-		var calendar = new GoogleCalendar(config.GoogleServiceAccount, "[skole]");
-		//var hest = await calendar.GetEventsThisWeeek(config.Children[0].GoogleCalendarId);
-		//await calendar.CreateEventTEST(config.Children[0].GoogleCalendarId);
-
-		//bool success = await calendar.SynchronizeWeek(config.Children[0].GoogleCalendarId,
-		//	DateOnly.FromDateTime(DateTime.Today), schedule);
-
-		var telegram = new TelegramClient(config.Telegram.Token);
-		await telegram.PostWeekLetter(config.Telegram.ChannelId, weekLetter);
-
-		//AULA
-		//var aulaClient = new AulaClient(config.UniLogin.Username, config.UniLogin.Password);
-		//if (await aulaClient.LoginAsync())
-		//	Console.WriteLine("Login to Aula successful.");
-		//else
-		//	Console.WriteLine("Login to Aula failed.");
-
-		//var profile = await aulaClient.GetProfile();
-		//var profileContext = await aulaClient.GetProfileContext();
-
-
-		//Console.WriteLine("Profile: ");
-		//Console.WriteLine(PrettifyJson(profile.ToString()));
-
-		//Console.WriteLine();
-		//Console.WriteLine("Profile Context: ");
-		//Console.WriteLine(PrettifyJson(profileContext.ToString()));
-		//Console.WriteLine();
+		if (loggedIn)
+		{
+			foreach (var child in config.Children)
+			{
+				var weekLetter = await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today));
+				await slackBot.PostWeekLetter(weekLetter, child);
+				await telegramBot.PostWeekLetter(config.Telegram.ChannelId, weekLetter, child);
+			}
+		}
 	}
 }
