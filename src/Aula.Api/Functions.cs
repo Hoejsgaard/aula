@@ -1,6 +1,5 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
-using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace Aula.Api;
 
@@ -20,7 +19,8 @@ public class Functions
 	public async Task<bool> Run([TimerTrigger("0 30 3 * * Mon")] TimerInfo myTimer)
 	{
 		var slackBot = new SlackBot(_config.Slack.WebhookUrl);
-		return await slackBot.SendTestMessage("Hey from Rune's function running in Azure - It's now " + "Monday at 03:30");
+		return await slackBot.SendTestMessage("Hey from Rune's function running in Azure - It's now " +
+		                                      "Monday at 03:30");
 	}
 
 	[Function("PublishWeekLetters")]
@@ -30,13 +30,14 @@ public class Functions
 		try
 		{
 			var minUddannelseClient = new MinUddannelseClient(_config.UniLogin.Username, _config.UniLogin.Password);
-			
+
 			var slackBot = new SlackBot(_config.Slack.WebhookUrl);
 			var telegram = new TelegramClient(_config.Telegram.Token);
-			
+
 			foreach (var child in _config.Children)
 			{
-				var weekLetter = await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today.AddDays(2)));
+				var weekLetter =
+					await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today.AddDays(2)));
 				await telegram.PostWeekLetter(_config.Telegram.ChannelId, weekLetter);
 				await slackBot.PostWeekLetter(weekLetter, child);
 			}
@@ -49,7 +50,4 @@ public class Functions
 			return false;
 		}
 	}
-
-
-
 }

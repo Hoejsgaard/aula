@@ -30,13 +30,13 @@ public class MinUddannelseClient : UniLoginClient
 	{
 		var url = string.Format(
 			"https://www.minuddannelse.net/api/stamdata/aulaskema/getElevSkema?elevId={0}&tidspunkt={1}-W{2}&_={3}",
-		GetChildId(child), date.Year, GetIsoWeekNumber(date),  DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+			GetChildId(child), date.Year, GetIsoWeekNumber(date), DateTimeOffset.UtcNow.ToUnixTimeSeconds());
 		var response = await HttpClient.GetAsync(url);
 		response.EnsureSuccessStatusCode();
 		var json = await response.Content.ReadAsStringAsync();
 		return JObject.Parse(json);
 	}
-	
+
 
 	private string? GetChildId(Child child)
 	{

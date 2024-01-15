@@ -1,7 +1,4 @@
-﻿using System.Net;
-using System.Web;
-using HtmlAgilityPack;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 
 namespace Aula;
 
@@ -9,7 +6,8 @@ public class AulaClient : UniLoginClient
 {
 	private const string _aulaApi = "https://www.aula.dk/api/v17/";
 
-	public AulaClient(string username, string password) : base(username, password, "https://www.aula.dk/auth/login.php?type=unilogin", "https://www.aula.dk/portal/")
+	public AulaClient(string username, string password) : base(username, password,
+		"https://www.aula.dk/auth/login.php?type=unilogin", "https://www.aula.dk/portal/")
 	{
 	}
 

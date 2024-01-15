@@ -1,7 +1,4 @@
-﻿using Html2Markdown;
-using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
-using Slack.Webhooks;
+﻿using Microsoft.Extensions.Configuration;
 
 namespace Aula;
 
@@ -18,7 +15,6 @@ public class Program
 		configuration.Bind(config);
 
 
-
 		var slackBot = new SlackBot(config.Slack.WebhookUrl);
 
 		var minUddannelseClient =
@@ -28,7 +24,7 @@ public class Program
 		else
 			Console.WriteLine("Login to MinUddannelse failed.");
 
-		Child child = config.Children[0];
+		var child = config.Children[0];
 
 		var weekLetter = await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today));
 		await slackBot.PostWeekLetter(weekLetter, child);
