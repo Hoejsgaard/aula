@@ -29,7 +29,7 @@ public class GoogleCalendar
 
 		// Your calendar management logic here
 	}
-	
+
 	private string GetJsonKey(GoogleServiceAccount serviceAccount)
 	{
 		return $@"{{
@@ -78,7 +78,7 @@ public class GoogleCalendar
 
 		return events.Items;
 	}
-	
+
 	public async Task<bool> SynchronizeWeek(string googleCalendarId, DateOnly dateInWeek, JObject jsonEvents)
 	{
 		// Calculate start and end of the week
@@ -123,7 +123,7 @@ public class GoogleCalendar
 			if (events != null)
 				foreach (var jEvent in events)
 				{
-					var summary = _prefix + " " +  jEvent["subject"];
+					var summary = _prefix + " " + jEvent["subject"];
 					var location = jEvent["location"]?.ToString() ?? "";
 					var start = jEvent["timeBegin"]?.ToString();
 					var end = jEvent["timeEnd"]?.ToString();
@@ -140,8 +140,7 @@ public class GoogleCalendar
 						End = new EventDateTime
 						{
 							DateTimeDateTimeOffset = DateTimeOffset.Parse(end)
-						},
-						
+						}
 					};
 
 					await _calendarService.Events.Insert(newEvent, calendarId).ExecuteAsync();

@@ -1,16 +1,14 @@
 using Aula;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using System.IO;
 using Microsoft.Extensions.DependencyInjection;
-
+using Microsoft.Extensions.Hosting;
 
 var host = new HostBuilder()
 	.ConfigureFunctionsWorkerDefaults()
 	.ConfigureAppConfiguration((context, builder) =>
 	{
 		builder.SetBasePath(Directory.GetCurrentDirectory())
-			.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+			.AddJsonFile("appsettings.json", true, true)
 			.AddEnvironmentVariables();
 	})
 	.ConfigureServices((context, services) =>

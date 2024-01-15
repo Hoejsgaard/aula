@@ -1,14 +1,12 @@
-﻿using System.Runtime.CompilerServices;
-using Html2Markdown;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using Slack.Webhooks;
 
 namespace Aula;
 
 public class SlackBot
 {
-	private readonly SlackClient _slackClient;
 	private readonly Html2SlackMarkdownConverter _html2MarkdownConverter;
+	private readonly SlackClient _slackClient;
 
 	public SlackBot(string webhookUrl)
 	{
@@ -18,9 +16,11 @@ public class SlackBot
 
 	public Task<bool> PushWeekLetter(JObject weekLetter)
 	{
-		var markdown = _html2MarkdownConverter.Convert(weekLetter["ugebreve"]?[0]?["indhold"]?.ToString().Replace("**", "*") ?? "");
+		var markdown =
+			_html2MarkdownConverter.Convert(weekLetter["ugebreve"]?[0]?["indhold"]?.ToString().Replace("**", "*") ??
+			                                "");
 
-		SlackMessage message = new SlackMessage()
+		var message = new SlackMessage
 		{
 			Text = markdown,
 			Markdown = true
@@ -35,20 +35,21 @@ public class SlackBot
 
 		var @class = weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? "";
 		var week = weekLetter["ugebreve"]?[0]?["uge"]?.ToString() ?? "";
-		var letterText = _html2MarkdownConverter.Convert(weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "").Replace("**", "*");
-		
-		SlackMessage message = new SlackMessage()
+		var letterText = _html2MarkdownConverter.Convert(weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "")
+			.Replace("**", "*");
+
+		var message = new SlackMessage
 		{
-			Attachments = new List<SlackAttachment>()
+			Attachments = new List<SlackAttachment>
 			{
 				new()
-			    {
-				  MarkdownIn = new List<string>() {"text"},
-				  Color = child.Colour,
-				  Pretext = $"Ugebrev for {@class} uge {week}",
-				  AuthorName = "MinUddannelse",
-				  AuthorLink = "https://www.minuddannelse.net/Node/minuge/fromwhereid?",
-				  Text = letterText
+				{
+					MarkdownIn = new List<string> { "text" },
+					Color = child.Colour,
+					Pretext = $"Ugebrev for {@class} uge {week}",
+					AuthorName = "MinUddannelse",
+					AuthorLink = "https://www.minuddannelse.net/Node/minuge/fromwhereid?",
+					Text = letterText
 				}
 			},
 			Markdown = true
@@ -59,8 +60,8 @@ public class SlackBot
 
 	public Task<bool> SendTestMessage(string message)
 	{
-		return _slackClient.PostAsync(new SlackMessage()
-		{ 
+		return _slackClient.PostAsync(new SlackMessage
+		{
 			Text = message
 		});
 	}
