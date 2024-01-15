@@ -22,6 +22,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="appsettings.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Google.Apis.Calendar.v3" Version="1.65.0.3270" />
     <PackageReference Include="Html2Markdown" Version="6.2.0.3" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.57" />
@@ -40,9 +44,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="appsettings.json">
+    <Resource Include="appsettings.json">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
+    </Resource>
   </ItemGroup>
 
 </Project>

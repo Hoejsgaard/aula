@@ -68,13 +68,6 @@ public class GoogleCalendar
 	public async Task<IList<Event>> GetEventsThisWeeek(string calendarId)
 	{
 		var events = await GetEventsForCurrentWeek(calendarId);
-		//Console.WriteLine("Events this week:");
-		foreach (var eventItem in events.Items)
-		{
-			var dateTimeOffset = eventItem.Start.DateTimeDateTimeOffset?.ToString() ?? "no date time offset";
-
-			//Console.WriteLine($"{eventItem.Summary} ({dateTimeOffset})");
-		}
 
 		return events.Items;
 	}

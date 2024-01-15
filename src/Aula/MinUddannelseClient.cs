@@ -69,10 +69,6 @@ public class MinUddannelseClient : UniLoginClient
 			HttpClient.DefaultRequestHeaders.Accept.Add(
 				new MediaTypeWithQualityHeaderValue("application/json"));
 			_userProfile = await ExtractUserProfile();
-
-			//Console.WriteLine("MinUddannelse Profile");
-			//Console.WriteLine(Program.PrettifyJson(_userProfile.ToString()));
-
 			return true;
 		}
 
@@ -89,7 +85,7 @@ public class MinUddannelseClient : UniLoginClient
 		var doc = new HtmlDocument();
 		doc.LoadHtml(content);
 
-		// Find the script node that contains __tempcontext__
+		// Find the script node that contains __tempcontext__5d
 		var script = doc.DocumentNode.Descendants("script")
 			.FirstOrDefault(n => n.InnerText.Contains("__tempcontext__"));
 

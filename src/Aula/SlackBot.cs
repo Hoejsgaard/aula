@@ -31,8 +31,6 @@ public class SlackBot
 
 	public Task<bool> PostWeekLetter(JObject weekLetter, Child child)
 	{
-		Console.WriteLine(JsonFormatter.Prettify(weekLetter.ToString()));
-
 		var @class = weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? "";
 		var week = weekLetter["ugebreve"]?[0]?["uge"]?.ToString() ?? "";
 		var letterText = _html2MarkdownConverter.Convert(weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "")
@@ -46,7 +44,7 @@ public class SlackBot
 				{
 					MarkdownIn = new List<string> { "text" },
 					Color = child.Colour,
-					Pretext = $"Ugebrev for {@class} uge {week}",
+					Pretext = $"Ugebrev for {child.FirstName} ({@class}) uge {week}",
 					AuthorName = "MinUddannelse",
 					AuthorLink = "https://www.minuddannelse.net/Node/minuge/fromwhereid?",
 					Text = letterText

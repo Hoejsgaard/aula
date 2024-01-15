@@ -38,7 +38,7 @@ public class Functions
 			{
 				var weekLetter =
 					await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today.AddDays(2)));
-				await telegram.PostWeekLetter(_config.Telegram.ChannelId, weekLetter);
+				await telegram.PostWeekLetter(_config.Telegram.ChannelId, weekLetter, child);
 				await slackBot.PostWeekLetter(weekLetter, child);
 			}
 
