@@ -1,4 +1,5 @@
-﻿using Html2Markdown;
+﻿using System.Text.RegularExpressions;
+using Html2Markdown;
 
 namespace Aula;
 
@@ -13,6 +14,14 @@ public class Html2SlackMarkdownConverter
 
 	public string Convert(string? html)
 	{
-		return _converter.Convert(html ?? "").Replace("**", "*");
+		if (html == null)
+		{
+			return "";
+		}
+
+		html = Regex.Replace(html, "<span[^>]*>", "");
+		html = html.Replace("</span>", "");
+
+		return _converter.Convert(html).Replace("**", "*");
 	}
 }
