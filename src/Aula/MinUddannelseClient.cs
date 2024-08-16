@@ -23,7 +23,22 @@ public class MinUddannelseClient : UniLoginClient
 		var response = await HttpClient.GetAsync(url);
 		response.EnsureSuccessStatusCode();
 		var json = await response.Content.ReadAsStringAsync();
-		return JObject.Parse(json);
+
+		var weekLetter = JObject.Parse(json);
+		var weekLettterArray = weekLetter["ugebreve"] as JArray;
+
+		if (weekLettterArray == null || !weekLettterArray.Any())
+		{
+			var nullObject = new JObject
+			{
+				["klasseNavn"] = "N/A",
+				["uge"] = $"{GetIsoWeekNumber(date)}",
+				["indhold"] = "Der er ikke skrevet nogen ugenoter til denne uge",
+			};
+			weekLetter["ugebreve"] = new JArray(nullObject);
+
+		}
+		return weekLetter;
 	}
 
 	public async Task<JObject> GetWeekSchedule(Child child, DateOnly date)
