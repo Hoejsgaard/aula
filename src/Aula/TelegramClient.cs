@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using System.Diagnostics;
+using Newtonsoft.Json.Linq;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 
@@ -33,7 +34,7 @@ public class TelegramClient
 
 		return false;
 	}
-
+	
 	public async Task<bool> PostWeekLetter(string channelId, JObject weekLetter, Child child)
 	{
 		var @class = weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? "";
