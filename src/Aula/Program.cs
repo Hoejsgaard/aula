@@ -1,6 +1,8 @@
 ﻿using System.Reflection;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json.Linq;
+using Org.BouncyCastle.Bcpg.OpenPgp;
 
 namespace Aula;
 
@@ -53,6 +55,7 @@ public class Program
 					var weekLetter =
 						await minUddannelseClient.GetWeekLetter(child,
 							DateOnly.FromDateTime(DateTime.Today.AddDays(1))); // expected to run on sundays, shrug
+					// make null object 'no week letter'
 					await slackBot.PostWeekLetter(weekLetter, child);
 					await telegramBot.PostWeekLetter(config.Telegram.ChannelId, weekLetter, child);
 				}
