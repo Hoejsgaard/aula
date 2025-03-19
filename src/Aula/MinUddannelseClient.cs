@@ -9,6 +9,11 @@ public class MinUddannelseClient : UniLoginClient
 {
 	private JObject _userProfile = new();
 
+	public MinUddannelseClient(Config config) : this(config.UniLogin.Username, config.UniLogin.Password)
+	{
+		
+	}
+
 	public MinUddannelseClient(string username, string password) : base(username, password,
 		"https://www.minuddannelse.net/KmdIdentity/Login?domainHint=unilogin-idp-prod&toFa=False",
 		"https://www.minuddannelse.net/Node/")

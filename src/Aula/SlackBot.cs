@@ -8,6 +8,9 @@ public class SlackBot
 	private readonly Html2SlackMarkdownConverter _html2MarkdownConverter;
 	private readonly SlackClient _slackClient;
 
+	public SlackBot(Config config) : this(config.Slack.WebhookUrl)
+	{}
+
 	public SlackBot(string webhookUrl)
 	{
 		_slackClient = new SlackClient(webhookUrl);
