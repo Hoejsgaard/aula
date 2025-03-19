@@ -20,7 +20,7 @@ public class TelegramClient
 	{
 		try
 		{
-			await _telegram.SendTextMessageAsync(
+			await _telegram.SendMessage(
 				channelId,
 				message,
 				parseMode: ParseMode.Markdown
