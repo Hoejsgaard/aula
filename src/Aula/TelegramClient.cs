@@ -10,6 +10,9 @@ public class TelegramClient
 	private readonly Html2SlackMarkdownConverter _markdownConverter;
 	private readonly ITelegramBotClient _telegram;
 
+	public TelegramClient(Config config) : this(config.Telegram.Token)
+	{}
+
 	public TelegramClient(string token)
 	{
 		_telegram = new TelegramBotClient(token);
