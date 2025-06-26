@@ -35,6 +35,31 @@ public class Program
                     var weekLetter = await agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
                     await slackBot.PostWeekLetter(weekLetter, child);
                     await telegramBot.PostWeekLetter(config.Telegram.ChannelId, weekLetter, child);
+                    
+                    // Demonstrate OpenAI functionality if API key is provided
+                    if (!string.IsNullOrEmpty(config.OpenAi.ApiKey))
+                    {
+                        try
+                        {
+                            // Get a summary of the week letter
+                            logger.LogInformation("Generating summary of week letter for {ChildName}", child.FirstName);
+                            var summary = await agentService.SummarizeWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
+                            
+                            // Post the summary to Slack
+                            await slackBot.PostMessage($"*Summary of {child.FirstName}'s week letter:*\n{summary}");
+                            
+                            // Extract key information
+                            logger.LogInformation("Extracting key information from week letter for {ChildName}", child.FirstName);
+                            var keyInfo = await agentService.ExtractKeyInformationFromWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
+                            
+                            // Post the key information to Slack
+                            await slackBot.PostMessage($"*Key information from {child.FirstName}'s week letter:*\n```{keyInfo}```");
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Error using OpenAI services");
+                        }
+                    }
                 }
             }
             else
@@ -69,6 +94,12 @@ public class Program
         // Register configuration
         var config = LoadConfigurationAsync().GetAwaiter().GetResult();
         serviceCollection.AddSingleton(config);
+        
+        // Register OpenAI service
+        serviceCollection.AddSingleton<IOpenAiService>(provider => 
+            new OpenAiService(
+                config.OpenAi.ApiKey, 
+                provider.GetRequiredService<ILoggerFactory>()));
 
         return serviceCollection.BuildServiceProvider();
     }

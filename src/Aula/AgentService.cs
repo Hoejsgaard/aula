@@ -7,16 +7,19 @@ public class AgentService : IAgentService
 {
     private readonly IMinUddannelseClient _minUddannelseClient;
     private readonly IDataManager _dataManager;
+    private readonly IOpenAiService _openAiService;
     private readonly ILogger _logger;
     private bool _isLoggedIn;
 
     public AgentService(
         IMinUddannelseClient minUddannelseClient,
         IDataManager dataManager,
+        IOpenAiService openAiService,
         ILoggerFactory loggerFactory)
     {
         _minUddannelseClient = minUddannelseClient;
         _dataManager = dataManager;
+        _openAiService = openAiService;
         _logger = loggerFactory.CreateLogger(nameof(AgentService));
     }
 
@@ -77,5 +80,31 @@ public class AgentService : IAgentService
         _dataManager.CacheWeekSchedule(child, weekSchedule);
 
         return weekSchedule;
+    }
+
+    public async Task<string> SummarizeWeekLetterAsync(Child child, DateOnly date)
+    {
+        _logger.LogInformation("Summarizing week letter for {ChildName} for date {Date}", child.FirstName, date);
+        
+        var weekLetter = await GetWeekLetterAsync(child, date);
+        return await _openAiService.SummarizeWeekLetterAsync(weekLetter);
+    }
+
+    public async Task<string> AskQuestionAboutWeekLetterAsync(Child child, DateOnly date, string question)
+    {
+        _logger.LogInformation("Asking question about week letter for {ChildName} for date {Date}: {Question}", 
+            child.FirstName, date, question);
+        
+        var weekLetter = await GetWeekLetterAsync(child, date);
+        return await _openAiService.AskQuestionAboutWeekLetterAsync(weekLetter, question);
+    }
+
+    public async Task<JObject> ExtractKeyInformationFromWeekLetterAsync(Child child, DateOnly date)
+    {
+        _logger.LogInformation("Extracting key information from week letter for {ChildName} for date {Date}", 
+            child.FirstName, date);
+        
+        var weekLetter = await GetWeekLetterAsync(child, date);
+        return await _openAiService.ExtractKeyInformationAsync(weekLetter);
     }
 }
