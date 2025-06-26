@@ -282,12 +282,6 @@ public class SlackInteractiveBot
 
         _logger.LogInformation("Processing message: {Text}", text);
         
-        // Log current conversation context if it's still valid
-        if (_conversationContext.IsStillValid)
-        {
-            _logger.LogInformation("Current conversation context: {Context}", _conversationContext);
-        }
-
         // Skip system messages and announcements that don't need a response
         if (text.Contains("has joined the channel") || 
             text.Contains("added an integration") ||
@@ -300,84 +294,9 @@ public class SlackInteractiveBot
 
         // Detect language (Danish or English)
         bool isEnglish = DetectLanguage(text) == "en";
-        _logger.LogInformation("Detected language: {Language}", isEnglish ? "English" : "Danish");
         
-        // Handle questions about what day it is today
-        if (text.ToLowerInvariant().Contains("hvilken dag er det i dag") || 
-            text.ToLowerInvariant().Contains("what day is it today") ||
-            text.ToLowerInvariant().Contains("hvilken dag er det") ||
-            text.ToLowerInvariant().Contains("what day is it"))
-        {
-            await HandleDayQuestion(isEnglish);
-            return;
-        }
-        
-        // Check for follow-up questions like "what about X?" or "how about X?"
-        bool isFollowUp = IsFollowUpQuestion(text);
-        string? followUpChildName = null;
-        
-        if (isFollowUp)
-        {
-            followUpChildName = ExtractChildName(text);
-            _logger.LogInformation("Detected follow-up question about child: {ChildName}", followUpChildName ?? "unknown");
-            
-            // If this is a follow-up with no child name and previous context was about a specific child,
-            // assume it's about the same child
-            if (followUpChildName == null && _conversationContext.IsStillValid && _conversationContext.LastChildName != null)
-            {
-                followUpChildName = _conversationContext.LastChildName;
-                _logger.LogInformation("Using previous child from context: {ChildName}", followUpChildName);
-            }
-        }
-        
-        // First check if this is a question about a child - this should take priority
-        if (await TryHandleChildQuestion(text, isEnglish, isFollowUp, followUpChildName))
-        {
-            _logger.LogInformation("Handled as child question");
-            return;
-        }
-
-        // Then check if this is a request for a week letter
-        if (await TryHandleWeekLetterRequest(text, isEnglish))
-        {
-            _logger.LogInformation("Handled as week letter request");
-            return;
-        }
-
-        // Only send the default response for messages that look like questions or commands
-        // and only if we haven't already sent a similar response recently
-        if (text.Contains("?") || 
-            text.StartsWith("vis") || text.StartsWith("få") || text.StartsWith("hvad") || 
-            text.StartsWith("hvornår") || text.StartsWith("hvordan") ||
-            text.StartsWith("show") || text.StartsWith("get") || text.StartsWith("what") || 
-            text.StartsWith("when") || text.StartsWith("how"))
-        {
-            // Don't respond to our own help message
-            if (!_recentlyRespondedToGenericQuestion)
-            {
-                _recentlyRespondedToGenericQuestion = true;
-                
-                if (isEnglish)
-                {
-                    await SendMessage("I'm not sure how to help with that. You can ask me about a child's activities like 'What is TestChild2 doing tomorrow?' or 'Does TestChild1 have homework for Tuesday?'");
-                }
-                else
-                {
-                    await SendMessage("Jeg er ikke sikker på, hvordan jeg kan hjælpe med det. Du kan spørge mig om et barns aktiviteter som 'Hvad skal TestChild2 lave i morgen?' eller 'Har TestChild1 lektier for til tirsdag?'");
-                }
-                
-                // Reset the flag after a delay to allow responding again later
-                _ = Task.Delay(TimeSpan.FromMinutes(5)).ContinueWith(_ => 
-                {
-                    _recentlyRespondedToGenericQuestion = false;
-                    _logger.LogInformation("Reset generic question response flag");
-                });
-            }
-            else
-            {
-                _logger.LogInformation("Suppressing duplicate generic response");
-            }
-        }
+        // Handle all Aula questions with a single method
+        await HandleAulaQuestion(text, isEnglish);
     }
 
     private bool IsFollowUpQuestion(string text)
@@ -594,58 +513,6 @@ public class SlackInteractiveBot
         
         _logger.LogInformation("No child name found in text");
         return null;
-    }
-
-    private async Task<bool> TryHandleChildQuestion(string text, bool isEnglish = false, bool isFollowUp = false, string? followUpChildName = null)
-    {
-        // Extract child name from the question
-        string? childName = followUpChildName ?? ExtractChildName(text);
-        
-        // For follow-up questions, use context from the previous question
-        bool isAboutToday = text.ToLowerInvariant().Contains("i dag") || 
-                          text.ToLowerInvariant().Contains("today") ||
-                          (isFollowUp && _conversationContext.WasAboutToday);
-                          
-        bool isAboutTomorrow = text.ToLowerInvariant().Contains("i morgen") || 
-                             text.ToLowerInvariant().Contains("tomorrow") ||
-                             (isFollowUp && _conversationContext.WasAboutTomorrow);
-                             
-        bool isAboutHomework = text.ToLowerInvariant().Contains("lektier") || 
-                             text.ToLowerInvariant().Contains("homework") ||
-                             (isFollowUp && _conversationContext.WasAboutHomework);
-        
-        // If no child name was found, check if we should handle as a multi-child question
-        if (childName == null)
-        {
-            // Check for phrases that indicate a question about all children
-            if (text.ToLowerInvariant().Contains("alle børn") || 
-                text.ToLowerInvariant().Contains("all children") ||
-                text.ToLowerInvariant().Contains("alle børnene") || 
-                text.ToLowerInvariant().Contains("all the children") ||
-                text.ToLowerInvariant().Contains("hvad laver alle") || 
-                text.ToLowerInvariant().Contains("what are all"))
-            {
-                await HandleMultiChildDayQuestion(text, isEnglish, isAboutToday);
-                return true;
-            }
-            
-            // If we have context and this is a follow-up, use the last child
-            if (isFollowUp && _conversationContext.IsStillValid && _conversationContext.LastChildName != null)
-            {
-                childName = _conversationContext.LastChildName;
-                _logger.LogInformation("Using child from context: {ChildName}", childName);
-            }
-            else
-            {
-                return false;
-            }
-        }
-        
-        // Update conversation context with this child's name
-        UpdateConversationContext(childName, isAboutToday, isAboutTomorrow, isAboutHomework);
-        
-        await HandleChildDayQuestion(text, childName, isEnglish, isAboutToday, isAboutTomorrow, isAboutHomework);
-        return true;
     }
 
     private async Task<bool> TryHandleWeekLetterRequest(string text, bool isEnglish = false)
@@ -904,22 +771,6 @@ public class SlackInteractiveBot
         var hash = sha.ComputeHash(bytes);
         return Convert.ToBase64String(hash);
     }
-
-    private async Task HandleDayQuestion(bool isEnglish)
-    {
-        // Get the current day of the week in Danish or English
-        string dayName = DateTime.Now.DayOfWeek.ToString();
-        string danishDayName = GetDanishDayName(DateTime.Now.DayOfWeek);
-        
-        if (isEnglish)
-        {
-            await SendMessage($"Today is {dayName}, {DateTime.Now:MMMM d, yyyy}.");
-        }
-        else
-        {
-            await SendMessage($"I dag er det {danishDayName}, {DateTime.Now:d. MMMM yyyy}.");
-        }
-    }
     
     private string GetDanishDayName(DayOfWeek dayOfWeek)
     {
@@ -936,61 +787,174 @@ public class SlackInteractiveBot
         };
     }
 
-    private async Task HandleMultiChildDayQuestion(string text, bool isEnglish, bool isAboutToday)
+    private async Task HandleAulaQuestion(string text, bool isEnglish)
     {
         try
         {
-            // Get the current day name
-            string currentDayDanish = GetDanishDayName(DateTime.Now.DayOfWeek);
-            string currentDayEnglish = DateTime.Now.DayOfWeek.ToString();
+            _logger.LogInformation("🔍 TRACKING: HandleAulaQuestion called with text: {Text}", text);
             
-            // Get tomorrow's day name
-            string tomorrowDayDanish = GetDanishDayName(DateTime.Now.AddDays(1).DayOfWeek);
-            string tomorrowDayEnglish = DateTime.Now.AddDays(1).DayOfWeek.ToString();
+            // Extract child name from the question
+            string? childName = ExtractChildName(text);
+            _logger.LogInformation("🔍 TRACKING: Extracted child name: {ChildName}", childName ?? "null");
             
-            // Determine if this is a follow-up question
-            bool isFollowUp = IsFollowUpQuestion(text);
-            bool isAboutTomorrow = !isAboutToday;
-            
-            // If it's a follow-up question with no explicit time reference, use context
-            if (isFollowUp && !text.ToLowerInvariant().Contains("i dag") && 
-                !text.ToLowerInvariant().Contains("today") &&
-                !text.ToLowerInvariant().Contains("i morgen") && 
-                !text.ToLowerInvariant().Contains("tomorrow"))
+            // If no child name found and we have context, use the last child
+            if (childName == null && _conversationContext.IsStillValid && _conversationContext.LastChildName != null)
             {
-                isAboutToday = _conversationContext.WasAboutToday;
-                isAboutTomorrow = _conversationContext.WasAboutTomorrow;
+                childName = _conversationContext.LastChildName;
+                _logger.LogInformation("🔍 TRACKING: Using child from context: {ChildName}", childName);
             }
             
-            StringBuilder responseBuilder = new StringBuilder();
+            // If we have a child name, handle it as a question about that child
+            if (childName != null)
+            {
+                // Find the child by name
+                if (!_childrenByName.TryGetValue(childName, out var child))
+                {
+                    _logger.LogWarning("🔍 TRACKING: Child not found: {ChildName}", childName);
+                    string notFoundMessage = isEnglish
+                        ? $"I don't know a child named {childName}. Available children are: {string.Join(", ", _childrenByName.Keys)}"
+                        : $"Jeg kender ikke et barn ved navn {childName}. Tilgængelige børn er: {string.Join(", ", _childrenByName.Keys)}";
+                    
+                    await SendMessage(notFoundMessage);
+                    return;
+                }
+
+                _logger.LogInformation("🔍 TRACKING: Found child: {ChildName}", childName);
+                
+                // Get the week letter for the child
+                _logger.LogInformation("🔍 TRACKING: Getting week letter for {ChildName}", childName);
+                var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
+                
+                if (weekLetter == null)
+                {
+                    _logger.LogWarning("🔍 TRACKING: Week letter is null for {ChildName}", childName);
+                    string noLetterMessage = isEnglish
+                        ? $"I don't have a week letter for {childName} yet."
+                        : $"Jeg har ikke et ugebrev for {childName} endnu.";
+                    
+                    await SendMessage(noLetterMessage);
+                    return;
+                }
+
+                // Log the week letter content to verify it's being extracted
+                var weekLetterContent = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
+                _logger.LogInformation("🔍 TRACKING: Week letter content for {ChildName}: {Length} characters", childName, weekLetterContent.Length);
+                _logger.LogInformation("🔍 TRACKING: Week letter has keys: {Keys}", string.Join(", ", weekLetter.Properties().Select(p => p.Name)));
+                
+                if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
+                {
+                    _logger.LogInformation("🔍 TRACKING: First ugebreve item has keys: {Keys}", 
+                        string.Join(", ", ugebreve[0].Children<JProperty>().Select(p => p.Name)));
+                }
+
+                // Use the child's name as the context key
+                string contextKey = childName.ToLowerInvariant();
+                _logger.LogInformation("🔍 TRACKING: Using context key: {ContextKey}", contextKey);
+                
+                // Let the LLM handle the question with context
+                _logger.LogInformation("🔍 TRACKING: Asking question about week letter: {Question}", text.Trim());
+                
+                // Log the first 200 characters of the week letter content to confirm what we're sending
+                var contentPreview = weekLetterContent.Length > 200 ? weekLetterContent.Substring(0, 200) + "..." : weekLetterContent;
+                _logger.LogInformation("🔍 TRACKING: Week letter content preview being sent to LLM: {Preview}", contentPreview);
+                
+                // Enhance the question with day of week context if it contains relative time references
+                string enhancedQuestion = text.Trim();
+                if (ContainsRelativeTimeReference(enhancedQuestion))
+                {
+                    string dayContext = $"Today is {DateTime.Now.DayOfWeek}. ";
+                    enhancedQuestion = dayContext + enhancedQuestion;
+                    _logger.LogInformation("🔍 TRACKING: Enhanced question with day context: {Question}", enhancedQuestion);
+                }
+                
+                string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), enhancedQuestion, contextKey);
+                _logger.LogInformation("🔍 TRACKING: Got answer: {Length} characters", answer.Length);
+                
+                await SendMessage(answer);
+                
+                // Update conversation context with just the child name
+                UpdateConversationContext(childName, false, false, false);
+                return;
+            }
             
-            if (isEnglish)
+            // Check if this is a question about all children
+            if (text.ToLowerInvariant().Contains("alle børn") || 
+                text.ToLowerInvariant().Contains("all children") ||
+                text.ToLowerInvariant().Contains("alle børnene") || 
+                text.ToLowerInvariant().Contains("all the children"))
             {
-                responseBuilder.AppendLine(isAboutToday 
-                    ? $"Here's what all children are doing today ({currentDayEnglish}):"
-                    : $"Here's what all children are doing tomorrow ({tomorrowDayEnglish}):");
+                await HandleAllChildrenQuestion(text, isEnglish);
+                return;
             }
-            else
+            
+            // If we get here, it's a generic question with no specific child
+            if (!_recentlyRespondedToGenericQuestion)
             {
-                responseBuilder.AppendLine(isAboutToday 
-                    ? $"Her er hvad alle børn laver i dag ({currentDayDanish}):"
-                    : $"Her er hvad alle børn laver i morgen ({tomorrowDayDanish}):");
+                _recentlyRespondedToGenericQuestion = true;
+                
+                if (isEnglish)
+                {
+                    await SendMessage("I'm not sure how to help with that. You can ask me about a child's activities like 'What is TestChild2 doing tomorrow?' or 'Does TestChild1 have homework for Tuesday?'");
+                }
+                else
+                {
+                    await SendMessage("Jeg er ikke sikker på, hvordan jeg kan hjælpe med det. Du kan spørge mig om et barns aktiviteter som 'Hvad skal TestChild2 lave i morgen?' eller 'Har TestChild1 lektier for til tirsdag?'");
+                }
+                
+                // Reset the flag after a delay
+                _ = Task.Delay(TimeSpan.FromMinutes(5)).ContinueWith(_ => 
+                {
+                    _recentlyRespondedToGenericQuestion = false;
+                });
             }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling Aula question");
+            string errorMessage = isEnglish
+                ? "Sorry, I couldn't process your question at the moment."
+                : "Beklager, jeg kunne ikke behandle dit spørgsmål i øjeblikket.";
+            
+            await SendMessage(errorMessage);
+        }
+    }
+
+    private async Task HandleAllChildrenQuestion(string text, bool isEnglish)
+    {
+        try
+        {
+            // Check if we have any children
+            if (_childrenByName.Count == 0)
+            {
+                string noChildrenMessage = isEnglish
+                    ? "I don't have any children configured."
+                    : "Jeg har ingen børn konfigureret.";
+                
+                await SendMessage(noChildrenMessage);
+                return;
+            }
+
+            // Create a response builder
+            var responseBuilder = new StringBuilder();
+            
+            // Add a header
+            responseBuilder.AppendLine(isEnglish 
+                ? "Here's information for all children:"
+                : "Her er information for alle børn:");
+            
+            // User's original question
+            string userQuestion = text.Trim();
             
             foreach (var childEntry in _childrenByName)
             {
                 string childName = childEntry.Key;
                 Child child = childEntry.Value;
-                
-                // Get the week letter for the child
-                var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
-                if (weekLetter == null || 
-                    !weekLetter.ContainsKey("ugebreve") || 
-                    weekLetter["ugebreve"] == null || 
-                    !(weekLetter["ugebreve"] is JArray ugebreve) || 
-                    ugebreve.Count == 0)
-                {
-                    string noLetterMessage = isEnglish
+
+            // Get the week letter for the child
+            var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
+                if (weekLetter == null)
+            {
+                string noLetterMessage = isEnglish
                         ? $"- {child.FirstName}: No week letter available."
                         : $"- {child.FirstName}: Intet ugebrev tilgængeligt.";
                     
@@ -998,141 +962,27 @@ public class SlackInteractiveBot
                     continue;
                 }
 
-                // Extract metadata from the week letter
-                var className = weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? "";
-                var weekNumber = weekLetter["ugebreve"]?[0]?["uge"]?.ToString() ?? "";
+                // Create a context key that includes the child name
+                string contextKey = $"{childName.ToLowerInvariant()}-all";
                 
-                // Formulate the question for the OpenAI service
-                string question;
-                
-                if (isAboutToday)
-                {
-                    question = isEnglish
-                        ? $"What is {child.FirstName} (class {className}) doing today ({currentDayEnglish}) according to the week letter for week {weekNumber}? Give a brief answer."
-                        : $"Hvad skal {child.FirstName} (klasse {className}) lave i dag ({currentDayDanish}) ifølge ugebrevet for uge {weekNumber}? Giv et kort svar.";
-                }
-                else
-                {
-                    question = isEnglish
-                        ? $"What is {child.FirstName} (class {className}) doing tomorrow ({tomorrowDayEnglish}) according to the week letter for week {weekNumber}? Today is {currentDayEnglish}. Give a brief answer."
-                        : $"Hvad skal {child.FirstName} (klasse {className}) lave i morgen ({tomorrowDayDanish}) ifølge ugebrevet for uge {weekNumber}? I dag er det {currentDayDanish}. Giv et kort svar.";
-                }
-
-                // Ask OpenAI about the child's activities
-                string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), question);
-                
+                // Formulate a brief question for this child
+                string question = $"{userQuestion} (About {child.FirstName}. Give a brief answer.)";
+            
+            // Ask OpenAI about the child's activities
+            string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), question, contextKey);
+            
                 // Format the answer
                 responseBuilder.AppendLine($"- {child.FirstName}: {answer.Trim()}");
             }
-            
-            // Update conversation context
-            UpdateConversationContext(null, isAboutToday, isAboutTomorrow, false);
             
             await SendMessage(responseBuilder.ToString());
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error handling multi-child day question");
+            _logger.LogError(ex, "Error handling multi-child question");
             string errorMessage = isEnglish
                 ? "Sorry, I couldn't retrieve information about the children's activities at the moment."
                 : "Beklager, jeg kunne ikke hente information om børnenes aktiviteter i øjeblikket.";
-            
-            await SendMessage(errorMessage);
-        }
-    }
-
-    private async Task HandleChildDayQuestion(string text, string childName, bool isEnglish, bool isAboutToday, bool isAboutTomorrow, bool isAboutHomework)
-    {
-        try
-        {
-            // Find the child by name
-            if (!_childrenByName.TryGetValue(childName, out var child))
-            {
-                string notFoundMessage = isEnglish
-                    ? $"I don't know a child named {childName}. Available children are: {string.Join(", ", _childrenByName.Keys)}"
-                    : $"Jeg kender ikke et barn ved navn {childName}. Tilgængelige børn er: {string.Join(", ", _childrenByName.Keys)}";
-                
-                await SendMessage(notFoundMessage);
-                return;
-            }
-
-            // Get the week letter for the child
-            var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
-            if (weekLetter == null || 
-                !weekLetter.ContainsKey("ugebreve") || 
-                weekLetter["ugebreve"] == null || 
-                !(weekLetter["ugebreve"] is JArray ugebreve) || 
-                ugebreve.Count == 0)
-            {
-                string noLetterMessage = isEnglish
-                    ? $"I don't have a week letter for {childName} yet."
-                    : $"Jeg har ikke et ugebrev for {childName} endnu.";
-                
-                await SendMessage(noLetterMessage);
-                return;
-            }
-
-            // Extract metadata from the week letter
-            var className = weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? "";
-            var weekNumber = weekLetter["ugebreve"]?[0]?["uge"]?.ToString() ?? "";
-            var content = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
-            
-            _logger.LogInformation("Found week letter for {ChildName}, class {ClassName}, week {WeekNumber}", 
-                child.FirstName, className, weekNumber);
-
-            // Formulate the question for the OpenAI service with more context and day information
-            string question;
-            
-            // Get the current day name in Danish and English
-            string currentDayDanish = GetDanishDayName(DateTime.Now.DayOfWeek);
-            string currentDayEnglish = DateTime.Now.DayOfWeek.ToString();
-            
-            // Get tomorrow's day name
-            string tomorrowDayDanish = GetDanishDayName(DateTime.Now.AddDays(1).DayOfWeek);
-            string tomorrowDayEnglish = DateTime.Now.AddDays(1).DayOfWeek.ToString();
-            
-            if (isAboutHomework)
-            {
-                question = isEnglish
-                    ? $"What homework does {child.FirstName} (class {className}) have for week {weekNumber}? Today is {currentDayEnglish}."
-                    : $"Hvilke lektier har {child.FirstName} (klasse {className}) for uge {weekNumber}? I dag er det {currentDayDanish}.";
-            }
-            else if (isAboutTomorrow)
-            {
-                question = isEnglish
-                    ? $"What is {child.FirstName} (class {className}) doing tomorrow ({tomorrowDayEnglish}) according to the week letter for week {weekNumber}? Today is {currentDayEnglish}."
-                    : $"Hvad skal {child.FirstName} (klasse {className}) lave i morgen ({tomorrowDayDanish}) ifølge ugebrevet for uge {weekNumber}? I dag er det {currentDayDanish}.";
-            }
-            else if (isAboutToday)
-            {
-                question = isEnglish
-                    ? $"What is {child.FirstName} (class {className}) doing today ({currentDayEnglish}) according to the week letter for week {weekNumber}?"
-                    : $"Hvad skal {child.FirstName} (klasse {className}) lave i dag ({currentDayDanish}) ifølge ugebrevet for uge {weekNumber}?";
-            }
-            else
-            {
-                question = isEnglish
-                    ? $"What is {child.FirstName} (class {className}) doing this week according to the week letter for week {weekNumber}? Today is {currentDayEnglish}."
-                    : $"Hvad skal {child.FirstName} (klasse {className}) lave denne uge ifølge ugebrevet for uge {weekNumber}? I dag er det {currentDayDanish}.";
-            }
-
-            _logger.LogInformation("Asking OpenAI: {Question}", question);
-
-            // Create a context key that includes the child name and whether this is about today/tomorrow
-            string contextKey = $"{childName.ToLowerInvariant()}-{(isAboutToday ? "today" : isAboutTomorrow ? "tomorrow" : "general")}";
-            
-            // Ask OpenAI about the child's activities
-            string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), question, contextKey);
-            
-            _logger.LogInformation("Got answer from OpenAI: {Answer}", answer);
-            await SendMessage(answer);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing question about child {ChildName}", childName);
-            string errorMessage = isEnglish
-                ? $"Sorry, I couldn't process information about {childName} at the moment."
-                : $"Beklager, jeg kunne ikke behandle information om {childName} i øjeblikket.";
             
             await SendMessage(errorMessage);
         }
@@ -1179,5 +1029,20 @@ public class SlackInteractiveBot
         {
             _logger.LogError(ex, "Error cleaning up old message IDs");
         }
+    }
+
+    // Helper method to detect if a question contains relative time references
+    private bool ContainsRelativeTimeReference(string text)
+    {
+        string lowerText = text.ToLowerInvariant();
+        
+        // Check for common relative time words in Danish and English
+        string[] relativeTimeWords = new[] 
+        { 
+            "tomorrow", "yesterday", "today", "next week", "last week", "tonight", "this morning",
+            "i morgen", "i går", "i dag", "næste uge", "sidste uge", "i aften", "i morges"
+        };
+        
+        return relativeTimeWords.Any(word => lowerText.Contains(word));
     }
 } 

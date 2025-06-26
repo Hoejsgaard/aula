@@ -86,49 +86,93 @@ public class OpenAiService : IOpenAiService
 
     public async Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, string? contextKey)
     {
-        _logger.LogInformation("Asking question about week letter: {Question}", question);
+        _logger.LogInformation("🔎 TRACE: AskQuestionAboutWeekLetterAsync called with question: {Question}", question);
         
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
+        _logger.LogInformation("🔎 TRACE: Week letter content in AskQuestionAboutWeekLetterAsync: {Length} characters", weekLetterContent.Length);
         
-        // Extract metadata from the week letter
-        string childName = "unknown";
-        string className = "unknown";
-        string weekNumber = "unknown";
-        
-        // Try to get metadata from the ugebreve array
-        if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
-        {
-            className = ugebreve[0]?["klasseNavn"]?.ToString() ?? "unknown";
-            weekNumber = ugebreve[0]?["uge"]?.ToString() ?? "unknown";
-        }
-        
-        // Fallback to old format if needed
-        if (weekLetter["child"] != null) childName = weekLetter["child"]?.ToString() ?? "unknown";
-        if (weekLetter["class"] != null) className = weekLetter["class"]?.ToString() ?? "unknown";
-        if (weekLetter["week"] != null) weekNumber = weekLetter["week"]?.ToString() ?? "unknown";
+        // Extract basic metadata from the week letter
+        string childName = weekLetter["child"]?.ToString() ?? "unknown";
+        _logger.LogInformation("🔎 TRACE: Child name from week letter: {ChildName}", childName);
         
         // Create a unique conversation key if not provided
         if (string.IsNullOrEmpty(contextKey))
         {
-            contextKey = $"{childName}-{weekNumber}";
+            contextKey = childName.ToLowerInvariant();
+            _logger.LogInformation("🔎 TRACE: Created context key from child name: {ContextKey}", contextKey);
+        }
+        else
+        {
+            _logger.LogInformation("🔎 TRACE: Using provided context key: {ContextKey}", contextKey);
         }
         
         // Initialize conversation history if it doesn't exist
         if (!_conversationHistory.ContainsKey(contextKey))
         {
+            _logger.LogInformation("🔎 TRACE: Creating new conversation context for {ContextKey}", contextKey);
             _conversationHistory[contextKey] = new List<ChatMessage>
             {
-                ChatMessage.FromSystem($"You are a helpful assistant that answers questions about a child's weekly school letter. " +
-                                      $"The child's name is {childName} and they're in class {className}. " +
-                                      $"This is for week {weekNumber}. Today is {DateTime.Now.DayOfWeek}. " +
-                                      $"Answer questions based on the content of the letter. If the information isn't in the letter, say so politely.")
+                ChatMessage.FromSystem($"You are a helpful assistant that answers questions about {childName}'s weekly school letter. " +
+                                      $"This letter is specifically about {childName}'s class and activities. " +
+                                      $"Today is {DateTime.Now.DayOfWeek}, {DateTime.Now.ToString("MMMM d, yyyy")}. " +
+                                      "Answer based on the content of the letter. If the specific information isn't in the letter, " +
+                                      "say 'I don't have that specific information in the weekly letter' and then provide any related " +
+                                      "information that might be helpful. For example, if asked about Tuesday's activities but only " +
+                                      "Monday's activities are mentioned, acknowledge that Tuesday isn't mentioned but share what's " +
+                                      "happening on Monday. Be concise and direct in your answers."),
+                ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}")
             };
+            _logger.LogInformation("🔎 TRACE: Added week letter content to conversation context: {Length} characters", weekLetterContent.Length);
+        }
+        else
+        {
+            // Always refresh the week letter content in the context
+            // First, find the system message with the week letter content
+            _logger.LogInformation("🔎 TRACE: Updating existing conversation context for {ContextKey}", contextKey);
+            int contentIndex = -1;
+            for (int i = 0; i < _conversationHistory[contextKey].Count; i++)
+            {
+                var message = _conversationHistory[contextKey][i];
+                if (message != null && message.Role == "system" && 
+                    message.Content != null && message.Content.StartsWith("Here's the weekly letter content"))
+                {
+                    contentIndex = i;
+                    break;
+                }
+            }
             
-            // Add the week letter content as context
-            _conversationHistory[contextKey].Add(ChatMessage.FromSystem($"Here's the week letter content:\n\n{weekLetterContent}"));
+            // If found, update it; otherwise, add it
+            if (contentIndex >= 0)
+            {
+                _logger.LogInformation("🔎 TRACE: Found existing week letter content at index {Index}, updating", contentIndex);
+                _conversationHistory[contextKey][contentIndex] = ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}");
+                _logger.LogInformation("🔎 TRACE: Updated existing week letter content in context: {Length} characters", weekLetterContent.Length);
+                
+                // Also update the system instructions if it's the first message
+                if (contentIndex > 0)
+                {
+                    _conversationHistory[contextKey][0] = ChatMessage.FromSystem($"You are a helpful assistant that answers questions about {childName}'s weekly school letter. " +
+                                      $"This letter is specifically about {childName}'s class and activities. " +
+                                      $"Today is {DateTime.Now.DayOfWeek}, {DateTime.Now.ToString("MMMM d, yyyy")}. " +
+                                      "Answer based on the content of the letter. If the specific information isn't in the letter, " +
+                                      "say 'I don't have that specific information in the weekly letter' and then provide any related " +
+                                      "information that might be helpful. For example, if asked about Tuesday's activities but only " +
+                                      "Monday's activities are mentioned, acknowledge that Tuesday isn't mentioned but share what's " +
+                                      "happening on Monday. Be concise and direct in your answers.");
+                    _logger.LogInformation("🔎 TRACE: Updated system instructions in context");
+                }
+            }
+            else
+            {
+                _logger.LogInformation("🔎 TRACE: No existing week letter content found, inserting after first system message");
+                // Insert after the first system message
+                _conversationHistory[contextKey].Insert(1, ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}"));
+                _logger.LogInformation("🔎 TRACE: Added week letter content to existing context: {Length} characters", weekLetterContent.Length);
+            }
         }
         
         // Add the user's question to the conversation history
+        _logger.LogInformation("🔎 TRACE: Adding user question to conversation history: {Question}", question);
         _conversationHistory[contextKey].Add(ChatMessage.FromUser(question));
         
         // Limit conversation history to prevent token overflow (keep last 10 messages)
@@ -138,6 +182,24 @@ public class OpenAiService : IOpenAiService
             _conversationHistory[contextKey] = _conversationHistory[contextKey].Take(2)
                 .Concat(_conversationHistory[contextKey].Skip(_conversationHistory[contextKey].Count - 10))
                 .ToList();
+            
+            _logger.LogInformation("🔎 TRACE: Trimmed conversation history to prevent token overflow");
+        }
+
+        // Log the conversation history structure
+        _logger.LogInformation("🔎 TRACE: Conversation history structure:");
+        for (int i = 0; i < _conversationHistory[contextKey].Count; i++)
+        {
+            var message = _conversationHistory[contextKey][i];
+            _logger.LogInformation("🔎 TRACE: Message {Index}: Role={Role}, Content Length={Length}", 
+                i, message.Role, message.Content?.Length ?? 0);
+            
+            // Log the first 100 characters of each message for debugging
+            if (message.Content != null && message.Content.Length > 0)
+            {
+                var preview = message.Content.Length > 100 ? message.Content.Substring(0, 100) + "..." : message.Content;
+                _logger.LogInformation("🔎 TRACE: Message {Index} Preview: {Preview}", i, preview);
+            }
         }
 
         var chatRequest = new ChatCompletionCreateRequest
@@ -232,26 +294,56 @@ public class OpenAiService : IOpenAiService
 
     private string ExtractWeekLetterContent(JObject weekLetter)
     {
-        var sb = new StringBuilder();
-        
-        // Check for content in the old format
-        if (weekLetter["content"] != null)
+        _logger.LogInformation("📋 DEBUG: ExtractWeekLetterContent called with JObject with keys: {Keys}", 
+            string.Join(", ", weekLetter.Properties().Select(p => p.Name)));
+            
+        // Check if the ugebreve array exists and has elements
+        if (weekLetter["ugebreve"] == null)
         {
-            sb.AppendLine(weekLetter["content"]?.ToString() ?? string.Empty);
-            return sb.ToString();
+            _logger.LogWarning("📋 DEBUG: Week letter does not contain 'ugebreve' property");
         }
-        
-        // Extract content from the ugebreve array
-        if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
+        else if (!(weekLetter["ugebreve"] is JArray ugebreve) || ugebreve.Count == 0)
         {
-            var indhold = ugebreve[0]?["indhold"]?.ToString();
-            if (!string.IsNullOrEmpty(indhold))
+            _logger.LogWarning("📋 DEBUG: Week letter 'ugebreve' is not an array or is empty");
+        }
+        else
+        {
+            var ugebreveArray = (JArray)weekLetter["ugebreve"]!;
+            _logger.LogInformation("📋 DEBUG: Week letter 'ugebreve' array contains {Count} items", ugebreveArray.Count);
+            
+            if (ugebreveArray[0] != null)
             {
-                sb.AppendLine(indhold);
+                var firstItem = ugebreveArray[0];
+                _logger.LogInformation("📋 DEBUG: First ugebreve item has keys: {Keys}", 
+                    string.Join(", ", firstItem.Children<JProperty>().Select(p => p.Name)));
+                
+                if (firstItem["indhold"] == null)
+                {
+                    _logger.LogWarning("📋 DEBUG: First ugebreve item does not contain 'indhold' property");
+                }
+                else
+                {
+                    _logger.LogInformation("📋 DEBUG: Found 'indhold' property in first ugebreve item");
+                }
             }
         }
         
-        return sb.ToString();
+        // Direct access to content as specified
+        var weekLetterContent = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
+        
+        _logger.LogInformation("📋 DEBUG: Extracted week letter content: {Length} characters", weekLetterContent.Length);
+        
+        if (string.IsNullOrEmpty(weekLetterContent))
+        {
+            _logger.LogWarning("📋 DEBUG: Week letter content is empty! Raw week letter: {WeekLetter}", weekLetter.ToString());
+        }
+        else
+        {
+            _logger.LogInformation("📋 DEBUG: Week letter content starts with: {Start}", 
+                weekLetterContent.Length > 100 ? weekLetterContent.Substring(0, 100) + "..." : weekLetterContent);
+        }
+        
+        return weekLetterContent;
     }
     
     // Method to clear conversation history for a specific context or all contexts
