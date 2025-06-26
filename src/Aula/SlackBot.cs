@@ -66,4 +66,13 @@ public class SlackBot
             Text = message
         });
     }
+
+    public Task<bool> PostMessage(string message)
+    {
+        return _slackClient.PostAsync(new SlackMessage
+        {
+            Text = message,
+            Markdown = true
+        });
+    }
 }

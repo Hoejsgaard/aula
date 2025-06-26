@@ -37,5 +37,9 @@
 		"BotName": "Name of your bot",
 		"Token": "Token of your bot",
 		"ChannelId": "ID of your channel - use a bot to retrieve it"
+	},
+	"OpenAi": {
+		"ApiKey": "your-openai-api-key",
+		"Model": "gpt-4" 
 	}
 }

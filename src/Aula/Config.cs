@@ -7,6 +7,7 @@ public interface IConfig
     List<Child> Children { get; set; }
     GoogleServiceAccount GoogleServiceAccount { get; set; }
     Telegram Telegram { get; set; }
+    OpenAi OpenAi { get; set; }
 }
 
 public class Config : IConfig
@@ -16,6 +17,7 @@ public class Config : IConfig
     public List<Child> Children { get; set; } = new();
     public GoogleServiceAccount GoogleServiceAccount { get; set; } = new();
     public Telegram Telegram { get; set; } = new();
+    public OpenAi OpenAi { get; set; } = new();
 }
 
 public class UniLogin
@@ -57,4 +59,10 @@ public class Telegram
     public string BotName { get; set; } = string.Empty;
     public string Token { get; set; } = string.Empty;
     public string ChannelId { get; set; } = string.Empty;
+}
+
+public class OpenAi
+{
+    public string ApiKey { get; set; } = string.Empty;
+    public string Model { get; set; } = "gpt-4"; // Default to GPT-4, can be overridden in config
 }

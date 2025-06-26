@@ -8,6 +8,7 @@ public class AgentServiceTests
 {
     private readonly Mock<IMinUddannelseClient> _minUddannelseClientMock;
     private readonly Mock<IDataManager> _dataManagerMock;
+    private readonly Mock<IOpenAiService> _openAiServiceMock;
     private readonly Mock<ILoggerFactory> _loggerFactoryMock;
     private readonly Mock<ILogger> _loggerMock;
     private readonly AgentService _agentService;
@@ -18,11 +19,16 @@ public class AgentServiceTests
     {
         _minUddannelseClientMock = new Mock<IMinUddannelseClient>();
         _dataManagerMock = new Mock<IDataManager>();
+        _openAiServiceMock = new Mock<IOpenAiService>();
         _loggerMock = new Mock<ILogger>();
         _loggerFactoryMock = new Mock<ILoggerFactory>();
         _loggerFactoryMock.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_loggerMock.Object);
 
-        _agentService = new AgentService(_minUddannelseClientMock.Object, _dataManagerMock.Object, _loggerFactoryMock.Object);
+        _agentService = new AgentService(
+            _minUddannelseClientMock.Object, 
+            _dataManagerMock.Object, 
+            _openAiServiceMock.Object,
+            _loggerFactoryMock.Object);
 
         _testChild = new Child
         {
@@ -144,5 +150,106 @@ public class AgentServiceTests
         Assert.Same(apiWeekLetter, result);
         _minUddannelseClientMock.Verify(m => m.LoginAsync(), Times.Once);
         _minUddannelseClientMock.Verify(m => m.GetWeekLetter(_testChild, _testDate), Times.Once);
+    }
+
+    [Fact]
+    public async Task SummarizeWeekLetterAsync_CallsOpenAiService()
+    {
+        // Arrange
+        var weekLetter = new JObject
+        {
+            ["ugebreve"] = new JArray
+            {
+                new JObject
+                {
+                    ["klasseNavn"] = "Test Class",
+                    ["uge"] = "42",
+                    ["indhold"] = "Test content"
+                }
+            }
+        };
+
+        _dataManagerMock.Setup(m => m.GetWeekLetter(_testChild))
+            .Returns(weekLetter);
+
+        _openAiServiceMock.Setup(m => m.SummarizeWeekLetterAsync(weekLetter))
+            .ReturnsAsync("Test summary");
+
+        // Act
+        var result = await _agentService.SummarizeWeekLetterAsync(_testChild, _testDate);
+
+        // Assert
+        Assert.Equal("Test summary", result);
+        _openAiServiceMock.Verify(m => m.SummarizeWeekLetterAsync(weekLetter), Times.Once);
+    }
+
+    [Fact]
+    public async Task AskQuestionAboutWeekLetterAsync_CallsOpenAiService()
+    {
+        // Arrange
+        var weekLetter = new JObject
+        {
+            ["ugebreve"] = new JArray
+            {
+                new JObject
+                {
+                    ["klasseNavn"] = "Test Class",
+                    ["uge"] = "42",
+                    ["indhold"] = "Test content"
+                }
+            }
+        };
+
+        var question = "Test question";
+
+        _dataManagerMock.Setup(m => m.GetWeekLetter(_testChild))
+            .Returns(weekLetter);
+
+        _openAiServiceMock.Setup(m => m.AskQuestionAboutWeekLetterAsync(weekLetter, question))
+            .ReturnsAsync("Test answer");
+
+        // Act
+        var result = await _agentService.AskQuestionAboutWeekLetterAsync(_testChild, _testDate, question);
+
+        // Assert
+        Assert.Equal("Test answer", result);
+        _openAiServiceMock.Verify(m => m.AskQuestionAboutWeekLetterAsync(weekLetter, question), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExtractKeyInformationFromWeekLetterAsync_CallsOpenAiService()
+    {
+        // Arrange
+        var weekLetter = new JObject
+        {
+            ["ugebreve"] = new JArray
+            {
+                new JObject
+                {
+                    ["klasseNavn"] = "Test Class",
+                    ["uge"] = "42",
+                    ["indhold"] = "Test content"
+                }
+            }
+        };
+
+        var keyInfo = new JObject
+        {
+            ["events"] = new JArray { "Event 1", "Event 2" },
+            ["deadlines"] = new JArray { "Deadline 1" }
+        };
+
+        _dataManagerMock.Setup(m => m.GetWeekLetter(_testChild))
+            .Returns(weekLetter);
+
+        _openAiServiceMock.Setup(m => m.ExtractKeyInformationAsync(weekLetter))
+            .ReturnsAsync(keyInfo);
+
+        // Act
+        var result = await _agentService.ExtractKeyInformationFromWeekLetterAsync(_testChild, _testDate);
+
+        // Assert
+        Assert.Same(keyInfo, result);
+        _openAiServiceMock.Verify(m => m.ExtractKeyInformationAsync(weekLetter), Times.Once);
     }
 }
