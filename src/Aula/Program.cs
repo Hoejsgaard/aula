@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Text;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -20,9 +21,9 @@ public class Program
 			var config = serviceProvider.GetRequiredService<Config>();
 			var slackBot = serviceProvider.GetRequiredService<SlackBot>();
 			var telegramBot = serviceProvider.GetRequiredService<TelegramClient>();
-			var minUddannelseClient = serviceProvider.GetRequiredService<MinUddannelseClient>();
+			var agentService = serviceProvider.GetRequiredService<IAgentService>();
 
-			var loggedIn = await minUddannelseClient.LoginAsync();
+			var loggedIn = await agentService.LoginAsync();
 
 			if (loggedIn)
 			{
@@ -30,7 +31,7 @@ public class Program
 				foreach (var child in config.Children)
 				{
 					logger.LogInformation("Fetching week letter for {ChildName}", child.FirstName);
-					var weekLetter = await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
+					var weekLetter = await agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
 					await slackBot.PostWeekLetter(weekLetter, child);
 					await telegramBot.PostWeekLetter(config.Telegram.ChannelId, weekLetter, child);
 				}
@@ -51,9 +52,18 @@ public class Program
 	{
 		var serviceCollection = new ServiceCollection();
 		serviceCollection.AddLogging(configure => configure.AddConsole());
+		
+		// Register services
 		serviceCollection.AddSingleton<SlackBot>();
 		serviceCollection.AddSingleton<TelegramClient>();
-		serviceCollection.AddSingleton<MinUddannelseClient>();
+		
+		// Register memory cache
+		serviceCollection.AddMemoryCache();
+		
+		// Register interfaces and implementations
+		serviceCollection.AddSingleton<IMinUddannelseClient, MinUddannelseClient>();
+		serviceCollection.AddSingleton<IDataManager, DataManager>();
+		serviceCollection.AddSingleton<IAgentService, AgentService>();
 
 		// Register configuration
 		var config = LoadConfigurationAsync().GetAwaiter().GetResult();
