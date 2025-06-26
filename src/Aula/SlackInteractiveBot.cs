@@ -571,8 +571,11 @@ public class SlackInteractiveBot
 
             _logger.LogInformation("Asking OpenAI: {Question}", question);
 
+            // Create a context key that includes the child name and whether this is about today/tomorrow
+            string contextKey = $"{childName.ToLowerInvariant()}-{(isAboutToday ? "today" : isAboutTomorrow ? "tomorrow" : "general")}";
+            
             // Ask OpenAI about the child's activities
-            string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), question);
+            string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), question, contextKey);
             
             _logger.LogInformation("Got answer from OpenAI: {Answer}", answer);
             await SendMessage(answer);
