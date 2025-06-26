@@ -1,6 +1,5 @@
-chore: add OpenAI package and update project rules
+fix: prevent duplicate message processing in Slack bot
 
-Added OpenAI package (v1.7.2) to both main project and test project to support
-agent implementation. Updated rule files with domain-specific examples and
-formatting improvements. All tests pass and build is successful despite some
-formatting warnings that will be addressed in a separate commit.
+The Slack bot was repeatedly processing the same messages due to timestamp handling issues.
+Added timestamp buffering and improved message filtering to aoid duplicates.
+This should reduce the "Found 1 new message" log spam when there are no actual new messages.

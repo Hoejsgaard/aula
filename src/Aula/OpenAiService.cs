@@ -34,12 +34,29 @@ public class OpenAiService : IOpenAiService
         
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
         
+        // Extract metadata from the week letter
+        string childName = "unknown";
+        string className = "unknown";
+        string weekNumber = "unknown";
+        
+        // Try to get metadata from the ugebreve array
+        if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
+        {
+            className = ugebreve[0]?["klasseNavn"]?.ToString() ?? "unknown";
+            weekNumber = ugebreve[0]?["uge"]?.ToString() ?? "unknown";
+        }
+        
+        // Fallback to old format if needed
+        if (weekLetter["child"] != null) childName = weekLetter["child"]?.ToString() ?? "unknown";
+        if (weekLetter["class"] != null) className = weekLetter["class"]?.ToString() ?? "unknown";
+        if (weekLetter["week"] != null) weekNumber = weekLetter["week"]?.ToString() ?? "unknown";
+        
         var messages = new List<ChatMessage>
         {
             ChatMessage.FromSystem("You are a helpful assistant that summarizes weekly school letters for parents. " +
                                   "Provide a brief summary of the key information in the letter, focusing on activities, " +
                                   "important dates, and things parents need to know. Be concise but thorough."),
-            ChatMessage.FromUser($"Here's the week letter content:\n\n{weekLetterContent}\n\nPlease summarize this week letter.")
+            ChatMessage.FromUser($"Here's the week letter for {className} for week {weekNumber}:\n\n{weekLetterContent}\n\nPlease summarize this week letter.")
         };
 
         var chatRequest = new ChatCompletionCreateRequest
@@ -72,9 +89,23 @@ public class OpenAiService : IOpenAiService
         _logger.LogInformation("Asking question about week letter: {Question}", question);
         
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
-        string childName = weekLetter["child"]?.ToString() ?? "unknown";
-        string className = weekLetter["class"]?.ToString() ?? "unknown";
-        string weekNumber = weekLetter["week"]?.ToString() ?? "unknown";
+        
+        // Extract metadata from the week letter
+        string childName = "unknown";
+        string className = "unknown";
+        string weekNumber = "unknown";
+        
+        // Try to get metadata from the ugebreve array
+        if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
+        {
+            className = ugebreve[0]?["klasseNavn"]?.ToString() ?? "unknown";
+            weekNumber = ugebreve[0]?["uge"]?.ToString() ?? "unknown";
+        }
+        
+        // Fallback to old format if needed
+        if (weekLetter["child"] != null) childName = weekLetter["child"]?.ToString() ?? "unknown";
+        if (weekLetter["class"] != null) className = weekLetter["class"]?.ToString() ?? "unknown";
+        if (weekLetter["week"] != null) weekNumber = weekLetter["week"]?.ToString() ?? "unknown";
         
         // Create a unique conversation key if not provided
         if (string.IsNullOrEmpty(contextKey))
@@ -137,9 +168,23 @@ public class OpenAiService : IOpenAiService
         _logger.LogInformation("Extracting key information from week letter");
         
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
-        string childName = weekLetter["child"]?.ToString() ?? "unknown";
-        string className = weekLetter["class"]?.ToString() ?? "unknown";
-        string weekNumber = weekLetter["week"]?.ToString() ?? "unknown";
+        
+        // Extract metadata from the week letter
+        string childName = "unknown";
+        string className = "unknown";
+        string weekNumber = "unknown";
+        
+        // Try to get metadata from the ugebreve array
+        if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
+        {
+            className = ugebreve[0]?["klasseNavn"]?.ToString() ?? "unknown";
+            weekNumber = ugebreve[0]?["uge"]?.ToString() ?? "unknown";
+        }
+        
+        // Fallback to old format if needed
+        if (weekLetter["child"] != null) childName = weekLetter["child"]?.ToString() ?? "unknown";
+        if (weekLetter["class"] != null) className = weekLetter["class"]?.ToString() ?? "unknown";
+        if (weekLetter["week"] != null) weekNumber = weekLetter["week"]?.ToString() ?? "unknown";
         
         var messages = new List<ChatMessage>
         {
@@ -189,9 +234,21 @@ public class OpenAiService : IOpenAiService
     {
         var sb = new StringBuilder();
         
+        // Check for content in the old format
         if (weekLetter["content"] != null)
         {
             sb.AppendLine(weekLetter["content"]?.ToString() ?? string.Empty);
+            return sb.ToString();
+        }
+        
+        // Extract content from the ugebreve array
+        if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
+        {
+            var indhold = ugebreve[0]?["indhold"]?.ToString();
+            if (!string.IsNullOrEmpty(indhold))
+            {
+                sb.AppendLine(indhold);
+            }
         }
         
         return sb.ToString();

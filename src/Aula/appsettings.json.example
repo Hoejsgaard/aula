@@ -5,9 +5,10 @@
 	},
 	"Slack": {
 		"WebhookUrl": "channel webhook",
-		"ApiToken": "xoxb-your-bot-token-here",
-		"EnableInteractiveBot": false,
-		"ChannelId": "C0123456789"
+		"ApiToken": "xoxb-your-bot-token-here", // Bot User OAuth Token from Slack API
+		"EnableInteractiveBot": false, // Set to true to enable interactive Slack bot
+		"ChannelId": "C0123456789", // Channel ID where the bot will listen and respond
+		"PostWeekLettersOnStartup": false // Set to false to disable automatic posting of week letters on startup
 	},
 	"Children": [
 		{
