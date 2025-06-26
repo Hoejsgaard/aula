@@ -3,19 +3,19 @@ description: Expected layout and file placement for backend
 globs: 
 alwaysApply: false
 ---
-
 # 📁 Backend Folder Structure
 
-## `src/transaction-app`
+## `src/Aula`
 - Core backend logic lives here.
-- Compose services, auth flows, and bank integration logic here.
+- Compose services, auth flows, and educational platform integration logic here.
 
-## `src/transaction-app.Tests`
+## `src/Aula.Tests`
 - Test projects (unit/integration) belong here.
-- Test filenames should match logic in `transaction-app`.
+- Test filenames should match logic in `Aula`.
 
-## `src/transaction-client`
-- Optional SDK or client. Do not add backend logic here.
+## `src/Aula.Api`
+- Azure Functions API project.
+- Exposes functionality as HTTP endpoints.
 
 ## `scripts`
 - Use only for CLI tools, ad hoc tasks, or dev helpers.

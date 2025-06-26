@@ -3,7 +3,6 @@ description:
 globs: 
 alwaysApply: true
 ---
-
 # Git Commit Guidelines
 
 - DO NOT commit, push, or stage files without explicit user confirmation.
@@ -20,9 +19,9 @@ Always use temporary file for proper formatting:
 
 ```bash
 cat > temp_commit_msg.txt << 'EOF'
-feat: add retry logic for bank API failures
+feat: add retry logic for MinUddannelse API failures
 
-The Danske Bank API fails during peak hours, blocking reconciliation.
+The MinUddannelse API fails during peak hours, blocking data retrieval.
 Added exponential backoff with 3 retries to handle 503/504 errors.
 This should reduce failed imports by 80%.
 EOF
@@ -33,4 +32,4 @@ rm temp_commit_msg.txt
 
 ## Common Scopes
 
-`banking`, `auth`, `api`, `secrets`, `infra`, `tests`
+`unilogin`, `minuddannelse`, `aula`, `auth`, `api`, `secrets`, `infra`, `tests`

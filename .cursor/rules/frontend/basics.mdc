@@ -1,6 +1,6 @@
 ---
 description: 
-globs: **/transaction-client/**,*.html,*.css
+globs: *.html,*.css
 alwaysApply: false
 ---
 # Frontend Rules
