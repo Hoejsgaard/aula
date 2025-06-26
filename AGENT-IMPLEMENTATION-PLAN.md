@@ -7,7 +7,7 @@
    - IDataManager
    - IAgentService
 3. ✅ Implemented concrete classes for these interfaces
-4. ✅ Created TestableMinUddannelseClient fo testing
+4. ✅ Created TestableMinUddannelseClient for testing
 5. ✅ Added unit tests for key components
    - MinUddannelseClient tests
    - DataManager tests
@@ -21,11 +21,16 @@
 9. ✅ Documented project rules in RULES.md
 
 ## Pending Tasks
-1. ⬜ Implement authentication refresh mechanism
-2. ⬜ Add caching for API responses
-3. ⬜ Implement error handling and retry logic
-4. ⬜ Add integration tests
-5. ⬜ Implement notification system for failures
-6. ⬜ Add monitoring and logging enhancements
-7. ⬜ Performance optimizations
-8. ⬜ Documentation updates
+1. ⬜ Implement LLM integration
+   - Create ILlmService interface
+   - Implement LLM client (OpenAI or Anthropic)
+   - Add methods to process week letters with LLM
+   - Create simple chat interface for testing
+2. ⬜ Implement authentication refresh mechanism
+3. ⬜ Add caching for API responses
+4. ⬜ Implement error handling and retry logic
+5. ⬜ Add integration tests
+6. ⬜ Implement notification system for failures
+7. ⬜ Add monitoring and logging enhancements
+8. ⬜ Performance optimizations
+9. ⬜ Documentation updates
