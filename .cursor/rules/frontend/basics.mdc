@@ -3,7 +3,6 @@ description:
 globs: **/transaction-client/**,*.html,*.css
 alwaysApply: false
 ---
-  
 # Frontend Rules
 
 ## Keep It Simple
@@ -13,21 +12,17 @@ alwaysApply: false
 - Inline styles are fine for this POC
 - CDN dependencies over local files
 
-## Banking UI Standards
+## Educational UI Standards
 
-- Professional, clean design
+- Clean, intuitive design
 - Clear error messages for users
 - Loading states for API calls
 - Accessible form controls
 
 ## File Organization
 
-- Static files in `src/transaction-client/`
-- Use `npm run dev` for local development
-- Keep HTML files focused and readable
-
-
-- Use `npm run dev` for local development
+- Static files in `src/Aula.Api/wwwroot/`
+- Use `dotnet run` for local development
 - Keep HTML files focused and readable
 
 

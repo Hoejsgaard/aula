@@ -8,119 +8,119 @@ namespace Aula;
 
 public abstract class UniLoginClient
 {
-	private readonly string _loginUrl;
-	private readonly string _password;
-	private readonly string _username;
-	private bool _loggedIn;
+    private readonly string _loginUrl;
+    private readonly string _password;
+    private readonly string _username;
+    private bool _loggedIn;
 
-	private JObject _userProfile = new();
+    private JObject _userProfile = new();
 
-	public UniLoginClient(string username, string password, string loginUrl, string successUrl)
-	{
-		var httpClientHandler = new HttpClientHandler
-		{
-			CookieContainer = new CookieContainer(),
-			UseCookies = true,
-			AllowAutoRedirect = true
-		};
-		HttpClient = new HttpClient(httpClientHandler);
-		_username = username ?? throw new ArgumentNullException(nameof(username));
-		_password = password ?? throw new ArgumentNullException(nameof(password));
-		_loginUrl = loginUrl;
-		SuccessUrl = successUrl;
-	}
+    public UniLoginClient(string username, string password, string loginUrl, string successUrl)
+    {
+        var httpClientHandler = new HttpClientHandler
+        {
+            CookieContainer = new CookieContainer(),
+            UseCookies = true,
+            AllowAutoRedirect = true
+        };
+        HttpClient = new HttpClient(httpClientHandler);
+        _username = username ?? throw new ArgumentNullException(nameof(username));
+        _password = password ?? throw new ArgumentNullException(nameof(password));
+        _loginUrl = loginUrl;
+        SuccessUrl = successUrl;
+    }
 
-	protected HttpClient HttpClient { get; }
-	protected string SuccessUrl { get; }
+    protected HttpClient HttpClient { get; }
+    protected string SuccessUrl { get; }
 
-	public async Task<bool> LoginAsync()
-	{
-		var response = await HttpClient.GetAsync(_loginUrl);
-		var content = await response.Content.ReadAsStringAsync();
+    public async Task<bool> LoginAsync()
+    {
+        var response = await HttpClient.GetAsync(_loginUrl);
+        var content = await response.Content.ReadAsStringAsync();
 
-		return await ProcessLoginResponseAsync(content);
-	}
-
-
-	private async Task<bool> ProcessLoginResponseAsync(string content)
-	{
-		var maxSteps = 10;
-		var success = false;
-		for (var stepCounter = 0; stepCounter < maxSteps; stepCounter++)
-			try
-			{
-				var formData = ExtractFormData(content);
-				var response = await HttpClient.PostAsync(formData.Item1, new FormUrlEncodedContent(formData.Item2));
-				content = await response.Content.ReadAsStringAsync();
+        return await ProcessLoginResponseAsync(content);
+    }
 
 
-				success = CheckIfLoginSuccessful(response);
-				if (success)
-				{
-					HttpClient.DefaultRequestHeaders.Accept.Add(
-						new MediaTypeWithQualityHeaderValue("application/json"));
+    private async Task<bool> ProcessLoginResponseAsync(string content)
+    {
+        var maxSteps = 10;
+        var success = false;
+        for (var stepCounter = 0; stepCounter < maxSteps; stepCounter++)
+            try
+            {
+                var formData = ExtractFormData(content);
+                var response = await HttpClient.PostAsync(formData.Item1, new FormUrlEncodedContent(formData.Item2));
+                content = await response.Content.ReadAsStringAsync();
 
-					return true;
-				}
-			}
-			catch (Exception)
-			{
-				// ignored - this is kind of fragile
-			}
 
-		return success;
-	}
+                success = CheckIfLoginSuccessful(response);
+                if (success)
+                {
+                    HttpClient.DefaultRequestHeaders.Accept.Add(
+                        new MediaTypeWithQualityHeaderValue("application/json"));
 
-	private Tuple<string, Dictionary<string, string>> ExtractFormData(string htmlContent)
-	{
-		var doc = new HtmlDocument();
-		doc.LoadHtml(htmlContent);
-		var formNode = doc.DocumentNode.SelectSingleNode("//form");
+                    return true;
+                }
+            }
+            catch (Exception)
+            {
+                // ignored - this is kind of fragile
+            }
 
-		if (formNode == null) throw new Exception("Form not found");
+        return success;
+    }
 
-		var actionUrl = formNode.Attributes["action"]?.Value;
-		if (actionUrl == null) throw new Exception("No action node found");
-		var formData = BuildFormData(doc);
-		var writer = new StringWriter();
-		HttpUtility.HtmlDecode(actionUrl, writer);
-		var decodedUrl = writer.ToString();
-		return new Tuple<string, Dictionary<string, string>>(decodedUrl, formData);
-	}
+    private Tuple<string, Dictionary<string, string>> ExtractFormData(string htmlContent)
+    {
+        var doc = new HtmlDocument();
+        doc.LoadHtml(htmlContent);
+        var formNode = doc.DocumentNode.SelectSingleNode("//form");
 
-	private Dictionary<string, string> BuildFormData(HtmlDocument document)
-	{
-		var formData = new Dictionary<string, string>();
+        if (formNode == null) throw new Exception("Form not found");
 
-		var inputs = document.DocumentNode.SelectNodes("//input");
-		if (inputs == null)
-		{
-			formData.Add("selectedIdp", "uni_idp");
-			return formData;
-		}
+        var actionUrl = formNode.Attributes["action"]?.Value;
+        if (actionUrl == null) throw new Exception("No action node found");
+        var formData = BuildFormData(doc);
+        var writer = new StringWriter();
+        HttpUtility.HtmlDecode(actionUrl, writer);
+        var decodedUrl = writer.ToString();
+        return new Tuple<string, Dictionary<string, string>>(decodedUrl, formData);
+    }
 
-		foreach (var input in inputs)
-		{
-			var name = input.Attributes["name"]?.Value;
-			var value = input.GetAttributeValue("value", string.Empty);
+    private Dictionary<string, string> BuildFormData(HtmlDocument document)
+    {
+        var formData = new Dictionary<string, string>();
 
-			if (string.IsNullOrWhiteSpace(name)) continue;
+        var inputs = document.DocumentNode.SelectNodes("//input");
+        if (inputs == null)
+        {
+            formData.Add("selectedIdp", "uni_idp");
+            return formData;
+        }
 
-			formData[name] = name switch
-			{
-				"username" => _username,
-				"password" => _password,
-				_ => value
-			};
-		}
+        foreach (var input in inputs)
+        {
+            var name = input.Attributes["name"]?.Value;
+            var value = input.GetAttributeValue("value", string.Empty);
 
-		return formData;
-	}
+            if (string.IsNullOrWhiteSpace(name)) continue;
 
-	private bool CheckIfLoginSuccessful(HttpResponseMessage response)
-	{
-		_loggedIn = response.RequestMessage?.RequestUri?.ToString() == SuccessUrl;
+            formData[name] = name switch
+            {
+                "username" => _username,
+                "password" => _password,
+                _ => value
+            };
+        }
 
-		return _loggedIn;
-	}
+        return formData;
+    }
+
+    private bool CheckIfLoginSuccessful(HttpResponseMessage response)
+    {
+        _loggedIn = response.RequestMessage?.RequestUri?.ToString() == SuccessUrl;
+
+        return _loggedIn;
+    }
 }

@@ -33,7 +33,7 @@ public class MinUddannelseClientTests
     {
         // Arrange
         var mockHandler = new Mock<HttpMessageHandler>();
-        
+
         // Setup mock response for GetWeekLetter
         mockHandler.Protected()
             .Setup<Task<HttpResponseMessage>>(
@@ -48,16 +48,16 @@ public class MinUddannelseClientTests
 
         var httpClient = new HttpClient(mockHandler.Object);
         var client = new TestableMinUddannelseClient(httpClient, "username", "password");
-        
+
         var child = new Child { FirstName = "Test", LastName = "Child" };
         var date = new DateOnly(2023, 10, 16); // Week 42 of 2023
-        
+
         // Login first
         await client.LoginAsync();
-        
+
         // Act
         var result = await client.GetWeekLetter(child, date);
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.NotNull(result["ugebreve"]);
@@ -67,4 +67,4 @@ public class MinUddannelseClientTests
         Assert.Equal("42", weekLetters[0]["uge"]?.ToString());
         Assert.Equal("Test content", weekLetters[0]["indhold"]?.ToString());
     }
-} 
+}
