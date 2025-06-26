@@ -1,21 +1,30 @@
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
-using OpenAI_API;
-using OpenAI_API.Chat;
+using OpenAI.ObjectModels;
+using OpenAI.ObjectModels.RequestModels;
+using OpenAI.ObjectModels.ResponseModels;
+using OpenAI.Managers;
+using OpenAI;
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace Aula;
 
 public class OpenAiService : IOpenAiService
 {
-    private readonly OpenAIAPI _openAiClient;
+    private readonly OpenAIService _openAiClient;
     private readonly ILogger _logger;
+    private readonly Dictionary<string, List<ChatMessage>> _conversationHistory = new();
 
     public OpenAiService(string apiKey, ILoggerFactory loggerFactory)
     {
-        _openAiClient = new OpenAIAPI(apiKey);
+        _openAiClient = new OpenAIService(new OpenAiOptions()
+        {
+            ApiKey = apiKey
+        });
         _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
     }
 
@@ -25,68 +34,101 @@ public class OpenAiService : IOpenAiService
         
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
         
-        var chat = _openAiClient.Chat.CreateConversation();
-        
-        // Use GPT-4 if available, otherwise fall back to GPT-3.5
-        try
+        var messages = new List<ChatMessage>
         {
-            chat.Model = OpenAI_API.Models.Model.GPT4;
+            ChatMessage.FromSystem("You are a helpful assistant that summarizes weekly school letters for parents. " +
+                                  "Provide a brief summary of the key information in the letter, focusing on activities, " +
+                                  "important dates, and things parents need to know. Be concise but thorough."),
+            ChatMessage.FromUser($"Here's the week letter content:\n\n{weekLetterContent}\n\nPlease summarize this week letter.")
+        };
+
+        var chatRequest = new ChatCompletionCreateRequest
+        {
+            Messages = messages,
+            Model = Models.Gpt_4,
+            Temperature = 0.7f
+        };
+
+        var response = await _openAiClient.ChatCompletion.CreateCompletion(chatRequest);
+
+        if (response.Successful)
+        {
+            return response.Choices.First().Message.Content ?? "No response content received.";
         }
-        catch
+        else
         {
-            chat.Model = OpenAI_API.Models.Model.ChatGPTTurbo;
-        }
-        
-        chat.AppendSystemMessage("You are a helpful assistant that summarizes weekly school letters for parents. " +
-                               "Extract the most important information and present it in a clear, concise format. " +
-                               "Focus on key events, deadlines, and important notices.");
-        
-        chat.AppendUserInput($"Please summarize this week letter from school:\n\n{weekLetterContent}");
-        
-        try
-        {
-            var response = await chat.GetResponseFromChatbotAsync();
-            return response;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error from OpenAI API");
-            return "Error processing the week letter. Please try again later.";
+            _logger.LogError("Error calling OpenAI API: {Error}", response.Error?.Message);
+            return "Sorry, I couldn't summarize the week letter at this time.";
         }
     }
 
     public async Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question)
     {
+        return await AskQuestionAboutWeekLetterAsync(weekLetter, question, null);
+    }
+
+    public async Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, string? contextKey)
+    {
         _logger.LogInformation("Asking question about week letter: {Question}", question);
         
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
+        string childName = weekLetter["child"]?.ToString() ?? "unknown";
+        string className = weekLetter["class"]?.ToString() ?? "unknown";
+        string weekNumber = weekLetter["week"]?.ToString() ?? "unknown";
         
-        var chat = _openAiClient.Chat.CreateConversation();
-        
-        // Use GPT-4 if available, otherwise fall back to GPT-3.5
-        try
+        // Create a unique conversation key if not provided
+        if (string.IsNullOrEmpty(contextKey))
         {
-            chat.Model = OpenAI_API.Models.Model.GPT4;
-        }
-        catch
-        {
-            chat.Model = OpenAI_API.Models.Model.ChatGPTTurbo;
+            contextKey = $"{childName}-{weekNumber}";
         }
         
-        chat.AppendSystemMessage("You are a helpful assistant that answers questions about weekly school letters. " +
-                               "Provide accurate, concise answers based only on the information in the week letter.");
-        
-        chat.AppendUserInput($"Week letter content:\n\n{weekLetterContent}\n\nQuestion: {question}");
-        
-        try
+        // Initialize conversation history if it doesn't exist
+        if (!_conversationHistory.ContainsKey(contextKey))
         {
-            var response = await chat.GetResponseFromChatbotAsync();
-            return response;
+            _conversationHistory[contextKey] = new List<ChatMessage>
+            {
+                ChatMessage.FromSystem($"You are a helpful assistant that answers questions about a child's weekly school letter. " +
+                                      $"The child's name is {childName} and they're in class {className}. " +
+                                      $"This is for week {weekNumber}. Today is {DateTime.Now.DayOfWeek}. " +
+                                      $"Answer questions based on the content of the letter. If the information isn't in the letter, say so politely.")
+            };
+            
+            // Add the week letter content as context
+            _conversationHistory[contextKey].Add(ChatMessage.FromSystem($"Here's the week letter content:\n\n{weekLetterContent}"));
         }
-        catch (Exception ex)
+        
+        // Add the user's question to the conversation history
+        _conversationHistory[contextKey].Add(ChatMessage.FromUser(question));
+        
+        // Limit conversation history to prevent token overflow (keep last 10 messages)
+        if (_conversationHistory[contextKey].Count > 12)
         {
-            _logger.LogError(ex, "Error from OpenAI API: {Error}", ex.Message);
-            return "Error processing your question. Please try again later.";
+            // Keep the system messages (first 2) and the last 10 messages
+            _conversationHistory[contextKey] = _conversationHistory[contextKey].Take(2)
+                .Concat(_conversationHistory[contextKey].Skip(_conversationHistory[contextKey].Count - 10))
+                .ToList();
+        }
+
+        var chatRequest = new ChatCompletionCreateRequest
+        {
+            Messages = _conversationHistory[contextKey],
+            Model = Models.Gpt_4,
+            Temperature = 0.7f
+        };
+
+        var response = await _openAiClient.ChatCompletion.CreateCompletion(chatRequest);
+
+        if (response.Successful)
+        {
+            var reply = response.Choices.First().Message.Content ?? "No response content received.";
+            // Add the assistant's response to the conversation history
+            _conversationHistory[contextKey].Add(ChatMessage.FromAssistant(reply));
+            return reply;
+        }
+        else
+        {
+            _logger.LogError("Error calling OpenAI API: {Error}", response.Error?.Message);
+            return "Sorry, I couldn't answer your question at this time.";
         }
     }
 
@@ -95,68 +137,76 @@ public class OpenAiService : IOpenAiService
         _logger.LogInformation("Extracting key information from week letter");
         
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
+        string childName = weekLetter["child"]?.ToString() ?? "unknown";
+        string className = weekLetter["class"]?.ToString() ?? "unknown";
+        string weekNumber = weekLetter["week"]?.ToString() ?? "unknown";
         
-        var chat = _openAiClient.Chat.CreateConversation();
-        
-        // Use GPT-4 if available, otherwise fall back to GPT-3.5
-        try
+        var messages = new List<ChatMessage>
         {
-            chat.Model = OpenAI_API.Models.Model.GPT4;
+            ChatMessage.FromSystem("You are a helpful assistant that extracts structured information from weekly school letters. " +
+                                  "Extract information about activities for each day of the week, homework, and important dates. " +
+                                  "Respond in valid JSON format with the following structure: " +
+                                  "{ \"monday\": \"activities\", \"tuesday\": \"activities\", \"wednesday\": \"activities\", " +
+                                  "\"thursday\": \"activities\", \"friday\": \"activities\", \"homework\": \"homework details\", " +
+                                  "\"important_dates\": [\"date1\", \"date2\"] }"),
+            ChatMessage.FromUser($"Here's the week letter for {childName} in class {className} for week {weekNumber}:\n\n{weekLetterContent}\n\nPlease extract the key information in JSON format.")
+        };
+
+        var chatRequest = new ChatCompletionCreateRequest
+        {
+            Messages = messages,
+            Model = Models.Gpt_4,
+            Temperature = 0.3f
+        };
+
+        var response = await _openAiClient.ChatCompletion.CreateCompletion(chatRequest);
+
+        if (response.Successful)
+        {
+            var jsonResponse = response.Choices.First().Message.Content;
+            try
+            {
+                if (string.IsNullOrEmpty(jsonResponse))
+                {
+                    return new JObject();
+                }
+                return JObject.Parse(jsonResponse);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error parsing JSON response from OpenAI");
+                return new JObject();
+            }
         }
-        catch
+        else
         {
-            chat.Model = OpenAI_API.Models.Model.ChatGPTTurbo;
-        }
-        
-        chat.AppendSystemMessage("You are a helpful assistant that extracts key information from weekly school letters. " +
-                               "Extract events, deadlines, required materials, and other important information. " +
-                               "Return the information as a JSON object with appropriate categories.");
-        
-        chat.AppendUserInput($"Extract key information from this week letter as JSON:\n\n{weekLetterContent}");
-        
-        try
-        {
-            var response = await chat.GetResponseFromChatbotAsync();
-            return JObject.Parse(response);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error from OpenAI API or parsing JSON response");
-            return new JObject { ["error"] = "Error processing the week letter or parsing the response" };
+            _logger.LogError("Error calling OpenAI API: {Error}", response.Error?.Message);
+            return new JObject();
         }
     }
-    
+
     private string ExtractWeekLetterContent(JObject weekLetter)
     {
-        try
+        var sb = new StringBuilder();
+        
+        if (weekLetter["content"] != null)
         {
-            var content = new StringBuilder();
-            
-            if (weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
-            {
-                foreach (var ugeBrev in ugebreve)
-                {
-                    var klasseNavn = ugeBrev["klasseNavn"]?.ToString();
-                    var uge = ugeBrev["uge"]?.ToString();
-                    var indhold = ugeBrev["indhold"]?.ToString();
-                    
-                    if (!string.IsNullOrEmpty(klasseNavn) && !string.IsNullOrEmpty(indhold))
-                    {
-                        content.AppendLine($"Class: {klasseNavn}");
-                        content.AppendLine($"Week: {uge}");
-                        content.AppendLine("Content:");
-                        content.AppendLine(indhold);
-                        content.AppendLine();
-                    }
-                }
-            }
-            
-            return content.ToString();
+            sb.AppendLine(weekLetter["content"]?.ToString() ?? string.Empty);
         }
-        catch (Exception ex)
+        
+        return sb.ToString();
+    }
+    
+    // Method to clear conversation history for a specific context or all contexts
+    public void ClearConversationHistory(string? contextKey = null)
+    {
+        if (string.IsNullOrEmpty(contextKey))
         {
-            _logger.LogError(ex, "Error extracting content from week letter");
-            return "Error extracting content from week letter";
+            _conversationHistory.Clear();
+        }
+        else if (_conversationHistory.ContainsKey(contextKey))
+        {
+            _conversationHistory.Remove(contextKey);
         }
     }
 } 

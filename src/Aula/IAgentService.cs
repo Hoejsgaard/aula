@@ -11,5 +11,6 @@ public interface IAgentService
     // OpenAI-related methods
     Task<string> SummarizeWeekLetterAsync(Child child, DateOnly date);
     Task<string> AskQuestionAboutWeekLetterAsync(Child child, DateOnly date, string question);
+    Task<string> AskQuestionAboutWeekLetterAsync(Child child, DateOnly date, string question, string? contextKey);
     Task<JObject> ExtractKeyInformationFromWeekLetterAsync(Child child, DateOnly date);
 }
