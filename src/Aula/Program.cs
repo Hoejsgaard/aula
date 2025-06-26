@@ -24,6 +24,15 @@ public class Program
             var telegramBot = serviceProvider.GetRequiredService<TelegramClient>();
             var agentService = serviceProvider.GetRequiredService<IAgentService>();
 
+            // Start the interactive Slack bot if enabled
+            if (config.Slack.EnableInteractiveBot && !string.IsNullOrEmpty(config.Slack.ApiToken))
+            {
+                logger.LogInformation("Starting interactive Slack bot");
+                var slackInteractiveBot = serviceProvider.GetRequiredService<SlackInteractiveBot>();
+                await slackInteractiveBot.Start();
+                logger.LogInformation("Interactive Slack bot started");
+            }
+
             var loggedIn = await agentService.LoginAsync();
 
             if (loggedIn)
@@ -34,7 +43,11 @@ public class Program
                     logger.LogInformation("Fetching week letter for {ChildName}", child.FirstName);
                     var weekLetter = await agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
                     await slackBot.PostWeekLetter(weekLetter, child);
-                    await telegramBot.PostWeekLetter(config.Telegram.ChannelId, weekLetter, child);
+                    
+                    if (config.Telegram.Enabled)
+                    {
+                        await telegramBot.PostWeekLetter(config.Telegram.ChannelId, weekLetter, child);
+                    }
                     
                     // Demonstrate OpenAI functionality if API key is provided
                     if (!string.IsNullOrEmpty(config.OpenAi.ApiKey))
@@ -66,6 +79,22 @@ public class Program
             {
                 logger.LogError("Failed to log into MinUddannelse");
             }
+
+            // If interactive bot is enabled, keep the application running
+            if (config.Slack.EnableInteractiveBot && !string.IsNullOrEmpty(config.Slack.ApiToken))
+            {
+                logger.LogInformation("Interactive bot is running. Press Ctrl+C to exit.");
+                
+                // Keep the application running
+                var exitEvent = new ManualResetEvent(false);
+                Console.CancelKeyPress += (sender, eventArgs) => {
+                    eventArgs.Cancel = true;
+                    exitEvent.Set();
+                };
+                
+                // Wait for Ctrl+C
+                exitEvent.WaitOne();
+            }
         }
         catch (Exception e)
         {
@@ -82,6 +111,7 @@ public class Program
         // Register services
         serviceCollection.AddSingleton<SlackBot>();
         serviceCollection.AddSingleton<TelegramClient>();
+        serviceCollection.AddSingleton<SlackInteractiveBot>();
 
         // Register memory cache
         serviceCollection.AddMemoryCache();
