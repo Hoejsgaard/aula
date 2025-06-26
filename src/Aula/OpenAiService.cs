@@ -119,7 +119,9 @@ public class OpenAiService : IOpenAiService
                                       "say 'I don't have that specific information in the weekly letter' and then provide any related " +
                                       "information that might be helpful. For example, if asked about Tuesday's activities but only " +
                                       "Monday's activities are mentioned, acknowledge that Tuesday isn't mentioned but share what's " +
-                                      "happening on Monday. Be concise and direct in your answers."),
+                                      "happening on Monday. Be concise and direct in your answers. " +
+                                      "IMPORTANT: Always respond in the same language as the user's question. " +
+                                      "If the question is in Danish, respond in Danish. If the question is in English, respond in English."),
                 ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}")
             };
             _logger.LogInformation("🔎 TRACE: Added week letter content to conversation context: {Length} characters", weekLetterContent.Length);
@@ -158,7 +160,9 @@ public class OpenAiService : IOpenAiService
                                       "say 'I don't have that specific information in the weekly letter' and then provide any related " +
                                       "information that might be helpful. For example, if asked about Tuesday's activities but only " +
                                       "Monday's activities are mentioned, acknowledge that Tuesday isn't mentioned but share what's " +
-                                      "happening on Monday. Be concise and direct in your answers.");
+                                      "happening on Monday. Be concise and direct in your answers. " +
+                                      "IMPORTANT: Always respond in the same language as the user's question. " +
+                                      "If the question is in Danish, respond in Danish. If the question is in English, respond in English.");
                     _logger.LogInformation("🔎 TRACE: Updated system instructions in context");
                 }
             }
