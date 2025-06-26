@@ -10,22 +10,37 @@ namespace Aula;
 public class TelegramClient
 {
     private readonly Html2SlackMarkdownConverter _markdownConverter;
-    private readonly ITelegramBotClient _telegram;
+    private readonly ITelegramBotClient? _telegram;
+    private readonly bool _enabled;
 
-    public TelegramClient(Config config) : this(config.Telegram.Token)
-    { }
+    public TelegramClient(Config config)
+    {
+        _enabled = config.Telegram.Enabled;
+        if (_enabled)
+        {
+            _telegram = new TelegramBotClient(config.Telegram.Token);
+        }
+        _markdownConverter = new Html2SlackMarkdownConverter();
+    }
 
     public TelegramClient(string token)
     {
+        _enabled = true;
         _telegram = new TelegramBotClient(token);
         _markdownConverter = new Html2SlackMarkdownConverter();
     }
 
     public async Task<bool> SendMessageToChannel(string channelId, string message)
     {
+        if (!_enabled)
+        {
+            Console.WriteLine("Telegram integration is disabled. Message not sent.");
+            return false;
+        }
+
         try
         {
-            await _telegram.SendMessage(
+            await _telegram!.SendMessage(
                 channelId,
                 message,
                 parseMode: ParseMode.Html
@@ -42,6 +57,12 @@ public class TelegramClient
 
     public async Task<bool> PostWeekLetter(string channelId, JObject weekLetter, Child child)
     {
+        if (!_enabled)
+        {
+            Console.WriteLine("Telegram integration is disabled. Week letter not posted.");
+            return false;
+        }
+
         var @class = weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? "";
         var week = weekLetter["ugebreve"]?[0]?["uge"]?.ToString() ?? "";
 
@@ -73,7 +94,7 @@ public class TelegramClient
             // Send without parse mode
             try
             {
-                await _telegram.SendMessage(
+                await _telegram!.SendMessage(
                     channelId,
                     message
                 );
