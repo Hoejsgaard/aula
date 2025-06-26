@@ -29,6 +29,9 @@ public class UniLogin
 public class Slack
 {
     public string WebhookUrl { get; set; } = string.Empty;
+    public string ApiToken { get; set; } = string.Empty;
+    public bool EnableInteractiveBot { get; set; } = false;
+    public string ChannelId { get; set; } = string.Empty;
 }
 
 public class Child

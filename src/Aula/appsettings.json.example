@@ -4,7 +4,10 @@
 		"Password": "Your unilogin password"
 	},
 	"Slack": {
-		"WebhookUrl": "channel webhook"
+		"WebhookUrl": "channel webhook",
+		"ApiToken": "xoxb-your-bot-token-here",
+		"EnableInteractiveBot": false,
+		"ChannelId": "C0123456789"
 	},
 	"Children": [
 		{
