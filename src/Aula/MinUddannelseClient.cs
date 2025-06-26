@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Aula;
 
-public class MinUddannelseClient : UniLoginClient
+public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
 {
 	private JObject _userProfile = new();
 
