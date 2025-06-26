@@ -1,0 +1,33 @@
+root = true
+
+[*.cs]
+# Disable problematic rules entirely
+dotnet_diagnostic.IDE0051.severity = none    # Remove unused private members
+dotnet_diagnostic.IDE0052.severity = none    # Remove unread private members
+dotnet_diagnostic.IDE0161.severity = none    # Use file-scoped namespace
+
+# Keep some rules as warnings
+dotnet_analyzer_diagnostic.category-security.severity = warning
+dotnet_diagnostic.CS0169.severity = warning     # Field is never used
+dotnet_diagnostic.CS0414.severity = warning     # Field is assigned but never used
+
+# Keep everything else as suggestions if needed
+dotnet_analyzer_diagnostic.category-style.severity = suggestion
+dotnet_analyzer_diagnostic.category-design.severity = suggestion
+dotnet_analyzer_diagnostic.category-maintainability.severity = suggestion
+dotnet_analyzer_diagnostic.category-performance.severity = suggestion
+dotnet_analyzer_diagnostic.category-reliability.severity = suggestion
+dotnet_analyzer_diagnostic.category-usage.severity = suggestion
+
+# Additional rules as suggestions
+dotnet_diagnostic.IDE0005.severity = suggestion  # Using directive is unnecessary
+dotnet_diagnostic.IDE0060.severity = suggestion  # Remove unused parameter
+dotnet_diagnostic.IDE0059.severity = suggestion  # Unnecessary assignment of a value
+dotnet_diagnostic.CA1823.severity = suggestion   # Unused private fields
+dotnet_diagnostic.CA1801.severity = suggestion   # Unused parameters
+dotnet_diagnostic.CS0067.severity = suggestion   # Event is never used
+dotnet_diagnostic.CS0649.severity = suggestion   # Field is never assigned to
+dotnet_diagnostic.CS0168.severity = suggestion   # Variable is declared but never used
+
+# Explicitly prefer file-scoped namespaces
+csharp_style_namespace_declarations = file_scoped:suggestion 

@@ -1,0 +1,79 @@
+{
+  "mcpServers": {
+    "MCP_DOCKER": {
+      "command": "docker run -i --rm alpine/socat STDIO TCP:host.docker.internal:8811"
+    }
+  },
+  "agents": {
+    "aula-assistant": {
+      "loadRules": true,
+      "followGuidelines": true,
+      "description": "Aula Assistant for MinUddannelse and Unilogin integrations",
+      "context": "file://mcp.context.json",
+      "attachments": [
+        {
+          "paths": ["ai-doc/**/*.md", "ai-doc/**/*.yaml"],
+          "description": "Documentation for Aula and MinUddannelse integrations"
+        },
+        {
+          "paths": [
+            "ai-doc/**/sample-responses/*.json"
+          ],
+          "description": "Sample responses from Aula and MinUddannelse APIs"
+        },
+        {
+          "paths": ["ai-doc/**/*.json"],
+          "exclude": [
+            "ai-doc/**/sample-responses/*.json"
+          ],
+          "description": "API configuration and schema definitions for educational integrations"
+        }
+      ]
+    },
+    "general-assistant": {
+      "description": "General coding assistant that follows project AI rules and guidelines",
+      "loadRules": true,
+      "followGuidelines": true
+    }
+  },
+  "rules": {
+    "directories": [".cursor/rules"],
+    "alwaysApplied": [
+      "main.mdc",
+      "00-procedure.mdc",
+      "user-preferences.mdc",
+      "security/secrets.mdc",
+      "workflows/commit-guidelines.mdc",
+      "workflows/development.mdc"
+    ],
+    "requestable": {
+      "backend/clean-code": {
+        "path": ".cursor/rules/backend/clean-code.mdc",
+        "description": "Rules for writing clean code, and how to not comment"
+      },
+      "backend/structure": {
+        "path": ".cursor/rules/backend/structure.mdc",
+        "description": "Expected layout and file placement for backend"
+      },
+      "backend/testing": {
+        "path": ".cursor/rules/backend/testing.mdc",
+        "description": "Test guidelines and best practices"
+      },
+      "frontend/basics": {
+        "path": ".cursor/rules/frontend/basics.mdc",
+        "description": "Frontend standards and best practices"
+      }
+    }
+  },
+  "documentation": {
+    "autoAttach": {
+      "aulaDocs": {
+        "paths": ["ai-doc/**/*.md", "ai-doc/**/*.json", "ai-doc/**/*.yaml"],
+        "description": "Documentation for Aula and MinUddannelse integrations",
+        "when": {
+          "filePatterns": ["**/Services/**/*.cs", "**/Clients/**/*.cs"]
+        }
+      }
+    }
+  }
+}

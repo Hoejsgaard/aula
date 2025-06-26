@@ -22,7 +22,7 @@ public class TestableMinUddannelseClient : IMinUddannelseClient
         _password = password;
     }
 
-    public async Task<bool> LoginAsync()
+    public Task<bool> LoginAsync()
     {
         // In tests, we'll just simulate a successful login
         _loggedIn = true;
@@ -41,7 +41,7 @@ public class TestableMinUddannelseClient : IMinUddannelseClient
             }
         };
         
-        return true;
+        return Task.FromResult(true);
     }
 
     public async Task<JObject> GetWeekLetter(Child child, DateOnly date)
