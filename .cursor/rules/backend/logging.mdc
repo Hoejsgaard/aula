@@ -1,0 +1,11 @@
+---
+description: 
+globs: *.cs
+alwaysApply: false
+---
+# Logging Rules
+
+- Remove LogDebug calls - use LogInformation or higher
+- Remove try/catch->log patterns - let middleware handle exceptions  
+
+- Use ILoggerFactory injection, not ILogger<T> in constructors

@@ -1,0 +1,29 @@
+root = true
+
+[*.cs]
+# Enable all code analysis rules
+dotnet_analyzer_diagnostic.category-style.severity = warning
+dotnet_analyzer_diagnostic.category-design.severity = warning
+dotnet_analyzer_diagnostic.category-maintainability.severity = warning
+dotnet_analyzer_diagnostic.category-performance.severity = warning
+dotnet_analyzer_diagnostic.category-reliability.severity = warning
+dotnet_analyzer_diagnostic.category-security.severity = warning
+dotnet_analyzer_diagnostic.category-usage.severity = warning
+
+# Specific rules for unused members - MAKE THESE ERRORS
+dotnet_diagnostic.IDE0051.severity = error    # Remove unused private members
+dotnet_diagnostic.IDE0052.severity = error    # Remove unread private members
+dotnet_diagnostic.CS0169.severity = error     # Field is never used
+dotnet_diagnostic.CS0414.severity = error     # Field is assigned but never used - THIS ONE!
+dotnet_diagnostic.IDE0060.severity = warning  # Remove unused parameter
+dotnet_diagnostic.IDE0059.severity = warning  # Unnecessary assignment of a value
+
+# Enable unused using directives
+dotnet_diagnostic.IDE0005.severity = warning  # Using directive is unnecessary
+
+# Additional unused member rules
+dotnet_diagnostic.CA1823.severity = warning   # Unused private fields
+dotnet_diagnostic.CA1801.severity = warning   # Unused parameters
+dotnet_diagnostic.CS0067.severity = warning   # Event is never used
+dotnet_diagnostic.CS0649.severity = warning   # Field is never assigned to
+dotnet_diagnostic.CS0168.severity = warning   # Variable is declared but never used 

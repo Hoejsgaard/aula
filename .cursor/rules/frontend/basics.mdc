@@ -1,0 +1,35 @@
+---
+description: 
+globs: **/transaction-client/**,*.html,*.css
+alwaysApply: false
+---
+  
+# Frontend Rules
+
+## Keep It Simple
+
+- Vanilla HTML/CSS/JS only - no frameworks
+- Use semantic HTML elements
+- Inline styles are fine for this POC
+- CDN dependencies over local files
+
+## Banking UI Standards
+
+- Professional, clean design
+- Clear error messages for users
+- Loading states for API calls
+- Accessible form controls
+
+## File Organization
+
+- Static files in `src/transaction-client/`
+- Use `npm run dev` for local development
+- Keep HTML files focused and readable
+
+
+- Use `npm run dev` for local development
+- Keep HTML files focused and readable
+
+
+
+
