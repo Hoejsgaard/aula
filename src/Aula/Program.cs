@@ -23,12 +23,13 @@ public class Program
             var slackBot = serviceProvider.GetRequiredService<SlackBot>();
             var telegramBot = serviceProvider.GetRequiredService<TelegramClient>();
             var agentService = serviceProvider.GetRequiredService<IAgentService>();
+            SlackInteractiveBot? slackInteractiveBot = null;
 
             // Start the interactive Slack bot if enabled
             if (config.Slack.EnableInteractiveBot && !string.IsNullOrEmpty(config.Slack.ApiToken))
             {
                 logger.LogInformation("Starting interactive Slack bot");
-                var slackInteractiveBot = serviceProvider.GetRequiredService<SlackInteractiveBot>();
+                slackInteractiveBot = serviceProvider.GetRequiredService<SlackInteractiveBot>();
                 await slackInteractiveBot.Start();
                 logger.LogInformation("Interactive Slack bot started");
             }
@@ -38,40 +39,49 @@ public class Program
             if (loggedIn)
             {
                 logger.LogInformation("Successfully logged into MinUddannelse");
-                foreach (var child in config.Children)
+                
+                // Only post week letters on startup if the option is enabled
+                if (config.Slack.PostWeekLettersOnStartup)
                 {
-                    logger.LogInformation("Fetching week letter for {ChildName}", child.FirstName);
-                    var weekLetter = await agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
-                    await slackBot.PostWeekLetter(weekLetter, child);
-                    
-                    if (config.Telegram.Enabled)
+                    logger.LogInformation("Posting week letters on startup (can be disabled in config)");
+                    foreach (var child in config.Children)
                     {
-                        await telegramBot.PostWeekLetter(config.Telegram.ChannelId, weekLetter, child);
+                        logger.LogInformation("Fetching week letter for {ChildName}", child.FirstName);
+                        var weekLetter = await agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
+                        
+                        // Use the interactive bot for posting if it's enabled, otherwise use the regular SlackBot
+                        if (slackInteractiveBot != null)
+                        {
+                            var weekLetterContent = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
+                            var weekLetterTitle = $"Uge {weekLetter["ugebreve"]?[0]?["uge"]?.ToString() ?? ""} - {weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? ""}";
+                            
+                            // Convert HTML to markdown
+                            var html2MarkdownConverter = new Html2SlackMarkdownConverter();
+                            var markdownContent = html2MarkdownConverter.Convert(weekLetterContent).Replace("**", "*");
+                            
+                            // The PostWeekLetter method will check for duplicates
+                            await slackInteractiveBot.PostWeekLetter(child.FirstName, markdownContent, weekLetterTitle);
+                        }
+                        else
+                        {
+                            await slackBot.PostWeekLetter(weekLetter, child);
+                        }
+                        
+                        if (config.Telegram.Enabled)
+                        {
+                            await telegramBot.PostWeekLetter(config.Telegram.ChannelId, weekLetter, child);
+                        }
                     }
+                }
+                else
+                {
+                    logger.LogInformation("Automatic posting of week letters on startup is disabled");
                     
-                    // Demonstrate OpenAI functionality if API key is provided
-                    if (!string.IsNullOrEmpty(config.OpenAi.ApiKey))
+                    // Still fetch and cache the week letters for later use
+                    foreach (var child in config.Children)
                     {
-                        try
-                        {
-                            // Get a summary of the week letter
-                            logger.LogInformation("Generating summary of week letter for {ChildName}", child.FirstName);
-                            var summary = await agentService.SummarizeWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
-                            
-                            // Post the summary to Slack
-                            await slackBot.PostMessage($"*Summary of {child.FirstName}'s week letter:*\n{summary}");
-                            
-                            // Extract key information
-                            logger.LogInformation("Extracting key information from week letter for {ChildName}", child.FirstName);
-                            var keyInfo = await agentService.ExtractKeyInformationFromWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
-                            
-                            // Post the key information to Slack
-                            await slackBot.PostMessage($"*Key information from {child.FirstName}'s week letter:*\n```{keyInfo}```");
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogError(ex, "Error using OpenAI services");
-                        }
+                        logger.LogInformation("Fetching and caching week letter for {ChildName}", child.FirstName);
+                        await agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today.AddDays(1)));
                     }
                 }
             }

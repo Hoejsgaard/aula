@@ -28,6 +28,10 @@ public class SlackInteractiveBot
     private int _pollingInProgress = 0;
     private bool _recentlyRespondedToGenericQuestion = false;
     private readonly HashSet<string> _postedWeekLetterHashes = new HashSet<string>();
+    // Track our own message IDs to avoid processing them
+    private readonly HashSet<string> _sentMessageIds = new HashSet<string>();
+    // Keep track of when messages were sent to allow cleanup
+    private readonly Dictionary<string, DateTime> _messageTimestamps = new Dictionary<string, DateTime>();
     private readonly HashSet<string> _englishWords = new HashSet<string> { "what", "when", "how", "is", "does", "do", "can", "will", "has", "have", "had", "show", "get", "tell", "please", "thanks", "thank", "you", "hello", "hi" };
     private readonly HashSet<string> _danishWords = new HashSet<string> { "hvad", "hvornår", "hvordan", "er", "gør", "kan", "vil", "har", "havde", "vis", "få", "fortæl", "venligst", "tak", "du", "dig", "hej", "hallo", "goddag" };
     
@@ -98,11 +102,17 @@ public class SlackInteractiveBot
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _config.Slack.ApiToken);
         
         // Set the timestamp to now so we don't process old messages
-        _lastTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        // Slack uses a timestamp format like "1234567890.123456"
+        var unixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        _lastTimestamp = $"{unixTimestamp}.000000";
+        _logger.LogInformation("Initial timestamp set to: {Timestamp}", _lastTimestamp);
         
         // Start polling
         _isRunning = true;
         _pollingTimer = new Timer(PollMessages, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
+        
+        // Start message ID cleanup timer (run every hour)
+        var cleanupTimer = new Timer(CleanupOldMessageIds, null, TimeSpan.FromHours(1), TimeSpan.FromHours(1));
         
         // Build a list of available children (first names only)
         string childrenList = string.Join(" og ", _childrenByName.Values.Select(c => c.FirstName.Split(' ')[0]));
@@ -139,14 +149,22 @@ public class SlackInteractiveBot
             var adjustedTimestamp = _lastTimestamp;
             if (!string.IsNullOrEmpty(_lastTimestamp) && _lastTimestamp != "0")
             {
-                // Parse the timestamp and add a tiny fraction to avoid getting the same message again
-                if (double.TryParse(_lastTimestamp, out double ts))
+                // Slack timestamps are in the format "1234567890.123456"
+                // We need to ensure we're handling them correctly
+                if (_lastTimestamp.Contains("."))
                 {
-                    adjustedTimestamp = (ts + 0.000001).ToString("0.000000");
+                    // Already in correct format, add a tiny fraction to avoid duplicates
+                    adjustedTimestamp = _lastTimestamp;
+                }
+                else if (double.TryParse(_lastTimestamp, out double ts))
+                {
+                    // Convert to proper Slack timestamp format if needed
+                    adjustedTimestamp = ts.ToString("0.000000");
                 }
             }
             
-            var url = $"https://slack.com/api/conversations.history?channel={_config.Slack.ChannelId}&oldest={adjustedTimestamp}";
+            _logger.LogInformation("Polling for messages since timestamp: {Timestamp}", adjustedTimestamp);
+            var url = $"https://slack.com/api/conversations.history?channel={_config.Slack.ChannelId}&oldest={adjustedTimestamp}&limit=10";
             
             // Make the API call
             var response = await _httpClient.GetAsync(url);
@@ -183,11 +201,33 @@ public class SlackInteractiveBot
                 return;
             }
             
+            // Debug the raw messages to understand what we're getting
+            _logger.LogInformation("Raw messages received: {Count}", messages.Count);
+            foreach (var msg in messages.Take(3))
+            {
+                _logger.LogInformation("Message: TS={Timestamp}, Type={Type}, SubType={SubType}, User={User}, BotId={BotId}",
+                    msg["ts"], msg["type"], msg["subtype"], msg["user"], msg["bot_id"]);
+            }
+            
             // Get actual new messages (not from the bot)
-            var userMessages = messages.Where(m => 
-                m["subtype"]?.ToString() != "bot_message" && 
-                m["bot_id"] == null &&
-                !string.IsNullOrEmpty(m["user"]?.ToString())).ToList();
+            var userMessages = messages.Where(m => {
+                // Skip messages we sent ourselves (by checking the ID)
+                string messageId = m["ts"]?.ToString() ?? "";
+                if (!string.IsNullOrEmpty(messageId) && _sentMessageIds.Contains(messageId))
+                {
+                    _logger.LogInformation("Skipping our own message with ID: {MessageId}", messageId);
+                    return false;
+                }
+                
+                // Skip bot messages
+                if (m["subtype"]?.ToString() == "bot_message" || m["bot_id"] != null)
+                {
+                    return false;
+                }
+                
+                // Only include messages with a user ID
+                return !string.IsNullOrEmpty(m["user"]?.ToString());
+            }).ToList();
                 
             if (!userMessages.Any())
             {
@@ -202,7 +242,7 @@ public class SlackInteractiveBot
             // Process messages in chronological order (oldest first)
             foreach (var message in userMessages.OrderBy(m => m["ts"]?.ToString()))
             {
-                // Process the message
+                // Process the message immediately with higher priority
                 await ProcessMessage(message["text"]?.ToString() ?? "");
                 
                 // Update the latest timestamp if this message is newer
@@ -216,10 +256,10 @@ public class SlackInteractiveBot
             }
             
             // Update the timestamp to the latest message
-            if (!string.IsNullOrEmpty(latestTimestamp))
+            if (!string.IsNullOrEmpty(latestTimestamp) && latestTimestamp != _lastTimestamp)
             {
                 _lastTimestamp = latestTimestamp;
-                _logger.LogDebug("Updated last timestamp to {Timestamp}", _lastTimestamp);
+                _logger.LogInformation("Updated last timestamp to {Timestamp}", _lastTimestamp);
             }
         }
         catch (Exception ex)
@@ -248,27 +288,19 @@ public class SlackInteractiveBot
             _logger.LogInformation("Current conversation context: {Context}", _conversationContext);
         }
 
-        // Skip our own messages to prevent loops
-        if (text.Contains("Jeg er online") || 
-            text.Contains("I'm online") ||
-            text.Contains("Jeg er ikke sikker") ||
-            text.Contains("I'm not sure"))
-        {
-            _logger.LogInformation("Skipping our own message to prevent loops");
-            return;
-        }
-
         // Skip system messages and announcements that don't need a response
         if (text.Contains("has joined the channel") || 
             text.Contains("added an integration") ||
             text.Contains("added to the channel") ||
             text.StartsWith("<http"))
         {
+            _logger.LogInformation("Skipping system message or announcement");
             return;
         }
 
         // Detect language (Danish or English)
         bool isEnglish = DetectLanguage(text) == "en";
+        _logger.LogInformation("Detected language: {Language}", isEnglish ? "English" : "Danish");
         
         // Handle questions about what day it is today
         if (text.ToLowerInvariant().Contains("hvilken dag er det i dag") || 
@@ -350,30 +382,67 @@ public class SlackInteractiveBot
 
     private bool IsFollowUpQuestion(string text)
     {
-        if (!_conversationContext.IsStillValid)
+        if (string.IsNullOrEmpty(text))
         {
             return false;
         }
         
         text = text.ToLowerInvariant();
         
-        // Check for phrases that indicate follow-up questions
-        bool hasFollowUpPhrase = text.Contains("what about") || 
-                               text.Contains("how about") || 
-                               text.Contains("hvad med") || 
-                               text.Contains("hvordan med") ||
-                               text.Contains("og hvad med") ||
-                               text.Contains("and what about") ||
-                               text.Contains("tak") ||
-                               text.Contains("thanks") ||
-                               text.StartsWith("og") ||
-                               text.StartsWith("and");
-                               
-        // If it's a very short message, it's likely a follow-up
-        bool isShortMessage = text.Split(' ').Length <= 5;
+        // Log the current text and conversation context
+        _logger.LogInformation("Checking if '{Text}' is a follow-up question. Context valid: {IsValid}", 
+            text, _conversationContext.IsStillValid);
         
-        // If it contains a child name but doesn't have time references, it might be a follow-up
-        bool hasChildName = ExtractChildName(text) != null;
+        // If the conversation context has expired, it's not a follow-up
+        if (!_conversationContext.IsStillValid)
+        {
+            return false;
+        }
+        
+        // Check for explicit follow-up phrases
+        bool hasFollowUpPhrase = text.Contains("hvad med") || 
+                               text.Contains("what about") || 
+                               text.Contains("how about") || 
+                               text.Contains("hvordan med") ||
+                               text.StartsWith("og ") || 
+                               text.StartsWith("and ") ||
+                               text.Contains("og hvad") ||
+                               text.Contains("and what") ||
+                               text.Contains("også") ||
+                               text.Contains("also") ||
+                               text.Contains("likewise") ||
+                               text == "og?" ||
+                               text == "and?";
+        
+        // Check if this is a short message
+        bool isShortMessage = text.Length < 15;
+        
+        // Check if the message contains a child name
+        bool hasChildName = false;
+        foreach (var childName in _childrenByName.Keys)
+        {
+            if (text.Contains(childName.ToLowerInvariant()))
+            {
+                hasChildName = true;
+                break;
+            }
+        }
+        
+        // Also check for first names
+        if (!hasChildName)
+        {
+            foreach (var child in _childrenByName.Values)
+            {
+                string firstName = child.FirstName.Split(' ')[0].ToLowerInvariant();
+                if (text.Contains(firstName.ToLowerInvariant()))
+                {
+                    hasChildName = true;
+                    break;
+                }
+            }
+        }
+        
+        // Check if the message contains time references
         bool hasTimeReference = text.Contains("today") || text.Contains("tomorrow") || 
                               text.Contains("i dag") || text.Contains("i morgen");
                               
@@ -439,11 +508,27 @@ public class SlackInteractiveBot
                 // Use word boundary to avoid partial matches
                 if (Regex.IsMatch(text, $@"\b{Regex.Escape(childName)}\b", RegexOptions.IgnoreCase))
                 {
+                    _logger.LogInformation("Found child name in follow-up: {ChildName}", childName);
                     return childName;
                 }
             }
             
+            // Check for first names only in follow-up questions
+            foreach (var child in _childrenByName.Values)
+            {
+                string firstName = child.FirstName.Split(' ')[0].ToLowerInvariant();
+                // Use word boundary to avoid partial matches
+                if (Regex.IsMatch(text, $@"\b{Regex.Escape(firstName)}\b", RegexOptions.IgnoreCase))
+                {
+                    string matchedKey = _childrenByName.Keys.FirstOrDefault(k => 
+                        k.StartsWith(firstName, StringComparison.OrdinalIgnoreCase)) ?? "";
+                    _logger.LogInformation("Found first name in follow-up: {FirstName} -> {ChildName}", firstName, matchedKey);
+                    return matchedKey;
+                }
+            }
+            
             // If no child name found in the follow-up, use the last child from context
+            _logger.LogInformation("No child name in follow-up, using context: {ChildName}", _conversationContext.LastChildName);
             return _conversationContext.LastChildName;
         }
         
@@ -455,11 +540,28 @@ public class SlackInteractiveBot
             if (index >= 0)
             {
                 string afterPhrase = text.Substring(index + phrase.Length).Trim();
+                _logger.LogInformation("Follow-up phrase detected: '{Phrase}', text after: '{AfterPhrase}'", phrase, afterPhrase);
+                
+                // First check for full names
                 foreach (var childName in _childrenByName.Keys)
                 {
                     if (Regex.IsMatch(afterPhrase, $@"\b{Regex.Escape(childName)}\b", RegexOptions.IgnoreCase))
                     {
+                        _logger.LogInformation("Found child name after follow-up phrase: {ChildName}", childName);
                         return childName;
+                    }
+                }
+                
+                // Then check for first names
+                foreach (var child in _childrenByName.Values)
+                {
+                    string firstName = child.FirstName.Split(' ')[0].ToLowerInvariant();
+                    if (Regex.IsMatch(afterPhrase, $@"\b{Regex.Escape(firstName)}\b", RegexOptions.IgnoreCase))
+                    {
+                        string matchedKey = _childrenByName.Keys.FirstOrDefault(k => 
+                            k.StartsWith(firstName, StringComparison.OrdinalIgnoreCase)) ?? "";
+                        _logger.LogInformation("Found first name after follow-up phrase: {FirstName} -> {ChildName}", firstName, matchedKey);
+                        return matchedKey;
                     }
                 }
             }
@@ -471,6 +573,7 @@ public class SlackInteractiveBot
             // Use word boundary to avoid partial matches
             if (Regex.IsMatch(text, $@"\b{Regex.Escape(childName)}\b", RegexOptions.IgnoreCase))
             {
+                _logger.LogInformation("Found full child name in text: {ChildName}", childName);
                 return childName;
             }
         }
@@ -482,11 +585,14 @@ public class SlackInteractiveBot
             // Use word boundary to avoid partial matches
             if (Regex.IsMatch(text, $@"\b{Regex.Escape(firstName)}\b", RegexOptions.IgnoreCase))
             {
-                return _childrenByName.Keys.FirstOrDefault(k => 
-                    k.StartsWith(firstName, StringComparison.OrdinalIgnoreCase));
+                string matchedKey = _childrenByName.Keys.FirstOrDefault(k => 
+                    k.StartsWith(firstName, StringComparison.OrdinalIgnoreCase)) ?? "";
+                _logger.LogInformation("Found first name in text: {FirstName} -> {ChildName}", firstName, matchedKey);
+                return matchedKey;
             }
         }
         
+        _logger.LogInformation("No child name found in text");
         return null;
     }
 
@@ -624,26 +730,24 @@ public class SlackInteractiveBot
     {
         try
         {
-            // Create the message payload
+            _logger.LogInformation("Sending message to Slack");
+            
             var payload = new
             {
                 channel = _config.Slack.ChannelId,
-                text = text,
-                mrkdwn = true
+                text = text
             };
             
-            // Serialize to JSON
             var content = new StringContent(
                 JsonConvert.SerializeObject(payload),
-                Encoding.UTF8);
-            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                Encoding.UTF8,
+                "application/json");
             
-            // Send to Slack API
             var response = await _httpClient.PostAsync("https://slack.com/api/chat.postMessage", content);
             
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Failed to send message to Slack: HTTP {StatusCode}", response.StatusCode);
+                _logger.LogError("Failed to send message: HTTP {StatusCode}", response.StatusCode);
                 return;
             }
             
@@ -652,7 +756,19 @@ public class SlackInteractiveBot
             
             if (data["ok"]?.Value<bool>() != true)
             {
-                _logger.LogError("Failed to send message to Slack: {Error}", data["error"]?.ToString());
+                _logger.LogError("Failed to send message: {Error}", data["error"]);
+            }
+            else
+            {
+                // Store the message ID to avoid processing it later
+                string messageId = data["ts"]?.ToString() ?? "";
+                if (!string.IsNullOrEmpty(messageId))
+                {
+                    _sentMessageIds.Add(messageId);
+                    _messageTimestamps[messageId] = DateTime.UtcNow;
+                    _logger.LogInformation("Stored sent message ID: {MessageId}", messageId);
+                }
+                _logger.LogInformation("Message sent successfully");
             }
         }
         catch (Exception ex)
@@ -711,35 +827,73 @@ public class SlackInteractiveBot
     {
         if (string.IsNullOrEmpty(weekLetter))
         {
-            _logger.LogInformation("Empty week letter for {ChildName}, not posting", childName);
+            _logger.LogWarning("Cannot post empty week letter for {ChildName}", childName);
             return;
         }
-
-        // Create a hash of the week letter content to check for duplicates
-        string contentHash = ComputeHash(childName + weekLetterTitle + weekLetter);
         
-        // Check if we've already posted this exact week letter
-        if (_postedWeekLetterHashes.Contains(contentHash))
+        // Compute a hash of the week letter to avoid posting duplicates
+        string hash = ComputeHash(weekLetter);
+        
+        // Check if we've already posted this week letter
+        if (_postedWeekLetterHashes.Contains(hash))
         {
-            _logger.LogInformation("Week letter for {ChildName} with title {Title} already posted, skipping", childName, weekLetterTitle);
+            _logger.LogInformation("Week letter for {ChildName} already posted, skipping", childName);
             return;
         }
-
-        _logger.LogInformation("Posting week letter for {ChildName} with title {Title}", childName, weekLetterTitle);
-        string message = $"*Week letter for {childName}*\n*{weekLetterTitle}*\n\n{weekLetter}";
         
-        await SendMessage(message);
+        // Add the hash to our set
+        _postedWeekLetterHashes.Add(hash);
         
-        // Remember that we've posted this week letter
-        _postedWeekLetterHashes.Add(contentHash);
-        _logger.LogInformation("Added hash for week letter: {ChildName} - {Title}", childName, weekLetterTitle);
+        // Format the message with a title
+        string message = $"*Ugeplan for {childName}: {weekLetterTitle}*\n\n{weekLetter}";
         
-        // Limit the size of the hash set to avoid memory issues over time
-        if (_postedWeekLetterHashes.Count > 100)
+        try
         {
-            // Remove oldest entries (approximation since HashSet doesn't maintain order)
-            int toRemove = _postedWeekLetterHashes.Count - 100;
-            _postedWeekLetterHashes.Take(toRemove).ToList().ForEach(hash => _postedWeekLetterHashes.Remove(hash));
+            _logger.LogInformation("Posting week letter for {ChildName}", childName);
+            
+            var payload = new
+            {
+                channel = _config.Slack.ChannelId,
+                text = message,
+                mrkdwn = true
+            };
+            
+            var content = new StringContent(
+                JsonConvert.SerializeObject(payload),
+                Encoding.UTF8);
+            content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+            
+            var response = await _httpClient.PostAsync("https://slack.com/api/chat.postMessage", content);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Failed to post week letter: HTTP {StatusCode}", response.StatusCode);
+                return;
+            }
+            
+            var responseContent = await response.Content.ReadAsStringAsync();
+            var data = JObject.Parse(responseContent);
+            
+            if (data["ok"]?.Value<bool>() != true)
+            {
+                _logger.LogError("Failed to post week letter: {Error}", data["error"]?.ToString());
+            }
+            else
+            {
+                // Store the message ID to avoid processing it later
+                string messageId = data["ts"]?.ToString() ?? "";
+                if (!string.IsNullOrEmpty(messageId))
+                {
+                    _sentMessageIds.Add(messageId);
+                    _messageTimestamps[messageId] = DateTime.UtcNow;
+                    _logger.LogInformation("Stored week letter message ID: {MessageId}", messageId);
+                }
+                _logger.LogInformation("Week letter for {ChildName} posted successfully", childName);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error posting week letter for {ChildName}", childName);
         }
     }
     
@@ -981,6 +1135,49 @@ public class SlackInteractiveBot
                 : $"Beklager, jeg kunne ikke behandle information om {childName} i øjeblikket.";
             
             await SendMessage(errorMessage);
+        }
+    }
+
+    private void CleanupOldMessageIds(object? state)
+    {
+        try
+        {
+            // Keep message IDs for 24 hours to be safe
+            var cutoff = DateTime.UtcNow.AddHours(-24);
+            int removedCount = 0;
+            
+            // Find message IDs older than the cutoff
+            var oldMessageIds = _messageTimestamps
+                .Where(kvp => kvp.Value < cutoff)
+                .Select(kvp => kvp.Key)
+                .ToList();
+            
+            // Remove them from both collections
+            foreach (var messageId in oldMessageIds)
+            {
+                _sentMessageIds.Remove(messageId);
+                _messageTimestamps.Remove(messageId);
+                removedCount++;
+            }
+            
+            // Also clean up the week letter hashes if there are too many
+            if (_postedWeekLetterHashes.Count > 100)
+            {
+                // Since we can't easily determine which are oldest in a HashSet,
+                // we'll just clear it if it gets too large
+                _postedWeekLetterHashes.Clear();
+                _logger.LogInformation("Cleared week letter hash cache");
+            }
+            
+            if (removedCount > 0)
+            {
+                _logger.LogInformation("Cleaned up {Count} old message IDs. Remaining: {Remaining}", 
+                    removedCount, _sentMessageIds.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error cleaning up old message IDs");
         }
     }
 } 

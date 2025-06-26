@@ -44,12 +44,22 @@ public class AgentService : IAgentService
             if (cachedWeekLetter != null)
             {
                 _logger.LogInformation("Returning cached week letter for {ChildName}", child.FirstName);
+                
+                // Add child name to the week letter object if not already present
+                if (cachedWeekLetter["child"] == null)
+                {
+                    cachedWeekLetter["child"] = child.FirstName;
+                }
+                
                 return cachedWeekLetter;
             }
         }
 
         _logger.LogInformation("Getting week letter for {ChildName} for date {Date}", child.FirstName, date);
         var weekLetter = await _minUddannelseClient.GetWeekLetter(child, date);
+        
+        // Add child name to the week letter object
+        weekLetter["child"] = child.FirstName;
 
         _dataManager.CacheWeekLetter(child, weekLetter);
 
