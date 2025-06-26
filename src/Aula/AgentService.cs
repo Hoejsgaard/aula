@@ -99,6 +99,15 @@ public class AgentService : IAgentService
         return await _openAiService.AskQuestionAboutWeekLetterAsync(weekLetter, question);
     }
 
+    public async Task<string> AskQuestionAboutWeekLetterAsync(Child child, DateOnly date, string question, string? contextKey)
+    {
+        _logger.LogInformation("Asking question about week letter for {ChildName} for date {Date} with context {ContextKey}: {Question}", 
+            child.FirstName, date, contextKey, question);
+        
+        var weekLetter = await GetWeekLetterAsync(child, date);
+        return await _openAiService.AskQuestionAboutWeekLetterAsync(weekLetter, question, contextKey);
+    }
+
     public async Task<JObject> ExtractKeyInformationFromWeekLetterAsync(Child child, DateOnly date)
     {
         _logger.LogInformation("Extracting key information from week letter for {ChildName} for date {Date}", 
