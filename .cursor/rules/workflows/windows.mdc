@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+- Prefix terminal commands with space to prevent character truncation
+
+- Use Git Bash for consistency across development team

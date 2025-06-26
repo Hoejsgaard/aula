@@ -79,7 +79,7 @@ public class AgentServiceTests
     {
         // Arrange
         _dataManagerMock.Setup(m => m.GetWeekLetter(_testChild))
-            .Returns((JObject)null);
+            .Returns((JObject?)null);
 
         var apiWeekLetter = new JObject
         {
@@ -112,7 +112,7 @@ public class AgentServiceTests
     {
         // Arrange
         _dataManagerMock.Setup(m => m.GetWeekLetter(_testChild))
-            .Returns((JObject)null);
+            .Returns((JObject?)null);
 
         var apiWeekLetter = new JObject
         {
