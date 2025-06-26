@@ -32,9 +32,12 @@ public class AgentService : IAgentService
 
     public async Task<JObject> GetWeekLetterAsync(Child child, DateOnly date, bool useCache = true)
     {
+        _logger.LogInformation("📌 MONITOR: GetWeekLetterAsync for {ChildName} for date {Date}, useCache: {UseCache}", 
+            child.FirstName, date, useCache);
+        
         if (!_isLoggedIn)
         {
-            _logger.LogWarning("Not logged in. Attempting to login before getting week letter");
+            _logger.LogWarning("📌 MONITOR: Not logged in. Attempting to login before getting week letter");
             await LoginAsync();
         }
 
@@ -43,26 +46,64 @@ public class AgentService : IAgentService
             var cachedWeekLetter = _dataManager.GetWeekLetter(child);
             if (cachedWeekLetter != null)
             {
-                _logger.LogInformation("Returning cached week letter for {ChildName}", child.FirstName);
+                _logger.LogInformation("📌 MONITOR: Returning cached week letter for {ChildName}", child.FirstName);
+                
+                // Log the content of the cached week letter
+                var cachedContent = cachedWeekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
+                _logger.LogInformation("📌 MONITOR: Cached week letter content length for {ChildName}: {Length} characters", 
+                    child.FirstName, cachedContent.Length);
+                
+                if (string.IsNullOrEmpty(cachedContent))
+                {
+                    _logger.LogWarning("📌 MONITOR: Cached week letter content is empty for {ChildName}", child.FirstName);
+                }
                 
                 // Add child name to the week letter object if not already present
                 if (cachedWeekLetter["child"] == null)
                 {
                     cachedWeekLetter["child"] = child.FirstName;
+                    _logger.LogInformation("📌 MONITOR: Added missing child name to cached week letter");
                 }
                 
                 return cachedWeekLetter;
             }
         }
 
-        _logger.LogInformation("Getting week letter for {ChildName} for date {Date}", child.FirstName, date);
+        _logger.LogInformation("📌 MONITOR: Fetching fresh week letter for {ChildName} for date {Date}", child.FirstName, date);
         var weekLetter = await _minUddannelseClient.GetWeekLetter(child, date);
+        
+        // Log the raw week letter structure
+        _logger.LogInformation("📌 MONITOR: Raw week letter structure for {ChildName}: {Keys}", 
+            child.FirstName, string.Join(", ", weekLetter.Properties().Select(p => p.Name)));
+        
+        if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
+        {
+            _logger.LogInformation("📌 MONITOR: Week letter for {ChildName} contains {Count} ugebreve items, first item has keys: {Keys}", 
+                child.FirstName, ugebreve.Count, 
+                string.Join(", ", ugebreve[0].Children<JProperty>().Select(p => p.Name)));
+            
+            var content = ugebreve[0]?["indhold"]?.ToString() ?? "";
+            _logger.LogInformation("📌 MONITOR: Week letter content length for {ChildName}: {Length} characters", 
+                child.FirstName, content.Length);
+                
+            if (!string.IsNullOrEmpty(content))
+            {
+                _logger.LogInformation("📌 MONITOR: Week letter content starts with: {Start}", 
+                    content.Length > 100 ? content.Substring(0, 100) + "..." : content);
+            }
+        }
+        else
+        {
+            _logger.LogWarning("📌 MONITOR: Week letter for {ChildName} does not contain ugebreve array or it's empty", child.FirstName);
+        }
         
         // Add child name to the week letter object
         weekLetter["child"] = child.FirstName;
+        _logger.LogInformation("📌 MONITOR: Added child name to week letter: {ChildName}", child.FirstName);
 
         _dataManager.CacheWeekLetter(child, weekLetter);
-
+        _logger.LogInformation("📌 MONITOR: Cached week letter for {ChildName}", child.FirstName);
+        
         return weekLetter;
     }
 
@@ -111,10 +152,21 @@ public class AgentService : IAgentService
 
     public async Task<string> AskQuestionAboutWeekLetterAsync(Child child, DateOnly date, string question, string? contextKey)
     {
-        _logger.LogInformation("Asking question about week letter for {ChildName} for date {Date} with context {ContextKey}: {Question}", 
-            child.FirstName, date, contextKey, question);
+        _logger.LogInformation("📌 MONITOR: AskQuestionAboutWeekLetterAsync for {ChildName} with context {ContextKey}: {Question}", 
+            child.FirstName, contextKey, question);
         
         var weekLetter = await GetWeekLetterAsync(child, date);
+        
+        // Extract and log the content to ensure it's being passed correctly
+        var content = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
+        _logger.LogInformation("📌 MONITOR: Week letter content being passed to OpenAiService: {Length} characters", content.Length);
+        
+        if (!string.IsNullOrEmpty(content))
+        {
+            var contentPreview = content.Length > 200 ? content.Substring(0, 200) + "..." : content;
+            _logger.LogInformation("📌 MONITOR: Week letter content preview: {Preview}", contentPreview);
+        }
+        
         return await _openAiService.AskQuestionAboutWeekLetterAsync(weekLetter, question, contextKey);
     }
 
