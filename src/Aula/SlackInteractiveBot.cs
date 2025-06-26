@@ -384,25 +384,48 @@ public class SlackInteractiveBot
 
     private string DetectLanguage(string text)
     {
-        // Simple language detection based on word frequency
-        text = text.ToLowerInvariant();
-        
-        // Count English and Danish words
-        int englishCount = 0;
-        int danishCount = 0;
-        
-        // Split text into words and count matches
-        var words = Regex.Split(text, @"\W+").Where(w => !string.IsNullOrEmpty(w));
-        foreach (var word in words)
+        if (string.IsNullOrEmpty(text))
         {
-            if (_englishWords.Contains(word))
-                englishCount++;
-            if (_danishWords.Contains(word))
-                danishCount++;
+            return "da"; // Default to Danish if no text
         }
         
-        // Default to Danish unless clearly English
-        return englishCount > danishCount ? "en" : "da";
+        string lowerText = text.ToLowerInvariant();
+        
+        // Count English and Danish words
+        int englishWordCount = 0;
+        int danishWordCount = 0;
+        
+        foreach (var word in lowerText.Split(' ', ',', '.', '!', '?', ':', ';', '-', '(', ')', '[', ']', '{', '}'))
+        {
+            string cleanWord = word.Trim();
+            if (string.IsNullOrEmpty(cleanWord))
+            {
+                continue;
+            }
+            
+            if (_englishWords.Contains(cleanWord))
+            {
+                englishWordCount++;
+            }
+            
+            if (_danishWords.Contains(cleanWord))
+            {
+                danishWordCount++;
+            }
+        }
+        
+        _logger.LogInformation("🔍 TRACKING: Language detection - English words: {EnglishCount}, Danish words: {DanishCount}", 
+            englishWordCount, danishWordCount);
+        
+        // If we have more Danish words, or equal but the text contains Danish-specific characters, use Danish
+        if (danishWordCount > englishWordCount || 
+            (danishWordCount == englishWordCount && 
+             (lowerText.Contains('æ') || lowerText.Contains('ø') || lowerText.Contains('å'))))
+        {
+            return "da";
+        }
+        
+        return "en";
     }
 
     private string? ExtractChildName(string text)
@@ -866,6 +889,11 @@ public class SlackInteractiveBot
                     enhancedQuestion = dayContext + enhancedQuestion;
                     _logger.LogInformation("🔍 TRACKING: Enhanced question with day context: {Question}", enhancedQuestion);
                 }
+                
+                // Add language context to ensure the LLM responds in the correct language
+                string language = isEnglish ? "English" : "Danish";
+                enhancedQuestion = $"[Please respond in {language}] " + enhancedQuestion;
+                _logger.LogInformation("🔍 TRACKING: Added language context: {Language}", language);
                 
                 string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), enhancedQuestion, contextKey);
                 _logger.LogInformation("🔍 TRACKING: Got answer: {Length} characters", answer.Length);
