@@ -1,0 +1,21 @@
+---
+description: Expected layout and file placement for backend
+globs: 
+alwaysApply: false
+---
+
+# 📁 Backend Folder Structure
+
+## `src/transaction-app`
+- Core backend logic lives here.
+- Compose services, auth flows, and bank integration logic here.
+
+## `src/transaction-app.Tests`
+- Test projects (unit/integration) belong here.
+- Test filenames should match logic in `transaction-app`.
+
+## `src/transaction-client`
+- Optional SDK or client. Do not add backend logic here.
+
+## `scripts`
+- Use only for CLI tools, ad hoc tasks, or dev helpers.

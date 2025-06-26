@@ -1,0 +1,34 @@
+---
+description: Rules for writing clean code, and how to not comment.
+globs: *.cs
+alwaysApply: false
+---
+
+# Clean Code Guidelines
+
+- Favor clarity over brevity.
+- Use expressive names: `bankingTransactionService` > `svc`
+- Avoid side effects: functions should do one thing
+- Use consistent formatting (auto-format code)
+- Comment only when the "why" isn't obvious — never for the "what"
+- Avoid magic strings/numbers — extract constants
+
+## Style Rules
+
+- No XML documentation or verbose comments
+- Only document side effects and complex business logic
+- Use descriptive namespaces (SecureCommunication vs Banking)
+- Move/rename classes when purpose changes
+
+## Examples
+
+Bad:
+```csharp
+if (x == 4) { DoThing(); }
+```
+
+Good:
+```csharp
+if (retryCount == MaxRetries) { NotifyUser(); }
+```
+

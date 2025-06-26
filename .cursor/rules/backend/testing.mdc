@@ -1,0 +1,222 @@
+---
+description: 
+globs: **/transaction-app.Tests/*
+alwaysApply: false
+---
+# Unit Test Guidelines
+
+Tests are production code. Write them with the same care and standards.
+
+## Structure: AAA Pattern
+```csharp
+[Fact]
+public async Task CreateLoginUrl_WhenBankNotFound_ShouldThrowArgumentException()
+{
+    // Arrange
+    var service = CreateTestService();
+    
+    // Act
+    var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
+        service.CreateLoginUrl("unknown-bank"));
+    
+    // Assert
+    exception.Message.Should().Contain("Bank not found");
+}
+```
+
+**Use `// Arrange`, `// Act`, and `// Assert` comments in every test method.**
+This makes the test structure immediately clear to all readers and helps enforce the AAA pattern, especially for onboarding and code reviews.
+
+**One Thing Per Test**
+Each test verifies one specific behavior. Split complex scenarios into multiple focused tests.
+
+## Naming Conventions
+
+- Test files: `[Feature]ProviderServiceTests.cs`
+- Test classes: `[Feature]ProviderServiceTests` (sealed)
+- Test methods: `[Method]_[Condition]_[ExpectedResult]`
+
+## Style & Tools
+
+**Use FluentAssertions exclusively**
+```csharp
+// Good
+result.Should().NotBeNull();
+result.Status.Should().Be(HttpStatusCode.OK);
+
+// Bad - basic asserts
+Assert.NotNull(result);
+```
+
+**No Reflection in Tests**
+If you need reflection to verify results, the API design needs improvement.
+
+## Test Data
+
+**Use Builders for Complex Data**
+```csharp
+public static class TestDataBuilder
+{
+    public static BankDataEnvironment CreateSandboxEnvironment(string bankId = "sydbank") =>
+        new BankDataEnvironment 
+        { 
+            Name = "Sandbox",
+            Banks = new Dictionary<string, BankDataBank>
+            {
+                [bankId] = CreateTestBank(bankId)
+            }
+        };
+}
+```
+
+**Use Random Data for Non-Critical Values**
+Use realistic but randomized data for strings, names, etc. to avoid test coupling.
+
+**Minimal Test Data**
+Only include properties relevant to the test scenario.
+
+## Mocking
+
+**Mock External Dependencies Only**
+Don't mock the system under test or value objects.
+
+**Verify Important Interactions**
+```csharp
+// Good - verify the important interaction
+mockApiClient.Verify(x => x.GetAccounts(It.IsAny<string>()), Times.Once);
+
+// Bad - over-verification of logging
+mockLogger.Verify(x => x.LogInformation(It.IsAny<string>()), Times.Exactly(3));
+```
+
+## Side Effects Verification
+
+**Verify State Changes**
+Test that your code produces the expected side effects:
+```csharp
+// Verify database changes
+var savedConsent = await repository.GetConsentAsync(consentId);
+savedConsent.Status.Should().Be(ConsentStatus.Authorized);
+
+// Verify external API calls
+mockBankApi.Verify(x => x.CreateConsent(It.IsAny<ConsentRequest>()), Times.Once);
+```
+
+## Configuration Tests
+
+**Use Test Configuration Files, Not In-Memory Dictionaries**
+Create actual `appsettings.test.json` files instead of building complex in-memory configurations.
+
+```csharp
+// Good - use actual config file
+private static IConfiguration BuildTestConfiguration()
+{
+    return new ConfigurationBuilder()
+        .AddJsonFile("TestData/appsettings.test.json")
+        .Build();
+}
+
+[Fact]
+public void BankDataSettings_ShouldLoadFromConfiguration()
+{
+    // Arrange
+    var configuration = BuildTestConfiguration();
+    
+    // Act
+    var settings = configuration.GetSection("Providers:BankData").Get<BankDataSettings>();
+    
+    // Assert
+    settings.Should().NotBeNull();
+    settings.Environments.Should().NotBeEmpty();
+    settings.Environments.First().Banks.Should().ContainKey("sydbank");
+}
+
+// Bad - massive in-memory dictionary
+private static IConfiguration BuildConfiguration()
+{
+    var configValues = new Dictionary<string, string?>
+    {
+        {"Providers:BankData:Environments:0:Name", "Sandbox"},
+        {"Providers:BankData:Environments:0:ClientId", "test-client"},
+        // ... 50+ more lines of configuration
+    };
+    return new ConfigurationBuilder().AddInMemoryCollection(configValues).Build();
+}
+```
+
+**Test Configuration Loading, Not Data Values**
+Verify the binding works and structure is correct, not every individual configuration value.
+
+## Certificate/Security Tests
+
+**Use Actual Test Certificate Files**
+Create real test certificates and load them from files, never use production certificates or hardcoded byte arrays.
+
+```csharp
+// Good - use test certificate files
+public static class TestCertificates
+{
+    public static X509Certificate2 GetTestQseal() =>
+        new X509Certificate2("TestData/Certificates/test-qseal.p12", "test-password");
+        
+    public static X509Certificate2 GetTestQwac() =>
+        new X509Certificate2("TestData/Certificates/test-qwac.p12", "test-password");
+}
+
+[Fact]
+public void CertificateHandler_ShouldLoadTestCertificate()
+{
+    // Arrange
+    var cert = TestCertificates.GetTestQseal();
+    
+    // Act
+    var handler = new CertificateHandler(cert);
+    
+    // Assert
+    handler.Should().NotBeNull();
+    cert.HasPrivateKey.Should().BeTrue();
+}
+
+// Bad - hardcoded bytes or production certs
+var cert = new X509Certificate2(new byte[] { 0x30, 0x82, ... }); // hundreds of bytes
+```
+
+**Store Test Certificates in TestData/Certificates/**
+Keep all test certificates in a dedicated folder structure that's clearly separate from production certificates.
+
+## Test Organization
+
+**Group by Feature**
+Organize tests in directories matching the feature structure:
+```
+Tests/
+  Services/
+    Providers/
+      BankData/
+        BankDataProviderServiceTests.cs
+        BankDataApiClientTests.cs
+```
+
+**Avoid Shared State**
+Don't use fields between tests. Prefer local variables within each test method.
+
+## Coverage
+- Test both:
+  - Positive paths: valid inputs, successful results
+  - Negative paths: errors, nulls, invalid tokens
+
+## Red Flags
+
+These patterns indicate test quality issues:
+- Using `GetType()` or reflection
+- Tests over 20 lines
+- More than 3 mocks per test
+- Hardcoded JSON strings
+- Testing multiple scenarios in one method
+- Sharing fields between tests
+
+## Tips
+- Test smallest units — avoid integration unless required
+- One assert per test is a good default
+- Use descriptive variable names in tests
+- Test error messages only when they're user-facing
