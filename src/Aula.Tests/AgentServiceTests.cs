@@ -8,7 +8,8 @@ public class AgentServiceTests
 {
     private readonly Mock<IMinUddannelseClient> _minUddannelseClientMock;
     private readonly Mock<IDataManager> _dataManagerMock;
-    private readonly Mock<ILogger<AgentService>> _loggerMock;
+    private readonly Mock<ILoggerFactory> _loggerFactoryMock;
+    private readonly Mock<ILogger> _loggerMock;
     private readonly AgentService _agentService;
     private readonly Child _testChild;
     private readonly DateOnly _testDate;
@@ -17,8 +18,11 @@ public class AgentServiceTests
     {
         _minUddannelseClientMock = new Mock<IMinUddannelseClient>();
         _dataManagerMock = new Mock<IDataManager>();
-        _loggerMock = new Mock<ILogger<AgentService>>();
-        _agentService = new AgentService(_minUddannelseClientMock.Object, _dataManagerMock.Object, _loggerMock.Object);
+        _loggerMock = new Mock<ILogger>();
+        _loggerFactoryMock = new Mock<ILoggerFactory>();
+        _loggerFactoryMock.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_loggerMock.Object);
+
+        _agentService = new AgentService(_minUddannelseClientMock.Object, _dataManagerMock.Object, _loggerFactoryMock.Object);
 
         _testChild = new Child
         {
@@ -141,4 +145,4 @@ public class AgentServiceTests
         _minUddannelseClientMock.Verify(m => m.LoginAsync(), Times.Once);
         _minUddannelseClientMock.Verify(m => m.GetWeekLetter(_testChild, _testDate), Times.Once);
     }
-} 
+}

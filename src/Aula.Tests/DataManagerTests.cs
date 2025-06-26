@@ -8,7 +8,8 @@ namespace Aula.Tests;
 public class DataManagerTests
 {
     private readonly IMemoryCache _cache;
-    private readonly Mock<ILogger<DataManager>> _loggerMock;
+    private readonly Mock<ILoggerFactory> _loggerFactoryMock;
+    private readonly Mock<ILogger> _loggerMock;
     private readonly DataManager _dataManager;
     private readonly Child _testChild;
 
@@ -16,8 +17,11 @@ public class DataManagerTests
     {
         // Create a real memory cache for testing
         _cache = new MemoryCache(new MemoryCacheOptions());
-        _loggerMock = new Mock<ILogger<DataManager>>();
-        _dataManager = new DataManager(_cache, _loggerMock.Object);
+        _loggerMock = new Mock<ILogger>();
+        _loggerFactoryMock = new Mock<ILoggerFactory>();
+        _loggerFactoryMock.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_loggerMock.Object);
+
+        _dataManager = new DataManager(_cache, _loggerFactoryMock.Object);
 
         _testChild = new Child
         {
@@ -104,4 +108,4 @@ public class DataManagerTests
         // Assert
         Assert.Null(result);
     }
-} 
+}

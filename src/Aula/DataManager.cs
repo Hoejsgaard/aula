@@ -7,13 +7,13 @@ namespace Aula;
 public class DataManager : IDataManager
 {
     private readonly IMemoryCache _cache;
-    private readonly ILogger<DataManager> _logger;
+    private readonly ILogger _logger;
     private readonly TimeSpan _cacheExpiration = TimeSpan.FromHours(1);
 
-    public DataManager(IMemoryCache cache, ILogger<DataManager> logger)
+    public DataManager(IMemoryCache cache, ILoggerFactory loggerFactory)
     {
         _cache = cache;
-        _logger = logger;
+        _logger = loggerFactory.CreateLogger(nameof(DataManager));
     }
 
     public void CacheWeekLetter(Child child, JObject weekLetter)
@@ -31,7 +31,7 @@ public class DataManager : IDataManager
             _logger.LogInformation("Retrieved week letter from cache for {ChildName}", child.FirstName);
             return weekLetter;
         }
-        
+
         _logger.LogInformation("No cached week letter found for {ChildName}", child.FirstName);
         return null;
     }
@@ -51,7 +51,7 @@ public class DataManager : IDataManager
             _logger.LogInformation("Retrieved week schedule from cache for {ChildName}", child.FirstName);
             return weekSchedule;
         }
-        
+
         _logger.LogInformation("No cached week schedule found for {ChildName}", child.FirstName);
         return null;
     }
@@ -65,4 +65,4 @@ public class DataManager : IDataManager
     {
         return $"WeekSchedule:{child.FirstName}:{child.LastName}";
     }
-} 
+}

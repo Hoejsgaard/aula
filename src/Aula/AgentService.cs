@@ -7,17 +7,17 @@ public class AgentService : IAgentService
 {
     private readonly IMinUddannelseClient _minUddannelseClient;
     private readonly IDataManager _dataManager;
-    private readonly ILogger<AgentService> _logger;
+    private readonly ILogger _logger;
     private bool _isLoggedIn;
 
     public AgentService(
         IMinUddannelseClient minUddannelseClient,
         IDataManager dataManager,
-        ILogger<AgentService> logger)
+        ILoggerFactory loggerFactory)
     {
         _minUddannelseClient = minUddannelseClient;
         _dataManager = dataManager;
-        _logger = logger;
+        _logger = loggerFactory.CreateLogger(nameof(AgentService));
     }
 
     public async Task<bool> LoginAsync()
@@ -47,9 +47,9 @@ public class AgentService : IAgentService
 
         _logger.LogInformation("Getting week letter for {ChildName} for date {Date}", child.FirstName, date);
         var weekLetter = await _minUddannelseClient.GetWeekLetter(child, date);
-        
+
         _dataManager.CacheWeekLetter(child, weekLetter);
-        
+
         return weekLetter;
     }
 
@@ -73,9 +73,9 @@ public class AgentService : IAgentService
 
         _logger.LogInformation("Getting week schedule for {ChildName} for date {Date}", child.FirstName, date);
         var weekSchedule = await _minUddannelseClient.GetWeekSchedule(child, date);
-        
+
         _dataManager.CacheWeekSchedule(child, weekSchedule);
-        
+
         return weekSchedule;
     }
-} 
+}
