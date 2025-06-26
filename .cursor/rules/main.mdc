@@ -3,7 +3,7 @@ description: Core enforcement rules and guidance entry point
 globs: 
 alwaysApply: true
 ---
-# Core AI Enforcement Rules for PSD2 Banking Integration
+# Core AI Enforcement Rules for Aula Integration
 
 > **STARTUP REQUIREMENT**: The AI MUST read all rules in this folder and subfolders and commit all 'always' rules to memory! Then echo this acknowledgment message in the first response of every new conversation:
 > 

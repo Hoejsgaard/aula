@@ -10,17 +10,16 @@ Tests are production code. Write them with the same care and standards.
 ## Structure: AAA Pattern
 ```csharp
 [Fact]
-public async Task CreateLoginUrl_WhenBankNotFound_ShouldThrowArgumentException()
+public async Task GetWeekLetter_WhenNoDataFound_ShouldReturnNull()
 {
     // Arrange
     var service = CreateTestService();
     
     // Act
-    var exception = await Assert.ThrowsAsync<ArgumentException>(() => 
-        service.CreateLoginUrl("unknown-bank"));
+    var result = await service.GetWeekLetter("unknown-school");
     
     // Assert
-    exception.Message.Should().Contain("Bank not found");
+    result.Should().BeNull();
 }
 ```
 
@@ -32,8 +31,8 @@ Each test verifies one specific behavior. Split complex scenarios into multiple 
 
 ## Naming Conventions
 
-- Test files: `[Feature]ProviderServiceTests.cs`
-- Test classes: `[Feature]ProviderServiceTests` (sealed)
+- Test files: `[Class]Tests.cs`
+- Test classes: `[Class]Tests` (sealed)
 - Test methods: `[Method]_[Condition]_[ExpectedResult]`
 
 ## Style & Tools
@@ -57,13 +56,13 @@ If you need reflection to verify results, the API design needs improvement.
 ```csharp
 public static class TestDataBuilder
 {
-    public static BankDataEnvironment CreateSandboxEnvironment(string bankId = "sydbank") =>
-        new BankDataEnvironment 
+    public static MinUddannelseEnvironment CreateTestEnvironment(string schoolId = "test-school") =>
+        new MinUddannelseEnvironment 
         { 
-            Name = "Sandbox",
-            Banks = new Dictionary<string, BankDataBank>
+            Name = "Test",
+            Schools = new Dictionary<string, MinUddannelseSchool>
             {
-                [bankId] = CreateTestBank(bankId)
+                [schoolId] = CreateTestSchool(schoolId)
             }
         };
 }
@@ -83,7 +82,7 @@ Don't mock the system under test or value objects.
 **Verify Important Interactions**
 ```csharp
 // Good - verify the important interaction
-mockApiClient.Verify(x => x.GetAccounts(It.IsAny<string>()), Times.Once);
+mockApiClient.Verify(x => x.GetWeekLetter(It.IsAny<string>()), Times.Once);
 
 // Bad - over-verification of logging
 mockLogger.Verify(x => x.LogInformation(It.IsAny<string>()), Times.Exactly(3));
@@ -94,12 +93,12 @@ mockLogger.Verify(x => x.LogInformation(It.IsAny<string>()), Times.Exactly(3));
 **Verify State Changes**
 Test that your code produces the expected side effects:
 ```csharp
-// Verify database changes
-var savedConsent = await repository.GetConsentAsync(consentId);
-savedConsent.Status.Should().Be(ConsentStatus.Authorized);
+// Verify data changes
+var savedData = await dataManager.GetDataAsync(dataId);
+savedData.Status.Should().Be(DataStatus.Updated);
 
 // Verify external API calls
-mockBankApi.Verify(x => x.CreateConsent(It.IsAny<ConsentRequest>()), Times.Once);
+mockAulaClient.Verify(x => x.GetMessages(It.IsAny<string>()), Times.Once);
 ```
 
 ## Configuration Tests
@@ -117,18 +116,18 @@ private static IConfiguration BuildTestConfiguration()
 }
 
 [Fact]
-public void BankDataSettings_ShouldLoadFromConfiguration()
+public void AulaSettings_ShouldLoadFromConfiguration()
 {
     // Arrange
     var configuration = BuildTestConfiguration();
     
     // Act
-    var settings = configuration.GetSection("Providers:BankData").Get<BankDataSettings>();
+    var settings = configuration.GetSection("Aula").Get<AulaSettings>();
     
     // Assert
     settings.Should().NotBeNull();
-    settings.Environments.Should().NotBeEmpty();
-    settings.Environments.First().Banks.Should().ContainKey("sydbank");
+    settings.Schools.Should().NotBeEmpty();
+    settings.Schools.First().Should().NotBeNull();
 }
 
 // Bad - massive in-memory dictionary
@@ -136,8 +135,8 @@ private static IConfiguration BuildConfiguration()
 {
     var configValues = new Dictionary<string, string?>
     {
-        {"Providers:BankData:Environments:0:Name", "Sandbox"},
-        {"Providers:BankData:Environments:0:ClientId", "test-client"},
+        {"Aula:Schools:0:Name", "Test School"},
+        {"Aula:Schools:0:Id", "test-school"},
         // ... 50+ more lines of configuration
     };
     return new ConfigurationBuilder().AddInMemoryCollection(configValues).Build();
@@ -147,42 +146,47 @@ private static IConfiguration BuildConfiguration()
 **Test Configuration Loading, Not Data Values**
 Verify the binding works and structure is correct, not every individual configuration value.
 
-## Certificate/Security Tests
+## Authentication Tests
 
-**Use Actual Test Certificate Files**
-Create real test certificates and load them from files, never use production certificates or hardcoded byte arrays.
+**Use Test Credentials Files**
+Create separate test credentials and load them from files, never use production credentials or hardcoded values.
 
 ```csharp
-// Good - use test certificate files
-public static class TestCertificates
+// Good - use test credential files
+public static class TestCredentials
 {
-    public static X509Certificate2 GetTestQseal() =>
-        new X509Certificate2("TestData/Certificates/test-qseal.p12", "REDACTED_PASSWORD");
-        
-    public static X509Certificate2 GetTestQwac() =>
-        new X509Certificate2("TestData/Certificates/test-qwac.p12", "REDACTED_PASSWORD");
+    public static UniLoginCredentials GetTestCredentials() =>
+        new UniLoginCredentials
+        {
+            Username = "test-user",
+            Password = "REDACTED_PASSWORD"
+        };
 }
 
 [Fact]
-public void CertificateHandler_ShouldLoadTestCertificate()
+public void UniLoginClient_ShouldAuthenticateWithTestCredentials()
 {
     // Arrange
-    var cert = TestCertificates.GetTestQseal();
+    var credentials = TestCredentials.GetTestCredentials();
     
     // Act
-    var handler = new CertificateHandler(cert);
+    var client = new UniLoginClient(credentials);
     
     // Assert
-    handler.Should().NotBeNull();
-    cert.HasPrivateKey.Should().BeTrue();
+    client.Should().NotBeNull();
+    client.IsAuthenticated.Should().BeFalse(); // Not authenticated yet
 }
 
-// Bad - hardcoded bytes or production certs
-var cert = new X509Certificate2(new byte[] { 0x30, 0x82, ... }); // hundreds of bytes
+// Bad - hardcoded credentials
+var client = new UniLoginClient(new UniLoginCredentials 
+{ 
+    Username = "real-username", 
+    Password = "actual-password" 
+});
 ```
 
-**Store Test Certificates in TestData/Certificates/**
-Keep all test certificates in a dedicated folder structure that's clearly separate from production certificates.
+**Store Test Credentials in TestData/Credentials/**
+Keep all test credentials in a dedicated folder structure that's clearly separate from production credentials.
 
 ## Test Organization
 
@@ -191,10 +195,10 @@ Organize tests in directories matching the feature structure:
 ```
 Tests/
   Services/
-    Providers/
-      BankData/
-        BankDataProviderServiceTests.cs
-        BankDataApiClientTests.cs
+    AgentServiceTests.cs
+  Clients/
+    MinUddannelseClientTests.cs
+    AulaClientTests.cs
 ```
 
 **Avoid Shared State**
