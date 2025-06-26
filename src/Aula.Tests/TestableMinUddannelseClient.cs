@@ -26,7 +26,7 @@ public class TestableMinUddannelseClient : IMinUddannelseClient
     {
         // In tests, we'll just simulate a successful login
         _loggedIn = true;
-        
+
         // Set up a mock user profile for testing
         _userProfile = new JObject
         {
@@ -40,7 +40,7 @@ public class TestableMinUddannelseClient : IMinUddannelseClient
                 }
             }
         };
-        
+
         return Task.FromResult(true);
     }
 
@@ -66,7 +66,7 @@ public class TestableMinUddannelseClient : IMinUddannelseClient
         var response = await _httpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
-        
+
         return JObject.Parse(json);
     }
 
@@ -77,4 +77,4 @@ public class TestableMinUddannelseClient : IMinUddannelseClient
         var firstDayOfWeek = cultureInfo.DateTimeFormat.FirstDayOfWeek;
         return cultureInfo.Calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue), calendarWeekRule, firstDayOfWeek);
     }
-} 
+}

@@ -7,4 +7,4 @@ public interface IAgentService
     Task<bool> LoginAsync();
     Task<JObject> GetWeekLetterAsync(Child child, DateOnly date, bool useCache = true);
     Task<JObject> GetWeekScheduleAsync(Child child, DateOnly date, bool useCache = true);
-} 
+}
