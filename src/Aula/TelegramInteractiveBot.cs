@@ -404,7 +404,7 @@ public class TelegramInteractiveBot
                     ? "I don't have any children configured."
                     : "Jeg har ingen børn konfigureret.";
                 
-                await SendMessage(chatId, noChildrenMessage);
+                await SendMessageInternal(chatId, noChildrenMessage);
                 return;
             }
 
@@ -425,7 +425,7 @@ public class TelegramInteractiveBot
                     ? "I don't have any week letters available at the moment."
                     : "Jeg har ingen ugebreve tilgængelige i øjeblikket.";
                 
-                await SendMessage(chatId, noLettersMessage);
+                await SendMessageInternal(chatId, noLettersMessage);
                 return;
             }
 
@@ -448,7 +448,7 @@ public class TelegramInteractiveBot
             // Use the new combined method
             string answer = await _agentService.AskQuestionAboutChildrenAsync(childrenWeekLetters, enhancedQuestion, contextKey, ChatInterface.Telegram);
             
-            await SendMessage(chatId, answer);
+            await SendMessageInternal(chatId, answer);
         }
         catch (Exception ex)
         {
@@ -457,7 +457,7 @@ public class TelegramInteractiveBot
                 ? "Sorry, I couldn't process your question at the moment."
                 : "Beklager, jeg kunne ikke behandle dit spørgsmål i øjeblikket.";
             
-            await SendMessage(chatId, errorMessage);
+            await SendMessageInternal(chatId, errorMessage);
         }
     }
 
@@ -473,7 +473,7 @@ public class TelegramInteractiveBot
                     ? "I don't have any children configured."
                     : "Jeg har ingen børn konfigureret.";
                 
-                await SendMessage(chatId, noChildrenMessage);
+                await SendMessageInternal(chatId, noChildrenMessage);
                 return;
             }
 
@@ -521,7 +521,7 @@ public class TelegramInteractiveBot
             }
             
             // Send the combined response
-            await SendMessage(chatId, responseBuilder.ToString());
+            await SendMessageInternal(chatId, responseBuilder.ToString());
         }
         catch (Exception ex)
         {
@@ -530,11 +530,16 @@ public class TelegramInteractiveBot
                 ? "Sorry, I couldn't process information about all children at the moment."
                 : "Beklager, jeg kunne ikke behandle information om alle børn i øjeblikket.";
             
-            await SendMessage(chatId, errorMessage);
+            await SendMessageInternal(chatId, errorMessage);
         }
     }
 
-    private async Task SendMessage(long chatId, string text)
+    public async Task SendMessage(long chatId, string text)
+    {
+        await SendMessageInternal(chatId, text);
+    }
+
+    private async Task SendMessageInternal(long chatId, string text)
     {
         try
         {

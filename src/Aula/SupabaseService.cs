@@ -326,7 +326,7 @@ public class SupabaseService : ISupabaseService
 
         var result = await _supabase
             .From<ScheduledTask>()
-            .Where(t => t.Enabled)
+            .Where(t => t.Enabled == true)
             .Get();
 
         return result.Models;
