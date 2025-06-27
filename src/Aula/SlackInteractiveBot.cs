@@ -298,6 +298,12 @@ public class SlackInteractiveBot
         // Detect language (Danish or English)
         bool isEnglish = DetectLanguage(text) == "en";
         
+        // Check for help command first
+        if (await TryHandleHelpCommand(text, isEnglish))
+        {
+            return;
+        }
+        
         // Check for reminder commands first
         if (await TryHandleReminderCommand(text, isEnglish))
         {
@@ -1019,6 +1025,91 @@ public class SlackInteractiveBot
         };
         
         return relativeTimeWords.Any(word => lowerText.Contains(word));
+    }
+
+    private async Task<bool> TryHandleHelpCommand(string text, bool isEnglish)
+    {
+        var helpPatterns = new[]
+        {
+            @"^(help|--help|\?|commands)$",
+            @"^(hjælp|kommandoer)$"
+        };
+
+        foreach (var pattern in helpPatterns)
+        {
+            if (Regex.IsMatch(text, pattern, RegexOptions.IgnoreCase))
+            {
+                string helpMessage = isEnglish ? GetEnglishHelpMessage() : GetDanishHelpMessage();
+                await SendMessageInternal(helpMessage);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private string GetEnglishHelpMessage()
+    {
+        return """
+📚 *AulaBot Commands & Usage*
+
+*🤖 Interactive Questions:*
+Ask me anything about your children's school activities in natural language:
+• "What does Søren have today?"
+• "Does Hans have homework tomorrow?"
+• "What activities are planned this week?"
+
+*⏰ Reminder Commands:*
+• `remind me tomorrow at 8:00 that Hans has Haver til maver`
+• `remind me 25/12 at 7:30 that Christmas breakfast`
+• `list reminders` - Show all reminders
+• `delete reminder 1` - Delete reminder with ID 1
+
+*📅 Automatic Features:*
+• Weekly letters posted every Sunday at 16:00
+• Morning reminders sent when scheduled
+• Retry logic for missing content
+
+*💬 Language Support:*
+Ask questions in English or Danish - I'll respond in the same language!
+
+*ℹ️ Tips:*
+• Use "today", "tomorrow", or specific dates
+• Mention child names for targeted questions
+• Follow-up questions maintain context for 10 minutes
+""";
+    }
+
+    private string GetDanishHelpMessage()
+    {
+        return """
+📚 *AulaBot Kommandoer & Brug*
+
+*🤖 Interaktive Spørgsmål:*
+Spørg mig om hvad som helst vedrørende dine børns skoleaktiviteter på naturligt sprog:
+• "Hvad skal Søren i dag?"
+• "Har Hans lektier i morgen?"
+• "Hvilke aktiviteter er planlagt denne uge?"
+
+*⏰ Påmindelseskommandoer:*
+• `husk mig i morgen kl 8:00 at Hans har Haver til maver`
+• `husk mig 25/12 kl 7:30 at julefrokost`
+• `vis påmindelser` - Vis alle påmindelser
+• `slet påmindelse 1` - Slet påmindelse med ID 1
+
+*📅 Automatiske Funktioner:*
+• Ugebreve postes hver søndag kl. 16:00
+• Morgenpåmindelser sendes når planlagt
+• Genforøgelseslogik for manglende indhold
+
+*💬 Sprogunderstøttelse:*
+Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
+
+*ℹ️ Tips:*
+• Brug "i dag", "i morgen", eller specifikke datoer
+• Nævn børnenes navne for målrettede spørgsmål
+• Opfølgningsspørgsmål bevarer kontekst i 10 minutter
+""";
     }
 
     private async Task<bool> TryHandleReminderCommand(string text, bool isEnglish)
