@@ -385,8 +385,81 @@ public class OpenAiService : IOpenAiService
         
         return weekLetterContent;
     }
+
+    public async Task<string> AskQuestionAboutChildrenAsync(Dictionary<string, JObject> childrenWeekLetters, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack)
+    {
+        _logger.LogInformation("Asking question about multiple children: {Question} for {ChatInterface}", question, chatInterface);
+        
+        var combinedContent = new StringBuilder();
+        combinedContent.AppendLine("Week letters for children:");
+        combinedContent.AppendLine();
+        
+        foreach (var (childName, weekLetter) in childrenWeekLetters)
+        {
+            var weekLetterContent = ExtractWeekLetterContent(weekLetter);
+            combinedContent.AppendLine($"=== {childName} ===");
+            combinedContent.AppendLine(weekLetterContent);
+            combinedContent.AppendLine();
+        }
+        
+        var contextKeyToUse = contextKey ?? "combined-children";
+        
+        if (!_conversationHistory.ContainsKey(contextKeyToUse))
+        {
+            _conversationHistory[contextKeyToUse] = new List<ChatMessage>();
+        }
+        
+        var systemPrompt = $@"You are an AI assistant helping parents understand their children's school activities. 
+You have been provided with week letters from school for multiple children. 
+Answer questions about the children's activities clearly and helpfully.
+
+{GetChatInterfaceInstructions(chatInterface)}
+
+When answering about multiple children, clearly indicate which child each piece of information relates to.
+If a question is about a specific child, focus on that child but you can mention relevant information about other children if helpful.
+If a question could apply to multiple children, provide information for all relevant children.
+
+Current day context: Today is {DateTime.Now.ToString("dddd, MMMM dd, yyyy")}";
+
+        var messages = new List<ChatMessage>
+        {
+            ChatMessage.FromSystem(systemPrompt),
+            ChatMessage.FromUser($"Here are the week letters:\n\n{combinedContent}")
+        };
+        
+        messages.AddRange(_conversationHistory[contextKeyToUse]);
+        messages.Add(ChatMessage.FromUser(question));
+        
+        var chatRequest = new ChatCompletionCreateRequest
+        {
+            Messages = messages,
+            Model = Models.Gpt_4,
+            Temperature = 0.3f
+        };
+        
+        var response = await _openAiClient.ChatCompletion.CreateCompletion(chatRequest);
+        
+        if (response.Successful)
+        {
+            var answer = response.Choices.First().Message.Content ?? "I couldn't generate a response.";
+            
+            _conversationHistory[contextKeyToUse].Add(ChatMessage.FromUser(question));
+            _conversationHistory[contextKeyToUse].Add(ChatMessage.FromAssistant(answer));
+            
+            if (_conversationHistory[contextKeyToUse].Count > 20)
+            {
+                _conversationHistory[contextKeyToUse] = _conversationHistory[contextKeyToUse].Skip(4).ToList();
+            }
+            
+            return answer;
+        }
+        else
+        {
+            _logger.LogError("Error calling OpenAI API: {Error}", response.Error?.Message);
+            return "I'm sorry, I couldn't process your question at the moment.";
+        }
+    }
     
-    // Method to clear conversation history for a specific context or all contexts
     public void ClearConversationHistory(string? contextKey = null)
     {
         if (string.IsNullOrEmpty(contextKey))

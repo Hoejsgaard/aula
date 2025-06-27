@@ -814,130 +814,61 @@ public class SlackInteractiveBot
     {
         try
         {
-            _logger.LogInformation("🔍 TRACKING: HandleAulaQuestion called with text: {Text}", text);
+            _logger.LogInformation("HandleAulaQuestion called with text: {Text}", text);
             
-            // Extract child name from the question
-            string? childName = ExtractChildName(text);
-            _logger.LogInformation("🔍 TRACKING: Extracted child name: {ChildName}", childName ?? "null");
-            
-            // If no child name found and we have context, use the last child
-            if (childName == null && _conversationContext.IsStillValid && _conversationContext.LastChildName != null)
+            // Get all children and their week letters
+            var allChildren = await _agentService.GetAllChildrenAsync();
+            if (!allChildren.Any())
             {
-                childName = _conversationContext.LastChildName;
-                _logger.LogInformation("🔍 TRACKING: Using child from context: {ChildName}", childName);
-            }
-            
-            // If we have a child name, handle it as a question about that child
-            if (childName != null)
-            {
-                // Find the child by name using the AgentService for consistent lookup
-                var child = await _agentService.GetChildByNameAsync(childName);
-                if (child == null)
-                {
-                    _logger.LogWarning("🔍 TRACKING: Child not found: {ChildName}", childName);
-                    var allChildren = await _agentService.GetAllChildrenAsync();
-                    var childNames = string.Join(", ", allChildren.Select(c => c.FirstName));
-                    string notFoundMessage = isEnglish
-                        ? $"I don't know a child named {childName}. Available children are: {childNames}"
-                        : $"Jeg kender ikke et barn ved navn {childName}. Tilgængelige børn er: {childNames}";
-                    
-                    await SendMessage(notFoundMessage);
-                    return;
-                }
-
-                _logger.LogInformation("🔍 TRACKING: Found child: {ChildName}", childName);
+                string noChildrenMessage = isEnglish
+                    ? "I don't have any children configured."
+                    : "Jeg har ingen børn konfigureret.";
                 
-                // Get the week letter for the child
-                _logger.LogInformation("🔍 TRACKING: Getting week letter for {ChildName}", childName);
+                await SendMessage(noChildrenMessage);
+                return;
+            }
+
+            // Collect week letters for all children
+            var childrenWeekLetters = new Dictionary<string, JObject>();
+            foreach (var child in allChildren)
+            {
                 var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
-                
-                if (weekLetter == null)
+                if (weekLetter != null)
                 {
-                    _logger.LogWarning("🔍 TRACKING: Week letter is null for {ChildName}", childName);
-                    string noLetterMessage = isEnglish
-                        ? $"I don't have a week letter for {childName} yet."
-                        : $"Jeg har ikke et ugebrev for {childName} endnu.";
-                    
-                    await SendMessage(noLetterMessage);
-                    return;
+                    childrenWeekLetters[child.FirstName] = weekLetter;
                 }
+            }
 
-                // Log the week letter content to verify it's being extracted
-                var weekLetterContent = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
-                _logger.LogInformation("🔍 TRACKING: Week letter content for {ChildName}: {Length} characters", childName, weekLetterContent.Length);
-                _logger.LogInformation("🔍 TRACKING: Week letter has keys: {Keys}", string.Join(", ", weekLetter.Properties().Select(p => p.Name)));
+            if (!childrenWeekLetters.Any())
+            {
+                string noLettersMessage = isEnglish
+                    ? "I don't have any week letters available at the moment."
+                    : "Jeg har ingen ugebreve tilgængelige i øjeblikket.";
                 
-                if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
-                {
-                    _logger.LogInformation("🔍 TRACKING: First ugebreve item has keys: {Keys}", 
-                        string.Join(", ", ugebreve[0].Children<JProperty>().Select(p => p.Name)));
-                }
-
-                // Use a channel-based context key that allows child switching
-                string contextKey = $"slack-{_config.Slack.ChannelId}";
-                _logger.LogInformation("🔍 TRACKING: Using context key: {ContextKey}", contextKey);
-                
-                // Let the LLM handle the question with context
-                _logger.LogInformation("🔍 TRACKING: Asking question about week letter: {Question}", text.Trim());
-                
-                // Log the first 200 characters of the week letter content to confirm what we're sending
-                var contentPreview = weekLetterContent.Length > 200 ? weekLetterContent.Substring(0, 200) + "..." : weekLetterContent;
-                _logger.LogInformation("🔍 TRACKING: Week letter content preview being sent to LLM: {Preview}", contentPreview);
-                
-                // Enhance the question with day of week context if it contains relative time references
-                string enhancedQuestion = text.Trim();
-                if (ContainsRelativeTimeReference(enhancedQuestion))
-                {
-                    string dayContext = $"Today is {DateTime.Now.DayOfWeek}. ";
-                    enhancedQuestion = dayContext + enhancedQuestion;
-                    _logger.LogInformation("🔍 TRACKING: Enhanced question with day context: {Question}", enhancedQuestion);
-                }
-                
-                // Add language context to ensure the LLM responds in the correct language
-                string language = isEnglish ? "English" : "Danish";
-                enhancedQuestion = $"[Please respond in {language}] " + enhancedQuestion;
-                _logger.LogInformation("🔍 TRACKING: Added language context: {Language}", language);
-                
-                string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), enhancedQuestion, contextKey, ChatInterface.Slack);
-                _logger.LogInformation("🔍 TRACKING: Got answer: {Length} characters", answer.Length);
-                
-                await SendMessage(answer);
-                
-                // Update conversation context with just the child name
-                UpdateConversationContext(child.FirstName, false, false, false);
+                await SendMessage(noLettersMessage);
                 return;
             }
+
+            // Use a single context key for the channel
+            string contextKey = $"slack-{_config.Slack.ChannelId}";
             
-            // Check if this is a question about all children
-            if (text.ToLowerInvariant().Contains("alle børn") || 
-                text.ToLowerInvariant().Contains("all children") ||
-                text.ToLowerInvariant().Contains("alle børnene") || 
-                text.ToLowerInvariant().Contains("all the children"))
+            // Add day context if needed
+            string enhancedQuestion = text;
+            if (text.ToLowerInvariant().Contains("i dag") || text.ToLowerInvariant().Contains("today"))
             {
-                await HandleAllChildrenQuestion(text, isEnglish);
-                return;
+                string dayOfWeek = isEnglish ? DateTime.Now.DayOfWeek.ToString() : GetDanishDayName(DateTime.Now.DayOfWeek);
+                enhancedQuestion = $"{text} (Today is {dayOfWeek})";
             }
+            else if (text.ToLowerInvariant().Contains("i morgen") || text.ToLowerInvariant().Contains("tomorrow"))
+            {
+                string dayOfWeek = isEnglish ? DateTime.Now.AddDays(1).DayOfWeek.ToString() : GetDanishDayName(DateTime.Now.AddDays(1).DayOfWeek);
+                enhancedQuestion = $"{text} (Tomorrow is {dayOfWeek})";
+            }
+
+            // Use the new combined method
+            string answer = await _agentService.AskQuestionAboutChildrenAsync(childrenWeekLetters, enhancedQuestion, contextKey, ChatInterface.Slack);
             
-            // If we get here, it's a generic question with no specific child
-            if (!_recentlyRespondedToGenericQuestion)
-            {
-                _recentlyRespondedToGenericQuestion = true;
-                
-                if (isEnglish)
-                {
-                    await SendMessage("I'm not sure how to help with that. You can ask me about a child's activities like 'What is Søren doing tomorrow?' or 'Does Hans have homework for Tuesday?'");
-                }
-                else
-                {
-                    await SendMessage("Jeg er ikke sikker på, hvordan jeg kan hjælpe med det. Du kan spørge mig om et barns aktiviteter som 'Hvad skal Søren lave i morgen?' eller 'Har Hans lektier for til tirsdag?'");
-                }
-                
-                // Reset the flag after a delay
-                _ = Task.Delay(TimeSpan.FromMinutes(5)).ContinueWith(_ => 
-                {
-                    _recentlyRespondedToGenericQuestion = false;
-                });
-            }
+            await SendMessage(answer);
         }
         catch (Exception ex)
         {

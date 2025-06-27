@@ -45,9 +45,7 @@ public interface IOpenAiService
     /// <returns>A JObject containing key information from the week letter.</returns>
     Task<JObject> ExtractKeyInformationAsync(JObject weekLetter, ChatInterface chatInterface = ChatInterface.Slack);
     
-    /// <summary>
-    /// Clears conversation history for a specific context or all contexts.
-    /// </summary>
-    /// <param name="contextKey">Optional context key. If null, clears all conversation history.</param>
+    Task<string> AskQuestionAboutChildrenAsync(Dictionary<string, JObject> childrenWeekLetters, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack);
+    
     void ClearConversationHistory(string? contextKey = null);
 } 

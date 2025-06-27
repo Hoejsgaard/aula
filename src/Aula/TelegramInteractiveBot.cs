@@ -396,107 +396,59 @@ public class TelegramInteractiveBot
         {
             _logger.LogInformation("HandleAulaQuestion called with text: {Text}", text);
             
-            // Extract child name from the question
-            string? childName = ExtractChildName(text);
-            _logger.LogInformation("Extracted child name: {ChildName}", childName ?? "null");
-            
-            // If no child name found and we have context, use the last child
-            if (childName == null && 
-                _conversationContexts.TryGetValue(chatId, out var context) && 
-                context.IsStillValid && 
-                context.LastChildName != null)
+            // Get all children and their week letters
+            var allChildren = await _agentService.GetAllChildrenAsync();
+            if (!allChildren.Any())
             {
-                childName = context.LastChildName;
-                _logger.LogInformation("Using child from context: {ChildName}", childName);
-            }
-            
-            // If we have a child name, handle it as a question about that child
-            if (childName != null)
-            {
-                // Find the child by name using the AgentService for consistent lookup
-                var child = await _agentService.GetChildByNameAsync(childName);
-                if (child == null)
-                {
-                    _logger.LogWarning("Child not found: {ChildName}", childName);
-                    var allChildren = await _agentService.GetAllChildrenAsync();
-                    var childNames = string.Join(", ", allChildren.Select(c => c.FirstName));
-                    string notFoundMessage = isEnglish
-                        ? $"I don't know a child named {childName}. Available children are: {childNames}"
-                        : $"Jeg kender ikke et barn ved navn {childName}. Tilgængelige børn er: {childNames}";
-                    
-                    await SendMessage(chatId, notFoundMessage);
-                    return;
-                }
-
-                _logger.LogInformation("Found child: {ChildName}", childName);
+                string noChildrenMessage = isEnglish
+                    ? "I don't have any children configured."
+                    : "Jeg har ingen børn konfigureret.";
                 
-                // Get the week letter for the child
-                _logger.LogInformation("Getting week letter for {ChildName}", childName);
+                await SendMessage(chatId, noChildrenMessage);
+                return;
+            }
+
+            // Collect week letters for all children
+            var childrenWeekLetters = new Dictionary<string, JObject>();
+            foreach (var child in allChildren)
+            {
                 var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
-                
-                if (weekLetter == null)
+                if (weekLetter != null)
                 {
-                    _logger.LogWarning("Week letter is null for {ChildName}", childName);
-                    string noLetterMessage = isEnglish
-                        ? $"I don't have a week letter for {childName} yet."
-                        : $"Jeg har ikke et ugebrev for {childName} endnu.";
-                    
-                    await SendMessage(chatId, noLetterMessage);
-                    return;
+                    childrenWeekLetters[child.FirstName] = weekLetter;
                 }
+            }
 
-                // Log the week letter content to verify it's being extracted
-                var weekLetterContent = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
-                _logger.LogInformation("Week letter content for {ChildName}: {Length} characters", childName, weekLetterContent.Length);
+            if (!childrenWeekLetters.Any())
+            {
+                string noLettersMessage = isEnglish
+                    ? "I don't have any week letters available at the moment."
+                    : "Jeg har ingen ugebreve tilgængelige i øjeblikket.";
                 
-                // Use a chat-based context key that allows child switching
-                string contextKey = $"telegram-{chatId}";
-                _logger.LogInformation("Using context key: {ContextKey}", contextKey);
-                
-                // Enhance the question with day of week context if it contains relative time references
-                string enhancedQuestion = text.Trim();
-                if (ContainsRelativeTimeReference(enhancedQuestion))
-                {
-                    string dayContext = $"Today is {DateTime.Now.DayOfWeek}. ";
-                    enhancedQuestion = dayContext + enhancedQuestion;
-                    _logger.LogInformation("Enhanced question with day context: {Question}", enhancedQuestion);
-                }
-                
-                // Add language context to ensure the LLM responds in the correct language
-                string language = isEnglish ? "English" : "Danish";
-                enhancedQuestion = $"[Please respond in {language}] " + enhancedQuestion;
-                _logger.LogInformation("Added language context: {Language}", language);
-                
-                // Let the LLM handle the question with context
-                string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), enhancedQuestion, contextKey, ChatInterface.Telegram);
-                _logger.LogInformation("Got answer: {Length} characters", answer.Length);
-                
-                await SendMessage(chatId, answer);
-                
-                // Update conversation context with the child name
-                UpdateConversationContext(chatId, child.FirstName);
+                await SendMessage(chatId, noLettersMessage);
                 return;
             }
+
+            // Use a single context key for the chat
+            string contextKey = $"telegram-{chatId}";
             
-            // Check if this is a question about all children
-            if (text.ToLowerInvariant().Contains("alle børn") || 
-                text.ToLowerInvariant().Contains("all children") ||
-                text.ToLowerInvariant().Contains("alle børnene") || 
-                text.ToLowerInvariant().Contains("all the children"))
+            // Add day context if needed
+            string enhancedQuestion = text;
+            if (text.ToLowerInvariant().Contains("i dag") || text.ToLowerInvariant().Contains("today"))
             {
-                await HandleAllChildrenQuestion(chatId, text, isEnglish);
-                return;
+                string dayOfWeek = isEnglish ? DateTime.Now.DayOfWeek.ToString() : GetDanishDayName(DateTime.Now.DayOfWeek);
+                enhancedQuestion = $"{text} (Today is {dayOfWeek})";
             }
+            else if (text.ToLowerInvariant().Contains("i morgen") || text.ToLowerInvariant().Contains("tomorrow"))
+            {
+                string dayOfWeek = isEnglish ? DateTime.Now.AddDays(1).DayOfWeek.ToString() : GetDanishDayName(DateTime.Now.AddDays(1).DayOfWeek);
+                enhancedQuestion = $"{text} (Tomorrow is {dayOfWeek})";
+            }
+
+            // Use the new combined method
+            string answer = await _agentService.AskQuestionAboutChildrenAsync(childrenWeekLetters, enhancedQuestion, contextKey, ChatInterface.Telegram);
             
-            // If we get here, it's a generic question with no specific child
-            if (isEnglish)
-            {
-                await SendMessage(chatId, "I'm not sure how to help with that. You can ask me about a child's activities like 'What is Søren doing tomorrow?' or 'Does Hans have homework for Tuesday?'");
-            }
-            else
-            {
-                await SendMessage(chatId, "Jeg er ikke sikker på, hvordan jeg kan hjælpe med det. Du kan spørge mig om et barns aktiviteter som 'Hvad skal Søren lave i morgen?' eller 'Har Hans lektier for til tirsdag?'");
-            }
+            await SendMessage(chatId, answer);
         }
         catch (Exception ex)
         {
@@ -684,6 +636,21 @@ public class TelegramInteractiveBot
         using var sha256 = SHA256.Create();
         var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
         return Convert.ToBase64String(bytes);
+    }
+
+    private string GetDanishDayName(DayOfWeek dayOfWeek)
+    {
+        return dayOfWeek switch
+        {
+            DayOfWeek.Monday => "mandag",
+            DayOfWeek.Tuesday => "tirsdag",
+            DayOfWeek.Wednesday => "onsdag",
+            DayOfWeek.Thursday => "torsdag",
+            DayOfWeek.Friday => "fredag",
+            DayOfWeek.Saturday => "lørdag",
+            DayOfWeek.Sunday => "søndag",
+            _ => "ukendt dag"
+        };
     }
 
     private bool ContainsRelativeTimeReference(string text)

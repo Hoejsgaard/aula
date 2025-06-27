@@ -205,4 +205,10 @@ public class AgentService : IAgentService
         _logger.LogInformation("Found {Count} children", children.Count());
         return Task.FromResult(children);
     }
+
+    public async Task<string> AskQuestionAboutChildrenAsync(Dictionary<string, JObject> childrenWeekLetters, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack)
+    {
+        _logger.LogInformation("Asking question about multiple children: {Question}", question);
+        return await _openAiService.AskQuestionAboutChildrenAsync(childrenWeekLetters, question, contextKey, chatInterface);
+    }
 }
