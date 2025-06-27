@@ -104,10 +104,10 @@ public class TelegramInteractiveBot
         
         // Register handlers for updates
         _telegramClient.StartReceiving(
-            updateHandler: HandleUpdateAsync,
-            pollingErrorHandler: HandlePollingErrorAsync,
-            receiverOptions: receiverOptions,
-            cancellationToken: cts.Token
+            HandleUpdateAsync,
+            HandlePollingErrorAsync,
+            receiverOptions,
+            cts.Token
         );
         
         // Build a list of available children (first names only)
@@ -413,13 +413,16 @@ public class TelegramInteractiveBot
             // If we have a child name, handle it as a question about that child
             if (childName != null)
             {
-                // Find the child by name
-                if (!_childrenByName.TryGetValue(childName, out var child))
+                // Find the child by name using the AgentService for consistent lookup
+                var child = await _agentService.GetChildByNameAsync(childName);
+                if (child == null)
                 {
                     _logger.LogWarning("Child not found: {ChildName}", childName);
+                    var allChildren = await _agentService.GetAllChildrenAsync();
+                    var childNames = string.Join(", ", allChildren.Select(c => c.FirstName));
                     string notFoundMessage = isEnglish
-                        ? $"I don't know a child named {childName}. Available children are: {string.Join(", ", _childrenByName.Keys)}"
-                        : $"Jeg kender ikke et barn ved navn {childName}. Tilgængelige børn er: {string.Join(", ", _childrenByName.Keys)}";
+                        ? $"I don't know a child named {childName}. Available children are: {childNames}"
+                        : $"Jeg kender ikke et barn ved navn {childName}. Tilgængelige børn er: {childNames}";
                     
                     await SendMessage(chatId, notFoundMessage);
                     return;
@@ -446,8 +449,8 @@ public class TelegramInteractiveBot
                 var weekLetterContent = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
                 _logger.LogInformation("Week letter content for {ChildName}: {Length} characters", childName, weekLetterContent.Length);
                 
-                // Use the child's name as the context key
-                string contextKey = $"telegram-{chatId}-{childName.ToLowerInvariant()}";
+                // Use a chat-based context key that allows child switching
+                string contextKey = $"telegram-{chatId}";
                 _logger.LogInformation("Using context key: {ContextKey}", contextKey);
                 
                 // Enhance the question with day of week context if it contains relative time references
@@ -471,7 +474,7 @@ public class TelegramInteractiveBot
                 await SendMessage(chatId, answer);
                 
                 // Update conversation context with the child name
-                UpdateConversationContext(chatId, childName);
+                UpdateConversationContext(chatId, child.FirstName);
                 return;
             }
             
@@ -510,8 +513,9 @@ public class TelegramInteractiveBot
     {
         try
         {
-            // Check if we have any children
-            if (_childrenByName.Count == 0)
+            // Get all children using the AgentService
+            var allChildren = await _agentService.GetAllChildrenAsync();
+            if (!allChildren.Any())
             {
                 string noChildrenMessage = isEnglish
                     ? "I don't have any children configured."
@@ -532,10 +536,8 @@ public class TelegramInteractiveBot
             // User's original question
             string userQuestion = text.Trim();
             
-            foreach (var childEntry in _childrenByName)
+            foreach (var child in allChildren)
             {
-                string childName = childEntry.Key;
-                Child child = childEntry.Value;
 
                 // Get the week letter for the child
                 var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
@@ -549,8 +551,8 @@ public class TelegramInteractiveBot
                     continue;
                 }
 
-                // Create a context key that includes the child name
-                string contextKey = $"telegram-{chatId}-{childName.ToLowerInvariant()}-all";
+                // Create a context key for all-children query  
+                string contextKey = $"telegram-{chatId}-all-{child.FirstName.ToLowerInvariant()}";
                 
                 // Formulate a brief question for this child
                 string question = $"{userQuestion} (About {child.FirstName}. Give a brief answer.)";
@@ -587,7 +589,7 @@ public class TelegramInteractiveBot
             _logger.LogInformation("Sending message to chat {ChatId}: {TextLength} characters", chatId, text.Length);
             
             await _telegramClient.SendTextMessageAsync(
-                chatId: chatId,
+                chatId: new ChatId(chatId),
                 text: text,
                 parseMode: ParseMode.Html
             );
@@ -611,7 +613,7 @@ public class TelegramInteractiveBot
         try
         {
             await _telegramClient.SendTextMessageAsync(
-                chatId: _config.Telegram.ChannelId,
+                chatId: new ChatId(_config.Telegram.ChannelId),
                 text: message,
                 parseMode: ParseMode.Html
             );

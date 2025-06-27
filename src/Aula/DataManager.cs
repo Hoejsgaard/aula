@@ -8,11 +8,13 @@ public class DataManager : IDataManager
 {
     private readonly IMemoryCache _cache;
     private readonly ILogger _logger;
+    private readonly Config _config;
     private readonly TimeSpan _cacheExpiration = TimeSpan.FromHours(1);
 
-    public DataManager(IMemoryCache cache, ILoggerFactory loggerFactory)
+    public DataManager(IMemoryCache cache, Config config, ILoggerFactory loggerFactory)
     {
         _cache = cache;
+        _config = config;
         _logger = loggerFactory.CreateLogger(nameof(DataManager));
     }
 
@@ -64,5 +66,10 @@ public class DataManager : IDataManager
     private string GetWeekScheduleCacheKey(Child child)
     {
         return $"WeekSchedule:{child.FirstName}:{child.LastName}";
+    }
+
+    public IEnumerable<Child> GetChildren()
+    {
+        return _config.Children;
     }
 }

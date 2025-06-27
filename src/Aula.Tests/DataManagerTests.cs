@@ -21,7 +21,8 @@ public class DataManagerTests
         _loggerFactoryMock = new Mock<ILoggerFactory>();
         _loggerFactoryMock.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_loggerMock.Object);
 
-        _dataManager = new DataManager(_cache, _loggerFactoryMock.Object);
+        var configMock = new Mock<Config>();
+        _dataManager = new DataManager(_cache, configMock.Object, _loggerFactoryMock.Object);
 
         _testChild = new Child
         {
