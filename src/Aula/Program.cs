@@ -22,6 +22,21 @@ public class Program
             var config = serviceProvider.GetRequiredService<Config>();
             var slackBot = serviceProvider.GetRequiredService<SlackBot>();
             var telegramClient = serviceProvider.GetRequiredService<TelegramClient>();
+            
+            // Initialize Supabase
+            var supabaseService = serviceProvider.GetRequiredService<ISupabaseService>();
+            await supabaseService.InitializeAsync();
+            
+            // Test Supabase connection
+            var connectionTest = await supabaseService.TestConnectionAsync();
+            if (!connectionTest)
+            {
+                logger.LogWarning("Supabase connection test failed - continuing without database features");
+            }
+            else
+            {
+                logger.LogInformation("Supabase connection test successful");
+            }
 
             // Preload week letters for all children to ensure data is available for interactive bots
             logger.LogInformation("Preloading week letters for all children");
@@ -132,6 +147,7 @@ public class Program
         services.AddSingleton<IAgentService, AgentService>();
         services.AddSingleton<SlackInteractiveBot>();
         services.AddSingleton<TelegramInteractiveBot>();
+        services.AddSingleton<ISupabaseService, SupabaseService>();
 
         return services.BuildServiceProvider();
     }
