@@ -10,6 +10,7 @@ public class OpenAiServiceTests
 {
     private readonly Mock<ILoggerFactory> _mockLoggerFactory;
     private readonly Mock<ILogger> _mockLogger;
+    private readonly Mock<AiToolsManager> _mockAiToolsManager;
     private readonly string _testApiKey = "test-api-key";
 
     public OpenAiServiceTests()
@@ -17,13 +18,17 @@ public class OpenAiServiceTests
         _mockLogger = new Mock<ILogger>();
         _mockLoggerFactory = new Mock<ILoggerFactory>();
         _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
+        _mockAiToolsManager = new Mock<AiToolsManager>(
+            Mock.Of<ISupabaseService>(),
+            Mock.Of<IDataManager>(),
+            _mockLoggerFactory.Object);
     }
 
     [Fact(Skip = "Requires valid OpenAI API key")]
     public async Task SummarizeWeekLetterAsync_WithValidInput_ReturnsSummary()
     {
         // Arrange
-        var service = new OpenAiService(_testApiKey, _mockLoggerFactory.Object);
+        var service = new OpenAiService(_testApiKey, _mockLoggerFactory.Object, _mockAiToolsManager.Object);
         var weekLetter = CreateTestWeekLetter();
 
         // Act
@@ -38,7 +43,7 @@ public class OpenAiServiceTests
     public async Task AskQuestionAboutWeekLetterAsync_WithValidInput_ReturnsAnswer()
     {
         // Arrange
-        var service = new OpenAiService(_testApiKey, _mockLoggerFactory.Object);
+        var service = new OpenAiService(_testApiKey, _mockLoggerFactory.Object, _mockAiToolsManager.Object);
         var weekLetter = CreateTestWeekLetter();
         var question = "What activities are planned for this week?";
 
@@ -54,7 +59,7 @@ public class OpenAiServiceTests
     public async Task ExtractKeyInformationAsync_WithValidInput_ReturnsJsonObject()
     {
         // Arrange
-        var service = new OpenAiService(_testApiKey, _mockLoggerFactory.Object);
+        var service = new OpenAiService(_testApiKey, _mockLoggerFactory.Object, _mockAiToolsManager.Object);
         var weekLetter = CreateTestWeekLetter();
 
         // Act
@@ -91,4 +96,4 @@ public class OpenAiServiceTests
             ]
         }");
     }
-} 
+}

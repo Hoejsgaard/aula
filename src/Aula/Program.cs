@@ -22,11 +22,11 @@ public class Program
             var config = serviceProvider.GetRequiredService<Config>();
             var slackBot = serviceProvider.GetRequiredService<SlackBot>();
             var telegramClient = serviceProvider.GetRequiredService<TelegramClient>();
-            
+
             // Initialize Supabase
             var supabaseService = serviceProvider.GetRequiredService<ISupabaseService>();
             await supabaseService.InitializeAsync();
-            
+
             // Test Supabase connection
             var connectionTest = await supabaseService.TestConnectionAsync();
             if (!connectionTest)
@@ -42,7 +42,7 @@ public class Program
             logger.LogInformation("Preloading week letters for all children");
             var agentService = serviceProvider.GetRequiredService<IAgentService>();
             await agentService.LoginAsync();
-            
+
             var allChildren = await agentService.GetAllChildrenAsync();
             foreach (var child in allChildren)
             {
@@ -105,8 +105,27 @@ public class Program
 
             logger.LogInformation("Aula started");
 
-            // Keep the application running
-            await Task.Delay(Timeout.Infinite);
+            // Keep the application running with cancellation support
+            var cancellationTokenSource = new CancellationTokenSource();
+            Console.CancelKeyPress += (_, e) =>
+            {
+                e.Cancel = true;
+                cancellationTokenSource.Cancel();
+                logger.LogInformation("Shutdown requested");
+            };
+
+            try
+            {
+                // Wait indefinitely until cancellation is requested
+                while (!cancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    await Task.Delay(1000, cancellationTokenSource.Token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                logger.LogInformation("Application shutting down gracefully");
+            }
         }
         catch (Exception ex)
         {
@@ -145,15 +164,16 @@ public class Program
         services.AddSingleton<SlackBot>();
         services.AddSingleton<TelegramClient>();
         services.AddSingleton<GoogleCalendar>();
-        services.AddSingleton<IOpenAiService>(provider => 
+        services.AddSingleton<IOpenAiService>(provider =>
         {
             var config = provider.GetRequiredService<Config>();
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-            return new OpenAiService(config.OpenAi.ApiKey, loggerFactory);
+            var aiToolsManager = provider.GetRequiredService<AiToolsManager>();
+            return new OpenAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager);
         });
         services.AddSingleton<IAgentService, AgentService>();
         services.AddSingleton<SlackInteractiveBot>();
-        
+
         // Only register TelegramInteractiveBot if enabled
         var tempConfig = new Config();
         configuration.Bind(tempConfig);
@@ -161,9 +181,10 @@ public class Program
         {
             services.AddSingleton<TelegramInteractiveBot>();
         }
-        
+
         services.AddSingleton<ISupabaseService, SupabaseService>();
-        services.AddSingleton<ISchedulingService>(provider => 
+        services.AddSingleton<AiToolsManager>();
+        services.AddSingleton<ISchedulingService>(provider =>
         {
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
             var supabaseService = provider.GetRequiredService<ISupabaseService>();
@@ -171,7 +192,7 @@ public class Program
             var slackBot = provider.GetRequiredService<SlackInteractiveBot>();
             var telegramBot = provider.GetService<TelegramInteractiveBot>(); // May be null
             var config = provider.GetRequiredService<Config>();
-            
+
             return new SchedulingService(loggerFactory, supabaseService, agentService, slackBot, telegramBot, config);
         });
 

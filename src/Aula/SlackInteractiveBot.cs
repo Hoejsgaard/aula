@@ -33,7 +33,7 @@ public class SlackInteractiveBot
     private readonly Dictionary<string, DateTime> _messageTimestamps = new Dictionary<string, DateTime>();
     private readonly HashSet<string> _englishWords = new HashSet<string> { "what", "when", "how", "is", "does", "do", "can", "will", "has", "have", "had", "show", "get", "tell", "please", "thanks", "thank", "you", "hello", "hi" };
     private readonly HashSet<string> _danishWords = new HashSet<string> { "hvad", "hvornår", "hvordan", "er", "gør", "kan", "vil", "har", "havde", "vis", "få", "fortæl", "venligst", "tak", "du", "dig", "hej", "hallo", "goddag" };
-    
+
     // Conversation context tracking
     private class ConversationContext
     {
@@ -42,17 +42,17 @@ public class SlackInteractiveBot
         public bool WasAboutTomorrow { get; set; }
         public bool WasAboutHomework { get; set; }
         public DateTime Timestamp { get; set; } = DateTime.Now;
-        
+
         public bool IsStillValid => (DateTime.Now - Timestamp).TotalMinutes < 10; // Context expires after 10 minutes
-        
+
         public override string ToString()
         {
             return $"Child: {LastChildName ?? "none"}, Today: {WasAboutToday}, Tomorrow: {WasAboutTomorrow}, Homework: {WasAboutHomework}, Age: {(DateTime.Now - Timestamp).TotalMinutes:F1} minutes";
         }
     }
-    
+
     private ConversationContext _conversationContext = new ConversationContext();
-    
+
     private void UpdateConversationContext(string? childName, bool isAboutToday, bool isAboutTomorrow, bool isAboutHomework)
     {
         _conversationContext = new ConversationContext
@@ -63,7 +63,7 @@ public class SlackInteractiveBot
             WasAboutHomework = isAboutHomework,
             Timestamp = DateTime.Now
         };
-        
+
         _logger.LogInformation("Updated conversation context: {Context}", _conversationContext);
     }
 
@@ -79,6 +79,7 @@ public class SlackInteractiveBot
         _config = config;
         _logger = loggerFactory.CreateLogger<SlackInteractiveBot>();
         _httpClient = new HttpClient();
+        _httpClient.Timeout = TimeSpan.FromSeconds(30); // Add 30 second timeout
         _supabaseService = supabaseService;
         _childrenByName = _config.Children.ToDictionary(
             c => c.FirstName.ToLowerInvariant(),
@@ -100,32 +101,32 @@ public class SlackInteractiveBot
         }
 
         _logger.LogInformation("Starting Slack polling bot");
-        
+
         // Configure the HTTP client for Slack API
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _config.Slack.ApiToken);
-        
+
         // Set the timestamp to now so we don't process old messages
         // Slack uses a timestamp format like "1234567890.123456"
         var unixTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         _lastTimestamp = $"{unixTimestamp}.000000";
         _logger.LogInformation("Initial timestamp set to: {Timestamp}", _lastTimestamp);
-        
+
         // Start polling
         _isRunning = true;
         _pollingTimer = new Timer(PollMessages, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
-        
+
         // Start message ID cleanup timer (run every hour)
         var cleanupTimer = new Timer(CleanupOldMessageIds, null, TimeSpan.FromHours(1), TimeSpan.FromHours(1));
-        
+
         // Build a list of available children (first names only)
         string childrenList = string.Join(" og ", _childrenByName.Values.Select(c => c.FirstName.Split(' ')[0]));
-        
+
         // Get the current week number
         int weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Now);
-        
+
         // Send welcome message in Danish with children info
         await SendMessageInternal($"Jeg er online og har ugeplan for {childrenList} for Uge {weekNumber}");
-        
+
         _logger.LogInformation("Slack polling bot started");
     }
 
@@ -165,10 +166,10 @@ public class SlackInteractiveBot
                     adjustedTimestamp = ts.ToString("0.000000");
                 }
             }
-            
+
             _logger.LogInformation("Polling for messages since timestamp: {Timestamp}", adjustedTimestamp);
             var url = $"https://slack.com/api/conversations.history?channel={_config.Slack.ChannelId}&oldest={adjustedTimestamp}&limit=10";
-            
+
             // Make the API call
             var response = await _httpClient.GetAsync(url);
             if (!response.IsSuccessStatusCode)
@@ -176,15 +177,15 @@ public class SlackInteractiveBot
                 _logger.LogError("Failed to fetch messages: HTTP {StatusCode}", response.StatusCode);
                 return;
             }
-            
+
             // Parse the response
             var content = await response.Content.ReadAsStringAsync();
             var data = JObject.Parse(content);
-            
+
             if (data["ok"]?.Value<bool>() != true)
             {
                 string error = data["error"]?.ToString() ?? "unknown error";
-                
+
                 // Handle the not_in_channel error
                 if (error == "not_in_channel")
                 {
@@ -192,18 +193,18 @@ public class SlackInteractiveBot
                     await JoinChannel();
                     return;
                 }
-                
+
                 _logger.LogError("Failed to fetch messages: {Error}", error);
                 return;
             }
-            
+
             // Get the messages
             var messages = data["messages"] as JArray;
             if (messages == null || !messages.Any())
             {
                 return;
             }
-            
+
             // Debug the raw messages to understand what we're getting
             _logger.LogInformation("Raw messages received: {Count}", messages.Count);
             foreach (var msg in messages.Take(3))
@@ -211,9 +212,10 @@ public class SlackInteractiveBot
                 _logger.LogInformation("Message: TS={Timestamp}, Type={Type}, SubType={SubType}, User={User}, BotId={BotId}",
                     msg["ts"], msg["type"], msg["subtype"], msg["user"], msg["bot_id"]);
             }
-            
+
             // Get actual new messages (not from the bot)
-            var userMessages = messages.Where(m => {
+            var userMessages = messages.Where(m =>
+            {
                 // Skip messages we sent ourselves (by checking the ID)
                 string messageId = m["ts"]?.ToString() ?? "";
                 if (!string.IsNullOrEmpty(messageId) && _sentMessageIds.Contains(messageId))
@@ -221,43 +223,43 @@ public class SlackInteractiveBot
                     _logger.LogInformation("Skipping our own message with ID: {MessageId}", messageId);
                     return false;
                 }
-                
+
                 // Skip bot messages
                 if (m["subtype"]?.ToString() == "bot_message" || m["bot_id"] != null)
                 {
                     return false;
                 }
-                
+
                 // Only include messages with a user ID
                 return !string.IsNullOrEmpty(m["user"]?.ToString());
             }).ToList();
-                
+
             if (!userMessages.Any())
             {
                 return;
             }
-            
+
             _logger.LogInformation("Found {Count} new user messages", userMessages.Count);
-            
+
             // Keep track of the latest timestamp
             string latestTimestamp = _lastTimestamp;
-            
+
             // Process messages in chronological order (oldest first)
             foreach (var message in userMessages.OrderBy(m => m["ts"]?.ToString()))
             {
                 // Process the message immediately with higher priority
                 await ProcessMessage(message["text"]?.ToString() ?? "");
-                
+
                 // Update the latest timestamp if this message is newer
                 string messageTs = message["ts"]?.ToString() ?? "";
-                if (!string.IsNullOrEmpty(messageTs) && 
-                    (string.IsNullOrEmpty(latestTimestamp) || 
+                if (!string.IsNullOrEmpty(messageTs) &&
+                    (string.IsNullOrEmpty(latestTimestamp) ||
                      string.Compare(messageTs, latestTimestamp) > 0))
                 {
                     latestTimestamp = messageTs;
                 }
             }
-            
+
             // Update the timestamp to the latest message
             if (!string.IsNullOrEmpty(latestTimestamp) && latestTimestamp != _lastTimestamp)
             {
@@ -284,9 +286,9 @@ public class SlackInteractiveBot
         }
 
         _logger.LogInformation("Processing message: {Text}", text);
-        
+
         // Skip system messages and announcements that don't need a response
-        if (text.Contains("has joined the channel") || 
+        if (text.Contains("has joined the channel") ||
             text.Contains("added an integration") ||
             text.Contains("added to the channel") ||
             text.StartsWith("<http"))
@@ -297,21 +299,17 @@ public class SlackInteractiveBot
 
         // Detect language (Danish or English)
         bool isEnglish = DetectLanguage(text) == "en";
-        
+
         // Check for help command first
         if (await TryHandleHelpCommand(text, isEnglish))
         {
             return;
         }
-        
-        // Check for reminder commands first
-        if (await TryHandleReminderCommand(text, isEnglish))
-        {
-            return;
-        }
-        
-        // Handle all Aula questions with a single method
-        await HandleAulaQuestion(text, isEnglish);
+
+        // Use the new tool-based processing that can handle both tools and regular questions
+        string contextKey = $"slack-{_config.Slack.ChannelId}";
+        string response = await _agentService.ProcessQueryWithToolsAsync(text, contextKey, ChatInterface.Slack);
+        await SendMessageInternal(response);
     }
 
     private bool IsFollowUpQuestion(string text)
@@ -320,25 +318,25 @@ public class SlackInteractiveBot
         {
             return false;
         }
-        
+
         text = text.ToLowerInvariant();
-        
+
         // Log the current text and conversation context
-        _logger.LogInformation("Checking if '{Text}' is a follow-up question. Context valid: {IsValid}", 
+        _logger.LogInformation("Checking if '{Text}' is a follow-up question. Context valid: {IsValid}",
             text, _conversationContext.IsStillValid);
-        
+
         // If the conversation context has expired, it's not a follow-up
         if (!_conversationContext.IsStillValid)
         {
             return false;
         }
-        
+
         // Check for explicit follow-up phrases
-        bool hasFollowUpPhrase = text.Contains("hvad med") || 
-                               text.Contains("what about") || 
-                               text.Contains("how about") || 
+        bool hasFollowUpPhrase = text.Contains("hvad med") ||
+                               text.Contains("what about") ||
+                               text.Contains("how about") ||
                                text.Contains("hvordan med") ||
-                               text.StartsWith("og ") || 
+                               text.StartsWith("og ") ||
                                text.StartsWith("and ") ||
                                text.Contains("og hvad") ||
                                text.Contains("and what") ||
@@ -347,10 +345,10 @@ public class SlackInteractiveBot
                                text.Contains("likewise") ||
                                text == "og?" ||
                                text == "and?";
-        
+
         // Check if this is a short message
         bool isShortMessage = text.Length < 15;
-        
+
         // Check if the message contains a child name
         bool hasChildName = false;
         foreach (var childName in _childrenByName.Keys)
@@ -361,7 +359,7 @@ public class SlackInteractiveBot
                 break;
             }
         }
-        
+
         // Also check for first names
         if (!hasChildName)
         {
@@ -375,25 +373,25 @@ public class SlackInteractiveBot
                 }
             }
         }
-        
+
         // Check if the message contains time references
-        bool hasTimeReference = text.Contains("today") || text.Contains("tomorrow") || 
+        bool hasTimeReference = text.Contains("today") || text.Contains("tomorrow") ||
                               text.Contains("i dag") || text.Contains("i morgen");
-                              
+
         // Special case for very short messages that are likely follow-ups
         if (isShortMessage && (text.Contains("?") || text == "ok" || text == "okay"))
         {
             _logger.LogInformation("Detected likely follow-up based on short message: {Text}", text);
             return true;
         }
-        
+
         bool result = hasFollowUpPhrase || (isShortMessage && hasChildName && !hasTimeReference);
-        
+
         if (result)
         {
             _logger.LogInformation("Detected follow-up question: {Text}", text);
         }
-        
+
         return result;
     }
 
@@ -403,13 +401,13 @@ public class SlackInteractiveBot
         {
             return "da"; // Default to Danish if no text
         }
-        
+
         string lowerText = text.ToLowerInvariant();
-        
+
         // Count English and Danish words
         int englishWordCount = 0;
         int danishWordCount = 0;
-        
+
         foreach (var word in lowerText.Split(' ', ',', '.', '!', '?', ':', ';', '-', '(', ')', '[', ']', '{', '}'))
         {
             string cleanWord = word.Trim();
@@ -417,29 +415,29 @@ public class SlackInteractiveBot
             {
                 continue;
             }
-            
+
             if (_englishWords.Contains(cleanWord))
             {
                 englishWordCount++;
             }
-            
+
             if (_danishWords.Contains(cleanWord))
             {
                 danishWordCount++;
             }
         }
-        
-        _logger.LogInformation("🔍 TRACKING: Language detection - English words: {EnglishCount}, Danish words: {DanishCount}", 
+
+        _logger.LogInformation("🔍 TRACKING: Language detection - English words: {EnglishCount}, Danish words: {DanishCount}",
             englishWordCount, danishWordCount);
-        
+
         // If we have more Danish words, or equal but the text contains Danish-specific characters, use Danish
-        if (danishWordCount > englishWordCount || 
-            (danishWordCount == englishWordCount && 
+        if (danishWordCount > englishWordCount ||
+            (danishWordCount == englishWordCount &&
              (lowerText.Contains('æ') || lowerText.Contains('ø') || lowerText.Contains('å'))))
         {
             return "da";
         }
-        
+
         return "en";
     }
 
@@ -449,13 +447,13 @@ public class SlackInteractiveBot
         {
             return null;
         }
-        
+
         text = text.ToLowerInvariant();
-        
+
         // For very short follow-up questions with no clear child name, use the last child from context
-        if (text.Length < 15 && 
+        if (text.Length < 15 &&
             (_conversationContext.IsStillValid && _conversationContext.LastChildName != null) &&
-            (text.Contains("what about") || text.Contains("how about") || 
+            (text.Contains("what about") || text.Contains("how about") ||
              text.Contains("hvad med") || text.Contains("hvordan med") ||
              text.StartsWith("og") || text.StartsWith("and")))
         {
@@ -469,7 +467,7 @@ public class SlackInteractiveBot
                     return childName;
                 }
             }
-            
+
             // Check for first names only in follow-up questions
             foreach (var child in _childrenByName.Values)
             {
@@ -477,18 +475,18 @@ public class SlackInteractiveBot
                 // Use word boundary to avoid partial matches
                 if (Regex.IsMatch(text, $@"\b{Regex.Escape(firstName)}\b", RegexOptions.IgnoreCase))
                 {
-                    string matchedKey = _childrenByName.Keys.FirstOrDefault(k => 
+                    string matchedKey = _childrenByName.Keys.FirstOrDefault(k =>
                         k.StartsWith(firstName, StringComparison.OrdinalIgnoreCase)) ?? "";
                     _logger.LogInformation("Found first name in follow-up: {FirstName} -> {ChildName}", firstName, matchedKey);
                     return matchedKey;
                 }
             }
-            
+
             // If no child name found in the follow-up, use the last child from context
             _logger.LogInformation("No child name in follow-up, using context: {ChildName}", _conversationContext.LastChildName);
             return _conversationContext.LastChildName;
         }
-        
+
         // Check for "og hvad med X" or "and what about X" patterns
         string[] followUpPhrases = { "hvad med", "what about", "how about", "hvordan med", "og hvad", "and what" };
         foreach (var phrase in followUpPhrases)
@@ -498,7 +496,7 @@ public class SlackInteractiveBot
             {
                 string afterPhrase = text.Substring(index + phrase.Length).Trim();
                 _logger.LogInformation("Follow-up phrase detected: '{Phrase}', text after: '{AfterPhrase}'", phrase, afterPhrase);
-                
+
                 // First check for full names
                 foreach (var childName in _childrenByName.Keys)
                 {
@@ -508,14 +506,14 @@ public class SlackInteractiveBot
                         return childName;
                     }
                 }
-                
+
                 // Then check for first names
                 foreach (var child in _childrenByName.Values)
                 {
                     string firstName = child.FirstName.Split(' ')[0].ToLowerInvariant();
                     if (Regex.IsMatch(afterPhrase, $@"\b{Regex.Escape(firstName)}\b", RegexOptions.IgnoreCase))
                     {
-                        string matchedKey = _childrenByName.Keys.FirstOrDefault(k => 
+                        string matchedKey = _childrenByName.Keys.FirstOrDefault(k =>
                             k.StartsWith(firstName, StringComparison.OrdinalIgnoreCase)) ?? "";
                         _logger.LogInformation("Found first name after follow-up phrase: {FirstName} -> {ChildName}", firstName, matchedKey);
                         return matchedKey;
@@ -523,7 +521,7 @@ public class SlackInteractiveBot
                 }
             }
         }
-        
+
         // Standard child name extraction - check for each child name in the text
         foreach (var childName in _childrenByName.Keys)
         {
@@ -534,7 +532,7 @@ public class SlackInteractiveBot
                 return childName;
             }
         }
-        
+
         // Check for first names only
         foreach (var child in _childrenByName.Values)
         {
@@ -542,13 +540,13 @@ public class SlackInteractiveBot
             // Use word boundary to avoid partial matches
             if (Regex.IsMatch(text, $@"\b{Regex.Escape(firstName)}\b", RegexOptions.IgnoreCase))
             {
-                string matchedKey = _childrenByName.Keys.FirstOrDefault(k => 
+                string matchedKey = _childrenByName.Keys.FirstOrDefault(k =>
                     k.StartsWith(firstName, StringComparison.OrdinalIgnoreCase)) ?? "";
                 _logger.LogInformation("Found first name in text: {FirstName} -> {ChildName}", firstName, matchedKey);
                 return matchedKey;
             }
         }
-        
+
         _logger.LogInformation("No child name found in text");
         return null;
     }
@@ -563,14 +561,14 @@ public class SlackInteractiveBot
         }
 
         string childName = match.Groups[3].Value;
-        
+
         // Find the child by name
         if (!_childrenByName.TryGetValue(childName.ToLowerInvariant(), out var child))
         {
             string notFoundMessage = isEnglish
                 ? $"I don't know a child named {childName}. Available children are: {string.Join(", ", _childrenByName.Keys)}"
                 : $"Jeg kender ikke et barn ved navn {childName}. Tilgængelige børn er: {string.Join(", ", _childrenByName.Keys)}";
-            
+
             await SendMessageInternal(notFoundMessage);
             return true;
         }
@@ -579,15 +577,15 @@ public class SlackInteractiveBot
         {
             // Get the week letter for the child
             var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
-            
+
             // Extract the content and post it
             var weekLetterContent = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
             var weekLetterTitle = $"Uge {weekLetter["ugebreve"]?[0]?["uge"]?.ToString() ?? ""} - {weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? ""}";
-            
+
             // Convert HTML to markdown
             var html2MarkdownConverter = new Html2SlackMarkdownConverter();
             var markdownContent = html2MarkdownConverter.Convert(weekLetterContent).Replace("**", "*");
-            
+
             await PostWeekLetter(child.FirstName, markdownContent, weekLetterTitle);
             return true;
         }
@@ -597,7 +595,7 @@ public class SlackInteractiveBot
             string errorMessage = isEnglish
                 ? $"Sorry, I couldn't retrieve the week letter for {childName} at the moment."
                 : $"Beklager, jeg kunne ikke hente ugebrevet for {childName} i øjeblikket.";
-            
+
             await SendMessageInternal(errorMessage);
             return true;
         }
@@ -608,25 +606,25 @@ public class SlackInteractiveBot
         using var client = new HttpClient();
         var request = new HttpRequestMessage(HttpMethod.Post, "https://slack.com/api/conversations.history");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _config.Slack.ApiToken);
-        
+
         var parameters = new Dictionary<string, string>
         {
             { "channel", _config.Slack.ChannelId },
             { "limit", "50" }
         };
-        
+
         if (!string.IsNullOrEmpty(_lastTimestamp) && _lastTimestamp != "0")
         {
             parameters.Add("oldest", _lastTimestamp);
         }
-        
+
         var content = new StringContent(JsonConvert.SerializeObject(parameters), Encoding.UTF8);
         content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
         request.Content = content;
-        
+
         var response = await client.SendAsync(request);
         response.EnsureSuccessStatusCode();
-        
+
         var responseContent = await response.Content.ReadAsStringAsync();
         return JObject.Parse(responseContent);
     }
@@ -641,29 +639,29 @@ public class SlackInteractiveBot
         try
         {
             _logger.LogInformation("Sending message to Slack");
-            
+
             var payload = new
             {
                 channel = _config.Slack.ChannelId,
                 text = text
             };
-            
+
             var content = new StringContent(
                 JsonConvert.SerializeObject(payload),
                 Encoding.UTF8,
                 "application/json");
-            
+
             var response = await _httpClient.PostAsync("https://slack.com/api/chat.postMessage", content);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError("Failed to send message: HTTP {StatusCode}", response.StatusCode);
                 return;
             }
-            
+
             var responseContent = await response.Content.ReadAsStringAsync();
             var data = JObject.Parse(responseContent);
-            
+
             if (data["ok"]?.Value<bool>() != true)
             {
                 _logger.LogError("Failed to send message: {Error}", data["error"]);
@@ -696,29 +694,29 @@ public class SlackInteractiveBot
             {
                 channel = _config.Slack.ChannelId
             };
-            
+
             // Serialize to JSON
             var content = new StringContent(
                 JsonConvert.SerializeObject(payload),
                 Encoding.UTF8,
                 "application/json");
-            
+
             // Send to Slack API
             var response = await _httpClient.PostAsync("https://slack.com/api/conversations.join", content);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError("Failed to join channel: HTTP {StatusCode}", response.StatusCode);
                 return;
             }
-            
+
             var responseContent = await response.Content.ReadAsStringAsync();
             var data = JObject.Parse(responseContent);
-            
+
             if (data["ok"]?.Value<bool>() != true)
             {
                 _logger.LogError("Failed to join channel: {Error}", data["error"]?.ToString());
-                
+
                 // If we can't join, send a message to the user about it
                 await SendMessageInternal("I need to be invited to this channel. Please use `/invite @YourBotName` in the channel.");
             }
@@ -740,50 +738,50 @@ public class SlackInteractiveBot
             _logger.LogWarning("Cannot post empty week letter for {ChildName}", childName);
             return;
         }
-        
+
         // Compute a hash of the week letter to avoid posting duplicates
         string hash = ComputeHash(weekLetter);
-        
+
         // Check if we've already posted this week letter
         if (_postedWeekLetterHashes.Contains(hash))
         {
             _logger.LogInformation("Week letter for {ChildName} already posted, skipping", childName);
             return;
         }
-        
+
         // Add the hash to our set
         _postedWeekLetterHashes.Add(hash);
-        
+
         // Format the message with a title
         string message = $"*Ugeplan for {childName}: {weekLetterTitle}*\n\n{weekLetter}";
-        
+
         try
         {
             _logger.LogInformation("Posting week letter for {ChildName}", childName);
-            
+
             var payload = new
             {
                 channel = _config.Slack.ChannelId,
                 text = message,
                 mrkdwn = true
             };
-            
+
             var content = new StringContent(
                 JsonConvert.SerializeObject(payload),
                 Encoding.UTF8);
             content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-            
+
             var response = await _httpClient.PostAsync("https://slack.com/api/chat.postMessage", content);
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError("Failed to post week letter: HTTP {StatusCode}", response.StatusCode);
                 return;
             }
-            
+
             var responseContent = await response.Content.ReadAsStringAsync();
             var data = JObject.Parse(responseContent);
-            
+
             if (data["ok"]?.Value<bool>() != true)
             {
                 _logger.LogError("Failed to post week letter: {Error}", data["error"]?.ToString());
@@ -806,7 +804,7 @@ public class SlackInteractiveBot
             _logger.LogError(ex, "Error posting week letter for {ChildName}", childName);
         }
     }
-    
+
     private string ComputeHash(string input)
     {
         using var sha = System.Security.Cryptography.SHA256.Create();
@@ -814,7 +812,7 @@ public class SlackInteractiveBot
         var hash = sha.ComputeHash(bytes);
         return Convert.ToBase64String(hash);
     }
-    
+
     private string GetDanishDayName(DayOfWeek dayOfWeek)
     {
         return dayOfWeek switch
@@ -835,7 +833,7 @@ public class SlackInteractiveBot
         try
         {
             _logger.LogInformation("HandleAulaQuestion called with text: {Text}", text);
-            
+
             // Get all children and their week letters
             var allChildren = await _agentService.GetAllChildrenAsync();
             if (!allChildren.Any())
@@ -843,7 +841,7 @@ public class SlackInteractiveBot
                 string noChildrenMessage = isEnglish
                     ? "I don't have any children configured."
                     : "Jeg har ingen børn konfigureret.";
-                
+
                 await SendMessageInternal(noChildrenMessage);
                 return;
             }
@@ -864,14 +862,14 @@ public class SlackInteractiveBot
                 string noLettersMessage = isEnglish
                     ? "I don't have any week letters available at the moment."
                     : "Jeg har ingen ugebreve tilgængelige i øjeblikket.";
-                
+
                 await SendMessageInternal(noLettersMessage);
                 return;
             }
 
             // Use a single context key for the channel
             string contextKey = $"slack-{_config.Slack.ChannelId}";
-            
+
             // Add day context if needed
             string enhancedQuestion = text;
             if (text.ToLowerInvariant().Contains("i dag") || text.ToLowerInvariant().Contains("today"))
@@ -887,7 +885,7 @@ public class SlackInteractiveBot
 
             // Use the new combined method
             string answer = await _agentService.AskQuestionAboutChildrenAsync(childrenWeekLetters, enhancedQuestion, contextKey, ChatInterface.Slack);
-            
+
             await SendMessageInternal(answer);
         }
         catch (Exception ex)
@@ -896,7 +894,7 @@ public class SlackInteractiveBot
             string errorMessage = isEnglish
                 ? "Sorry, I couldn't process your question at the moment."
                 : "Beklager, jeg kunne ikke behandle dit spørgsmål i øjeblikket.";
-            
+
             await SendMessageInternal(errorMessage);
         }
     }
@@ -912,50 +910,50 @@ public class SlackInteractiveBot
                 string noChildrenMessage = isEnglish
                     ? "I don't have any children configured."
                     : "Jeg har ingen børn konfigureret.";
-                
+
                 await SendMessageInternal(noChildrenMessage);
                 return;
             }
 
             // Create a response builder
             var responseBuilder = new StringBuilder();
-            
+
             // Add a header
-            responseBuilder.AppendLine(isEnglish 
+            responseBuilder.AppendLine(isEnglish
                 ? "Here's information for all children:"
                 : "Her er information for alle børn:");
-            
+
             // User's original question
             string userQuestion = text.Trim();
-            
+
             foreach (var child in allChildren)
             {
 
-            // Get the week letter for the child
-            var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
+                // Get the week letter for the child
+                var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
                 if (weekLetter == null)
-            {
-                string noLetterMessage = isEnglish
-                        ? $"- {child.FirstName}: No week letter available."
-                        : $"- {child.FirstName}: Intet ugebrev tilgængeligt.";
-                    
+                {
+                    string noLetterMessage = isEnglish
+                            ? $"- {child.FirstName}: No week letter available."
+                            : $"- {child.FirstName}: Intet ugebrev tilgængeligt.";
+
                     responseBuilder.AppendLine(noLetterMessage);
                     continue;
                 }
 
                 // Create a context key for all-children query
                 string contextKey = $"slack-{_config.Slack.ChannelId}-all-{child.FirstName.ToLowerInvariant()}";
-                
+
                 // Formulate a brief question for this child
                 string question = $"{userQuestion} (About {child.FirstName}. Give a brief answer.)";
-            
-            // Ask OpenAI about the child's activities
-            string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), question, contextKey, ChatInterface.Slack);
-            
+
+                // Ask OpenAI about the child's activities
+                string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), question, contextKey, ChatInterface.Slack);
+
                 // Format the answer
                 responseBuilder.AppendLine($"- {child.FirstName}: {answer.Trim()}");
             }
-            
+
             await SendMessageInternal(responseBuilder.ToString());
         }
         catch (Exception ex)
@@ -964,7 +962,7 @@ public class SlackInteractiveBot
             string errorMessage = isEnglish
                 ? "Sorry, I couldn't retrieve information about the children's activities at the moment."
                 : "Beklager, jeg kunne ikke hente information om børnenes aktiviteter i øjeblikket.";
-            
+
             await SendMessageInternal(errorMessage);
         }
     }
@@ -976,13 +974,13 @@ public class SlackInteractiveBot
             // Keep message IDs for 24 hours to be safe
             var cutoff = DateTime.UtcNow.AddHours(-24);
             int removedCount = 0;
-            
+
             // Find message IDs older than the cutoff
             var oldMessageIds = _messageTimestamps
                 .Where(kvp => kvp.Value < cutoff)
                 .Select(kvp => kvp.Key)
                 .ToList();
-            
+
             // Remove them from both collections
             foreach (var messageId in oldMessageIds)
             {
@@ -990,7 +988,7 @@ public class SlackInteractiveBot
                 _messageTimestamps.Remove(messageId);
                 removedCount++;
             }
-            
+
             // Also clean up the week letter hashes if there are too many
             if (_postedWeekLetterHashes.Count > 100)
             {
@@ -999,10 +997,10 @@ public class SlackInteractiveBot
                 _postedWeekLetterHashes.Clear();
                 _logger.LogInformation("Cleared week letter hash cache");
             }
-            
+
             if (removedCount > 0)
             {
-                _logger.LogInformation("Cleaned up {Count} old message IDs. Remaining: {Remaining}", 
+                _logger.LogInformation("Cleaned up {Count} old message IDs. Remaining: {Remaining}",
                     removedCount, _sentMessageIds.Count);
             }
         }
@@ -1016,14 +1014,14 @@ public class SlackInteractiveBot
     private bool ContainsRelativeTimeReference(string text)
     {
         string lowerText = text.ToLowerInvariant();
-        
+
         // Check for common relative time words in Danish and English
-        string[] relativeTimeWords = new[] 
-        { 
+        string[] relativeTimeWords = new[]
+        {
             "tomorrow", "yesterday", "today", "next week", "last week", "tonight", "this morning",
             "i morgen", "i går", "i dag", "næste uge", "sidste uge", "i aften", "i morges"
         };
-        
+
         return relativeTimeWords.Any(word => lowerText.Contains(word));
     }
 
@@ -1115,12 +1113,12 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
     private async Task<bool> TryHandleReminderCommand(string text, bool isEnglish)
     {
         text = text.Trim();
-        
+
         // Check for various reminder command patterns
         if (await TryHandleAddReminder(text, isEnglish)) return true;
         if (await TryHandleListReminders(text, isEnglish)) return true;
         if (await TryHandleDeleteReminder(text, isEnglish)) return true;
-        
+
         return false;
     }
 
@@ -1128,7 +1126,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
     {
         // Patterns: "remind me tomorrow at 8:00 that Hans has Haver til maver"
         //           "husk mig i morgen kl 8:00 at Hans har Haver til maver"
-        
+
         var reminderPatterns = new[]
         {
             @"remind me (tomorrow|today|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}) at (\d{1,2}:\d{2}) that (.+)",
@@ -1164,8 +1162,8 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                     {
                         // Try parsing DD/MM format
                         var dateParts = dateStr.Split('/');
-                        if (dateParts.Length == 2 && 
-                            int.TryParse(dateParts[0], out var day) && 
+                        if (dateParts.Length == 2 &&
+                            int.TryParse(dateParts[0], out var day) &&
                             int.TryParse(dateParts[1], out var month))
                         {
                             var year = DateTime.Now.Year;
@@ -1215,7 +1213,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                     string errorMessage = isEnglish
                         ? "❌ Error adding reminder. Please check the date and time format."
                         : "❌ Fejl ved tilføjelse af påmindelse. Tjek venligst dato og tidsformat.";
-                    
+
                     await SendMessageInternal(errorMessage);
                     return true;
                 }
@@ -1240,13 +1238,13 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                 try
                 {
                     var reminders = await _supabaseService.GetAllRemindersAsync();
-                    
+
                     if (!reminders.Any())
                     {
                         string noRemindersMessage = isEnglish
                             ? "📝 No reminders found."
                             : "📝 Ingen påmindelser fundet.";
-                        
+
                         await SendMessageInternal(noRemindersMessage);
                         return true;
                     }
@@ -1258,7 +1256,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                     {
                         string status = reminder.IsSent ? "✅" : "⏰";
                         string childInfo = !string.IsNullOrEmpty(reminder.ChildName) ? $" ({reminder.ChildName})" : "";
-                        
+
                         messageBuilder.AppendLine($"{status} *ID {reminder.Id}*: {reminder.Text}{childInfo}");
                         messageBuilder.AppendLine($"   📅 {reminder.RemindDate:yyyy-MM-dd} ⏰ {reminder.RemindTime:HH:mm}");
                     }
@@ -1272,7 +1270,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                     string errorMessage = isEnglish
                         ? "❌ Error retrieving reminders."
                         : "❌ Fejl ved hentning af påmindelser.";
-                    
+
                     await SendMessageInternal(errorMessage);
                     return true;
                 }
@@ -1298,13 +1296,13 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                 try
                 {
                     var reminderId = int.Parse(match.Groups[1].Value);
-                    
+
                     await _supabaseService.DeleteReminderAsync(reminderId);
-                    
+
                     string successMessage = isEnglish
                         ? $"✅ Reminder {reminderId} deleted."
                         : $"✅ Påmindelse {reminderId} slettet.";
-                    
+
                     await SendMessageInternal(successMessage);
                     return true;
                 }
@@ -1314,7 +1312,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                     string errorMessage = isEnglish
                         ? "❌ Error deleting reminder. Please check the reminder ID."
                         : "❌ Fejl ved sletning af påmindelse. Tjek venligst påmindelse ID.";
-                    
+
                     await SendMessageInternal(errorMessage);
                     return true;
                 }
@@ -1323,4 +1321,4 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
 
         return false;
     }
-} 
+}

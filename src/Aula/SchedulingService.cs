@@ -39,41 +39,43 @@ public class SchedulingService : ISchedulingService
         _config = config;
     }
 
-    public Task StartAsync()
+    public async Task StartAsync()
     {
         _logger.LogInformation("Starting scheduling service");
-        
+
         lock (_lockObject)
         {
             if (_isRunning)
             {
                 _logger.LogWarning("Scheduling service is already running");
-                return Task.CompletedTask;
+                return;
             }
-            
+
             _isRunning = true;
         }
 
+        // Check for missed reminders on startup
+        await CheckForMissedReminders();
+
         // Schedule initial check and then every minute
-        _schedulingTimer = new Timer(CheckScheduledTasks, null, TimeSpan.Zero, TimeSpan.FromMinutes(1));
-        
-        _logger.LogInformation("Scheduling service started - checking every minute");
-        
-        return Task.CompletedTask;
+        // Use 10 second intervals for more responsive reminder checking
+        _schedulingTimer = new Timer(CheckScheduledTasks, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
+
+        _logger.LogInformation("Scheduling service started - checking every 10 seconds");
     }
 
     public Task StopAsync()
     {
         _logger.LogInformation("Stopping scheduling service");
-        
+
         lock (_lockObject)
         {
             _isRunning = false;
         }
-        
+
         _schedulingTimer?.Dispose();
         _logger.LogInformation("Scheduling service stopped");
-        
+
         return Task.CompletedTask;
     }
 
@@ -83,37 +85,50 @@ public class SchedulingService : ISchedulingService
 
         try
         {
-            _logger.LogInformation("Checking scheduled tasks");
-            
-            var tasks = await _supabaseService.GetScheduledTasksAsync();
-            var now = DateTime.UtcNow;
+            _logger.LogInformation("🔔 Timer fired: Checking scheduled tasks and reminders at {LocalTime} (UTC: {UtcTime})", DateTime.Now, DateTime.UtcNow);
 
-            foreach (var task in tasks)
+            // ALWAYS check for pending reminders every 10 seconds
+            await ExecutePendingReminders();
+
+            // Only check database-driven scheduled tasks every minute (every 6th call)
+            var currentSecond = DateTime.Now.Second;
+            
+            // Run scheduled tasks only at the top of each minute (when seconds are 0-9)
+            if (currentSecond < 10)
             {
-                try
+                _logger.LogInformation("⏰ Running scheduled tasks check at {Time}", DateTime.Now);
+                
+                var tasks = await _supabaseService.GetScheduledTasksAsync();
+                var now = DateTime.UtcNow;
+
+                foreach (var task in tasks)
                 {
-                    if (ShouldRunTask(task, now))
+                    try
                     {
-                        _logger.LogInformation("Executing scheduled task: {TaskName}", task.Name);
-                        
-                        // Update last run time
-                        task.LastRun = now;
-                        task.NextRun = GetNextRunTime(task.CronExpression, now);
-                        await _supabaseService.UpdateScheduledTaskAsync(task);
-                        
-                        // Execute the task
-                        await ExecuteTask(task);
+                        if (ShouldRunTask(task, now))
+                        {
+                            _logger.LogInformation("Executing scheduled task: {TaskName}", task.Name);
+
+                            // Update last run time
+                            task.LastRun = now;
+                            task.NextRun = GetNextRunTime(task.CronExpression, now);
+                            await _supabaseService.UpdateScheduledTaskAsync(task);
+
+                            // Execute the task
+                            await ExecuteTask(task);
+                        }
                     }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error processing scheduled task: {TaskName}", task.Name);
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error processing scheduled task: {TaskName}", task.Name);
+                    }
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking scheduled tasks");
+            _logger.LogError(ex, "CRITICAL: Error in CheckScheduledTasks - this could cause app crashes");
+            // Don't rethrow - let the timer continue
         }
     }
 
@@ -127,7 +142,7 @@ public class SchedulingService : ISchedulingService
         try
         {
             var schedule = CrontabSchedule.Parse(task.CronExpression);
-            var nextRun = task.LastRun != null 
+            var nextRun = task.LastRun != null
                 ? schedule.GetNextOccurrence(task.LastRun.Value)
                 : schedule.GetNextOccurrence(now.AddMinutes(-1));
 
@@ -136,7 +151,7 @@ public class SchedulingService : ISchedulingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Invalid cron expression for task {TaskName}: {CronExpression}", 
+            _logger.LogError(ex, "Invalid cron expression for task {TaskName}: {CronExpression}",
                 task.Name, task.CronExpression);
             return false;
         }
@@ -160,28 +175,29 @@ public class SchedulingService : ISchedulingService
     {
         switch (task.Name)
         {
-            case "MorningReminders":
-                await ExecuteMorningReminders();
+            case "MorningReminders": // Keep backwards compatibility
+            case "ReminderCheck": // Better name
+                await ExecutePendingReminders();
                 break;
-                
+
             case "WeeklyLetterCheck":
                 await ExecuteWeeklyLetterCheck(task);
                 break;
-                
+
             default:
                 _logger.LogWarning("Unknown scheduled task: {TaskName}", task.Name);
                 break;
         }
     }
 
-    private async Task ExecuteMorningReminders()
+    private async Task ExecutePendingReminders()
     {
         try
         {
-            _logger.LogInformation("Executing morning reminders");
-            
+            _logger.LogInformation("📋 ExecutePendingReminders called at {LocalTime} (UTC: {UtcTime})", DateTime.Now, DateTime.UtcNow);
+
             var pendingReminders = await _supabaseService.GetPendingRemindersAsync();
-            
+
             if (!pendingReminders.Any())
             {
                 _logger.LogInformation("No pending reminders found");
@@ -195,9 +211,9 @@ public class SchedulingService : ISchedulingService
                 try
                 {
                     await SendReminderNotification(reminder);
-                    await _supabaseService.MarkReminderAsSentAsync(reminder.Id);
-                    
-                    _logger.LogInformation("Sent reminder {ReminderId}: {Text}", reminder.Id, reminder.Text);
+                    await _supabaseService.DeleteReminderAsync(reminder.Id); // DELETE instead of mark as sent
+
+                    _logger.LogInformation("Sent and deleted reminder {ReminderId}: {Text}", reminder.Id, reminder.Text);
                 }
                 catch (Exception ex)
                 {
@@ -207,7 +223,7 @@ public class SchedulingService : ISchedulingService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error executing morning reminders");
+            _logger.LogError(ex, "Error executing pending reminders");
         }
     }
 
@@ -234,7 +250,7 @@ public class SchedulingService : ISchedulingService
         try
         {
             _logger.LogInformation("Executing weekly letter check");
-            
+
             // Get all children
             var children = await _agentService.GetAllChildrenAsync();
             if (!children.Any())
@@ -266,15 +282,15 @@ public class SchedulingService : ISchedulingService
         try
         {
             _logger.LogInformation("Checking week letter for {ChildName}", child.FirstName);
-            
+
             var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Now);
             var year = DateTime.Now.Year;
-            
+
             // Check if we've already posted this week letter
             var alreadyPosted = await _supabaseService.HasWeekLetterBeenPostedAsync(child.FirstName, weekNumber, year);
             if (alreadyPosted)
             {
-                _logger.LogInformation("Week letter for {ChildName} week {WeekNumber}/{Year} already posted", 
+                _logger.LogInformation("Week letter for {ChildName} week {WeekNumber}/{Year} already posted",
                     child.FirstName, weekNumber, year);
                 return;
             }
@@ -298,7 +314,7 @@ public class SchedulingService : ISchedulingService
             }
 
             var contentHash = ComputeContentHash(content);
-            
+
             // Check if this exact content was already posted (in case of manual posting)
             var existingPosts = await _supabaseService.GetAppStateAsync($"last_posted_hash_{child.FirstName}");
             if (existingPosts == contentHash)
@@ -310,18 +326,18 @@ public class SchedulingService : ISchedulingService
 
             // Post the week letter
             await PostWeekLetter(child, weekLetter, content);
-            
+
             // Mark as posted and store hash
             await _supabaseService.MarkWeekLetterAsPostedAsync(child.FirstName, weekNumber, year, contentHash, true, _config.Telegram.Enabled);
             await _supabaseService.SetAppStateAsync($"last_posted_hash_{child.FirstName}", contentHash);
             await _supabaseService.MarkRetryAsSuccessfulAsync(child.FirstName, weekNumber, year);
-            
+
             _logger.LogInformation("Successfully posted week letter for {ChildName}", child.FirstName);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing week letter for {ChildName}", child.FirstName);
-            
+
             // Increment retry count
             var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Now);
             var year = DateTime.Now.Year;
@@ -397,6 +413,55 @@ public class SchedulingService : ISchedulingService
         {
             _logger.LogError(ex, "Error posting week letter for {ChildName}", child.FirstName);
             throw;
+        }
+    }
+
+    private async Task CheckForMissedReminders()
+    {
+        try
+        {
+            _logger.LogInformation("Checking for missed reminders on startup");
+
+            var pendingReminders = await _supabaseService.GetPendingRemindersAsync();
+
+            if (pendingReminders.Any())
+            {
+                _logger.LogWarning("Found {Count} missed reminders on startup", pendingReminders.Count);
+
+                foreach (var reminder in pendingReminders)
+                {
+                    var reminderLocalDateTime = reminder.RemindDate.ToDateTime(reminder.RemindTime);
+                    var missedBy = DateTime.Now - reminderLocalDateTime;
+
+                    string childInfo = !string.IsNullOrEmpty(reminder.ChildName) ? $" ({reminder.ChildName})" : "";
+                    string message = $"⚠️ *Missed Reminder*{childInfo}: {reminder.Text}\n" +
+                                   $"_Was scheduled for {reminderLocalDateTime:HH:mm} ({missedBy.TotalMinutes:F0} minutes ago)_";
+
+                    // Send notification about missed reminder
+                    if (_config.Slack.EnableInteractiveBot)
+                    {
+                        await _slackBot.SendMessage(message);
+                    }
+
+                    if (_config.Telegram.Enabled && _telegramBot != null)
+                    {
+                        await _telegramBot.SendMessage(long.Parse(_config.Telegram.ChannelId), message);
+                    }
+
+                    // Delete the missed reminder so it doesn't keep showing up
+                    await _supabaseService.DeleteReminderAsync(reminder.Id);
+
+                    _logger.LogInformation("Notified about missed reminder: {Text}", reminder.Text);
+                }
+            }
+            else
+            {
+                _logger.LogInformation("No missed reminders found on startup");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking for missed reminders");
         }
     }
 }
