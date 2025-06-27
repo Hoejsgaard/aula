@@ -18,6 +18,7 @@ public class OpenAiService : IOpenAiService
     private readonly OpenAIService _openAiClient;
     private readonly ILogger _logger;
     private readonly Dictionary<string, List<ChatMessage>> _conversationHistory = new();
+    private readonly Dictionary<string, string> _currentChildContext = new();
 
     public OpenAiService(string apiKey, ILoggerFactory loggerFactory)
     {
@@ -28,9 +29,9 @@ public class OpenAiService : IOpenAiService
         _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
     }
 
-    public async Task<string> SummarizeWeekLetterAsync(JObject weekLetter)
+    public async Task<string> SummarizeWeekLetterAsync(JObject weekLetter, ChatInterface chatInterface = ChatInterface.Slack)
     {
-        _logger.LogInformation("Summarizing week letter");
+        _logger.LogInformation("Summarizing week letter for {ChatInterface}", chatInterface);
         
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
         
@@ -53,9 +54,10 @@ public class OpenAiService : IOpenAiService
         
         var messages = new List<ChatMessage>
         {
-            ChatMessage.FromSystem("You are a helpful assistant that summarizes weekly school letters for parents. " +
+            ChatMessage.FromSystem($"You are a helpful assistant that summarizes weekly school letters for parents. " +
                                   "Provide a brief summary of the key information in the letter, focusing on activities, " +
-                                  "important dates, and things parents need to know. Be concise but thorough."),
+                                  "important dates, and things parents need to know. Be concise but thorough. " +
+                                  "You are responding via {GetChatInterfaceInstructions(chatInterface)}"),
             ChatMessage.FromUser($"Here's the week letter for {className} for week {weekNumber}:\n\n{weekLetterContent}\n\nPlease summarize this week letter.")
         };
 
@@ -79,14 +81,14 @@ public class OpenAiService : IOpenAiService
         }
     }
 
-    public async Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question)
+    public async Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, ChatInterface chatInterface = ChatInterface.Slack)
     {
-        return await AskQuestionAboutWeekLetterAsync(weekLetter, question, null);
+        return await AskQuestionAboutWeekLetterAsync(weekLetter, question, null, chatInterface);
     }
 
-    public async Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, string? contextKey)
+    public async Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack)
     {
-        _logger.LogInformation("🔎 TRACE: AskQuestionAboutWeekLetterAsync called with question: {Question}", question);
+        _logger.LogInformation("🔎 TRACE: AskQuestionAboutWeekLetterAsync called with question: {Question} for {ChatInterface}", question, chatInterface);
         
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
         _logger.LogInformation("🔎 TRACE: Week letter content in AskQuestionAboutWeekLetterAsync: {Length} characters", weekLetterContent.Length);
@@ -106,6 +108,10 @@ public class OpenAiService : IOpenAiService
             _logger.LogInformation("🔎 TRACE: Using provided context key: {ContextKey}", contextKey);
         }
         
+        // Store the current child name for this context
+        _currentChildContext[contextKey] = childName;
+        _logger.LogInformation("🔎 TRACE: Set current child context for {ContextKey} to {ChildName}", contextKey, childName);
+        
         // Initialize conversation history if it doesn't exist
         if (!_conversationHistory.ContainsKey(contextKey))
         {
@@ -121,57 +127,87 @@ public class OpenAiService : IOpenAiService
                                       "Monday's activities are mentioned, acknowledge that Tuesday isn't mentioned but share what's " +
                                       "happening on Monday. Be concise and direct in your answers. " +
                                       "IMPORTANT: Always respond in the same language as the user's question. " +
-                                      "If the question is in Danish, respond in Danish. If the question is in English, respond in English."),
+                                      "If the question is in Danish, respond in Danish. If the question is in English, respond in English. " +
+                                      $"You are responding via {GetChatInterfaceInstructions(chatInterface)}"),
                 ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}")
             };
             _logger.LogInformation("🔎 TRACE: Added week letter content to conversation context: {Length} characters", weekLetterContent.Length);
         }
         else
         {
-            // Always refresh the week letter content in the context
-            // First, find the system message with the week letter content
-            _logger.LogInformation("🔎 TRACE: Updating existing conversation context for {ContextKey}", contextKey);
-            int contentIndex = -1;
-            for (int i = 0; i < _conversationHistory[contextKey].Count; i++)
+            // Check if the child has changed for this context key
+            if (_currentChildContext.TryGetValue(contextKey, out var previousChildName) && 
+                !string.Equals(previousChildName, childName, StringComparison.OrdinalIgnoreCase))
             {
-                var message = _conversationHistory[contextKey][i];
-                if (message != null && message.Role == "system" && 
-                    message.Content != null && message.Content.StartsWith("Here's the weekly letter content"))
-                {
-                    contentIndex = i;
-                    break;
-                }
-            }
-            
-            // If found, update it; otherwise, add it
-            if (contentIndex >= 0)
-            {
-                _logger.LogInformation("🔎 TRACE: Found existing week letter content at index {Index}, updating", contentIndex);
-                _conversationHistory[contextKey][contentIndex] = ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}");
-                _logger.LogInformation("🔎 TRACE: Updated existing week letter content in context: {Length} characters", weekLetterContent.Length);
+                _logger.LogInformation("🔎 TRACE: Child changed for context {ContextKey} from {PreviousChild} to {CurrentChild}, resetting context", 
+                    contextKey, previousChildName, childName);
                 
-                // Also update the system instructions if it's the first message
-                if (contentIndex > 0)
+                // Reset the conversation history for this context key
+                _conversationHistory[contextKey] = new List<ChatMessage>
                 {
-                    _conversationHistory[contextKey][0] = ChatMessage.FromSystem($"You are a helpful assistant that answers questions about {childName}'s weekly school letter. " +
-                                      $"This letter is specifically about {childName}'s class and activities. " +
-                                      $"Today is {DateTime.Now.DayOfWeek}, {DateTime.Now.ToString("MMMM d, yyyy")}. " +
-                                      "Answer based on the content of the letter. If the specific information isn't in the letter, " +
-                                      "say 'I don't have that specific information in the weekly letter' and then provide any related " +
-                                      "information that might be helpful. For example, if asked about Tuesday's activities but only " +
-                                      "Monday's activities are mentioned, acknowledge that Tuesday isn't mentioned but share what's " +
-                                      "happening on Monday. Be concise and direct in your answers. " +
-                                      "IMPORTANT: Always respond in the same language as the user's question. " +
-                                      "If the question is in Danish, respond in Danish. If the question is in English, respond in English.");
-                    _logger.LogInformation("🔎 TRACE: Updated system instructions in context");
-                }
+                    ChatMessage.FromSystem($"You are a helpful assistant that answers questions about {childName}'s weekly school letter. " +
+                                          $"This letter is specifically about {childName}'s class and activities. " +
+                                          $"Today is {DateTime.Now.DayOfWeek}, {DateTime.Now.ToString("MMMM d, yyyy")}. " +
+                                          "Answer based on the content of the letter. If the specific information isn't in the letter, " +
+                                          "say 'I don't have that specific information in the weekly letter' and then provide any related " +
+                                          "information that might be helpful. For example, if asked about Tuesday's activities but only " +
+                                          "Monday's activities are mentioned, acknowledge that Tuesday isn't mentioned but share what's " +
+                                          "happening on Monday. Be concise and direct in your answers. " +
+                                          "IMPORTANT: Always respond in the same language as the user's question. " +
+                                          "If the question is in Danish, respond in Danish. If the question is in English, respond in English. " +
+                                          $"You are responding via {GetChatInterfaceInstructions(chatInterface)}"),
+                    ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}")
+                };
+                _logger.LogInformation("🔎 TRACE: Reset conversation history for {ContextKey} with new child {ChildName}", contextKey, childName);
             }
             else
             {
-                _logger.LogInformation("🔎 TRACE: No existing week letter content found, inserting after first system message");
-                // Insert after the first system message
-                _conversationHistory[contextKey].Insert(1, ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}"));
-                _logger.LogInformation("🔎 TRACE: Added week letter content to existing context: {Length} characters", weekLetterContent.Length);
+                // Always refresh the week letter content in the context
+                // First, find the system message with the week letter content
+                _logger.LogInformation("🔎 TRACE: Updating existing conversation context for {ContextKey}", contextKey);
+                int contentIndex = -1;
+                for (int i = 0; i < _conversationHistory[contextKey].Count; i++)
+                {
+                    var message = _conversationHistory[contextKey][i];
+                    if (message != null && message.Role == "system" && 
+                        message.Content != null && message.Content.StartsWith("Here's the weekly letter content"))
+                    {
+                        contentIndex = i;
+                        break;
+                    }
+                }
+                
+                // If found, update it; otherwise, add it
+                if (contentIndex >= 0)
+                {
+                    _logger.LogInformation("🔎 TRACE: Found existing week letter content at index {Index}, updating", contentIndex);
+                    _conversationHistory[contextKey][contentIndex] = ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}");
+                    _logger.LogInformation("🔎 TRACE: Updated existing week letter content in context: {Length} characters", weekLetterContent.Length);
+                    
+                    // Also update the system instructions if it's the first message
+                    if (contentIndex > 0)
+                    {
+                        _conversationHistory[contextKey][0] = ChatMessage.FromSystem($"You are a helpful assistant that answers questions about {childName}'s weekly school letter. " +
+                                          $"This letter is specifically about {childName}'s class and activities. " +
+                                          $"Today is {DateTime.Now.DayOfWeek}, {DateTime.Now.ToString("MMMM d, yyyy")}. " +
+                                          "Answer based on the content of the letter. If the specific information isn't in the letter, " +
+                                          "say 'I don't have that specific information in the weekly letter' and then provide any related " +
+                                          "information that might be helpful. For example, if asked about Tuesday's activities but only " +
+                                          "Monday's activities are mentioned, acknowledge that Tuesday isn't mentioned but share what's " +
+                                          "happening on Monday. Be concise and direct in your answers. " +
+                                          "IMPORTANT: Always respond in the same language as the user's question. " +
+                                          "If the question is in Danish, respond in Danish. If the question is in English, respond in English. " +
+                                          $"You are responding via {GetChatInterfaceInstructions(chatInterface)}");
+                        _logger.LogInformation("🔎 TRACE: Updated system instructions in context");
+                    }
+                }
+                else
+                {
+                    _logger.LogInformation("🔎 TRACE: No existing week letter content found, inserting after first system message");
+                    // Insert after the first system message
+                    _conversationHistory[contextKey].Insert(1, ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}"));
+                    _logger.LogInformation("🔎 TRACE: Added week letter content to existing context: {Length} characters", weekLetterContent.Length);
+                }
             }
         }
         
@@ -229,9 +265,9 @@ public class OpenAiService : IOpenAiService
         }
     }
 
-    public async Task<JObject> ExtractKeyInformationAsync(JObject weekLetter)
+    public async Task<JObject> ExtractKeyInformationAsync(JObject weekLetter, ChatInterface chatInterface = ChatInterface.Slack)
     {
-        _logger.LogInformation("Extracting key information from week letter");
+        _logger.LogInformation("Extracting key information from week letter for {ChatInterface}", chatInterface);
         
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
         
@@ -356,10 +392,25 @@ public class OpenAiService : IOpenAiService
         if (string.IsNullOrEmpty(contextKey))
         {
             _conversationHistory.Clear();
+            _currentChildContext.Clear();
+            _logger.LogInformation("Cleared all conversation history and child contexts");
         }
         else if (_conversationHistory.ContainsKey(contextKey))
         {
             _conversationHistory.Remove(contextKey);
+            _currentChildContext.Remove(contextKey);
+            _logger.LogInformation("Cleared conversation history and child context for {ContextKey}", contextKey);
         }
+    }
+
+    // Helper method to get chat interface-specific instructions
+    private string GetChatInterfaceInstructions(ChatInterface chatInterface)
+    {
+        return chatInterface switch
+        {
+            ChatInterface.Slack => "Slack. Format your responses using Slack markdown (e.g., *bold*, _italic_, `code`). Don't use HTML tags.",
+            ChatInterface.Telegram => "Telegram. Format your responses using HTML tags (e.g., <b>bold</b>, <i>italic</i>, <code>code</code>). Telegram supports these HTML tags: <b>, <i>, <u>, <s>, <a>, <code>, <pre>. Use <br/> for line breaks.",
+            _ => "a chat interface. Use plain text formatting."
+        };
     }
 } 
