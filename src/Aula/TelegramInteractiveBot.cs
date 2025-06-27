@@ -135,17 +135,32 @@ public class TelegramInteractiveBot
 
     private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Received update: {UpdateType}", update.Type);
+        
         // Only process message updates
         if (update.Message is not { } message)
+        {
+            _logger.LogWarning("Update does not contain a message");
             return;
+        }
         
         // Only process text messages
         if (message.Text is not { } messageText)
+        {
+            _logger.LogWarning("Message does not contain text");
             return;
+        }
         
         var chatId = message.Chat.Id;
         
         _logger.LogInformation("Received message from {ChatId}: {Message}", chatId, messageText);
+        _logger.LogInformation("Message from user: {FirstName} {LastName} (@{Username})", 
+            message.From?.FirstName ?? "Unknown", 
+            message.From?.LastName ?? "", 
+            message.From?.Username ?? "Unknown");
+        _logger.LogInformation("Chat type: {ChatType}, Title: {Title}", 
+            message.Chat.Type, 
+            message.Chat.Title ?? "N/A");
         
         // Process the message
         await ProcessMessage(chatId, messageText);
@@ -168,16 +183,26 @@ public class TelegramInteractiveBot
     {
         if (string.IsNullOrEmpty(text))
         {
+            _logger.LogWarning("Empty message received, skipping processing");
             return;
         }
 
         _logger.LogInformation("Processing message from {ChatId}: {Text}", chatId, text);
         
-        // Detect language (Danish or English)
-        bool isEnglish = DetectLanguage(text) == "en";
-        
-        // Handle Aula questions
-        await HandleAulaQuestion(chatId, text, isEnglish);
+        try
+        {
+            // Detect language (Danish or English)
+            bool isEnglish = DetectLanguage(text) == "en";
+            _logger.LogInformation("Detected language: {Language}", isEnglish ? "English" : "Danish");
+            
+            // Handle Aula questions
+            _logger.LogInformation("Forwarding to HandleAulaQuestion");
+            await HandleAulaQuestion(chatId, text, isEnglish);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing message: {Message}", text);
+        }
     }
 
     private bool IsFollowUpQuestion(string text)
@@ -559,11 +584,15 @@ public class TelegramInteractiveBot
     {
         try
         {
+            _logger.LogInformation("Sending message to chat {ChatId}: {TextLength} characters", chatId, text.Length);
+            
             await _telegramClient.SendTextMessageAsync(
                 chatId: chatId,
                 text: text,
                 parseMode: ParseMode.Html
             );
+            
+            _logger.LogInformation("Message sent successfully to chat {ChatId}", chatId);
         }
         catch (Exception ex)
         {
