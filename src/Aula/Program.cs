@@ -57,6 +57,13 @@ public class Program
                 }
             }
 
+            // Start scheduling service FIRST before bots
+            logger.LogInformation("🚀 About to start SchedulingService");
+            var schedulingService = serviceProvider.GetRequiredService<ISchedulingService>();
+            logger.LogInformation("🚀 Got SchedulingService instance, calling StartAsync");
+            await schedulingService.StartAsync();
+            logger.LogInformation("🚀 SchedulingService.StartAsync completed");
+
             // Start Slack interactive bot if enabled
             SlackInteractiveBot? slackInteractiveBot = null;
             if (config.Slack.EnableInteractiveBot)
@@ -99,9 +106,7 @@ public class Program
                 }
             }
 
-            // Start scheduling service
-            var schedulingService = serviceProvider.GetRequiredService<ISchedulingService>();
-            await schedulingService.StartAsync();
+            // Scheduling service already started above - removed duplicate
 
             logger.LogInformation("Aula started");
 
@@ -149,10 +154,16 @@ public class Program
             return config;
         });
 
-        // Logging
+        // Logging - configure to always go to console with timestamps
         services.AddLogging(builder =>
         {
-            builder.AddConsole();
+            builder.ClearProviders();
+            builder.AddSimpleConsole(options =>
+            {
+                options.TimestampFormat = "HH:mm:ss ";
+                options.IncludeScopes = false;
+            });
+            builder.SetMinimumLevel(LogLevel.Information);
         });
 
         // Memory cache
