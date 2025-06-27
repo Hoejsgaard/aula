@@ -9,18 +9,6 @@ using Telegram.Bot.Requests;
 
 namespace Aula;
 
-// Extension method for ITelegramBotClient
-public static class TelegramBotClientExtensions
-{
-    public static async Task SendMessage(this ITelegramBotClient botClient, string chatId, string text, ParseMode? parseMode = null)
-    {
-        await botClient.SendTextMessageAsync(
-            chatId: chatId,
-            text: text,
-            parseMode: parseMode
-        );
-    }
-}
 
 public class TelegramClient
 {
@@ -56,7 +44,7 @@ public class TelegramClient
         try
         {
             await _telegram!.SendTextMessageAsync(
-                chatId: channelId,
+                chatId: new ChatId(channelId),
                 text: message,
                 parseMode: ParseMode.Html
             );
@@ -109,8 +97,8 @@ public class TelegramClient
             // Send without parse mode
             try
             {
-                await _telegram!.SendMessage(
-                    channelId,
+                await _telegram!.SendTextMessageAsync(
+                    new ChatId(channelId),
                     message
                 );
                 return true;

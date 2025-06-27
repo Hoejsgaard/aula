@@ -830,13 +830,16 @@ public class SlackInteractiveBot
             // If we have a child name, handle it as a question about that child
             if (childName != null)
             {
-                // Find the child by name
-                if (!_childrenByName.TryGetValue(childName, out var child))
+                // Find the child by name using the AgentService for consistent lookup
+                var child = await _agentService.GetChildByNameAsync(childName);
+                if (child == null)
                 {
                     _logger.LogWarning("🔍 TRACKING: Child not found: {ChildName}", childName);
+                    var allChildren = await _agentService.GetAllChildrenAsync();
+                    var childNames = string.Join(", ", allChildren.Select(c => c.FirstName));
                     string notFoundMessage = isEnglish
-                        ? $"I don't know a child named {childName}. Available children are: {string.Join(", ", _childrenByName.Keys)}"
-                        : $"Jeg kender ikke et barn ved navn {childName}. Tilgængelige børn er: {string.Join(", ", _childrenByName.Keys)}";
+                        ? $"I don't know a child named {childName}. Available children are: {childNames}"
+                        : $"Jeg kender ikke et barn ved navn {childName}. Tilgængelige børn er: {childNames}";
                     
                     await SendMessage(notFoundMessage);
                     return;
@@ -870,8 +873,8 @@ public class SlackInteractiveBot
                         string.Join(", ", ugebreve[0].Children<JProperty>().Select(p => p.Name)));
                 }
 
-                // Use the child's name as the context key
-                string contextKey = childName.ToLowerInvariant();
+                // Use a channel-based context key that allows child switching
+                string contextKey = $"slack-{_config.Slack.ChannelId}";
                 _logger.LogInformation("🔍 TRACKING: Using context key: {ContextKey}", contextKey);
                 
                 // Let the LLM handle the question with context
@@ -901,7 +904,7 @@ public class SlackInteractiveBot
                 await SendMessage(answer);
                 
                 // Update conversation context with just the child name
-                UpdateConversationContext(childName, false, false, false);
+                UpdateConversationContext(child.FirstName, false, false, false);
                 return;
             }
             
@@ -951,8 +954,9 @@ public class SlackInteractiveBot
     {
         try
         {
-            // Check if we have any children
-            if (_childrenByName.Count == 0)
+            // Get all children using the AgentService
+            var allChildren = await _agentService.GetAllChildrenAsync();
+            if (!allChildren.Any())
             {
                 string noChildrenMessage = isEnglish
                     ? "I don't have any children configured."
@@ -973,10 +977,8 @@ public class SlackInteractiveBot
             // User's original question
             string userQuestion = text.Trim();
             
-            foreach (var childEntry in _childrenByName)
+            foreach (var child in allChildren)
             {
-                string childName = childEntry.Key;
-                Child child = childEntry.Value;
 
             // Get the week letter for the child
             var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
@@ -990,8 +992,8 @@ public class SlackInteractiveBot
                     continue;
                 }
 
-                // Create a context key that includes the child name
-                string contextKey = $"{childName.ToLowerInvariant()}-all";
+                // Create a context key for all-children query
+                string contextKey = $"slack-{_config.Slack.ChannelId}-all-{child.FirstName.ToLowerInvariant()}";
                 
                 // Formulate a brief question for this child
                 string question = $"{userQuestion} (About {child.FirstName}. Give a brief answer.)";

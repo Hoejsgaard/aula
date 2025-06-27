@@ -9,4 +9,6 @@ public interface IDataManager
 
     void CacheWeekSchedule(Child child, JObject weekSchedule);
     JObject? GetWeekSchedule(Child child);
+    
+    IEnumerable<Child> GetChildren();
 }

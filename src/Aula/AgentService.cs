@@ -179,4 +179,30 @@ public class AgentService : IAgentService
         var weekLetter = await GetWeekLetterAsync(child, date);
         return await _openAiService.ExtractKeyInformationAsync(weekLetter, chatInterface);
     }
+
+    public Task<Child?> GetChildByNameAsync(string childName)
+    {
+        _logger.LogInformation("Getting child by name: {ChildName}", childName);
+        var child = _dataManager.GetChildren()
+            .FirstOrDefault(c => c.FirstName.Equals(childName, StringComparison.OrdinalIgnoreCase));
+        
+        if (child == null)
+        {
+            _logger.LogWarning("Child not found: {ChildName}", childName);
+        }
+        else
+        {
+            _logger.LogInformation("Found child: {ChildName}", child.FirstName);
+        }
+        
+        return Task.FromResult(child);
+    }
+
+    public Task<IEnumerable<Child>> GetAllChildrenAsync()
+    {
+        _logger.LogInformation("Getting all children");
+        var children = _dataManager.GetChildren();
+        _logger.LogInformation("Found {Count} children", children.Count());
+        return Task.FromResult(children);
+    }
 }
