@@ -465,7 +465,7 @@ public class TelegramInteractiveBot
                 _logger.LogInformation("Added language context: {Language}", language);
                 
                 // Let the LLM handle the question with context
-                string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), enhancedQuestion, contextKey);
+                string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), enhancedQuestion, contextKey, ChatInterface.Telegram);
                 _logger.LogInformation("Got answer: {Length} characters", answer.Length);
                 
                 await SendMessage(chatId, answer);
@@ -560,7 +560,7 @@ public class TelegramInteractiveBot
                 question = $"[Please respond in {language}] " + question;
                 
                 // Ask OpenAI about the child's activities
-                string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), question, contextKey);
+                string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), question, contextKey, ChatInterface.Telegram);
                 
                 // Add to the response
                 responseBuilder.AppendLine($"- {child.FirstName}: {answer}");

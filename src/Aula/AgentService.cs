@@ -133,27 +133,28 @@ public class AgentService : IAgentService
         return weekSchedule;
     }
 
-    public async Task<string> SummarizeWeekLetterAsync(Child child, DateOnly date)
+    public async Task<string> SummarizeWeekLetterAsync(Child child, DateOnly date, ChatInterface chatInterface = ChatInterface.Slack)
     {
-        _logger.LogInformation("Summarizing week letter for {ChildName} for date {Date}", child.FirstName, date);
+        _logger.LogInformation("Summarizing week letter for {ChildName} for date {Date} using {ChatInterface}", 
+            child.FirstName, date, chatInterface);
         
         var weekLetter = await GetWeekLetterAsync(child, date);
-        return await _openAiService.SummarizeWeekLetterAsync(weekLetter);
+        return await _openAiService.SummarizeWeekLetterAsync(weekLetter, chatInterface);
     }
 
-    public async Task<string> AskQuestionAboutWeekLetterAsync(Child child, DateOnly date, string question)
+    public async Task<string> AskQuestionAboutWeekLetterAsync(Child child, DateOnly date, string question, ChatInterface chatInterface = ChatInterface.Slack)
     {
-        _logger.LogInformation("Asking question about week letter for {ChildName} for date {Date}: {Question}", 
-            child.FirstName, date, question);
+        _logger.LogInformation("Asking question about week letter for {ChildName} for date {Date} using {ChatInterface}: {Question}", 
+            child.FirstName, date, chatInterface, question);
         
         var weekLetter = await GetWeekLetterAsync(child, date);
-        return await _openAiService.AskQuestionAboutWeekLetterAsync(weekLetter, question);
+        return await _openAiService.AskQuestionAboutWeekLetterAsync(weekLetter, question, chatInterface);
     }
 
-    public async Task<string> AskQuestionAboutWeekLetterAsync(Child child, DateOnly date, string question, string? contextKey)
+    public async Task<string> AskQuestionAboutWeekLetterAsync(Child child, DateOnly date, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack)
     {
-        _logger.LogInformation("📌 MONITOR: AskQuestionAboutWeekLetterAsync for {ChildName} with context {ContextKey}: {Question}", 
-            child.FirstName, contextKey, question);
+        _logger.LogInformation("📌 MONITOR: AskQuestionAboutWeekLetterAsync for {ChildName} with context {ContextKey} using {ChatInterface}: {Question}", 
+            child.FirstName, contextKey, chatInterface, question);
         
         var weekLetter = await GetWeekLetterAsync(child, date);
         
@@ -167,15 +168,15 @@ public class AgentService : IAgentService
             _logger.LogInformation("📌 MONITOR: Week letter content preview: {Preview}", contentPreview);
         }
         
-        return await _openAiService.AskQuestionAboutWeekLetterAsync(weekLetter, question, contextKey);
+        return await _openAiService.AskQuestionAboutWeekLetterAsync(weekLetter, question, contextKey, chatInterface);
     }
 
-    public async Task<JObject> ExtractKeyInformationFromWeekLetterAsync(Child child, DateOnly date)
+    public async Task<JObject> ExtractKeyInformationFromWeekLetterAsync(Child child, DateOnly date, ChatInterface chatInterface = ChatInterface.Slack)
     {
-        _logger.LogInformation("Extracting key information from week letter for {ChildName} for date {Date}", 
-            child.FirstName, date);
+        _logger.LogInformation("Extracting key information from week letter for {ChildName} for date {Date} using {ChatInterface}", 
+            child.FirstName, date, chatInterface);
         
         var weekLetter = await GetWeekLetterAsync(child, date);
-        return await _openAiService.ExtractKeyInformationAsync(weekLetter);
+        return await _openAiService.ExtractKeyInformationAsync(weekLetter, chatInterface);
     }
 }

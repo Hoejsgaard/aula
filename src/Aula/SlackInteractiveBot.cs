@@ -895,7 +895,7 @@ public class SlackInteractiveBot
                 enhancedQuestion = $"[Please respond in {language}] " + enhancedQuestion;
                 _logger.LogInformation("🔍 TRACKING: Added language context: {Language}", language);
                 
-                string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), enhancedQuestion, contextKey);
+                string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), enhancedQuestion, contextKey, ChatInterface.Slack);
                 _logger.LogInformation("🔍 TRACKING: Got answer: {Length} characters", answer.Length);
                 
                 await SendMessage(answer);
@@ -997,7 +997,7 @@ public class SlackInteractiveBot
                 string question = $"{userQuestion} (About {child.FirstName}. Give a brief answer.)";
             
             // Ask OpenAI about the child's activities
-            string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), question, contextKey);
+            string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), question, contextKey, ChatInterface.Slack);
             
                 // Format the answer
                 responseBuilder.AppendLine($"- {child.FirstName}: {answer.Trim()}");

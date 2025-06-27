@@ -9,8 +9,8 @@ public interface IAgentService
     Task<JObject> GetWeekScheduleAsync(Child child, DateOnly date, bool useCache = true);
     
     // OpenAI-related methods
-    Task<string> SummarizeWeekLetterAsync(Child child, DateOnly date);
-    Task<string> AskQuestionAboutWeekLetterAsync(Child child, DateOnly date, string question);
-    Task<string> AskQuestionAboutWeekLetterAsync(Child child, DateOnly date, string question, string? contextKey);
-    Task<JObject> ExtractKeyInformationFromWeekLetterAsync(Child child, DateOnly date);
+    Task<string> SummarizeWeekLetterAsync(Child child, DateOnly date, ChatInterface chatInterface = ChatInterface.Slack);
+    Task<string> AskQuestionAboutWeekLetterAsync(Child child, DateOnly date, string question, ChatInterface chatInterface = ChatInterface.Slack);
+    Task<string> AskQuestionAboutWeekLetterAsync(Child child, DateOnly date, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack);
+    Task<JObject> ExtractKeyInformationFromWeekLetterAsync(Child child, DateOnly date, ChatInterface chatInterface = ChatInterface.Slack);
 }

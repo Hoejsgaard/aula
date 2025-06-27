@@ -172,7 +172,7 @@ public class AgentServiceTests
         _dataManagerMock.Setup(m => m.GetWeekLetter(_testChild))
             .Returns(weekLetter);
 
-        _openAiServiceMock.Setup(m => m.SummarizeWeekLetterAsync(weekLetter))
+        _openAiServiceMock.Setup(m => m.SummarizeWeekLetterAsync(weekLetter, It.IsAny<ChatInterface>()))
             .ReturnsAsync("Test summary");
 
         // Act
@@ -180,7 +180,7 @@ public class AgentServiceTests
 
         // Assert
         Assert.Equal("Test summary", result);
-        _openAiServiceMock.Verify(m => m.SummarizeWeekLetterAsync(weekLetter), Times.Once);
+        _openAiServiceMock.Verify(m => m.SummarizeWeekLetterAsync(weekLetter, ChatInterface.Slack), Times.Once);
     }
 
     [Fact]
@@ -205,7 +205,7 @@ public class AgentServiceTests
         _dataManagerMock.Setup(m => m.GetWeekLetter(_testChild))
             .Returns(weekLetter);
 
-        _openAiServiceMock.Setup(m => m.AskQuestionAboutWeekLetterAsync(weekLetter, question))
+        _openAiServiceMock.Setup(m => m.AskQuestionAboutWeekLetterAsync(weekLetter, question, It.IsAny<ChatInterface>()))
             .ReturnsAsync("Test answer");
 
         // Act
@@ -213,7 +213,7 @@ public class AgentServiceTests
 
         // Assert
         Assert.Equal("Test answer", result);
-        _openAiServiceMock.Verify(m => m.AskQuestionAboutWeekLetterAsync(weekLetter, question), Times.Once);
+        _openAiServiceMock.Verify(m => m.AskQuestionAboutWeekLetterAsync(weekLetter, question, ChatInterface.Slack), Times.Once);
     }
 
     [Fact]
@@ -242,7 +242,7 @@ public class AgentServiceTests
         _dataManagerMock.Setup(m => m.GetWeekLetter(_testChild))
             .Returns(weekLetter);
 
-        _openAiServiceMock.Setup(m => m.ExtractKeyInformationAsync(weekLetter))
+        _openAiServiceMock.Setup(m => m.ExtractKeyInformationAsync(weekLetter, It.IsAny<ChatInterface>()))
             .ReturnsAsync(keyInfo);
 
         // Act
@@ -250,6 +250,40 @@ public class AgentServiceTests
 
         // Assert
         Assert.Same(keyInfo, result);
-        _openAiServiceMock.Verify(m => m.ExtractKeyInformationAsync(weekLetter), Times.Once);
+        _openAiServiceMock.Verify(m => m.ExtractKeyInformationAsync(weekLetter, ChatInterface.Slack), Times.Once);
+    }
+    
+    [Fact]
+    public async Task AskQuestionAboutWeekLetterAsync_WithContextKey_CallsOpenAiService()
+    {
+        // Arrange
+        var weekLetter = new JObject
+        {
+            ["ugebreve"] = new JArray
+            {
+                new JObject
+                {
+                    ["klasseNavn"] = "Test Class",
+                    ["uge"] = "42",
+                    ["indhold"] = "Test content"
+                }
+            }
+        };
+
+        var question = "Test question";
+        var contextKey = "test-context";
+
+        _dataManagerMock.Setup(m => m.GetWeekLetter(_testChild))
+            .Returns(weekLetter);
+
+        _openAiServiceMock.Setup(m => m.AskQuestionAboutWeekLetterAsync(weekLetter, question, contextKey, It.IsAny<ChatInterface>()))
+            .ReturnsAsync("Test answer with context");
+
+        // Act
+        var result = await _agentService.AskQuestionAboutWeekLetterAsync(_testChild, _testDate, question, contextKey);
+
+        // Assert
+        Assert.Equal("Test answer with context", result);
+        _openAiServiceMock.Verify(m => m.AskQuestionAboutWeekLetterAsync(weekLetter, question, contextKey, ChatInterface.Slack), Times.Once);
     }
 }
