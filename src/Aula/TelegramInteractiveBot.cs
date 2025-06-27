@@ -26,24 +26,24 @@ public class TelegramInteractiveBot
     private readonly HashSet<string> _postedWeekLetterHashes = new HashSet<string>();
     private readonly HashSet<string> _englishWords = new HashSet<string> { "what", "when", "how", "is", "does", "do", "can", "will", "has", "have", "had", "show", "get", "tell", "please", "thanks", "thank", "you", "hello", "hi" };
     private readonly HashSet<string> _danishWords = new HashSet<string> { "hvad", "hvornår", "hvordan", "er", "gør", "kan", "vil", "har", "havde", "vis", "få", "fortæl", "venligst", "tak", "du", "dig", "hej", "hallo", "goddag" };
-    
+
     // Conversation context tracking
     private class ConversationContext
     {
         public string? LastChildName { get; set; }
         public DateTime Timestamp { get; set; } = DateTime.Now;
-        
+
         public bool IsStillValid => (DateTime.Now - Timestamp).TotalMinutes < 10; // Context expires after 10 minutes
-        
+
         public override string ToString()
         {
             return $"Child: {LastChildName ?? "none"}, Age: {(DateTime.Now - Timestamp).TotalMinutes:F1} minutes";
         }
     }
-    
+
     // Track conversation contexts by chat ID
     private readonly Dictionary<long, ConversationContext> _conversationContexts = new Dictionary<long, ConversationContext>();
-    
+
     private void UpdateConversationContext(long chatId, string? childName)
     {
         _conversationContexts[chatId] = new ConversationContext
@@ -51,7 +51,7 @@ public class TelegramInteractiveBot
             LastChildName = childName,
             Timestamp = DateTime.Now
         };
-        
+
         _logger.LogInformation("Updated conversation context for chat {ChatId}: {Context}", chatId, _conversationContexts[chatId]);
     }
 
@@ -65,7 +65,7 @@ public class TelegramInteractiveBot
         _config = config;
         _logger = loggerFactory.CreateLogger<TelegramInteractiveBot>();
         _supabaseService = supabaseService;
-        
+
         if (_config.Telegram.Enabled && !string.IsNullOrEmpty(_config.Telegram.Token))
         {
             _telegramClient = new TelegramBotClient(_config.Telegram.Token);
@@ -74,7 +74,7 @@ public class TelegramInteractiveBot
         {
             throw new InvalidOperationException("Telegram bot is not enabled or token is missing");
         }
-        
+
         _childrenByName = _config.Children.ToDictionary(
             c => c.FirstName.ToLowerInvariant(),
             c => c);
@@ -95,16 +95,16 @@ public class TelegramInteractiveBot
         }
 
         _logger.LogInformation("Starting Telegram interactive bot");
-        
+
         // Start receiving updates
         using var cts = new CancellationTokenSource();
-        
+
         // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
         var receiverOptions = new ReceiverOptions
         {
             AllowedUpdates = Array.Empty<UpdateType>() // receive all update types
         };
-        
+
         // Register handlers for updates
         _telegramClient.StartReceiving(
             HandleUpdateAsync,
@@ -112,21 +112,21 @@ public class TelegramInteractiveBot
             receiverOptions,
             cts.Token
         );
-        
+
         // Build a list of available children (first names only)
         string childrenList = string.Join(" og ", _childrenByName.Values.Select(c => c.FirstName.Split(' ')[0]));
-        
+
         // Get the current week number
         int weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Now);
-        
+
         // Send welcome message in Danish with children info to the configured channel
         if (!string.IsNullOrEmpty(_config.Telegram.ChannelId))
         {
             await SendMessageToChannel($"Jeg er online og har ugeplan for {childrenList} for Uge {weekNumber}");
         }
-        
+
         _logger.LogInformation("Telegram interactive bot started");
-        
+
         // Keep the application running
         await Task.Delay(Timeout.Infinite, cts.Token);
     }
@@ -139,32 +139,32 @@ public class TelegramInteractiveBot
     private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Received update: {UpdateType}", update.Type);
-        
+
         // Only process message updates
         if (update.Message is not { } message)
         {
             _logger.LogWarning("Update does not contain a message");
             return;
         }
-        
+
         // Only process text messages
         if (message.Text is not { } messageText)
         {
             _logger.LogWarning("Message does not contain text");
             return;
         }
-        
+
         var chatId = message.Chat.Id;
-        
+
         _logger.LogInformation("Received message from {ChatId}: {Message}", chatId, messageText);
-        _logger.LogInformation("Message from user: {FirstName} {LastName} (@{Username})", 
-            message.From?.FirstName ?? "Unknown", 
-            message.From?.LastName ?? "", 
+        _logger.LogInformation("Message from user: {FirstName} {LastName} (@{Username})",
+            message.From?.FirstName ?? "Unknown",
+            message.From?.LastName ?? "",
             message.From?.Username ?? "Unknown");
-        _logger.LogInformation("Chat type: {ChatType}, Title: {Title}", 
-            message.Chat.Type, 
+        _logger.LogInformation("Chat type: {ChatType}, Title: {Title}",
+            message.Chat.Type,
             message.Chat.Title ?? "N/A");
-        
+
         // Process the message
         await ProcessMessage(chatId, messageText);
     }
@@ -181,7 +181,7 @@ public class TelegramInteractiveBot
         _logger.LogError(errorMessage);
         return Task.CompletedTask;
     }
-    
+
     private async Task ProcessMessage(long chatId, string text)
     {
         if (string.IsNullOrEmpty(text))
@@ -191,28 +191,23 @@ public class TelegramInteractiveBot
         }
 
         _logger.LogInformation("Processing message from {ChatId}: {Text}", chatId, text);
-        
+
         try
         {
             // Detect language (Danish or English)
             bool isEnglish = DetectLanguage(text) == "en";
             _logger.LogInformation("Detected language: {Language}", isEnglish ? "English" : "Danish");
-            
+
             // Check for help command first
             if (await TryHandleHelpCommand(chatId, text, isEnglish))
             {
                 return;
             }
-            
-            // Check for reminder commands
-            if (await TryHandleReminderCommand(chatId, text, isEnglish))
-            {
-                return;
-            }
-            
-            // Handle Aula questions
-            _logger.LogInformation("Forwarding to HandleAulaQuestion");
-            await HandleAulaQuestion(chatId, text, isEnglish);
+
+            // Use the new tool-based processing that can handle both tools and regular questions
+            string contextKey = $"telegram-{chatId}";
+            string response = await _agentService.ProcessQueryWithToolsAsync(text, contextKey, ChatInterface.Telegram);
+            await SendMessageInternal(chatId, response);
         }
         catch (Exception ex)
         {
@@ -308,12 +303,12 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
     private async Task<bool> TryHandleReminderCommand(long chatId, string text, bool isEnglish)
     {
         text = text.Trim();
-        
+
         // Check for various reminder command patterns
         if (await TryHandleAddReminder(chatId, text, isEnglish)) return true;
         if (await TryHandleListReminders(chatId, text, isEnglish)) return true;
         if (await TryHandleDeleteReminder(chatId, text, isEnglish)) return true;
-        
+
         return false;
     }
 
@@ -321,7 +316,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
     {
         // Patterns: "remind me tomorrow at 8:00 that TestChild1 has Haver til maver"
         //           "husk mig i morgen kl 8:00 at TestChild1 har Haver til maver"
-        
+
         var reminderPatterns = new[]
         {
             @"remind me (tomorrow|today|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}) at (\d{1,2}:\d{2}) that (.+)",
@@ -357,8 +352,8 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                     {
                         // Try parsing DD/MM format
                         var dateParts = dateStr.Split('/');
-                        if (dateParts.Length == 2 && 
-                            int.TryParse(dateParts[0], out var day) && 
+                        if (dateParts.Length == 2 &&
+                            int.TryParse(dateParts[0], out var day) &&
                             int.TryParse(dateParts[1], out var month))
                         {
                             var year = DateTime.Now.Year;
@@ -434,13 +429,13 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                 try
                 {
                     var reminders = await _supabaseService.GetAllRemindersAsync();
-                    
+
                     if (!reminders.Any())
                     {
                         string noRemindersMessage = isEnglish
                             ? "📝 No reminders found."
                             : "📝 Ingen påmindelser fundet.";
-                        
+
                         await SendMessageInternal(chatId, noRemindersMessage);
                         return true;
                     }
@@ -451,12 +446,12 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
 
                     foreach (var reminder in reminders.OrderBy(r => r.RemindDate).ThenBy(r => r.RemindTime))
                     {
-                        string status = reminder.IsSent ? 
-                            (isEnglish ? "✅ Sent" : "✅ Sendt") : 
+                        string status = reminder.IsSent ?
+                            (isEnglish ? "✅ Sent" : "✅ Sendt") :
                             (isEnglish ? "⏳ Pending" : "⏳ Afventer");
-                        
+
                         string childInfo = !string.IsNullOrEmpty(reminder.ChildName) ? $" ({reminder.ChildName})" : "";
-                        
+
                         messageBuilder.AppendLine($"<b>ID {reminder.Id}:</b> {reminder.Text}{childInfo}");
                         messageBuilder.AppendLine($"📅 {reminder.RemindDate:dd/MM/yyyy} ⏰ {reminder.RemindTime:HH:mm} - {status}");
                         messageBuilder.AppendLine();
@@ -468,11 +463,11 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error listing reminders");
-                    
+
                     string errorMessage = isEnglish
                         ? "❌ Failed to retrieve reminders."
                         : "❌ Kunne ikke hente påmindelser.";
-                    
+
                     await SendMessageInternal(chatId, errorMessage);
                     return true;
                 }
@@ -498,24 +493,24 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                 try
                 {
                     var reminderId = int.Parse(match.Groups[1].Value);
-                    
+
                     await _supabaseService.DeleteReminderAsync(reminderId);
-                    
+
                     string successMessage = isEnglish
                         ? $"✅ Reminder {reminderId} deleted."
                         : $"✅ Påmindelse {reminderId} slettet.";
-                    
+
                     await SendMessageInternal(chatId, successMessage);
                     return true;
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error deleting reminder");
-                    
+
                     string errorMessage = isEnglish
                         ? "❌ Failed to delete reminder. Please check the ID."
                         : "❌ Kunne ikke slette påmindelse. Tjek venligst ID'et.";
-                    
+
                     await SendMessageInternal(chatId, errorMessage);
                     return true;
                 }
@@ -531,15 +526,15 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
         {
             return false;
         }
-        
+
         text = text.ToLowerInvariant();
-        
+
         // Check for explicit follow-up phrases
-        bool hasFollowUpPhrase = text.Contains("hvad med") || 
-                               text.Contains("what about") || 
-                               text.Contains("how about") || 
+        bool hasFollowUpPhrase = text.Contains("hvad med") ||
+                               text.Contains("what about") ||
+                               text.Contains("how about") ||
                                text.Contains("hvordan med") ||
-                               text.StartsWith("og ") || 
+                               text.StartsWith("og ") ||
                                text.StartsWith("and ") ||
                                text.Contains("og hvad") ||
                                text.Contains("and what") ||
@@ -548,10 +543,10 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                                text.Contains("likewise") ||
                                text == "og?" ||
                                text == "and?";
-        
+
         // Check if this is a short message
         bool isShortMessage = text.Length < 15;
-        
+
         // Check if the message contains a child name
         bool hasChildName = false;
         foreach (var childName in _childrenByName.Keys)
@@ -562,7 +557,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                 break;
             }
         }
-        
+
         // Also check for first names
         if (!hasChildName)
         {
@@ -576,25 +571,25 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                 }
             }
         }
-        
+
         // Check if the message contains time references
-        bool hasTimeReference = text.Contains("today") || text.Contains("tomorrow") || 
+        bool hasTimeReference = text.Contains("today") || text.Contains("tomorrow") ||
                               text.Contains("i dag") || text.Contains("i morgen");
-                              
+
         // Special case for very short messages that are likely follow-ups
         if (isShortMessage && (text.Contains("?") || text == "ok" || text == "okay"))
         {
             _logger.LogInformation("Detected likely follow-up based on short message: {Text}", text);
             return true;
         }
-        
+
         bool result = hasFollowUpPhrase || (isShortMessage && hasChildName && !hasTimeReference);
-        
+
         if (result)
         {
             _logger.LogInformation("Detected follow-up question: {Text}", text);
         }
-        
+
         return result;
     }
 
@@ -604,13 +599,13 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
         {
             return "da"; // Default to Danish if no text
         }
-        
+
         string lowerText = text.ToLowerInvariant();
-        
+
         // Count English and Danish words
         int englishWordCount = 0;
         int danishWordCount = 0;
-        
+
         foreach (var word in lowerText.Split(' ', ',', '.', '!', '?', ':', ';', '-', '(', ')', '[', ']', '{', '}'))
         {
             string cleanWord = word.Trim();
@@ -618,29 +613,29 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
             {
                 continue;
             }
-            
+
             if (_englishWords.Contains(cleanWord))
             {
                 englishWordCount++;
             }
-            
+
             if (_danishWords.Contains(cleanWord))
             {
                 danishWordCount++;
             }
         }
-        
-        _logger.LogInformation("Language detection - English words: {EnglishCount}, Danish words: {DanishCount}", 
+
+        _logger.LogInformation("Language detection - English words: {EnglishCount}, Danish words: {DanishCount}",
             englishWordCount, danishWordCount);
-        
+
         // If we have more Danish words, or equal but the text contains Danish-specific characters, use Danish
-        if (danishWordCount > englishWordCount || 
-            (danishWordCount == englishWordCount && 
+        if (danishWordCount > englishWordCount ||
+            (danishWordCount == englishWordCount &&
              (lowerText.Contains('æ') || lowerText.Contains('ø') || lowerText.Contains('å'))))
         {
             return "da";
         }
-        
+
         return "en";
     }
 
@@ -650,9 +645,9 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
         {
             return null;
         }
-        
+
         text = text.ToLowerInvariant();
-        
+
         // Check for full child names
         foreach (var childName in _childrenByName.Keys)
         {
@@ -662,20 +657,20 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                 return childName;
             }
         }
-        
+
         // Check for first names
         foreach (var child in _childrenByName.Values)
         {
             string firstName = child.FirstName.Split(' ')[0].ToLowerInvariant();
             if (Regex.IsMatch(text, $@"\b{Regex.Escape(firstName)}\b", RegexOptions.IgnoreCase))
             {
-                string matchedKey = _childrenByName.Keys.FirstOrDefault(k => 
+                string matchedKey = _childrenByName.Keys.FirstOrDefault(k =>
                     k.StartsWith(firstName, StringComparison.OrdinalIgnoreCase)) ?? "";
                 _logger.LogInformation("Found first name: {FirstName} -> {ChildName}", firstName, matchedKey);
                 return matchedKey;
             }
         }
-        
+
         // Check for follow-up phrases
         string[] followUpPhrases = { "hvad med", "what about", "how about", "hvordan med", "og hvad", "and what" };
         foreach (var phrase in followUpPhrases)
@@ -684,7 +679,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
             if (index >= 0)
             {
                 string afterPhrase = text.Substring(index + phrase.Length).Trim();
-                
+
                 // Check for full names after the phrase
                 foreach (var childName in _childrenByName.Keys)
                 {
@@ -693,20 +688,20 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                         return childName;
                     }
                 }
-                
+
                 // Check for first names after the phrase
                 foreach (var child in _childrenByName.Values)
                 {
                     string firstName = child.FirstName.Split(' ')[0].ToLowerInvariant();
                     if (Regex.IsMatch(afterPhrase, $@"\b{Regex.Escape(firstName)}\b", RegexOptions.IgnoreCase))
                     {
-                        return _childrenByName.Keys.FirstOrDefault(k => 
+                        return _childrenByName.Keys.FirstOrDefault(k =>
                             k.StartsWith(firstName, StringComparison.OrdinalIgnoreCase));
                     }
                 }
             }
         }
-        
+
         return null;
     }
 
@@ -715,7 +710,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
         try
         {
             _logger.LogInformation("HandleAulaQuestion called with text: {Text}", text);
-            
+
             // Get all children and their week letters
             var allChildren = await _agentService.GetAllChildrenAsync();
             if (!allChildren.Any())
@@ -723,7 +718,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                 string noChildrenMessage = isEnglish
                     ? "I don't have any children configured."
                     : "Jeg har ingen børn konfigureret.";
-                
+
                 await SendMessageInternal(chatId, noChildrenMessage);
                 return;
             }
@@ -744,14 +739,14 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                 string noLettersMessage = isEnglish
                     ? "I don't have any week letters available at the moment."
                     : "Jeg har ingen ugebreve tilgængelige i øjeblikket.";
-                
+
                 await SendMessageInternal(chatId, noLettersMessage);
                 return;
             }
 
             // Use a single context key for the chat
             string contextKey = $"telegram-{chatId}";
-            
+
             // Add day context if needed
             string enhancedQuestion = text;
             if (text.ToLowerInvariant().Contains("i dag") || text.ToLowerInvariant().Contains("today"))
@@ -767,7 +762,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
 
             // Use the new combined method
             string answer = await _agentService.AskQuestionAboutChildrenAsync(childrenWeekLetters, enhancedQuestion, contextKey, ChatInterface.Telegram);
-            
+
             await SendMessageInternal(chatId, answer);
         }
         catch (Exception ex)
@@ -776,7 +771,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
             string errorMessage = isEnglish
                 ? "Sorry, I couldn't process your question at the moment."
                 : "Beklager, jeg kunne ikke behandle dit spørgsmål i øjeblikket.";
-            
+
             await SendMessageInternal(chatId, errorMessage);
         }
     }
@@ -792,22 +787,22 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                 string noChildrenMessage = isEnglish
                     ? "I don't have any children configured."
                     : "Jeg har ingen børn konfigureret.";
-                
+
                 await SendMessageInternal(chatId, noChildrenMessage);
                 return;
             }
 
             // Create a response builder
             var responseBuilder = new StringBuilder();
-            
+
             // Add a header
-            responseBuilder.AppendLine(isEnglish 
+            responseBuilder.AppendLine(isEnglish
                 ? "Here's information for all children:"
                 : "Her er information for alle børn:");
-            
+
             // User's original question
             string userQuestion = text.Trim();
-            
+
             foreach (var child in allChildren)
             {
 
@@ -818,28 +813,28 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                     string noLetterMessage = isEnglish
                         ? $"- {child.FirstName}: No week letter available."
                         : $"- {child.FirstName}: Intet ugebrev tilgængeligt.";
-                    
+
                     responseBuilder.AppendLine(noLetterMessage);
                     continue;
                 }
 
                 // Create a context key for all-children query  
                 string contextKey = $"telegram-{chatId}-all-{child.FirstName.ToLowerInvariant()}";
-                
+
                 // Formulate a brief question for this child
                 string question = $"{userQuestion} (About {child.FirstName}. Give a brief answer.)";
-                
+
                 // Add language context
                 string language = isEnglish ? "English" : "Danish";
                 question = $"[Please respond in {language}] " + question;
-                
+
                 // Ask OpenAI about the child's activities
                 string answer = await _agentService.AskQuestionAboutWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), question, contextKey, ChatInterface.Telegram);
-                
+
                 // Add to the response
                 responseBuilder.AppendLine($"- {child.FirstName}: {answer}");
             }
-            
+
             // Send the combined response
             await SendMessageInternal(chatId, responseBuilder.ToString());
         }
@@ -849,7 +844,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
             string errorMessage = isEnglish
                 ? "Sorry, I couldn't process information about all children at the moment."
                 : "Beklager, jeg kunne ikke behandle information om alle børn i øjeblikket.";
-            
+
             await SendMessageInternal(chatId, errorMessage);
         }
     }
@@ -864,13 +859,13 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
         try
         {
             _logger.LogInformation("Sending message to chat {ChatId}: {TextLength} characters", chatId, text.Length);
-            
+
             await _telegramClient.SendTextMessageAsync(
                 chatId: new ChatId(chatId),
                 text: text,
                 parseMode: ParseMode.Html
             );
-            
+
             _logger.LogInformation("Message sent successfully to chat {ChatId}", chatId);
         }
         catch (Exception ex)
@@ -915,30 +910,30 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
         try
         {
             // Find the child
-            var child = _childrenByName.Values.FirstOrDefault(c => 
+            var child = _childrenByName.Values.FirstOrDefault(c =>
                 c.FirstName.Equals(childName, StringComparison.OrdinalIgnoreCase));
-            
+
             if (child == null)
             {
                 _logger.LogWarning("Child not found for week letter posting: {ChildName}", childName);
                 return;
             }
-            
+
             // Create a hash of the week letter to avoid duplicates
             var weekLetterContent = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
             var hash = ComputeHash(weekLetterContent);
-            
+
             // Check if we've already posted this week letter
             if (_postedWeekLetterHashes.Contains(hash))
             {
                 _logger.LogInformation("Week letter for {ChildName} already posted (hash: {Hash})", childName, hash);
                 return;
             }
-            
+
             // Post the week letter using the existing TelegramClient functionality
             var telegramClient = new TelegramClient(_config);
             bool success = await telegramClient.PostWeekLetter(_config.Telegram.ChannelId, weekLetter, child);
-            
+
             if (success)
             {
                 // Add the hash to avoid duplicates
@@ -984,9 +979,9 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
         {
             return false;
         }
-        
+
         text = text.ToLowerInvariant();
-        
+
         // Check for common time references in Danish and English
         return text.Contains("i dag") || text.Contains("i morgen") || text.Contains("i går") ||
                text.Contains("today") || text.Contains("tomorrow") || text.Contains("yesterday") ||
@@ -1000,4 +995,4 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
                text.Contains("lørdag") || text.Contains("saturday") ||
                text.Contains("søndag") || text.Contains("sunday");
     }
-} 
+}

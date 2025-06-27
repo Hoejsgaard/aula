@@ -25,8 +25,8 @@ public class AgentServiceTests
         _loggerFactoryMock.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_loggerMock.Object);
 
         _agentService = new AgentService(
-            _minUddannelseClientMock.Object, 
-            _dataManagerMock.Object, 
+            _minUddannelseClientMock.Object,
+            _dataManagerMock.Object,
             _openAiServiceMock.Object,
             _loggerFactoryMock.Object);
 
@@ -252,7 +252,7 @@ public class AgentServiceTests
         Assert.Same(keyInfo, result);
         _openAiServiceMock.Verify(m => m.ExtractKeyInformationAsync(weekLetter, ChatInterface.Slack), Times.Once);
     }
-    
+
     [Fact]
     public async Task AskQuestionAboutWeekLetterAsync_WithContextKey_CallsOpenAiService()
     {

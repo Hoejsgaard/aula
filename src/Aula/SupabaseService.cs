@@ -9,27 +9,27 @@ public interface ISupabaseService
 {
     Task InitializeAsync();
     Task<bool> TestConnectionAsync();
-    
+
     // Reminders
     Task<int> AddReminderAsync(string text, DateOnly date, TimeOnly time, string? childName = null);
     Task<List<Reminder>> GetPendingRemindersAsync();
     Task MarkReminderAsSentAsync(int reminderId);
     Task<List<Reminder>> GetAllRemindersAsync();
     Task DeleteReminderAsync(int reminderId);
-    
+
     // Posted letters tracking
     Task<bool> HasWeekLetterBeenPostedAsync(string childName, int weekNumber, int year);
     Task MarkWeekLetterAsPostedAsync(string childName, int weekNumber, int year, string contentHash, bool postedToSlack = false, bool postedToTelegram = false);
-    
+
     // App state
     Task<string?> GetAppStateAsync(string key);
     Task SetAppStateAsync(string key, string value);
-    
+
     // Retry attempts
     Task<int> GetRetryAttemptsAsync(string childName, int weekNumber, int year);
     Task IncrementRetryAttemptAsync(string childName, int weekNumber, int year);
     Task MarkRetryAsSuccessfulAsync(string childName, int weekNumber, int year);
-    
+
     // Scheduled tasks
     Task<List<ScheduledTask>> GetScheduledTasksAsync();
     Task<ScheduledTask?> GetScheduledTaskAsync(string name);
@@ -53,7 +53,7 @@ public class SupabaseService : ISupabaseService
         try
         {
             _logger.LogInformation("Initializing Supabase connection");
-            
+
             var options = new SupabaseOptions
             {
                 AutoConnectRealtime = false, // We don't need realtime for this use case
@@ -62,7 +62,7 @@ public class SupabaseService : ISupabaseService
 
             _supabase = new Client(_config.Supabase.Url, _config.Supabase.ServiceRoleKey, options);
             await _supabase.InitializeAsync();
-            
+
             _logger.LogInformation("Supabase client initialized successfully");
         }
         catch (Exception ex)
@@ -130,17 +130,42 @@ public class SupabaseService : ISupabaseService
     {
         if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
 
-        var now = DateTime.Now;
-        var today = DateOnly.FromDateTime(now);
-        var currentTime = TimeOnly.FromDateTime(now);
+        // Use UTC for all internal calculations
+        var nowUtc = DateTime.UtcNow;
+        var nowLocal = DateTime.Now; // For display only
+        
+        _logger.LogInformation("Checking for pending reminders. Current UTC: {UtcNow}, Local: {LocalNow}", 
+            nowUtc, nowLocal);
 
-        var result = await _supabase
+        // Get all reminders and filter in memory (since we delete fired reminders, all existing ones are pending)
+        var allReminders = await _supabase
             .From<Reminder>()
-            .Where(r => !r.IsSent)
-            .Where(r => r.RemindDate < today || (r.RemindDate == today && r.RemindTime <= currentTime))
             .Get();
 
-        return result.Models;
+        var pendingReminders = allReminders.Models.Where(r =>
+        {
+            // Convert reminder date/time to UTC for comparison
+            var reminderLocalDateTime = r.RemindDate.ToDateTime(r.RemindTime);
+            var reminderUtcDateTime = TimeZoneInfo.ConvertTimeToUtc(reminderLocalDateTime, TimeZoneInfo.Local);
+            
+            bool isPending = reminderUtcDateTime <= nowUtc;
+            
+            _logger.LogInformation("Reminder '{Text}': Local={LocalTime}, UTC={UtcTime}, Due={IsDue}", 
+                r.Text, reminderLocalDateTime, reminderUtcDateTime, isPending);
+                
+            return isPending;
+        }).ToList();
+
+        _logger.LogInformation("Found {Count} pending reminders", pendingReminders.Count);
+
+        foreach (var reminder in pendingReminders)
+        {
+            var reminderLocalDateTime = reminder.RemindDate.ToDateTime(reminder.RemindTime);
+            _logger.LogInformation("Pending reminder: '{Text}' scheduled for {DateTime} (local time)",
+                reminder.Text, reminderLocalDateTime);
+        }
+
+        return pendingReminders;
     }
 
     public async Task MarkReminderAsSentAsync(int reminderId)
@@ -209,7 +234,7 @@ public class SupabaseService : ISupabaseService
             .From<PostedLetter>()
             .Upsert(postedLetter);
 
-        _logger.LogInformation("Marked week letter as posted for {ChildName}, week {WeekNumber}/{Year}", 
+        _logger.LogInformation("Marked week letter as posted for {ChildName}, week {WeekNumber}/{Year}",
             childName, weekNumber, year);
     }
 
@@ -273,7 +298,7 @@ public class SupabaseService : ISupabaseService
             var task = await GetScheduledTaskAsync("WeeklyLetterCheck");
             var retryHours = task?.RetryIntervalHours ?? 1;
             existing.NextAttempt = DateTime.UtcNow.AddHours(retryHours);
-            
+
             await _supabase
                 .From<RetryAttempt>()
                 .Update(existing);
@@ -284,7 +309,7 @@ public class SupabaseService : ISupabaseService
             var task = await GetScheduledTaskAsync("WeeklyLetterCheck");
             var retryHours = task?.RetryIntervalHours ?? 1;
             var maxRetries = task?.MaxRetryHours ?? 48;
-            
+
             // Create new
             var retryAttempt = new RetryAttempt
             {
@@ -302,7 +327,7 @@ public class SupabaseService : ISupabaseService
                 .Insert(retryAttempt);
         }
 
-        _logger.LogInformation("Incremented retry attempt for {ChildName}, week {WeekNumber}/{Year}", 
+        _logger.LogInformation("Incremented retry attempt for {ChildName}, week {WeekNumber}/{Year}",
             childName, weekNumber, year);
     }
 
@@ -316,7 +341,7 @@ public class SupabaseService : ISupabaseService
             .Set(r => r.IsSuccessful, true)
             .Update();
 
-        _logger.LogInformation("Marked retry as successful for {ChildName}, week {WeekNumber}/{Year}", 
+        _logger.LogInformation("Marked retry as successful for {ChildName}, week {WeekNumber}/{Year}",
             childName, weekNumber, year);
     }
 
@@ -349,7 +374,7 @@ public class SupabaseService : ISupabaseService
         if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
 
         task.UpdatedAt = DateTime.UtcNow;
-        
+
         await _supabase
             .From<ScheduledTask>()
             .Update(task);
