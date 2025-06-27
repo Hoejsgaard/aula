@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet build:*)",
+      "Bash(export PATH=\"$PATH:/home/runeh/.dotnet\")",
+      "Bash(dotnet test:*)",
+      "Bash(dotnet run)",
+      "Bash(pkill:*)",
+      "Bash(true)",
+      "Bash(cp:*)",
+      "Bash(rg:*)",
+      "Bash(ls:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(dotnet add:*)",
+      "Bash(sed:*)",
+      "Bash(dotnet run:*)",
+      "Bash(grep:*)",
+      "Bash(timeout:*)",
+      "Bash(git add:*)",
+      "Bash(dotnet format:*)",
+      "Bash(find:*)"
+    ],
+    "deny": []
+  }
+}
