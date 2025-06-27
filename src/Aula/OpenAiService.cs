@@ -126,6 +126,9 @@ public class OpenAiService : IOpenAiService
                                       "information that might be helpful. For example, if asked about Tuesday's activities but only " +
                                       "Monday's activities are mentioned, acknowledge that Tuesday isn't mentioned but share what's " +
                                       "happening on Monday. Be concise and direct in your answers. " +
+                                      "CRITICAL: You can ONLY answer questions about the weekly letter content. You CANNOT create reminders, " +
+                                      "set alarms, or take any actions. Never promise to remind users of anything. If asked to create " +
+                                      "a reminder, explain they need to use specific reminder commands instead. " +
                                       "IMPORTANT: Always respond in the same language as the user's question. " +
                                       "If the question is in Danish, respond in Danish. If the question is in English, respond in English. " +
                                       $"You are responding via {GetChatInterfaceInstructions(chatInterface)}"),
@@ -153,6 +156,9 @@ public class OpenAiService : IOpenAiService
                                           "information that might be helpful. For example, if asked about Tuesday's activities but only " +
                                           "Monday's activities are mentioned, acknowledge that Tuesday isn't mentioned but share what's " +
                                           "happening on Monday. Be concise and direct in your answers. " +
+                                          "CRITICAL: You can ONLY answer questions about the weekly letter content. You CANNOT create reminders, " +
+                                          "set alarms, or take any actions. Never promise to remind users of anything. If asked to create " +
+                                          "a reminder, explain they need to use specific reminder commands instead. " +
                                           "IMPORTANT: Always respond in the same language as the user's question. " +
                                           "If the question is in Danish, respond in Danish. If the question is in English, respond in English. " +
                                           $"You are responding via {GetChatInterfaceInstructions(chatInterface)}"),
@@ -412,6 +418,10 @@ public class OpenAiService : IOpenAiService
         var systemPrompt = $@"You are an AI assistant helping parents understand their children's school activities. 
 You have been provided with week letters from school for multiple children. 
 Answer questions about the children's activities clearly and helpfully.
+
+CRITICAL: You can ONLY answer questions about the weekly letter content. You CANNOT create reminders, 
+set alarms, or take any actions. Never promise to remind users of anything. If asked to create 
+a reminder, explain they need to use specific reminder commands instead.
 
 {GetChatInterfaceInstructions(chatInterface)}
 
