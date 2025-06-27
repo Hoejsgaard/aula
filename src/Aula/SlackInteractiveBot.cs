@@ -124,7 +124,7 @@ public class SlackInteractiveBot
         int weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Now);
         
         // Send welcome message in Danish with children info
-        await SendMessage($"Jeg er online og har ugeplan for {childrenList} for Uge {weekNumber}");
+        await SendMessageInternal($"Jeg er online og har ugeplan for {childrenList} for Uge {weekNumber}");
         
         _logger.LogInformation("Slack polling bot started");
     }
@@ -565,7 +565,7 @@ public class SlackInteractiveBot
                 ? $"I don't know a child named {childName}. Available children are: {string.Join(", ", _childrenByName.Keys)}"
                 : $"Jeg kender ikke et barn ved navn {childName}. Tilgængelige børn er: {string.Join(", ", _childrenByName.Keys)}";
             
-            await SendMessage(notFoundMessage);
+            await SendMessageInternal(notFoundMessage);
             return true;
         }
 
@@ -592,7 +592,7 @@ public class SlackInteractiveBot
                 ? $"Sorry, I couldn't retrieve the week letter for {childName} at the moment."
                 : $"Beklager, jeg kunne ikke hente ugebrevet for {childName} i øjeblikket.";
             
-            await SendMessage(errorMessage);
+            await SendMessageInternal(errorMessage);
             return true;
         }
     }
@@ -625,7 +625,12 @@ public class SlackInteractiveBot
         return JObject.Parse(responseContent);
     }
 
-    private async Task SendMessage(string text)
+    public async Task SendMessage(string text)
+    {
+        await SendMessageInternal(text);
+    }
+
+    private async Task SendMessageInternal(string text)
     {
         try
         {
@@ -709,7 +714,7 @@ public class SlackInteractiveBot
                 _logger.LogError("Failed to join channel: {Error}", data["error"]?.ToString());
                 
                 // If we can't join, send a message to the user about it
-                await SendMessage("I need to be invited to this channel. Please use `/invite @YourBotName` in the channel.");
+                await SendMessageInternal("I need to be invited to this channel. Please use `/invite @YourBotName` in the channel.");
             }
             else
             {
@@ -833,7 +838,7 @@ public class SlackInteractiveBot
                     ? "I don't have any children configured."
                     : "Jeg har ingen børn konfigureret.";
                 
-                await SendMessage(noChildrenMessage);
+                await SendMessageInternal(noChildrenMessage);
                 return;
             }
 
@@ -854,7 +859,7 @@ public class SlackInteractiveBot
                     ? "I don't have any week letters available at the moment."
                     : "Jeg har ingen ugebreve tilgængelige i øjeblikket.";
                 
-                await SendMessage(noLettersMessage);
+                await SendMessageInternal(noLettersMessage);
                 return;
             }
 
@@ -877,7 +882,7 @@ public class SlackInteractiveBot
             // Use the new combined method
             string answer = await _agentService.AskQuestionAboutChildrenAsync(childrenWeekLetters, enhancedQuestion, contextKey, ChatInterface.Slack);
             
-            await SendMessage(answer);
+            await SendMessageInternal(answer);
         }
         catch (Exception ex)
         {
@@ -886,7 +891,7 @@ public class SlackInteractiveBot
                 ? "Sorry, I couldn't process your question at the moment."
                 : "Beklager, jeg kunne ikke behandle dit spørgsmål i øjeblikket.";
             
-            await SendMessage(errorMessage);
+            await SendMessageInternal(errorMessage);
         }
     }
 
@@ -902,7 +907,7 @@ public class SlackInteractiveBot
                     ? "I don't have any children configured."
                     : "Jeg har ingen børn konfigureret.";
                 
-                await SendMessage(noChildrenMessage);
+                await SendMessageInternal(noChildrenMessage);
                 return;
             }
 
@@ -945,7 +950,7 @@ public class SlackInteractiveBot
                 responseBuilder.AppendLine($"- {child.FirstName}: {answer.Trim()}");
             }
             
-            await SendMessage(responseBuilder.ToString());
+            await SendMessageInternal(responseBuilder.ToString());
         }
         catch (Exception ex)
         {
@@ -954,7 +959,7 @@ public class SlackInteractiveBot
                 ? "Sorry, I couldn't retrieve information about the children's activities at the moment."
                 : "Beklager, jeg kunne ikke hente information om børnenes aktiviteter i øjeblikket.";
             
-            await SendMessage(errorMessage);
+            await SendMessageInternal(errorMessage);
         }
     }
 
@@ -1110,7 +1115,7 @@ public class SlackInteractiveBot
                         ? $"✅ Reminder added (ID: {reminderId}): {reminderText} on {date:yyyy-MM-dd} at {time:HH:mm}"
                         : $"✅ Påmindelse tilføjet (ID: {reminderId}): {reminderText} den {date:yyyy-MM-dd} kl. {time:HH:mm}";
 
-                    await SendMessage(successMessage);
+                    await SendMessageInternal(successMessage);
                     return true;
                 }
                 catch (Exception ex)
@@ -1120,7 +1125,7 @@ public class SlackInteractiveBot
                         ? "❌ Error adding reminder. Please check the date and time format."
                         : "❌ Fejl ved tilføjelse af påmindelse. Tjek venligst dato og tidsformat.";
                     
-                    await SendMessage(errorMessage);
+                    await SendMessageInternal(errorMessage);
                     return true;
                 }
             }
@@ -1151,7 +1156,7 @@ public class SlackInteractiveBot
                             ? "📝 No reminders found."
                             : "📝 Ingen påmindelser fundet.";
                         
-                        await SendMessage(noRemindersMessage);
+                        await SendMessageInternal(noRemindersMessage);
                         return true;
                     }
 
@@ -1167,7 +1172,7 @@ public class SlackInteractiveBot
                         messageBuilder.AppendLine($"   📅 {reminder.RemindDate:yyyy-MM-dd} ⏰ {reminder.RemindTime:HH:mm}");
                     }
 
-                    await SendMessage(messageBuilder.ToString());
+                    await SendMessageInternal(messageBuilder.ToString());
                     return true;
                 }
                 catch (Exception ex)
@@ -1177,7 +1182,7 @@ public class SlackInteractiveBot
                         ? "❌ Error retrieving reminders."
                         : "❌ Fejl ved hentning af påmindelser.";
                     
-                    await SendMessage(errorMessage);
+                    await SendMessageInternal(errorMessage);
                     return true;
                 }
             }
@@ -1209,7 +1214,7 @@ public class SlackInteractiveBot
                         ? $"✅ Reminder {reminderId} deleted."
                         : $"✅ Påmindelse {reminderId} slettet.";
                     
-                    await SendMessage(successMessage);
+                    await SendMessageInternal(successMessage);
                     return true;
                 }
                 catch (Exception ex)
@@ -1219,7 +1224,7 @@ public class SlackInteractiveBot
                         ? "❌ Error deleting reminder. Please check the reminder ID."
                         : "❌ Fejl ved sletning af påmindelse. Tjek venligst påmindelse ID.";
                     
-                    await SendMessage(errorMessage);
+                    await SendMessageInternal(errorMessage);
                     return true;
                 }
             }

@@ -67,10 +67,13 @@ public class Program
 
             // Start Telegram interactive bot if enabled
             TelegramInteractiveBot? telegramInteractiveBot = null;
-            if (config.Telegram.Enabled)
+            if (config.Telegram.Enabled && !string.IsNullOrEmpty(config.Telegram.Token))
             {
-                telegramInteractiveBot = serviceProvider.GetRequiredService<TelegramInteractiveBot>();
-                await telegramInteractiveBot.Start();
+                telegramInteractiveBot = serviceProvider.GetService<TelegramInteractiveBot>();
+                if (telegramInteractiveBot != null)
+                {
+                    await telegramInteractiveBot.Start();
+                }
             }
 
             // Check if we need to post week letters on startup for either Slack or Telegram
@@ -95,6 +98,10 @@ public class Program
                     }
                 }
             }
+
+            // Start scheduling service
+            var schedulingService = serviceProvider.GetRequiredService<ISchedulingService>();
+            await schedulingService.StartAsync();
 
             logger.LogInformation("Aula started");
 
@@ -146,8 +153,27 @@ public class Program
         });
         services.AddSingleton<IAgentService, AgentService>();
         services.AddSingleton<SlackInteractiveBot>();
-        services.AddSingleton<TelegramInteractiveBot>();
+        
+        // Only register TelegramInteractiveBot if enabled
+        var tempConfig = new Config();
+        configuration.Bind(tempConfig);
+        if (tempConfig.Telegram.Enabled && !string.IsNullOrEmpty(tempConfig.Telegram.Token))
+        {
+            services.AddSingleton<TelegramInteractiveBot>();
+        }
+        
         services.AddSingleton<ISupabaseService, SupabaseService>();
+        services.AddSingleton<ISchedulingService>(provider => 
+        {
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var supabaseService = provider.GetRequiredService<ISupabaseService>();
+            var agentService = provider.GetRequiredService<IAgentService>();
+            var slackBot = provider.GetRequiredService<SlackInteractiveBot>();
+            var telegramBot = provider.GetService<TelegramInteractiveBot>(); // May be null
+            var config = provider.GetRequiredService<Config>();
+            
+            return new SchedulingService(loggerFactory, supabaseService, agentService, slackBot, telegramBot, config);
+        });
 
         return services.BuildServiceProvider();
     }

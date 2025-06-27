@@ -47,6 +47,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.6" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.6" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.6" />
+    <PackageReference Include="NCrontab" Version="3.3.3" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="Betalgo.OpenAI" Version="8.7.2" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
