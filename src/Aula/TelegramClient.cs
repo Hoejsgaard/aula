@@ -4,8 +4,23 @@ using HtmlAgilityPack;
 using Newtonsoft.Json.Linq;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types;
+using Telegram.Bot.Requests;
 
 namespace Aula;
+
+// Extension method for ITelegramBotClient
+public static class TelegramBotClientExtensions
+{
+    public static async Task SendMessage(this ITelegramBotClient botClient, string chatId, string text, ParseMode? parseMode = null)
+    {
+        await botClient.SendTextMessageAsync(
+            chatId: chatId,
+            text: text,
+            parseMode: parseMode
+        );
+    }
+}
 
 public class TelegramClient
 {
@@ -40,9 +55,9 @@ public class TelegramClient
 
         try
         {
-            await _telegram!.SendMessage(
-                channelId,
-                message,
+            await _telegram!.SendTextMessageAsync(
+                chatId: channelId,
+                text: message,
                 parseMode: ParseMode.Html
             );
             return true;
