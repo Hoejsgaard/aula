@@ -105,7 +105,7 @@ public class TelegramInteractiveBot
         // Register handlers for updates
         _telegramClient.StartReceiving(
             updateHandler: HandleUpdateAsync,
-            errorHandler: HandlePollingErrorAsync,
+            pollingErrorHandler: HandlePollingErrorAsync,
             receiverOptions: receiverOptions,
             cancellationToken: cts.Token
         );
@@ -559,7 +559,7 @@ public class TelegramInteractiveBot
     {
         try
         {
-            await _telegramClient.SendMessage(
+            await _telegramClient.SendTextMessageAsync(
                 chatId: chatId,
                 text: text,
                 parseMode: ParseMode.Html
@@ -581,7 +581,7 @@ public class TelegramInteractiveBot
 
         try
         {
-            await _telegramClient.SendMessage(
+            await _telegramClient.SendTextMessageAsync(
                 chatId: _config.Telegram.ChannelId,
                 text: message,
                 parseMode: ParseMode.Html
