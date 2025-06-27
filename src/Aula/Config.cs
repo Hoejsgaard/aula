@@ -8,6 +8,7 @@ public interface IConfig
     GoogleServiceAccount GoogleServiceAccount { get; set; }
     Telegram Telegram { get; set; }
     OpenAi OpenAi { get; set; }
+    Supabase Supabase { get; set; }
 }
 
 public class Config : IConfig
@@ -18,6 +19,7 @@ public class Config : IConfig
     public GoogleServiceAccount GoogleServiceAccount { get; set; } = new();
     public Telegram Telegram { get; set; } = new();
     public OpenAi OpenAi { get; set; } = new();
+    public Supabase Supabase { get; set; } = new();
 }
 
 public class UniLogin
@@ -71,4 +73,11 @@ public class OpenAi
 {
     public string ApiKey { get; set; } = string.Empty;
     public string Model { get; set; } = "gpt-4"; // Default to GPT-4, can be overridden in config
+}
+
+public class Supabase
+{
+    public string Url { get; set; } = string.Empty;
+    public string Key { get; set; } = string.Empty;
+    public string ServiceRoleKey { get; set; } = string.Empty;
 }

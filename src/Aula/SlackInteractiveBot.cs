@@ -26,7 +26,6 @@ public class SlackInteractiveBot
     private string _lastTimestamp = "0"; // Start from the beginning of time
     private readonly object _lockObject = new object();
     private int _pollingInProgress = 0;
-    private bool _recentlyRespondedToGenericQuestion = false;
     private readonly HashSet<string> _postedWeekLetterHashes = new HashSet<string>();
     // Track our own message IDs to avoid processing them
     private readonly HashSet<string> _sentMessageIds = new HashSet<string>();
@@ -68,15 +67,19 @@ public class SlackInteractiveBot
         _logger.LogInformation("Updated conversation context: {Context}", _conversationContext);
     }
 
+    private readonly ISupabaseService _supabaseService;
+
     public SlackInteractiveBot(
         IAgentService agentService,
         Config config,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        ISupabaseService supabaseService)
     {
         _agentService = agentService;
         _config = config;
         _logger = loggerFactory.CreateLogger<SlackInteractiveBot>();
         _httpClient = new HttpClient();
+        _supabaseService = supabaseService;
         _childrenByName = _config.Children.ToDictionary(
             c => c.FirstName.ToLowerInvariant(),
             c => c);
@@ -294,6 +297,12 @@ public class SlackInteractiveBot
 
         // Detect language (Danish or English)
         bool isEnglish = DetectLanguage(text) == "en";
+        
+        // Check for reminder commands first
+        if (await TryHandleReminderCommand(text, isEnglish))
+        {
+            return;
+        }
         
         // Handle all Aula questions with a single method
         await HandleAulaQuestion(text, isEnglish);
@@ -1005,5 +1014,217 @@ public class SlackInteractiveBot
         };
         
         return relativeTimeWords.Any(word => lowerText.Contains(word));
+    }
+
+    private async Task<bool> TryHandleReminderCommand(string text, bool isEnglish)
+    {
+        text = text.Trim();
+        
+        // Check for various reminder command patterns
+        if (await TryHandleAddReminder(text, isEnglish)) return true;
+        if (await TryHandleListReminders(text, isEnglish)) return true;
+        if (await TryHandleDeleteReminder(text, isEnglish)) return true;
+        
+        return false;
+    }
+
+    private async Task<bool> TryHandleAddReminder(string text, bool isEnglish)
+    {
+        // Patterns: "remind me tomorrow at 8:00 that Hans has Haver til maver"
+        //           "husk mig i morgen kl 8:00 at Hans har Haver til maver"
+        
+        var reminderPatterns = new[]
+        {
+            @"remind me (tomorrow|today|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}) at (\d{1,2}:\d{2}) that (.+)",
+            @"husk mig (i morgen|i dag|\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}) kl (\d{1,2}:\d{2}) at (.+)"
+        };
+
+        foreach (var pattern in reminderPatterns)
+        {
+            var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase);
+            if (match.Success)
+            {
+                try
+                {
+                    var dateStr = match.Groups[1].Value.ToLowerInvariant();
+                    var timeStr = match.Groups[2].Value;
+                    var reminderText = match.Groups[3].Value;
+
+                    // Parse date
+                    DateOnly date;
+                    if (dateStr == "tomorrow" || dateStr == "i morgen")
+                    {
+                        date = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
+                    }
+                    else if (dateStr == "today" || dateStr == "i dag")
+                    {
+                        date = DateOnly.FromDateTime(DateTime.Today);
+                    }
+                    else if (DateOnly.TryParse(dateStr, out var parsedDate))
+                    {
+                        date = parsedDate;
+                    }
+                    else
+                    {
+                        // Try parsing DD/MM format
+                        var dateParts = dateStr.Split('/');
+                        if (dateParts.Length == 2 && 
+                            int.TryParse(dateParts[0], out var day) && 
+                            int.TryParse(dateParts[1], out var month))
+                        {
+                            var year = DateTime.Now.Year;
+                            if (month < DateTime.Now.Month || (month == DateTime.Now.Month && day < DateTime.Now.Day))
+                            {
+                                year++; // Next year if date has passed
+                            }
+                            date = new DateOnly(year, month, day);
+                        }
+                        else
+                        {
+                            throw new FormatException("Invalid date format");
+                        }
+                    }
+
+                    // Parse time
+                    if (!TimeOnly.TryParse(timeStr, out var time))
+                    {
+                        throw new FormatException("Invalid time format");
+                    }
+
+                    // Extract child name if mentioned
+                    string? childName = null;
+                    foreach (var child in _childrenByName.Values)
+                    {
+                        string firstName = child.FirstName.Split(' ')[0];
+                        if (reminderText.Contains(firstName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            childName = child.FirstName;
+                            break;
+                        }
+                    }
+
+                    // Add reminder to database
+                    var reminderId = await _supabaseService.AddReminderAsync(reminderText, date, time, childName);
+
+                    string successMessage = isEnglish
+                        ? $"✅ Reminder added (ID: {reminderId}): {reminderText} on {date:yyyy-MM-dd} at {time:HH:mm}"
+                        : $"✅ Påmindelse tilføjet (ID: {reminderId}): {reminderText} den {date:yyyy-MM-dd} kl. {time:HH:mm}";
+
+                    await SendMessage(successMessage);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error adding reminder: {Text}", text);
+                    string errorMessage = isEnglish
+                        ? "❌ Error adding reminder. Please check the date and time format."
+                        : "❌ Fejl ved tilføjelse af påmindelse. Tjek venligst dato og tidsformat.";
+                    
+                    await SendMessage(errorMessage);
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private async Task<bool> TryHandleListReminders(string text, bool isEnglish)
+    {
+        var listPatterns = new[]
+        {
+            @"^(list reminders|show reminders)$",
+            @"^(vis påmindelser|liste påmindelser)$"
+        };
+
+        foreach (var pattern in listPatterns)
+        {
+            if (Regex.IsMatch(text, pattern, RegexOptions.IgnoreCase))
+            {
+                try
+                {
+                    var reminders = await _supabaseService.GetAllRemindersAsync();
+                    
+                    if (!reminders.Any())
+                    {
+                        string noRemindersMessage = isEnglish
+                            ? "📝 No reminders found."
+                            : "📝 Ingen påmindelser fundet.";
+                        
+                        await SendMessage(noRemindersMessage);
+                        return true;
+                    }
+
+                    var messageBuilder = new StringBuilder();
+                    messageBuilder.AppendLine(isEnglish ? "📝 *Current Reminders:*" : "📝 *Nuværende påmindelser:*");
+
+                    foreach (var reminder in reminders.OrderBy(r => r.RemindDate).ThenBy(r => r.RemindTime))
+                    {
+                        string status = reminder.IsSent ? "✅" : "⏰";
+                        string childInfo = !string.IsNullOrEmpty(reminder.ChildName) ? $" ({reminder.ChildName})" : "";
+                        
+                        messageBuilder.AppendLine($"{status} *ID {reminder.Id}*: {reminder.Text}{childInfo}");
+                        messageBuilder.AppendLine($"   📅 {reminder.RemindDate:yyyy-MM-dd} ⏰ {reminder.RemindTime:HH:mm}");
+                    }
+
+                    await SendMessage(messageBuilder.ToString());
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error listing reminders");
+                    string errorMessage = isEnglish
+                        ? "❌ Error retrieving reminders."
+                        : "❌ Fejl ved hentning af påmindelser.";
+                    
+                    await SendMessage(errorMessage);
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private async Task<bool> TryHandleDeleteReminder(string text, bool isEnglish)
+    {
+        var deletePatterns = new[]
+        {
+            @"^delete reminder (\d+)$",
+            @"^slet påmindelse (\d+)$"
+        };
+
+        foreach (var pattern in deletePatterns)
+        {
+            var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase);
+            if (match.Success)
+            {
+                try
+                {
+                    var reminderId = int.Parse(match.Groups[1].Value);
+                    
+                    await _supabaseService.DeleteReminderAsync(reminderId);
+                    
+                    string successMessage = isEnglish
+                        ? $"✅ Reminder {reminderId} deleted."
+                        : $"✅ Påmindelse {reminderId} slettet.";
+                    
+                    await SendMessage(successMessage);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error deleting reminder: {Text}", text);
+                    string errorMessage = isEnglish
+                        ? "❌ Error deleting reminder. Please check the reminder ID."
+                        : "❌ Fejl ved sletning af påmindelse. Tjek venligst påmindelse ID.";
+                    
+                    await SendMessage(errorMessage);
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 } 
