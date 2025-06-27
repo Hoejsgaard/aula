@@ -39,7 +39,7 @@ public class SchedulingService : ISchedulingService
         _config = config;
     }
 
-    public async Task StartAsync()
+    public Task StartAsync()
     {
         _logger.LogInformation("Starting scheduling service");
 
@@ -48,20 +48,30 @@ public class SchedulingService : ISchedulingService
             if (_isRunning)
             {
                 _logger.LogWarning("Scheduling service is already running");
-                return;
+                return Task.CompletedTask;
             }
 
             _isRunning = true;
         }
 
-        // Check for missed reminders on startup
-        await CheckForMissedReminders();
+        // Start the timer first, then check for missed reminders in background
+        _schedulingTimer = new Timer(CheckScheduledTasksWrapper, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
+        _logger.LogInformation("Scheduling service timer started - checking every 10 seconds");
 
-        // Schedule initial check and then every minute
-        // Use 10 second intervals for more responsive reminder checking
-        _schedulingTimer = new Timer(CheckScheduledTasks, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
+        // Check for missed reminders in background to avoid blocking startup
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await CheckForMissedReminders();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking for missed reminders on startup");
+            }
+        });
 
-        _logger.LogInformation("Scheduling service started - checking every 10 seconds");
+        return Task.CompletedTask;
     }
 
     public Task StopAsync()
@@ -79,7 +89,25 @@ public class SchedulingService : ISchedulingService
         return Task.CompletedTask;
     }
 
-    private async void CheckScheduledTasks(object? state)
+    private void CheckScheduledTasksWrapper(object? state)
+    {
+        _logger.LogInformation("🔥 TIMER FIRED - CheckScheduledTasksWrapper called at {Time}", DateTime.Now);
+        
+        // Don't use async void - use Fire and Forget pattern instead
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await CheckScheduledTasks();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unhandled error in scheduled task check");
+            }
+        });
+    }
+
+    private async Task CheckScheduledTasks()
     {
         if (!_isRunning) return;
 
@@ -235,13 +263,36 @@ public class SchedulingService : ISchedulingService
         // Send to Slack if enabled
         if (_config.Slack.EnableInteractiveBot)
         {
-            await _slackBot.SendMessage(message);
+            try
+            {
+                await _slackBot.SendMessage(message);
+                _logger.LogInformation("Sent reminder {ReminderId} to Slack", reminder.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send reminder {ReminderId} to Slack", reminder.Id);
+            }
         }
 
         // Send to Telegram if enabled
         if (_config.Telegram.Enabled && _telegramBot != null)
         {
-            await _telegramBot.SendMessage(long.Parse(_config.Telegram.ChannelId), message);
+            try
+            {
+                if (long.TryParse(_config.Telegram.ChannelId, out var channelId))
+                {
+                    await _telegramBot.SendMessage(channelId, message);
+                    _logger.LogInformation("Sent reminder {ReminderId} to Telegram", reminder.Id);
+                }
+                else
+                {
+                    _logger.LogError("Invalid Telegram ChannelId format: {ChannelId}", _config.Telegram.ChannelId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send reminder {ReminderId} to Telegram", reminder.Id);
+            }
         }
     }
 

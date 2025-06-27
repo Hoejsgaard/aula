@@ -167,7 +167,7 @@ public class SlackInteractiveBot
                 }
             }
 
-            _logger.LogInformation("Polling for messages since timestamp: {Timestamp}", adjustedTimestamp);
+            // Removed noisy polling log - only log when there are actual messages
             var url = $"https://slack.com/api/conversations.history?channel={_config.Slack.ChannelId}&oldest={adjustedTimestamp}&limit=10";
 
             // Make the API call
@@ -205,13 +205,7 @@ public class SlackInteractiveBot
                 return;
             }
 
-            // Debug the raw messages to understand what we're getting
-            _logger.LogInformation("Raw messages received: {Count}", messages.Count);
-            foreach (var msg in messages.Take(3))
-            {
-                _logger.LogInformation("Message: TS={Timestamp}, Type={Type}, SubType={SubType}, User={User}, BotId={BotId}",
-                    msg["ts"], msg["type"], msg["subtype"], msg["user"], msg["bot_id"]);
-            }
+            // Only log if there are actual new user messages (removed spam)
 
             // Get actual new messages (not from the bot)
             var userMessages = messages.Where(m =>
@@ -220,7 +214,7 @@ public class SlackInteractiveBot
                 string messageId = m["ts"]?.ToString() ?? "";
                 if (!string.IsNullOrEmpty(messageId) && _sentMessageIds.Contains(messageId))
                 {
-                    _logger.LogInformation("Skipping our own message with ID: {MessageId}", messageId);
+                    // Skip our own message (removed log spam)
                     return false;
                 }
 
