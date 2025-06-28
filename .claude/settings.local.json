@@ -18,7 +18,8 @@
       "Bash(timeout:*)",
       "Bash(git add:*)",
       "Bash(dotnet format:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git rm:*)"
     ],
     "deny": []
   }

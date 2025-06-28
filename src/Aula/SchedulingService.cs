@@ -279,15 +279,9 @@ public class SchedulingService : ISchedulingService
         {
             try
             {
-                if (long.TryParse(_config.Telegram.ChannelId, out var channelId))
-                {
-                    await _telegramBot.SendMessage(channelId, message);
-                    _logger.LogInformation("Sent reminder {ReminderId} to Telegram", reminder.Id);
-                }
-                else
-                {
-                    _logger.LogError("Invalid Telegram ChannelId format: {ChannelId}", _config.Telegram.ChannelId);
-                }
+                // ChatId constructor handles both string usernames (@channel) and numeric IDs
+                await _telegramBot.SendMessage(_config.Telegram.ChannelId, message);
+                _logger.LogInformation("Sent reminder {ReminderId} to Telegram", reminder.Id);
             }
             catch (Exception ex)
             {
@@ -496,7 +490,7 @@ public class SchedulingService : ISchedulingService
 
                     if (_config.Telegram.Enabled && _telegramBot != null)
                     {
-                        await _telegramBot.SendMessage(long.Parse(_config.Telegram.ChannelId), message);
+                        await _telegramBot.SendMessage(_config.Telegram.ChannelId, message);
                     }
 
                     // Delete the missed reminder so it doesn't keep showing up

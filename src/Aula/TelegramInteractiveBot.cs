@@ -854,6 +854,31 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
         await SendMessageInternal(chatId, text);
     }
 
+    public async Task SendMessage(string chatId, string text)
+    {
+        await SendMessageInternal(chatId, text);
+    }
+
+    private async Task SendMessageInternal(string chatId, string text)
+    {
+        try
+        {
+            _logger.LogInformation("Sending message to chat {ChatId}: {TextLength} characters", chatId, text.Length);
+
+            await _telegramClient.SendTextMessageAsync(
+                chatId: new ChatId(chatId),
+                text: text,
+                parseMode: ParseMode.Html
+            );
+
+            _logger.LogInformation("Message sent successfully to chat {ChatId}", chatId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending message to chat {ChatId}", chatId);
+        }
+    }
+
     private async Task SendMessageInternal(long chatId, string text)
     {
         try
