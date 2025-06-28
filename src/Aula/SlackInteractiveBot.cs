@@ -31,8 +31,7 @@ public class SlackInteractiveBot : IDisposable
     private readonly HashSet<string> _sentMessageIds = new HashSet<string>();
     // Keep track of when messages were sent to allow cleanup
     private readonly Dictionary<string, DateTime> _messageTimestamps = new Dictionary<string, DateTime>();
-    private readonly HashSet<string> _englishWords = new HashSet<string> { "what", "when", "how", "is", "does", "do", "can", "will", "has", "have", "had", "show", "get", "tell", "please", "thanks", "thank", "you", "hello", "hi" };
-    private readonly HashSet<string> _danishWords = new HashSet<string> { "hvad", "hvornår", "hvordan", "er", "gør", "kan", "vil", "har", "havde", "vis", "få", "fortæl", "venligst", "tak", "du", "dig", "hej", "hallo", "goddag" };
+    // Language detection arrays removed - GPT handles language detection naturally
 
     // Conversation context tracking
     private class ConversationContext
@@ -295,11 +294,8 @@ public class SlackInteractiveBot : IDisposable
             return;
         }
 
-        // Detect language (Danish or English)
-        bool isEnglish = DetectLanguage(text) == "en";
-
         // Check for help command first
-        if (await TryHandleHelpCommand(text, isEnglish))
+        if (await TryHandleHelpCommand(text))
         {
             return;
         }
@@ -310,134 +306,9 @@ public class SlackInteractiveBot : IDisposable
         await SendMessageInternal(response);
     }
 
-    private bool IsFollowUpQuestion(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return false;
-        }
+    // IsFollowUpQuestion method removed - dead code
 
-        text = text.ToLowerInvariant();
-
-        // Log the current text and conversation context
-        _logger.LogInformation("Checking if '{Text}' is a follow-up question. Context valid: {IsValid}",
-            text, _conversationContext.IsStillValid);
-
-        // If the conversation context has expired, it's not a follow-up
-        if (!_conversationContext.IsStillValid)
-        {
-            return false;
-        }
-
-        // Check for explicit follow-up phrases
-        bool hasFollowUpPhrase = text.Contains("hvad med") ||
-                               text.Contains("what about") ||
-                               text.Contains("how about") ||
-                               text.Contains("hvordan med") ||
-                               text.StartsWith("og ") ||
-                               text.StartsWith("and ") ||
-                               text.Contains("og hvad") ||
-                               text.Contains("and what") ||
-                               text.Contains("også") ||
-                               text.Contains("also") ||
-                               text.Contains("likewise") ||
-                               text == "og?" ||
-                               text == "and?";
-
-        // Check if this is a short message
-        bool isShortMessage = text.Length < 15;
-
-        // Check if the message contains a child name
-        bool hasChildName = false;
-        foreach (var childName in _childrenByName.Keys)
-        {
-            if (text.Contains(childName.ToLowerInvariant()))
-            {
-                hasChildName = true;
-                break;
-            }
-        }
-
-        // Also check for first names
-        if (!hasChildName)
-        {
-            foreach (var child in _childrenByName.Values)
-            {
-                string firstName = child.FirstName.Split(' ')[0].ToLowerInvariant();
-                if (text.Contains(firstName.ToLowerInvariant()))
-                {
-                    hasChildName = true;
-                    break;
-                }
-            }
-        }
-
-        // Check if the message contains time references
-        bool hasTimeReference = text.Contains("today") || text.Contains("tomorrow") ||
-                              text.Contains("i dag") || text.Contains("i morgen");
-
-        // Special case for very short messages that are likely follow-ups
-        if (isShortMessage && (text.Contains("?") || text == "ok" || text == "okay"))
-        {
-            _logger.LogInformation("Detected likely follow-up based on short message: {Text}", text);
-            return true;
-        }
-
-        bool result = hasFollowUpPhrase || (isShortMessage && hasChildName && !hasTimeReference);
-
-        if (result)
-        {
-            _logger.LogInformation("Detected follow-up question: {Text}", text);
-        }
-
-        return result;
-    }
-
-    private string DetectLanguage(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return "da"; // Default to Danish if no text
-        }
-
-        string lowerText = text.ToLowerInvariant();
-
-        // Count English and Danish words
-        int englishWordCount = 0;
-        int danishWordCount = 0;
-
-        foreach (var word in lowerText.Split(' ', ',', '.', '!', '?', ':', ';', '-', '(', ')', '[', ']', '{', '}'))
-        {
-            string cleanWord = word.Trim();
-            if (string.IsNullOrEmpty(cleanWord))
-            {
-                continue;
-            }
-
-            if (_englishWords.Contains(cleanWord))
-            {
-                englishWordCount++;
-            }
-
-            if (_danishWords.Contains(cleanWord))
-            {
-                danishWordCount++;
-            }
-        }
-
-        _logger.LogInformation("🔍 TRACKING: Language detection - English words: {EnglishCount}, Danish words: {DanishCount}",
-            englishWordCount, danishWordCount);
-
-        // If we have more Danish words, or equal but the text contains Danish-specific characters, use Danish
-        if (danishWordCount > englishWordCount ||
-            (danishWordCount == englishWordCount &&
-             (lowerText.Contains('æ') || lowerText.Contains('ø') || lowerText.Contains('å'))))
-        {
-            return "da";
-        }
-
-        return "en";
-    }
+    // DetectLanguage method removed - GPT handles language detection naturally
 
     private string? ExtractChildName(string text)
     {
@@ -1023,22 +894,22 @@ public class SlackInteractiveBot : IDisposable
         return relativeTimeWords.Any(word => lowerText.Contains(word));
     }
 
-    private async Task<bool> TryHandleHelpCommand(string text, bool isEnglish)
+    private async Task<bool> TryHandleHelpCommand(string text)
     {
-        var helpPatterns = new[]
+        var normalizedText = text.Trim().ToLowerInvariant();
+        
+        // English help commands
+        if (normalizedText == "help" || normalizedText == "--help" || normalizedText == "?" || normalizedText == "commands")
         {
-            @"^(help|--help|\?|commands)$",
-            @"^(hjælp|kommandoer)$"
-        };
-
-        foreach (var pattern in helpPatterns)
+            await SendMessageInternal(GetEnglishHelpMessage());
+            return true;
+        }
+        
+        // Danish help commands  
+        if (normalizedText == "hjælp" || normalizedText == "kommandoer")
         {
-            if (Regex.IsMatch(text, pattern, RegexOptions.IgnoreCase))
-            {
-                string helpMessage = isEnglish ? GetEnglishHelpMessage() : GetDanishHelpMessage();
-                await SendMessageInternal(helpMessage);
-                return true;
-            }
+            await SendMessageInternal(GetDanishHelpMessage());
+            return true;
         }
 
         return false;
@@ -1108,17 +979,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
 """;
     }
 
-    private async Task<bool> TryHandleReminderCommand(string text, bool isEnglish)
-    {
-        text = text.Trim();
-
-        // Check for various reminder command patterns
-        if (await TryHandleAddReminder(text, isEnglish)) return true;
-        if (await TryHandleListReminders(text, isEnglish)) return true;
-        if (await TryHandleDeleteReminder(text, isEnglish)) return true;
-
-        return false;
-    }
+    // TryHandleReminderCommand removed - dead code
 
     private async Task<bool> TryHandleAddReminder(string text, bool isEnglish)
     {
