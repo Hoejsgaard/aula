@@ -112,11 +112,11 @@ public class SupabaseService : ISupabaseService
             CreatedBy = "bot"
         };
 
-        var result = await _supabase
+        var insertResponse = await _supabase
             .From<Reminder>()
             .Insert(reminder);
 
-        var insertedReminder = result.Models.FirstOrDefault();
+        var insertedReminder = insertResponse.Models.FirstOrDefault();
         if (insertedReminder == null)
         {
             throw new InvalidOperationException("Failed to insert reminder");
@@ -133,8 +133,8 @@ public class SupabaseService : ISupabaseService
         // Use UTC for all internal calculations
         var nowUtc = DateTime.UtcNow;
         var nowLocal = DateTime.Now; // For display only
-        
-        _logger.LogInformation("Checking for pending reminders. Current UTC: {UtcNow}, Local: {LocalNow}", 
+
+        _logger.LogInformation("Checking for pending reminders. Current UTC: {UtcNow}, Local: {LocalNow}",
             nowUtc, nowLocal);
 
         // Get all reminders and filter in memory (since we delete fired reminders, all existing ones are pending)
@@ -147,12 +147,12 @@ public class SupabaseService : ISupabaseService
             // Convert reminder date/time to UTC for comparison
             var reminderLocalDateTime = r.RemindDate.ToDateTime(r.RemindTime);
             var reminderUtcDateTime = TimeZoneInfo.ConvertTimeToUtc(reminderLocalDateTime, TimeZoneInfo.Local);
-            
+
             bool isPending = reminderUtcDateTime <= nowUtc;
-            
-            _logger.LogInformation("Reminder '{Text}': Local={LocalTime}, UTC={UtcTime}, Due={IsDue}", 
+
+            _logger.LogInformation("Reminder '{Text}': Local={LocalTime}, UTC={UtcTime}, Due={IsDue}",
                 r.Text, reminderLocalDateTime, reminderUtcDateTime, isPending);
-                
+
             return isPending;
         }).ToList();
 
@@ -185,11 +185,11 @@ public class SupabaseService : ISupabaseService
     {
         if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
 
-        var result = await _supabase
+        var reminderResponse = await _supabase
             .From<Reminder>()
             .Get();
 
-        return result.Models;
+        return reminderResponse.Models;
     }
 
     public async Task DeleteReminderAsync(int reminderId)
@@ -349,12 +349,12 @@ public class SupabaseService : ISupabaseService
     {
         if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
 
-        var result = await _supabase
+        var tasksResponse = await _supabase
             .From<ScheduledTask>()
             .Where(t => t.Enabled == true)
             .Get();
 
-        return result.Models;
+        return tasksResponse.Models;
     }
 
     public async Task<ScheduledTask?> GetScheduledTaskAsync(string name)

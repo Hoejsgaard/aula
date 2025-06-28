@@ -517,9 +517,9 @@ Analyze the query and respond accordingly:";
 
             if (response.Successful)
             {
-                var result = response.Choices.First().Message.Content ?? "INFORMATION_QUERY";
-                _logger.LogInformation("Intent analysis completed successfully: {Result}", result);
-                return result;
+                var intentAnalysis = response.Choices.First().Message.Content ?? "INFORMATION_QUERY";
+                _logger.LogInformation("Intent analysis completed successfully: {Result}", intentAnalysis);
+                return intentAnalysis;
             }
             else
             {
