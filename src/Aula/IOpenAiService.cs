@@ -10,50 +10,16 @@ public enum ChatInterface
 
 public interface IOpenAiService
 {
-    /// <summary>
-    /// Processes a week letter with the OpenAI API and returns a summary.
-    /// </summary>
-    /// <param name="weekLetter">The week letter JObject from MinUddannelse.</param>
-    /// <param name="chatInterface">The chat interface the response will be sent to.</param>
-    /// <returns>A summary of the week letter.</returns>
     Task<string> SummarizeWeekLetterAsync(JObject weekLetter, ChatInterface chatInterface = ChatInterface.Slack);
 
-    /// <summary>
-    /// Asks a question about a week letter and returns the answer.
-    /// </summary>
-    /// <param name="weekLetter">The week letter JObject from MinUddannelse.</param>
-    /// <param name="question">The question to ask about the week letter.</param>
-    /// <param name="chatInterface">The chat interface the response will be sent to.</param>
-    /// <returns>The answer to the question.</returns>
     Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, ChatInterface chatInterface = ChatInterface.Slack);
 
-    /// <summary>
-    /// Asks a question about a week letter with a specific context key and returns the answer.
-    /// </summary>
-    /// <param name="weekLetter">The week letter JObject from MinUddannelse.</param>
-    /// <param name="question">The question to ask about the week letter.</param>
-    /// <param name="contextKey">Optional context key to maintain conversation history.</param>
-    /// <param name="chatInterface">The chat interface the response will be sent to.</param>
-    /// <returns>The answer to the question.</returns>
     Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack);
 
-    /// <summary>
-    /// Extracts key information from a week letter.
-    /// </summary>
-    /// <param name="weekLetter">The week letter JObject from MinUddannelse.</param>
-    /// <param name="chatInterface">The chat interface the response will be sent to.</param>
-    /// <returns>A JObject containing key information from the week letter.</returns>
     Task<JObject> ExtractKeyInformationAsync(JObject weekLetter, ChatInterface chatInterface = ChatInterface.Slack);
 
     Task<string> AskQuestionAboutChildrenAsync(Dictionary<string, JObject> childrenWeekLetters, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack);
 
-    /// <summary>
-    /// Processes user query with intelligent tool selection - can use tools for actions or answer questions directly.
-    /// </summary>
-    /// <param name="query">The user's question or request.</param>
-    /// <param name="contextKey">Context key to maintain conversation history.</param>
-    /// <param name="chatInterface">The chat interface the response will be sent to.</param>
-    /// <returns>The response, either from tools or direct AI response.</returns>
     Task<string> ProcessQueryWithToolsAsync(string query, string contextKey, ChatInterface chatInterface = ChatInterface.Slack);
 
     void ClearConversationHistory(string? contextKey = null);

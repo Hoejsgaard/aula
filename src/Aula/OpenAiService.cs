@@ -90,34 +90,21 @@ public class OpenAiService : IOpenAiService
 
     public async Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack)
     {
-        _logger.LogInformation("🔎 TRACE: AskQuestionAboutWeekLetterAsync called with question: {Question} for {ChatInterface}", question, chatInterface);
-
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
-        _logger.LogInformation("🔎 TRACE: Week letter content in AskQuestionAboutWeekLetterAsync: {Length} characters", weekLetterContent.Length);
-
-        // Extract basic metadata from the week letter
         string childName = weekLetter["child"]?.ToString() ?? "unknown";
-        _logger.LogInformation("🔎 TRACE: Child name from week letter: {ChildName}", childName);
 
         // Create a unique conversation key if not provided
         if (string.IsNullOrEmpty(contextKey))
         {
             contextKey = childName.ToLowerInvariant();
-            _logger.LogInformation("🔎 TRACE: Created context key from child name: {ContextKey}", contextKey);
-        }
-        else
-        {
-            _logger.LogInformation("🔎 TRACE: Using provided context key: {ContextKey}", contextKey);
         }
 
         // Store the current child name for this context
         _currentChildContext[contextKey] = childName;
-        _logger.LogInformation("🔎 TRACE: Set current child context for {ContextKey} to {ChildName}", contextKey, childName);
 
         // Initialize conversation history if it doesn't exist
         if (!_conversationHistory.ContainsKey(contextKey))
         {
-            _logger.LogInformation("🔎 TRACE: Creating new conversation context for {ContextKey}", contextKey);
             _conversationHistory[contextKey] = new List<ChatMessage>
             {
                 ChatMessage.FromSystem($"You are a helpful assistant that answers questions about {childName}'s weekly school letter. " +
@@ -136,7 +123,6 @@ public class OpenAiService : IOpenAiService
                                       $"You are responding via {GetChatInterfaceInstructions(chatInterface)}"),
                 ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}")
             };
-            _logger.LogInformation("🔎 TRACE: Added week letter content to conversation context: {Length} characters", weekLetterContent.Length);
         }
         else
         {
@@ -144,9 +130,6 @@ public class OpenAiService : IOpenAiService
             if (_currentChildContext.TryGetValue(contextKey, out var previousChildName) &&
                 !string.Equals(previousChildName, childName, StringComparison.OrdinalIgnoreCase))
             {
-                _logger.LogInformation("🔎 TRACE: Child changed for context {ContextKey} from {PreviousChild} to {CurrentChild}, resetting context",
-                    contextKey, previousChildName, childName);
-
                 // Reset the conversation history for this context key
                 _conversationHistory[contextKey] = new List<ChatMessage>
                 {
@@ -166,7 +149,6 @@ public class OpenAiService : IOpenAiService
                                           $"You are responding via {GetChatInterfaceInstructions(chatInterface)}"),
                     ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}")
                 };
-                _logger.LogInformation("🔎 TRACE: Reset conversation history for {ContextKey} with new child {ChildName}", contextKey, childName);
             }
             else
             {
@@ -342,53 +324,11 @@ public class OpenAiService : IOpenAiService
 
     private string ExtractWeekLetterContent(JObject weekLetter)
     {
-        _logger.LogInformation("📋 DEBUG: ExtractWeekLetterContent called with JObject with keys: {Keys}",
-            string.Join(", ", weekLetter.Properties().Select(p => p.Name)));
-
-        // Check if the ugebreve array exists and has elements
-        if (weekLetter["ugebreve"] == null)
-        {
-            _logger.LogWarning("📋 DEBUG: Week letter does not contain 'ugebreve' property");
-        }
-        else if (!(weekLetter["ugebreve"] is JArray ugebreve) || ugebreve.Count == 0)
-        {
-            _logger.LogWarning("📋 DEBUG: Week letter 'ugebreve' is not an array or is empty");
-        }
-        else
-        {
-            var ugebreveArray = (JArray)weekLetter["ugebreve"]!;
-            _logger.LogInformation("📋 DEBUG: Week letter 'ugebreve' array contains {Count} items", ugebreveArray.Count);
-
-            if (ugebreveArray[0] != null)
-            {
-                var firstItem = ugebreveArray[0];
-                _logger.LogInformation("📋 DEBUG: First ugebreve item has keys: {Keys}",
-                    string.Join(", ", firstItem.Children<JProperty>().Select(p => p.Name)));
-
-                if (firstItem["indhold"] == null)
-                {
-                    _logger.LogWarning("📋 DEBUG: First ugebreve item does not contain 'indhold' property");
-                }
-                else
-                {
-                    _logger.LogInformation("📋 DEBUG: Found 'indhold' property in first ugebreve item");
-                }
-            }
-        }
-
-        // Direct access to content as specified
         var weekLetterContent = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
-
-        _logger.LogInformation("📋 DEBUG: Extracted week letter content: {Length} characters", weekLetterContent.Length);
 
         if (string.IsNullOrEmpty(weekLetterContent))
         {
-            _logger.LogWarning("📋 DEBUG: Week letter content is empty! Raw week letter: {WeekLetter}", weekLetter.ToString());
-        }
-        else
-        {
-            _logger.LogInformation("📋 DEBUG: Week letter content starts with: {Start}",
-                weekLetterContent.Length > 100 ? weekLetterContent.Substring(0, 100) + "..." : weekLetterContent);
+            _logger.LogWarning("Week letter content is empty");
         }
 
         return weekLetterContent;

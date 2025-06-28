@@ -111,9 +111,6 @@ public class TelegramClient
         }
     }
 
-    /// <summary>
-    /// Sanitizes HTML to ensure compatibility with Telegram's HTML parser
-    /// </summary>
     private string SanitizeHtmlForTelegram(string html)
     {
         // Telegram only supports a limited set of HTML tags:
