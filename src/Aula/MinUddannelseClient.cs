@@ -95,9 +95,6 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
         return login;
     }
 
-    /// <summary>
-    ///     Read profile data out of the front page. I can't find the api call, if it exist, that give me this data
-    /// </summary>
     private async Task<JObject> ExtractUserProfile()
     {
         var response = await HttpClient.GetAsync(SuccessUrl);
