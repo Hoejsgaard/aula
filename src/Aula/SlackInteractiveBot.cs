@@ -14,7 +14,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Aula;
 
-public class SlackInteractiveBot
+public class SlackInteractiveBot : IDisposable
 {
     private readonly IAgentService _agentService;
     private readonly Config _config;
@@ -75,12 +75,12 @@ public class SlackInteractiveBot
         ILoggerFactory loggerFactory,
         ISupabaseService supabaseService)
     {
-        _agentService = agentService;
-        _config = config;
-        _logger = loggerFactory.CreateLogger<SlackInteractiveBot>();
+        _agentService = agentService ?? throw new ArgumentNullException(nameof(agentService));
+        _config = config ?? throw new ArgumentNullException(nameof(config));
+        _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<SlackInteractiveBot>();
         _httpClient = new HttpClient();
         _httpClient.Timeout = TimeSpan.FromSeconds(30); // Add 30 second timeout
-        _supabaseService = supabaseService;
+        _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
         _childrenByName = _config.Children.ToDictionary(
             c => c.FirstName.ToLowerInvariant(),
             c => c);
@@ -137,7 +137,7 @@ public class SlackInteractiveBot
         _logger.LogInformation("Slack polling bot stopped");
     }
 
-    private async void PollMessages(object? state)
+    private void PollMessages(object? state)
     {
         // Don't use locks with async/await as it can lead to deadlocks
         // Instead, use a simple flag to prevent concurrent executions
@@ -146,130 +146,134 @@ public class SlackInteractiveBot
             return;
         }
 
-        try
+        // Use Fire and Forget pattern instead of async void
+        _ = Task.Run(async () =>
         {
-            // Build the API URL for conversations.history
-            // Add a small buffer to the timestamp to avoid duplicate messages
-            var adjustedTimestamp = _lastTimestamp;
-            if (!string.IsNullOrEmpty(_lastTimestamp) && _lastTimestamp != "0")
+            try
             {
-                // Slack timestamps are in the format "1234567890.123456"
-                // We need to ensure we're handling them correctly
-                if (_lastTimestamp.Contains("."))
+                // Build the API URL for conversations.history
+                // Add a small buffer to the timestamp to avoid duplicate messages
+                var adjustedTimestamp = _lastTimestamp;
+                if (!string.IsNullOrEmpty(_lastTimestamp) && _lastTimestamp != "0")
                 {
-                    // Already in correct format, add a tiny fraction to avoid duplicates
-                    adjustedTimestamp = _lastTimestamp;
+                    // Slack timestamps are in the format "1234567890.123456"
+                    // We need to ensure we're handling them correctly
+                    if (_lastTimestamp.Contains("."))
+                    {
+                        // Already in correct format, add a tiny fraction to avoid duplicates
+                        adjustedTimestamp = _lastTimestamp;
+                    }
+                    else if (double.TryParse(_lastTimestamp, out double ts))
+                    {
+                        // Convert to proper Slack timestamp format if needed
+                        adjustedTimestamp = ts.ToString("0.000000");
+                    }
                 }
-                else if (double.TryParse(_lastTimestamp, out double ts))
+
+                // Removed noisy polling log - only log when there are actual messages
+                var url = $"https://slack.com/api/conversations.history?channel={_config.Slack.ChannelId}&oldest={adjustedTimestamp}&limit=10";
+
+                // Make the API call
+                var response = await _httpClient.GetAsync(url);
+                if (!response.IsSuccessStatusCode)
                 {
-                    // Convert to proper Slack timestamp format if needed
-                    adjustedTimestamp = ts.ToString("0.000000");
-                }
-            }
-
-            // Removed noisy polling log - only log when there are actual messages
-            var url = $"https://slack.com/api/conversations.history?channel={_config.Slack.ChannelId}&oldest={adjustedTimestamp}&limit=10";
-
-            // Make the API call
-            var response = await _httpClient.GetAsync(url);
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogError("Failed to fetch messages: HTTP {StatusCode}", response.StatusCode);
-                return;
-            }
-
-            // Parse the response
-            var content = await response.Content.ReadAsStringAsync();
-            var data = JObject.Parse(content);
-
-            if (data["ok"]?.Value<bool>() != true)
-            {
-                string error = data["error"]?.ToString() ?? "unknown error";
-
-                // Handle the not_in_channel error
-                if (error == "not_in_channel")
-                {
-                    _logger.LogWarning("Bot is not in the channel. Attempting to join...");
-                    await JoinChannel();
+                    _logger.LogError("Failed to fetch messages: HTTP {StatusCode}", response.StatusCode);
                     return;
                 }
 
-                _logger.LogError("Failed to fetch messages: {Error}", error);
-                return;
-            }
+                // Parse the response
+                var content = await response.Content.ReadAsStringAsync();
+                var data = JObject.Parse(content);
 
-            // Get the messages
-            var messages = data["messages"] as JArray;
-            if (messages == null || !messages.Any())
-            {
-                return;
-            }
-
-            // Only log if there are actual new user messages (removed spam)
-
-            // Get actual new messages (not from the bot)
-            var userMessages = messages.Where(m =>
-            {
-                // Skip messages we sent ourselves (by checking the ID)
-                string messageId = m["ts"]?.ToString() ?? "";
-                if (!string.IsNullOrEmpty(messageId) && _sentMessageIds.Contains(messageId))
+                if (data["ok"]?.Value<bool>() != true)
                 {
-                    // Skip our own message (removed log spam)
-                    return false;
+                    string error = data["error"]?.ToString() ?? "unknown error";
+
+                    // Handle the not_in_channel error
+                    if (error == "not_in_channel")
+                    {
+                        _logger.LogWarning("Bot is not in the channel. Attempting to join...");
+                        await JoinChannel();
+                        return;
+                    }
+
+                    _logger.LogError("Failed to fetch messages: {Error}", error);
+                    return;
                 }
 
-                // Skip bot messages
-                if (m["subtype"]?.ToString() == "bot_message" || m["bot_id"] != null)
+                // Get the messages
+                var messages = data["messages"] as JArray;
+                if (messages == null || !messages.Any())
                 {
-                    return false;
+                    return;
                 }
 
-                // Only include messages with a user ID
-                return !string.IsNullOrEmpty(m["user"]?.ToString());
-            }).ToList();
+                // Only log if there are actual new user messages (removed spam)
 
-            if (!userMessages.Any())
-            {
-                return;
-            }
-
-            _logger.LogInformation("Found {Count} new user messages", userMessages.Count);
-
-            // Keep track of the latest timestamp
-            string latestTimestamp = _lastTimestamp;
-
-            // Process messages in chronological order (oldest first)
-            foreach (var message in userMessages.OrderBy(m => m["ts"]?.ToString()))
-            {
-                // Process the message immediately with higher priority
-                await ProcessMessage(message["text"]?.ToString() ?? "");
-
-                // Update the latest timestamp if this message is newer
-                string messageTs = message["ts"]?.ToString() ?? "";
-                if (!string.IsNullOrEmpty(messageTs) &&
-                    (string.IsNullOrEmpty(latestTimestamp) ||
-                     string.Compare(messageTs, latestTimestamp) > 0))
+                // Get actual new messages (not from the bot)
+                var userMessages = messages.Where(m =>
                 {
-                    latestTimestamp = messageTs;
+                    // Skip messages we sent ourselves (by checking the ID)
+                    string messageId = m["ts"]?.ToString() ?? "";
+                    if (!string.IsNullOrEmpty(messageId) && _sentMessageIds.Contains(messageId))
+                    {
+                        // Skip our own message (removed log spam)
+                        return false;
+                    }
+
+                    // Skip bot messages
+                    if (m["subtype"]?.ToString() == "bot_message" || m["bot_id"] != null)
+                    {
+                        return false;
+                    }
+
+                    // Only include messages with a user ID
+                    return !string.IsNullOrEmpty(m["user"]?.ToString());
+                }).ToList();
+
+                if (!userMessages.Any())
+                {
+                    return;
+                }
+
+                _logger.LogInformation("Found {Count} new user messages", userMessages.Count);
+
+                // Keep track of the latest timestamp
+                string latestTimestamp = _lastTimestamp;
+
+                // Process messages in chronological order (oldest first)
+                foreach (var message in userMessages.OrderBy(m => m["ts"]?.ToString()))
+                {
+                    // Process the message immediately with higher priority
+                    await ProcessMessage(message["text"]?.ToString() ?? "");
+
+                    // Update the latest timestamp if this message is newer
+                    string messageTs = message["ts"]?.ToString() ?? "";
+                    if (!string.IsNullOrEmpty(messageTs) &&
+                        (string.IsNullOrEmpty(latestTimestamp) ||
+                         string.Compare(messageTs, latestTimestamp) > 0))
+                    {
+                        latestTimestamp = messageTs;
+                    }
+                }
+
+                // Update the timestamp to the latest message
+                if (!string.IsNullOrEmpty(latestTimestamp) && latestTimestamp != _lastTimestamp)
+                {
+                    _lastTimestamp = latestTimestamp;
+                    _logger.LogInformation("Updated last timestamp to {Timestamp}", _lastTimestamp);
                 }
             }
-
-            // Update the timestamp to the latest message
-            if (!string.IsNullOrEmpty(latestTimestamp) && latestTimestamp != _lastTimestamp)
+            catch (Exception ex)
             {
-                _lastTimestamp = latestTimestamp;
-                _logger.LogInformation("Updated last timestamp to {Timestamp}", _lastTimestamp);
+                _logger.LogError(ex, "Error polling Slack messages");
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error polling Slack messages");
-        }
-        finally
-        {
-            // Reset the flag to allow the next polling operation
-            Interlocked.Exchange(ref _pollingInProgress, 0);
-        }
+            finally
+            {
+                // Reset the flag to allow the next polling operation
+                Interlocked.Exchange(ref _pollingInProgress, 0);
+            }
+        });
     }
 
     private async Task ProcessMessage(string text)
@@ -1314,5 +1318,12 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
         }
 
         return false;
+    }
+
+    public void Dispose()
+    {
+        _httpClient?.Dispose();
+        _pollingTimer?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

@@ -59,7 +59,7 @@ public class OpenAiService : IOpenAiService
             ChatMessage.FromSystem($"You are a helpful assistant that summarizes weekly school letters for parents. " +
                                   "Provide a brief summary of the key information in the letter, focusing on activities, " +
                                   "important dates, and things parents need to know. Be concise but thorough. " +
-                                  "You are responding via {GetChatInterfaceInstructions(chatInterface)}"),
+                                  $"You are responding via {GetChatInterfaceInstructions(chatInterface)}"),
             ChatMessage.FromUser($"Here's the week letter for {className} for week {weekNumber}:\n\n{weekLetterContent}\n\nPlease summarize this week letter.")
         };
 

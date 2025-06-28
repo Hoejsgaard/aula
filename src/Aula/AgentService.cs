@@ -17,10 +17,10 @@ public class AgentService : IAgentService
         IOpenAiService openAiService,
         ILoggerFactory loggerFactory)
     {
-        _minUddannelseClient = minUddannelseClient;
-        _dataManager = dataManager;
-        _openAiService = openAiService;
-        _logger = loggerFactory.CreateLogger(nameof(AgentService));
+        _minUddannelseClient = minUddannelseClient ?? throw new ArgumentNullException(nameof(minUddannelseClient));
+        _dataManager = dataManager ?? throw new ArgumentNullException(nameof(dataManager));
+        _openAiService = openAiService ?? throw new ArgumentNullException(nameof(openAiService));
+        _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger(nameof(AgentService));
     }
 
     public async Task<bool> LoginAsync()

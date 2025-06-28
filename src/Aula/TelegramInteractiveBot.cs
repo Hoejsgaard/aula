@@ -62,10 +62,10 @@ public class TelegramInteractiveBot
         ILoggerFactory loggerFactory,
         ISupabaseService supabaseService)
     {
-        _agentService = agentService;
-        _config = config;
-        _logger = loggerFactory.CreateLogger<TelegramInteractiveBot>();
-        _supabaseService = supabaseService;
+        _agentService = agentService ?? throw new ArgumentNullException(nameof(agentService));
+        _config = config ?? throw new ArgumentNullException(nameof(config));
+        _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<TelegramInteractiveBot>();
+        _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
 
         if (_config.Telegram.Enabled && !string.IsNullOrEmpty(_config.Telegram.Token))
         {
@@ -142,11 +142,11 @@ public class TelegramInteractiveBot
     public void Stop()
     {
         _logger.LogInformation("Stopping Telegram interactive bot");
-        
+
         _cancellationTokenSource?.Cancel();
         _cancellationTokenSource?.Dispose();
         _cancellationTokenSource = null;
-        
+
         _logger.LogInformation("Telegram interactive bot stopped");
     }
 
