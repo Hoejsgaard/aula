@@ -24,4 +24,10 @@
     <ProjectReference Include="..\Aula\Aula.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="test-appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
