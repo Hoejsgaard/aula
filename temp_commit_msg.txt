@@ -1,5 +1,0 @@
-fix: prevent duplicate message processing in Slack bot
-
-The Slack bot was repeatedly processing the same messages due to timestamp handling issues.
-Added timestamp buffering and improved message filtering to aoid duplicates.
-This should reduce the "Found 1 new message" log spam when there are no actual new messages.
