@@ -12,7 +12,7 @@ This document outlines the key development rules and practices for the Aula proj
 
 - Favor clarity over brevity
 - Use expressive names (e.g., minUddannelseClient instead of client)
-- Avoid side effects - functions should do one ting
+- Avoid side effects - functions should do one thing
 - Comment only when the "why" isn't obvious - never for the "what"
 - No XML documentation or verbose comments
 

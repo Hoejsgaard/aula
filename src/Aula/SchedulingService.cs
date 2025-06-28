@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using NCrontab;
+using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -31,12 +32,12 @@ public class SchedulingService : ISchedulingService
         TelegramInteractiveBot? telegramBot,
         Config config)
     {
-        _logger = loggerFactory.CreateLogger<SchedulingService>();
-        _supabaseService = supabaseService;
-        _agentService = agentService;
-        _slackBot = slackBot;
-        _telegramBot = telegramBot;
-        _config = config;
+        _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<SchedulingService>();
+        _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
+        _agentService = agentService ?? throw new ArgumentNullException(nameof(agentService));
+        _slackBot = slackBot ?? throw new ArgumentNullException(nameof(slackBot));
+        _telegramBot = telegramBot; // Nullable, so no null check needed
+        _config = config ?? throw new ArgumentNullException(nameof(config));
     }
 
     public Task StartAsync()
@@ -92,7 +93,7 @@ public class SchedulingService : ISchedulingService
     private void CheckScheduledTasksWrapper(object? state)
     {
         _logger.LogInformation("🔥 TIMER FIRED - CheckScheduledTasksWrapper called at {Time}", DateTime.Now);
-        
+
         // Don't use async void - use Fire and Forget pattern instead
         _ = Task.Run(async () =>
         {
@@ -120,12 +121,12 @@ public class SchedulingService : ISchedulingService
 
             // Only check database-driven scheduled tasks every minute (every 6th call)
             var currentSecond = DateTime.Now.Second;
-            
+
             // Run scheduled tasks only at the top of each minute (when seconds are 0-9)
             if (currentSecond < 10)
             {
                 _logger.LogInformation("⏰ Running scheduled tasks check at {Time}", DateTime.Now);
-                
+
                 var tasks = await _supabaseService.GetScheduledTasksAsync();
                 var now = DateTime.UtcNow;
 
@@ -395,13 +396,9 @@ public class SchedulingService : ISchedulingService
         try
         {
             var ugebreve = weekLetter?["ugebreve"];
-            if (ugebreve != null)
+            if (ugebreve is JArray ugebreveArray && ugebreveArray.Count > 0)
             {
-                var count = ((dynamic)ugebreve).Count;
-                if (count > 0)
-                {
-                    return ugebreve[0]?["indhold"]?.ToString() ?? "";
-                }
+                return ugebreveArray[0]?["indhold"]?.ToString() ?? "";
             }
             return "";
         }
@@ -427,15 +424,11 @@ public class SchedulingService : ISchedulingService
             // Extract title
             var ugebreve = weekLetter?["ugebreve"];
             var weekLetterTitle = "";
-            if (ugebreve != null)
+            if (ugebreve is JArray ugebreveArray && ugebreveArray.Count > 0)
             {
-                var count = ((dynamic)ugebreve).Count;
-                if (count > 0)
-                {
-                    var uge = ugebreve[0]?["uge"]?.ToString() ?? "";
-                    var klasseNavn = ugebreve[0]?["klasseNavn"]?.ToString() ?? "";
-                    weekLetterTitle = $"Uge {uge} - {klasseNavn}";
-                }
+                var uge = ugebreveArray[0]?["uge"]?.ToString() ?? "";
+                var klasseNavn = ugebreveArray[0]?["klasseNavn"]?.ToString() ?? "";
+                weekLetterTitle = $"Uge {uge} - {klasseNavn}";
             }
 
             // Convert HTML to markdown for Slack
