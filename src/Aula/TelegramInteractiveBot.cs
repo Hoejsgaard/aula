@@ -24,6 +24,7 @@ public class TelegramInteractiveBot
     private readonly ISupabaseService _supabaseService;
     private readonly Dictionary<string, Child> _childrenByName;
     private readonly HashSet<string> _postedWeekLetterHashes = new HashSet<string>();
+    private CancellationTokenSource? _cancellationTokenSource;
     private readonly HashSet<string> _englishWords = new HashSet<string> { "what", "when", "how", "is", "does", "do", "can", "will", "has", "have", "had", "show", "get", "tell", "please", "thanks", "thank", "you", "hello", "hi" };
     private readonly HashSet<string> _danishWords = new HashSet<string> { "hvad", "hvornår", "hvordan", "er", "gør", "kan", "vil", "har", "havde", "vis", "få", "fortæl", "venligst", "tak", "du", "dig", "hej", "hallo", "goddag" };
 
@@ -96,8 +97,8 @@ public class TelegramInteractiveBot
 
         _logger.LogInformation("Starting Telegram interactive bot");
 
-        // Start receiving updates
-        using var cts = new CancellationTokenSource();
+        // Create cancellation token source for graceful shutdown
+        _cancellationTokenSource = new CancellationTokenSource();
 
         // StartReceiving does not block the caller thread. Receiving is done on the ThreadPool.
         var receiverOptions = new ReceiverOptions
@@ -110,7 +111,7 @@ public class TelegramInteractiveBot
             HandleUpdateAsync,
             HandlePollingErrorAsync,
             receiverOptions,
-            cts.Token
+            _cancellationTokenSource.Token
         );
 
         // Build a list of available children (first names only)
@@ -127,12 +128,25 @@ public class TelegramInteractiveBot
 
         _logger.LogInformation("Telegram interactive bot started");
 
-        // Keep the application running
-        await Task.Delay(Timeout.Infinite, cts.Token);
+        // Keep the bot running until cancellation is requested
+        try
+        {
+            await Task.Delay(Timeout.Infinite, _cancellationTokenSource.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("Telegram bot shutdown requested");
+        }
     }
 
     public void Stop()
     {
+        _logger.LogInformation("Stopping Telegram interactive bot");
+        
+        _cancellationTokenSource?.Cancel();
+        _cancellationTokenSource?.Dispose();
+        _cancellationTokenSource = null;
+        
         _logger.LogInformation("Telegram interactive bot stopped");
     }
 
