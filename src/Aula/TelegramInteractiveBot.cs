@@ -25,8 +25,7 @@ public class TelegramInteractiveBot
     private readonly Dictionary<string, Child> _childrenByName;
     private readonly HashSet<string> _postedWeekLetterHashes = new HashSet<string>();
     private CancellationTokenSource? _cancellationTokenSource;
-    private readonly HashSet<string> _englishWords = new HashSet<string> { "what", "when", "how", "is", "does", "do", "can", "will", "has", "have", "had", "show", "get", "tell", "please", "thanks", "thank", "you", "hello", "hi" };
-    private readonly HashSet<string> _danishWords = new HashSet<string> { "hvad", "hvornår", "hvordan", "er", "gør", "kan", "vil", "har", "havde", "vis", "få", "fortæl", "venligst", "tak", "du", "dig", "hej", "hallo", "goddag" };
+    // Language detection arrays removed - GPT handles language detection naturally
 
     // Conversation context tracking
     private class ConversationContext
@@ -208,12 +207,8 @@ public class TelegramInteractiveBot
 
         try
         {
-            // Detect language (Danish or English)
-            bool isEnglish = DetectLanguage(text) == "en";
-            _logger.LogInformation("Detected language: {Language}", isEnglish ? "English" : "Danish");
-
             // Check for help command first
-            if (await TryHandleHelpCommand(chatId, text, isEnglish))
+            if (await TryHandleHelpCommand(chatId, text))
             {
                 return;
             }
@@ -229,22 +224,23 @@ public class TelegramInteractiveBot
         }
     }
 
-    private async Task<bool> TryHandleHelpCommand(long chatId, string text, bool isEnglish)
+    private async Task<bool> TryHandleHelpCommand(long chatId, string text)
     {
-        var helpPatterns = new[]
+        var normalizedText = text.Trim().ToLowerInvariant();
+        
+        // English help commands
+        if (normalizedText == "help" || normalizedText == "--help" || normalizedText == "?" || 
+            normalizedText == "commands" || normalizedText == "/help" || normalizedText == "/start")
         {
-            @"^(help|--help|\?|commands|/help|/start)$",
-            @"^(hjælp|kommandoer|/hjælp)$"
-        };
-
-        foreach (var pattern in helpPatterns)
+            await SendMessageInternal(chatId, GetEnglishHelpMessage());
+            return true;
+        }
+        
+        // Danish help commands  
+        if (normalizedText == "hjælp" || normalizedText == "kommandoer" || normalizedText == "/hjælp")
         {
-            if (Regex.IsMatch(text, pattern, RegexOptions.IgnoreCase))
-            {
-                string helpMessage = isEnglish ? GetEnglishHelpMessage() : GetDanishHelpMessage();
-                await SendMessageInternal(chatId, helpMessage);
-                return true;
-            }
+            await SendMessageInternal(chatId, GetDanishHelpMessage());
+            return true;
         }
 
         return false;
@@ -607,188 +603,12 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
         return result;
     }
 
-    private string DetectLanguage(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return "da"; // Default to Danish if no text
-        }
+    // Dead methods removed:
+    // - DetectLanguage() - GPT handles language detection naturally
+    // - ExtractChildName() - not used anywhere
+    // - HandleAulaQuestion() - not used anywhere
 
-        string lowerText = text.ToLowerInvariant();
-
-        // Count English and Danish words
-        int englishWordCount = 0;
-        int danishWordCount = 0;
-
-        foreach (var word in lowerText.Split(' ', ',', '.', '!', '?', ':', ';', '-', '(', ')', '[', ']', '{', '}'))
-        {
-            string cleanWord = word.Trim();
-            if (string.IsNullOrEmpty(cleanWord))
-            {
-                continue;
-            }
-
-            if (_englishWords.Contains(cleanWord))
-            {
-                englishWordCount++;
-            }
-
-            if (_danishWords.Contains(cleanWord))
-            {
-                danishWordCount++;
-            }
-        }
-
-        _logger.LogInformation("Language detection - English words: {EnglishCount}, Danish words: {DanishCount}",
-            englishWordCount, danishWordCount);
-
-        // If we have more Danish words, or equal but the text contains Danish-specific characters, use Danish
-        if (danishWordCount > englishWordCount ||
-            (danishWordCount == englishWordCount &&
-             (lowerText.Contains('æ') || lowerText.Contains('ø') || lowerText.Contains('å'))))
-        {
-            return "da";
-        }
-
-        return "en";
-    }
-
-    private string? ExtractChildName(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return null;
-        }
-
-        text = text.ToLowerInvariant();
-
-        // Check for full child names
-        foreach (var childName in _childrenByName.Keys)
-        {
-            if (Regex.IsMatch(text, $@"\b{Regex.Escape(childName)}\b", RegexOptions.IgnoreCase))
-            {
-                _logger.LogInformation("Found child name: {ChildName}", childName);
-                return childName;
-            }
-        }
-
-        // Check for first names
-        foreach (var child in _childrenByName.Values)
-        {
-            string firstName = child.FirstName.Split(' ')[0].ToLowerInvariant();
-            if (Regex.IsMatch(text, $@"\b{Regex.Escape(firstName)}\b", RegexOptions.IgnoreCase))
-            {
-                string matchedKey = _childrenByName.Keys.FirstOrDefault(k =>
-                    k.StartsWith(firstName, StringComparison.OrdinalIgnoreCase)) ?? "";
-                _logger.LogInformation("Found first name: {FirstName} -> {ChildName}", firstName, matchedKey);
-                return matchedKey;
-            }
-        }
-
-        // Check for follow-up phrases
-        string[] followUpPhrases = { "hvad med", "what about", "how about", "hvordan med", "og hvad", "and what" };
-        foreach (var phrase in followUpPhrases)
-        {
-            int index = text.IndexOf(phrase);
-            if (index >= 0)
-            {
-                string afterPhrase = text.Substring(index + phrase.Length).Trim();
-
-                // Check for full names after the phrase
-                foreach (var childName in _childrenByName.Keys)
-                {
-                    if (Regex.IsMatch(afterPhrase, $@"\b{Regex.Escape(childName)}\b", RegexOptions.IgnoreCase))
-                    {
-                        return childName;
-                    }
-                }
-
-                // Check for first names after the phrase
-                foreach (var child in _childrenByName.Values)
-                {
-                    string firstName = child.FirstName.Split(' ')[0].ToLowerInvariant();
-                    if (Regex.IsMatch(afterPhrase, $@"\b{Regex.Escape(firstName)}\b", RegexOptions.IgnoreCase))
-                    {
-                        return _childrenByName.Keys.FirstOrDefault(k =>
-                            k.StartsWith(firstName, StringComparison.OrdinalIgnoreCase));
-                    }
-                }
-            }
-        }
-
-        return null;
-    }
-
-    private async Task HandleAulaQuestion(long chatId, string text, bool isEnglish)
-    {
-        try
-        {
-            _logger.LogInformation("HandleAulaQuestion called with text: {Text}", text);
-
-            // Get all children and their week letters
-            var allChildren = await _agentService.GetAllChildrenAsync();
-            if (!allChildren.Any())
-            {
-                string noChildrenMessage = isEnglish
-                    ? "I don't have any children configured."
-                    : "Jeg har ingen børn konfigureret.";
-
-                await SendMessageInternal(chatId, noChildrenMessage);
-                return;
-            }
-
-            // Collect week letters for all children
-            var childrenWeekLetters = new Dictionary<string, JObject>();
-            foreach (var child in allChildren)
-            {
-                var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
-                if (weekLetter != null)
-                {
-                    childrenWeekLetters[child.FirstName] = weekLetter;
-                }
-            }
-
-            if (!childrenWeekLetters.Any())
-            {
-                string noLettersMessage = isEnglish
-                    ? "I don't have any week letters available at the moment."
-                    : "Jeg har ingen ugebreve tilgængelige i øjeblikket.";
-
-                await SendMessageInternal(chatId, noLettersMessage);
-                return;
-            }
-
-            // Use a single context key for the chat
-            string contextKey = $"telegram-{chatId}";
-
-            // Add day context if needed
-            string enhancedQuestion = text;
-            if (text.ToLowerInvariant().Contains("i dag") || text.ToLowerInvariant().Contains("today"))
-            {
-                string dayOfWeek = isEnglish ? DateTime.Now.DayOfWeek.ToString() : GetDanishDayName(DateTime.Now.DayOfWeek);
-                enhancedQuestion = $"{text} (Today is {dayOfWeek})";
-            }
-            else if (text.ToLowerInvariant().Contains("i morgen") || text.ToLowerInvariant().Contains("tomorrow"))
-            {
-                string dayOfWeek = isEnglish ? DateTime.Now.AddDays(1).DayOfWeek.ToString() : GetDanishDayName(DateTime.Now.AddDays(1).DayOfWeek);
-                enhancedQuestion = $"{text} (Tomorrow is {dayOfWeek})";
-            }
-
-            // Use the new combined method
-            string answer = await _agentService.AskQuestionAboutChildrenAsync(childrenWeekLetters, enhancedQuestion, contextKey, ChatInterface.Telegram);
-
-            await SendMessageInternal(chatId, answer);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error handling Aula question");
-            string errorMessage = isEnglish
-                ? "Sorry, I couldn't process your question at the moment."
-                : "Beklager, jeg kunne ikke behandle dit spørgsmål i øjeblikket.";
-
-            await SendMessageInternal(chatId, errorMessage);
-        }
-    }
+    // HandleAulaQuestion method removed - dead code
 
     private async Task HandleAllChildrenQuestion(long chatId, string text, bool isEnglish)
     {
