@@ -116,22 +116,22 @@ public class AiToolsManager
                 return $"❌ No children found matching '{childName}'.";
             }
 
-            var result = new List<string>();
+            var weekLetterSummaries = new List<string>();
             foreach (var child in children)
             {
                 var weekLetter = dataManager.GetWeekLetter(child);
                 if (weekLetter != null)
                 {
                     var summary = ExtractSummaryFromWeekLetter(weekLetter);
-                    result.Add($"📝 **{child.FirstName} {child.LastName}** - Week Letter:\n{summary}");
+                    weekLetterSummaries.Add($"📝 **{child.FirstName} {child.LastName}** - Week Letter:\n{summary}");
                 }
                 else
                 {
-                    result.Add($"📝 **{child.FirstName} {child.LastName}** - No week letter available");
+                    weekLetterSummaries.Add($"📝 **{child.FirstName} {child.LastName}** - No week letter available");
                 }
             }
 
-            return string.Join("\n\n", result);
+            return string.Join("\n\n", weekLetterSummaries);
         }
         catch (Exception ex)
         {
