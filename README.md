@@ -1,22 +1,86 @@
-# Aula Bot
+# Aula Integration Bot
 
-A bot that fetches information from Aula (Danish school communication platform) and posts it to Slack and/or Telegram.
+An intelligent bot that integrates with the Danish school platform **Aula** (via MinUddannelse) to provide automated school communication and interactive assistance for parents.
 
-## Features
+## What This Project Does
 
-- Login to Aula via UniLogin
-- Fetch weekly letters for your children
-- Post weekly letters to Slack and/or Telegram
-- Fetch schedule/calendar for your children
-- Add schedule to Google Calendar
-- Interactive bot for Slack and Telegram that can answer questions about your children's school activities
+### Core Functionality
+- **Authenticates with MinUddannelse** using UniLogin credentials to access Aula data
+- **Fetches weekly letters** from your children's school classes
+- **Posts weekly updates** automatically to Slack and Telegram channels
+- **Interactive chat support** - Ask questions about your children's school activities in natural language
+- **Smart reminders** - Create and manage reminders, including AI-generated ones based on school content
+- **Calendar integration** - Sync school events to Google Calendar
+
+### Evolution: From Dumb Bot to Intelligent Agent
+
+**Original (Dumb Bot):**
+- Simple scheduled job running Sundays at 16:00
+- Fetched week letters and dumped them to channels
+- No interaction, just automated posting
+
+**Current (Intelligent Agent):**
+- Full LLM integration with OpenAI for natural language interaction
+- Interactive chat in both Slack and Telegram
+- AI-powered reminder creation and management
+- Function calling for calendar integration and reminder tools
+- Context-aware conversations about school activities
+
+## Key Features
+
+### Interactive Chat
+- Ask questions in natural language (Danish/English): *"Hvad skal TestChild2 i dag?"*
+- Get intelligent answers about children's school activities
+- Context-aware follow-up conversations
+- Automatic language detection and response matching
+
+### Smart Reminders
+- Create reminders via natural language: *"remind me tomorrow at 8:00 that TestChild1 has field trip"*
+- AI extracts dates, times, and context automatically
+- Cross-platform delivery (both Slack and Telegram)
+- Database-driven scheduling with 10-second responsiveness
+
+### Automated Scheduling
+- Weekly letter posting (Sundays at 16:00) **Currently needs rewiring**
+- Real-time reminder checking every 10 seconds
+- Missed reminder recovery on startup
+- Cron-based task scheduling via Supabase
+
+## Critical Hosting Requirement
+
+**MinUddannelse blocks major cloud providers** (AWS, Azure, GCP, etc.) by IP range. You must host this:
+- **Locally** on your home network
+- **VPS providers** not on major cloud infrastructure  
+- **Dedicated servers** with residential/business IP ranges
+
+This is a **hard requirement** - the bot will not work on major cloud platforms.
+
+## Current Limitations & TODOs
+
+### Known Issues
+1. **Weekly letter timer missing** - Automatic Sunday posting not wired up to new SchedulingService
+2. **No user profiles** - Single family configuration, no multi-user support
+3. **No mention detection** - Bot responds to all messages, no @mention filtering
+
+### Future Roadmap
+- [ ] **Fix weekly letter scheduling** - Wire up Sunday 16:00 posting to SchedulingService timer
+- [ ] **User profile system** - Support multiple families/users in same channels
+- [ ] **Mention-based activation** - Only respond when explicitly mentioned (@AulaBot)
+- [ ] **Enhanced AI features** - Automatic reminder generation from week letter content
+- [ ] **Improved calendar sync** - Better integration with family calendar systems
 
 ## Setup
 
 1. Clone this repository
 2. Copy `appsettings.json.example` to `appsettings.json`
-3. Fill in your UniLogin credentials, Slack webhook URL, and other configuration
-4. Build and run the application
+3. Fill in your UniLogin credentials, OpenAI API key, and platform configurations
+4. **Ensure hosting environment** can reach MinUddannelse (not on blocked cloud providers)
+5. **Set up database**: Follow [Supabase Setup Guide](SUPABASE_SETUP.md) for reminders and scheduling
+6. Build and run the application
+
+**Additional Documentation:**
+- [Supabase Setup Guide](SUPABASE_SETUP.md) - Database configuration for reminders and scheduling
+- [Troubleshooting Guide](TROUBLESHOOTING.md) - Common issues and solutions
 
 ### Slack Configuration
 
