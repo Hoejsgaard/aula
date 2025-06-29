@@ -1,8 +1,9 @@
 using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Text.RegularExpressions;
+using Aula.Configuration;
 
-namespace Aula;
+namespace Aula.Tools;
 
 public class ReminderCommandHandler
 {

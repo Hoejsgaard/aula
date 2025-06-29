@@ -1,6 +1,7 @@
 using Newtonsoft.Json.Linq;
+using Aula.Configuration;
 
-namespace Aula;
+namespace Aula.Integration;
 
 public interface IMinUddannelseClient
 {

@@ -1,7 +1,8 @@
 ﻿using Newtonsoft.Json.Linq;
 using Slack.Webhooks;
+using Aula.Configuration;
 
-namespace Aula;
+namespace Aula.Channels;
 
 public class SlackBot
 {

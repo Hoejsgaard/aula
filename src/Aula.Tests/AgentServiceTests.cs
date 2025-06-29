@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json.Linq;
+using Aula.Integration;
+using Aula.Configuration;
 
 namespace Aula.Tests;
 

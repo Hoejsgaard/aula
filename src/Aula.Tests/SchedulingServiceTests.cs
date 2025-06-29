@@ -1,5 +1,12 @@
 using Microsoft.Extensions.Logging;
 using Moq;
+using Aula.Integration;
+using Aula.Scheduling;
+using Aula.Bots;
+using Aula.Configuration;
+using ConfigSlack = Aula.Configuration.Slack;
+using ConfigTelegram = Aula.Configuration.Telegram;
+using ConfigChild = Aula.Configuration.Child;
 
 namespace Aula.Tests;
 
@@ -18,11 +25,11 @@ public class SchedulingServiceTests
 
         _testConfig = new Config
         {
-            Slack = new Slack { EnableInteractiveBot = true, ApiToken = "test-slack-token" },
-            Telegram = new Telegram { Enabled = true, ChannelId = "@testchannel", Token = "test-telegram-token" },
-            Children = new List<Child>
+            Slack = new ConfigSlack { EnableInteractiveBot = true, ApiToken = "test-slack-token" },
+            Telegram = new ConfigTelegram { Enabled = true, ChannelId = "@testchannel", Token = "test-telegram-token" },
+            Children = new List<ConfigChild>
             {
-                new Child { FirstName = "TestChild", LastName = "TestLast" }
+                new ConfigChild { FirstName = "TestChild", LastName = "TestLast" }
             }
         };
     }
@@ -69,7 +76,7 @@ public class SchedulingServiceTests
 
         // Act & Assert - Should not throw
         await schedulingService.StartAsync();
-        
+
         // Cleanup
         await schedulingService.StopAsync();
         slackBot.Dispose();
@@ -100,7 +107,7 @@ public class SchedulingServiceTests
 
         // Act & Assert - Should not throw
         await schedulingService.StopAsync();
-        
+
         // Cleanup
         slackBot.Dispose();
         // TelegramInteractiveBot does not implement IDisposable
@@ -131,11 +138,11 @@ public class SchedulingServiceTests
 
         // Wait a moment for async operations to complete
         await Task.Delay(100);
-        
+
         // Assert - The service should have called GetPendingRemindersAsync
         _mockSupabaseService.Verify(s => s.GetPendingRemindersAsync(), Times.AtLeastOnce);
         // Note: GetScheduledTasksAsync may be called on a different timer interval
-        
+
         // Cleanup
         await schedulingService.StopAsync();
         slackBot.Dispose();

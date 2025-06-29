@@ -1,4 +1,6 @@
-namespace Aula;
+using Aula.Bots;
+
+namespace Aula.Channels;
 
 public interface IMessageSender
 {

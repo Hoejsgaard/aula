@@ -1,5 +1,8 @@
 using Microsoft.Extensions.Configuration;
 using System.IO;
+using Aula.Configuration;
+using ConfigSlack = Aula.Configuration.Slack;
+using ConfigTelegram = Aula.Configuration.Telegram;
 
 namespace Aula.Tests;
 
@@ -11,7 +14,7 @@ public class ConfigurationTests
     public ConfigurationTests()
     {
         var configPath = Path.Combine(Directory.GetCurrentDirectory(), "test-appsettings.json");
-        
+
         _configuration = new ConfigurationBuilder()
             .AddJsonFile(configPath, optional: false, reloadOnChange: false)
             .Build();
@@ -77,7 +80,7 @@ public class ConfigurationTests
     {
         // Assert
         Assert.Equal(2, _config.Children.Count);
-        
+
         var alice = _config.Children.First(c => c.FirstName == "Alice");
         Assert.Equal("Alice", alice.FirstName);
         Assert.Equal("Johnson", alice.LastName);
@@ -181,7 +184,7 @@ public class ConfigurationTests
         // Arrange
         var config = new Config
         {
-            Slack = new Slack
+            Slack = new ConfigSlack
             {
                 ChannelId = channelId,
                 EnableInteractiveBot = true,
@@ -211,7 +214,7 @@ public class ConfigurationTests
         // Arrange
         var config = new Config
         {
-            Telegram = new Telegram
+            Telegram = new ConfigTelegram
             {
                 Token = token,
                 Enabled = true
@@ -219,8 +222,8 @@ public class ConfigurationTests
         };
 
         // Act & Assert
-        var hasColonAndMinLength = !string.IsNullOrEmpty(token) && 
-                                   token.Contains(':') && 
+        var hasColonAndMinLength = !string.IsNullOrEmpty(token) &&
+                                   token.Contains(':') &&
                                    token.Length > 10;
 
         Assert.Equal(isValidFormat, hasColonAndMinLength);
@@ -258,7 +261,7 @@ public class ConfigurationTests
     {
         // Assert - Config should implement IConfig interface
         Assert.IsAssignableFrom<IConfig>(_config);
-        
+
         // Verify all properties are accessible through interface
         IConfig iConfig = _config;
         Assert.NotNull(iConfig.UniLogin);

@@ -5,9 +5,10 @@ using Newtonsoft.Json.Linq;
 using Telegram.Bot;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types;
+using Aula.Configuration;
 using Telegram.Bot.Requests;
 
-namespace Aula;
+namespace Aula.Channels;
 
 
 public class TelegramClient

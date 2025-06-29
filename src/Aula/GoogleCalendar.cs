@@ -4,6 +4,7 @@ using Google.Apis.Calendar.v3;
 using Google.Apis.Calendar.v3.Data;
 using Google.Apis.Services;
 using Newtonsoft.Json.Linq;
+using Aula.Configuration;
 
 namespace Aula;
 

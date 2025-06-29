@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http;
 using Newtonsoft.Json.Linq;
+using Aula.Integration;
+using Aula.Configuration;
 
 namespace Aula.Tests;
 

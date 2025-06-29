@@ -256,7 +256,7 @@ public class WeekLetterContentExtractorTests
         // Create a dynamic object that will cause an exception when accessing ["ugebreve"]
         dynamic invalidWeekLetter = new { someProperty = "value" };
         // Force a reflection exception by trying to access non-existent indexer
-        
+
         // Act
         var result = WeekLetterContentExtractor.ExtractContent(invalidWeekLetter, mockLogger.Object);
 

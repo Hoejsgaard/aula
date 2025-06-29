@@ -1,7 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using Aula.Configuration;
 
-namespace Aula;
+namespace Aula.Integration;
 
 public class AgentService : IAgentService
 {

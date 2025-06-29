@@ -113,7 +113,7 @@ public class ConversationContextManagerTests
         // Arrange
         var key = "test-key";
         _manager.UpdateContext(key, "TestChild");
-        
+
         // Manually set the timestamp to be expired (simulate time passing)
         var context = _manager.GetContext(key);
         Assert.NotNull(context);
@@ -147,7 +147,7 @@ public class ConversationContextManagerTests
         // Assert
         var result = _manager.GetContext(key);
         Assert.Null(result);
-        
+
         _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Information,
@@ -190,7 +190,7 @@ public class ConversationContextManagerTests
         Assert.Null(_manager.GetContext("key1"));
         Assert.Null(_manager.GetContext("key2"));
         Assert.Null(_manager.GetContext("key3"));
-        
+
         _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Information,

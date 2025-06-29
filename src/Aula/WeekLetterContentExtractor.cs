@@ -10,12 +10,12 @@ public static class WeekLetterContentExtractor
         try
         {
             var content = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
-            
+
             if (string.IsNullOrEmpty(content))
             {
                 logger?.LogWarning("Week letter content is empty");
             }
-            
+
             return content;
         }
         catch (Exception ex)
@@ -24,7 +24,7 @@ public static class WeekLetterContentExtractor
             return "";
         }
     }
-    
+
     public static string ExtractContent(dynamic weekLetter, ILogger? logger = null)
     {
         try

@@ -11,8 +11,10 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Aula.Integration;
+using Aula.Configuration;
 
-namespace Aula;
+namespace Aula.Bots;
 
 public class SlackInteractiveBot : IDisposable
 {
@@ -830,14 +832,14 @@ public class SlackInteractiveBot : IDisposable
     private async Task<bool> TryHandleHelpCommand(string text)
     {
         var normalizedText = text.Trim().ToLowerInvariant();
-        
+
         // English help commands
         if (normalizedText == "help" || normalizedText == "--help" || normalizedText == "?" || normalizedText == "commands")
         {
             await SendMessageInternal(GetEnglishHelpMessage());
             return true;
         }
-        
+
         // Danish help commands  
         if (normalizedText == "hjælp" || normalizedText == "kommandoer")
         {
