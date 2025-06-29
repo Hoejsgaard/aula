@@ -34,6 +34,13 @@ public class OpenAiService : IOpenAiService
         _aiToolsManager = aiToolsManager;
     }
 
+    internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager)
+    {
+        _openAiClient = openAiClient;
+        _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
+        _aiToolsManager = aiToolsManager;
+    }
+
     public async Task<string> SummarizeWeekLetterAsync(JObject weekLetter, ChatInterface chatInterface = ChatInterface.Slack)
     {
         _logger.LogInformation("Summarizing week letter for {ChatInterface}", chatInterface);
