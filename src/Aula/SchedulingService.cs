@@ -393,20 +393,7 @@ public class SchedulingService : ISchedulingService
 
     private string ExtractWeekLetterContent(dynamic weekLetter)
     {
-        try
-        {
-            var ugebreve = weekLetter?["ugebreve"];
-            if (ugebreve is JArray ugebreveArray && ugebreveArray.Count > 0)
-            {
-                return ugebreveArray[0]?["indhold"]?.ToString() ?? "";
-            }
-            return "";
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error extracting week letter content");
-            return "";
-        }
+        return WeekLetterContentExtractor.ExtractContent(weekLetter, _logger);
     }
 
     private string ComputeContentHash(string content)
