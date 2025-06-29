@@ -82,3 +82,52 @@ Configuration is handled through `appsettings.json` with sections for:
 - .NET 9.0
 - EnableNETAnalyzers and TreatWarningsAsErrors are enabled
 - Tests use xUnit with Moq for mocking
+
+## Current Development State (as of 2025-06-29)
+
+### Recently Completed Code Quality Improvements
+The codebase underwent a comprehensive cleanup focused on eliminating duplicate code and improving testability:
+
+#### Shared Utilities Created
+- **WeekLetterContentExtractor**: Static utility for extracting content from week letters (JObject/dynamic)
+- **ReminderCommandHandler**: Consolidated ~220 lines of duplicate reminder code from both interactive bots
+- **ConversationContextManager<TKey>**: Generic conversation context management with expiration logic
+- **IMessageSender**: Interface abstraction with Slack/Telegram implementations
+
+#### Refactoring Completed
+- **OpenAiService.AskQuestionAboutWeekLetterAsync**: Decomposed 120+ line method into 13 focused functions
+- **Dead code removal**: ~200+ lines removed from SlackInteractiveBot, TelegramInteractiveBot
+- **Import cleanup**: Removed unused using statements across all files
+
+#### Tests Added (202 total tests, up from 87)
+- **WeekLetterContentExtractorTests**: 14 tests covering JSON/dynamic extraction, error handling
+- **ConversationContextTests**: 10 tests covering properties, expiration, ToString formatting  
+- **ConversationContextManagerTests**: 15 tests covering generic operations, lifecycle management
+- **ReminderCommandHandlerTests**: 38 tests covering regex patterns, date parsing, child name extraction
+
+### Next Priority: Refactoring Interactive Bots Before Testing
+
+#### Issues Identified in TelegramInteractiveBot & SlackInteractiveBot
+Both classes have code quality issues that make testing problematic:
+
+1. **Duplicate ConversationContext classes** - Should use shared ConversationContextManager
+2. **Manual conversation context management** - Duplicates functionality we already abstracted
+3. **Long constructors with many dependencies** - Hard to mock and test
+4. **Mixed responsibilities** - Bot management, conversation tracking, message handling combined
+
+#### Recommended Refactoring Approach
+1. **Remove duplicate ConversationContext classes** and use ConversationContextManager<long> for Telegram, ConversationContextManager<string> for Slack
+2. **Extract message handling logic** into separate, testable classes
+3. **Simplify constructors** by reducing direct dependencies
+4. **Improve separation of concerns** between bot lifecycle and message processing
+
+#### After Refactoring: Add Tests
+Once refactored, create comprehensive tests for:
+- **TelegramInteractiveBot**: Message handling, conversation context, command processing
+- **SlackInteractiveBot**: Similar coverage plus Socket Mode polling logic  
+- **OpenAiService**: Improve existing tests with proper HTTP client mocking
+
+### Development Philosophy
+- **Refactor first, test afterwards** - Never compromise code quality by forcing tests onto problematic code
+- **Focus on shared utilities** - Extract common patterns before duplicating test code
+- **Comprehensive test coverage** - Aim for edge cases, error handling, and proper mocking
