@@ -2,7 +2,7 @@
 using Html2Markdown;
 using HtmlAgilityPack;
 
-namespace Aula;
+namespace Aula.Utilities;
 
 public class Html2SlackMarkdownConverter
 {

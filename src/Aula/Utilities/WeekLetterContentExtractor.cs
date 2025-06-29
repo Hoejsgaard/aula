@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
-namespace Aula;
+namespace Aula.Utilities;
 
 public static class WeekLetterContentExtractor
 {

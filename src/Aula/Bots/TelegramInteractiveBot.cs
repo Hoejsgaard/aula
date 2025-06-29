@@ -16,6 +16,8 @@ using Aula.Integration;
 using Aula.Tools;
 using Aula.Channels;
 using Aula.Configuration;
+using Aula.Services;
+using Aula.Utilities;
 
 namespace Aula.Bots;
 

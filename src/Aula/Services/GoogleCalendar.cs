@@ -6,7 +6,7 @@ using Google.Apis.Services;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 
-namespace Aula;
+namespace Aula.Services;
 
 public class GoogleCalendar
 {

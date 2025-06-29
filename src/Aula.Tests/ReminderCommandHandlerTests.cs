@@ -3,6 +3,7 @@ using Moq;
 using Microsoft.Extensions.Logging;
 using Aula.Tools;
 using Aula.Configuration;
+using Aula.Services;
 
 namespace Aula.Tests;
 

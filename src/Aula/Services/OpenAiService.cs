@@ -12,8 +12,9 @@ using System.Threading.Tasks;
 using System.Linq;
 using Aula.Tools;
 using Aula.Configuration;
+using Aula.Utilities;
 
-namespace Aula;
+namespace Aula.Services;
 
 public class OpenAiService : IOpenAiService
 {

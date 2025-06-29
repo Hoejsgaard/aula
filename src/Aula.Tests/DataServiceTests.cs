@@ -3,18 +3,19 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
+using Aula.Services;
 
 namespace Aula.Tests;
 
-public class DataManagerTests
+public class DataServiceTests
 {
     private readonly IMemoryCache _cache;
     private readonly Mock<ILoggerFactory> _loggerFactoryMock;
     private readonly Mock<ILogger> _loggerMock;
-    private readonly DataManager _dataManager;
+    private readonly DataService _dataManager;
     private readonly Child _testChild;
 
-    public DataManagerTests()
+    public DataServiceTests()
     {
         // Create a real memory cache for testing
         _cache = new MemoryCache(new MemoryCacheOptions());
@@ -23,7 +24,7 @@ public class DataManagerTests
         _loggerFactoryMock.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_loggerMock.Object);
 
         var configMock = new Mock<Config>();
-        _dataManager = new DataManager(_cache, configMock.Object, _loggerFactoryMock.Object);
+        _dataManager = new DataService(_cache, configMock.Object, _loggerFactoryMock.Object);
 
         _testChild = new Child
         {

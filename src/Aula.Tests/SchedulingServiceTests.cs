@@ -4,6 +4,7 @@ using Aula.Integration;
 using Aula.Scheduling;
 using Aula.Bots;
 using Aula.Configuration;
+using Aula.Services;
 using ConfigSlack = Aula.Configuration.Slack;
 using ConfigTelegram = Aula.Configuration.Telegram;
 using ConfigChild = Aula.Configuration.Child;

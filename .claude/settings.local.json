@@ -25,7 +25,8 @@
       "Bash(curl:*)",
       "Bash(mkdir:*)",
       "Bash(mv:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(dotnet clean:*)"
     ],
     "deny": []
   }

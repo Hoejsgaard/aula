@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace Aula;
+namespace Aula.Utilities;
 
 public static class JsonFormatter
 {

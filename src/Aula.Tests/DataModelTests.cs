@@ -1,5 +1,6 @@
 using Aula.Configuration;
 using ConfigChild = Aula.Configuration.Child;
+using Aula.Services;
 
 namespace Aula.Tests;
 

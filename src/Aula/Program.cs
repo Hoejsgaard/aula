@@ -10,6 +10,8 @@ using Aula.Integration;
 using Aula.Scheduling;
 using Aula.Tools;
 using Aula.Configuration;
+using Aula.Services;
+using Aula.Utilities;
 
 namespace Aula;
 
@@ -176,7 +178,7 @@ public class Program
         services.AddMemoryCache();
 
         // Services
-        services.AddSingleton<IDataManager, DataManager>();
+        services.AddSingleton<IDataService, DataService>();
         services.AddSingleton<IMinUddannelseClient, MinUddannelseClient>();
         services.AddSingleton<SlackBot>();
         services.AddSingleton<TelegramClient>();

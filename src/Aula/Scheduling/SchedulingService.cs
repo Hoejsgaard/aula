@@ -6,6 +6,8 @@ using System.Text;
 using Aula.Bots;
 using Aula.Integration;
 using Aula.Configuration;
+using Aula.Services;
+using Aula.Utilities;
 
 namespace Aula.Scheduling;
 

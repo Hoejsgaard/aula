@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json.Linq;
 using Slack.Webhooks;
 using Aula.Configuration;
+using Aula.Utilities;
 
 namespace Aula.Channels;
 
