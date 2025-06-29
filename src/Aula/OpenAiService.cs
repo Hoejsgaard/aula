@@ -92,131 +92,158 @@ public class OpenAiService : IOpenAiService
     {
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
         string childName = weekLetter["child"]?.ToString() ?? "unknown";
+        contextKey = EnsureContextKey(contextKey, childName);
 
-        // Create a unique conversation key if not provided
+        EnsureConversationHistory(contextKey, childName, weekLetterContent, chatInterface);
+        AddUserQuestionToHistory(contextKey, question);
+        TrimConversationHistoryIfNeeded(contextKey);
+        LogConversationHistoryStructure(contextKey);
+
+        return await SendChatRequestAndGetResponse(contextKey);
+    }
+
+    private string EnsureContextKey(string? contextKey, string childName)
+    {
         if (string.IsNullOrEmpty(contextKey))
         {
             contextKey = childName.ToLowerInvariant();
         }
-
-        // Store the current child name for this context
         _currentChildContext[contextKey] = childName;
+        return contextKey;
+    }
 
-        // Initialize conversation history if it doesn't exist
+    private void EnsureConversationHistory(string contextKey, string childName, string weekLetterContent, ChatInterface chatInterface)
+    {
         if (!_conversationHistory.ContainsKey(contextKey))
         {
-            _conversationHistory[contextKey] = new List<ChatMessage>
-            {
-                ChatMessage.FromSystem($"You are a helpful assistant that answers questions about {childName}'s weekly school letter. " +
-                                      $"This letter is specifically about {childName}'s class and activities. " +
-                                      $"Today is {DateTime.Now.DayOfWeek}, {DateTime.Now.ToString("MMMM d, yyyy")}. " +
-                                      "Answer based on the content of the letter. If the specific information isn't in the letter, " +
-                                      "say 'I don't have that specific information in the weekly letter' and then provide any related " +
-                                      "information that might be helpful. For example, if asked about Tuesday's activities but only " +
-                                      "Monday's activities are mentioned, acknowledge that Tuesday isn't mentioned but share what's " +
-                                      "happening on Monday. Be concise and direct in your answers. " +
-                                      "CRITICAL: You can ONLY answer questions about the weekly letter content. You CANNOT create reminders, " +
-                                      "set alarms, or take any actions. Never promise to remind users of anything. If asked to create " +
-                                      "a reminder, explain they need to use specific reminder commands instead. " +
-                                      "IMPORTANT: Always respond in the same language as the user's question. " +
-                                      "If the question is in Danish, respond in Danish. If the question is in English, respond in English. " +
-                                      $"You are responding via {GetChatInterfaceInstructions(chatInterface)}"),
-                ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}")
-            };
+            InitializeNewConversationHistory(contextKey, childName, weekLetterContent, chatInterface);
         }
         else
         {
-            // Check if the child has changed for this context key
-            if (_currentChildContext.TryGetValue(contextKey, out var previousChildName) &&
-                !string.Equals(previousChildName, childName, StringComparison.OrdinalIgnoreCase))
-            {
-                // Reset the conversation history for this context key
-                _conversationHistory[contextKey] = new List<ChatMessage>
-                {
-                    ChatMessage.FromSystem($"You are a helpful assistant that answers questions about {childName}'s weekly school letter. " +
-                                          $"This letter is specifically about {childName}'s class and activities. " +
-                                          $"Today is {DateTime.Now.DayOfWeek}, {DateTime.Now.ToString("MMMM d, yyyy")}. " +
-                                          "Answer based on the content of the letter. If the specific information isn't in the letter, " +
-                                          "say 'I don't have that specific information in the weekly letter' and then provide any related " +
-                                          "information that might be helpful. For example, if asked about Tuesday's activities but only " +
-                                          "Monday's activities are mentioned, acknowledge that Tuesday isn't mentioned but share what's " +
-                                          "happening on Monday. Be concise and direct in your answers. " +
-                                          "CRITICAL: You can ONLY answer questions about the weekly letter content. You CANNOT create reminders, " +
-                                          "set alarms, or take any actions. Never promise to remind users of anything. If asked to create " +
-                                          "a reminder, explain they need to use specific reminder commands instead. " +
-                                          "IMPORTANT: Always respond in the same language as the user's question. " +
-                                          "If the question is in Danish, respond in Danish. If the question is in English, respond in English. " +
-                                          $"You are responding via {GetChatInterfaceInstructions(chatInterface)}"),
-                    ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}")
-                };
-            }
-            else
-            {
-                // Always refresh the week letter content in the context
-                // First, find the system message with the week letter content
-                _logger.LogInformation("🔎 TRACE: Updating existing conversation context for {ContextKey}", contextKey);
-                int contentIndex = -1;
-                for (int i = 0; i < _conversationHistory[contextKey].Count; i++)
-                {
-                    var message = _conversationHistory[contextKey][i];
-                    if (message != null && message.Role == "system" &&
-                        message.Content != null && message.Content.StartsWith("Here's the weekly letter content"))
-                    {
-                        contentIndex = i;
-                        break;
-                    }
-                }
+            UpdateExistingConversationHistory(contextKey, childName, weekLetterContent, chatInterface);
+        }
+    }
 
-                // If found, update it; otherwise, add it
-                if (contentIndex >= 0)
-                {
-                    _logger.LogInformation("🔎 TRACE: Found existing week letter content at index {Index}, updating", contentIndex);
-                    _conversationHistory[contextKey][contentIndex] = ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}");
-                    _logger.LogInformation("🔎 TRACE: Updated existing week letter content in context: {Length} characters", weekLetterContent.Length);
+    private void InitializeNewConversationHistory(string contextKey, string childName, string weekLetterContent, ChatInterface chatInterface)
+    {
+        _conversationHistory[contextKey] = new List<ChatMessage>
+        {
+            CreateSystemInstructionsMessage(childName, chatInterface),
+            CreateWeekLetterContentMessage(childName, weekLetterContent)
+        };
+    }
 
-                    // Also update the system instructions if it's the first message
-                    if (contentIndex > 0)
-                    {
-                        _conversationHistory[contextKey][0] = ChatMessage.FromSystem($"You are a helpful assistant that answers questions about {childName}'s weekly school letter. " +
-                                          $"This letter is specifically about {childName}'s class and activities. " +
-                                          $"Today is {DateTime.Now.DayOfWeek}, {DateTime.Now.ToString("MMMM d, yyyy")}. " +
-                                          "Answer based on the content of the letter. If the specific information isn't in the letter, " +
-                                          "say 'I don't have that specific information in the weekly letter' and then provide any related " +
-                                          "information that might be helpful. For example, if asked about Tuesday's activities but only " +
-                                          "Monday's activities are mentioned, acknowledge that Tuesday isn't mentioned but share what's " +
-                                          "happening on Monday. Be concise and direct in your answers. " +
-                                          "IMPORTANT: Always respond in the same language as the user's question. " +
-                                          "If the question is in Danish, respond in Danish. If the question is in English, respond in English. " +
-                                          $"You are responding via {GetChatInterfaceInstructions(chatInterface)}");
-                        _logger.LogInformation("🔎 TRACE: Updated system instructions in context");
-                    }
-                }
-                else
-                {
-                    _logger.LogInformation("🔎 TRACE: No existing week letter content found, inserting after first system message");
-                    // Insert after the first system message
-                    _conversationHistory[contextKey].Insert(1, ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}"));
-                    _logger.LogInformation("🔎 TRACE: Added week letter content to existing context: {Length} characters", weekLetterContent.Length);
-                }
+    private void UpdateExistingConversationHistory(string contextKey, string childName, string weekLetterContent, ChatInterface chatInterface)
+    {
+        if (ShouldResetHistoryForNewChild(contextKey, childName))
+        {
+            InitializeNewConversationHistory(contextKey, childName, weekLetterContent, chatInterface);
+        }
+        else
+        {
+            RefreshWeekLetterContentInHistory(contextKey, childName, weekLetterContent, chatInterface);
+        }
+    }
+
+    private bool ShouldResetHistoryForNewChild(string contextKey, string childName)
+    {
+        return _currentChildContext.TryGetValue(contextKey, out var previousChildName) &&
+               !string.Equals(previousChildName, childName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void RefreshWeekLetterContentInHistory(string contextKey, string childName, string weekLetterContent, ChatInterface chatInterface)
+    {
+        _logger.LogInformation("🔎 TRACE: Updating existing conversation context for {ContextKey}", contextKey);
+        
+        int contentIndex = FindWeekLetterContentIndex(contextKey);
+        
+        if (contentIndex >= 0)
+        {
+            UpdateExistingWeekLetterContent(contextKey, childName, weekLetterContent, contentIndex, chatInterface);
+        }
+        else
+        {
+            InsertWeekLetterContent(contextKey, childName, weekLetterContent);
+        }
+    }
+
+    private int FindWeekLetterContentIndex(string contextKey)
+    {
+        for (int i = 0; i < _conversationHistory[contextKey].Count; i++)
+        {
+            var message = _conversationHistory[contextKey][i];
+            if (message?.Role == "system" &&
+                message.Content?.StartsWith("Here's the weekly letter content") == true)
+            {
+                return i;
             }
         }
+        return -1;
+    }
 
-        // Add the user's question to the conversation history
+    private void UpdateExistingWeekLetterContent(string contextKey, string childName, string weekLetterContent, int contentIndex, ChatInterface chatInterface)
+    {
+        _logger.LogInformation("🔎 TRACE: Found existing week letter content at index {Index}, updating", contentIndex);
+        _conversationHistory[contextKey][contentIndex] = CreateWeekLetterContentMessage(childName, weekLetterContent);
+        _logger.LogInformation("🔎 TRACE: Updated existing week letter content in context: {Length} characters", weekLetterContent.Length);
+
+        if (contentIndex > 0)
+        {
+            _conversationHistory[contextKey][0] = CreateSystemInstructionsMessage(childName, chatInterface);
+            _logger.LogInformation("🔎 TRACE: Updated system instructions in context");
+        }
+    }
+
+    private void InsertWeekLetterContent(string contextKey, string childName, string weekLetterContent)
+    {
+        _logger.LogInformation("🔎 TRACE: No existing week letter content found, inserting after first system message");
+        _conversationHistory[contextKey].Insert(1, CreateWeekLetterContentMessage(childName, weekLetterContent));
+        _logger.LogInformation("🔎 TRACE: Added week letter content to existing context: {Length} characters", weekLetterContent.Length);
+    }
+
+    private ChatMessage CreateSystemInstructionsMessage(string childName, ChatInterface chatInterface)
+    {
+        return ChatMessage.FromSystem($"You are a helpful assistant that answers questions about {childName}'s weekly school letter. " +
+                                    $"This letter is specifically about {childName}'s class and activities. " +
+                                    $"Today is {DateTime.Now.DayOfWeek}, {DateTime.Now.ToString("MMMM d, yyyy")}. " +
+                                    "Answer based on the content of the letter. If the specific information isn't in the letter, " +
+                                    "say 'I don't have that specific information in the weekly letter' and then provide any related " +
+                                    "information that might be helpful. For example, if asked about Tuesday's activities but only " +
+                                    "Monday's activities are mentioned, acknowledge that Tuesday isn't mentioned but share what's " +
+                                    "happening on Monday. Be concise and direct in your answers. " +
+                                    "CRITICAL: You can ONLY answer questions about the weekly letter content. You CANNOT create reminders, " +
+                                    "set alarms, or take any actions. Never promise to remind users of anything. If asked to create " +
+                                    "a reminder, explain they need to use specific reminder commands instead. " +
+                                    "IMPORTANT: Always respond in the same language as the user's question. " +
+                                    "If the question is in Danish, respond in Danish. If the question is in English, respond in English. " +
+                                    $"You are responding via {GetChatInterfaceInstructions(chatInterface)}");
+    }
+
+    private ChatMessage CreateWeekLetterContentMessage(string childName, string weekLetterContent)
+    {
+        return ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}");
+    }
+
+    private void AddUserQuestionToHistory(string contextKey, string question)
+    {
         _logger.LogInformation("🔎 TRACE: Adding user question to conversation history: {Question}", question);
         _conversationHistory[contextKey].Add(ChatMessage.FromUser(question));
+    }
 
-        // Limit conversation history to prevent token overflow (keep last 10 messages)
+    private void TrimConversationHistoryIfNeeded(string contextKey)
+    {
         if (_conversationHistory[contextKey].Count > 12)
         {
-            // Keep the system messages (first 2) and the last 10 messages
             _conversationHistory[contextKey] = _conversationHistory[contextKey].Take(2)
                 .Concat(_conversationHistory[contextKey].Skip(_conversationHistory[contextKey].Count - 10))
                 .ToList();
 
             _logger.LogInformation("🔎 TRACE: Trimmed conversation history to prevent token overflow");
         }
+    }
 
-        // Log the conversation history structure
+    private void LogConversationHistoryStructure(string contextKey)
+    {
         _logger.LogInformation("🔎 TRACE: Conversation history structure:");
         for (int i = 0; i < _conversationHistory[contextKey].Count; i++)
         {
@@ -224,14 +251,16 @@ public class OpenAiService : IOpenAiService
             _logger.LogInformation("🔎 TRACE: Message {Index}: Role={Role}, Content Length={Length}",
                 i, message.Role, message.Content?.Length ?? 0);
 
-            // Log the first 100 characters of each message for debugging
             if (message.Content != null && message.Content.Length > 0)
             {
                 var preview = message.Content.Length > 100 ? message.Content.Substring(0, 100) + "..." : message.Content;
                 _logger.LogInformation("🔎 TRACE: Message {Index} Preview: {Preview}", i, preview);
             }
         }
+    }
 
+    private async Task<string> SendChatRequestAndGetResponse(string contextKey)
+    {
         var chatRequest = new ChatCompletionCreateRequest
         {
             Messages = _conversationHistory[contextKey],
@@ -244,7 +273,6 @@ public class OpenAiService : IOpenAiService
         if (response.Successful)
         {
             var reply = response.Choices.First().Message.Content ?? "No response content received.";
-            // Add the assistant's response to the conversation history
             _conversationHistory[contextKey].Add(ChatMessage.FromAssistant(reply));
             return reply;
         }
@@ -324,14 +352,7 @@ public class OpenAiService : IOpenAiService
 
     private string ExtractWeekLetterContent(JObject weekLetter)
     {
-        var weekLetterContent = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
-
-        if (string.IsNullOrEmpty(weekLetterContent))
-        {
-            _logger.LogWarning("Week letter content is empty");
-        }
-
-        return weekLetterContent;
+        return WeekLetterContentExtractor.ExtractContent(weekLetter, _logger);
     }
 
     public async Task<string> AskQuestionAboutChildrenAsync(Dictionary<string, JObject> childrenWeekLetters, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack)
