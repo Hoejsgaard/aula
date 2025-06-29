@@ -2,8 +2,9 @@
 using System.Net.Http.Headers;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Linq;
+using Aula.Configuration;
 
-namespace Aula;
+namespace Aula.Integration;
 
 public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
 {

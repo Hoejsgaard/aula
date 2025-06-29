@@ -3,6 +3,8 @@ using Moq;
 using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
 using Xunit;
+using Aula.Tools;
+using Aula.Configuration;
 
 namespace Aula.Tests;
 

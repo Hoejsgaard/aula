@@ -1,7 +1,8 @@
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
+using Aula.Configuration;
 
-namespace Aula;
+namespace Aula.Tools;
 
 public class AiToolsManager
 {

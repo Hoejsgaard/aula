@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
+using Aula.Tools;
+using Aula.Configuration;
 
 namespace Aula;
 
@@ -154,9 +156,9 @@ public class OpenAiService : IOpenAiService
     private void RefreshWeekLetterContentInHistory(string contextKey, string childName, string weekLetterContent, ChatInterface chatInterface)
     {
         _logger.LogInformation("🔎 TRACE: Updating existing conversation context for {ContextKey}", contextKey);
-        
+
         int contentIndex = FindWeekLetterContentIndex(contextKey);
-        
+
         if (contentIndex >= 0)
         {
             UpdateExistingWeekLetterContent(contextKey, childName, weekLetterContent, contentIndex, chatInterface);

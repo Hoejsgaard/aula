@@ -12,8 +12,12 @@ using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Aula.Integration;
+using Aula.Tools;
+using Aula.Channels;
+using Aula.Configuration;
 
-namespace Aula;
+namespace Aula.Bots;
 
 public class TelegramInteractiveBot
 {
@@ -79,7 +83,7 @@ public class TelegramInteractiveBot
         _childrenByName = _config.Children.ToDictionary(
             c => c.FirstName.ToLowerInvariant(),
             c => c);
-        
+
         _reminderHandler = new ReminderCommandHandler(_logger, _supabaseService, _childrenByName);
     }
 
@@ -230,15 +234,15 @@ public class TelegramInteractiveBot
     private async Task<bool> TryHandleHelpCommand(long chatId, string text)
     {
         var normalizedText = text.Trim().ToLowerInvariant();
-        
+
         // English help commands
-        if (normalizedText == "help" || normalizedText == "--help" || normalizedText == "?" || 
+        if (normalizedText == "help" || normalizedText == "--help" || normalizedText == "?" ||
             normalizedText == "commands" || normalizedText == "/help" || normalizedText == "/start")
         {
             await SendMessageInternal(chatId, GetEnglishHelpMessage());
             return true;
         }
-        
+
         // Danish help commands  
         if (normalizedText == "hjælp" || normalizedText == "kommandoer" || normalizedText == "/hjælp")
         {
@@ -316,12 +320,12 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
     private async Task<bool> TryHandleReminderCommand(long chatId, string text, bool isEnglish)
     {
         var (handled, response) = await _reminderHandler.TryHandleReminderCommand(text, isEnglish);
-        
+
         if (handled && response != null)
         {
             await SendMessageInternal(chatId, response);
         }
-        
+
         return handled;
     }
 

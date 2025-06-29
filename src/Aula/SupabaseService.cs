@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Supabase;
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
+using Aula.Configuration;
 
 namespace Aula;
 

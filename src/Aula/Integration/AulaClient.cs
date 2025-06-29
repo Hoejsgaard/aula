@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 
-namespace Aula;
+namespace Aula.Integration;
 
 public class AulaClient : UniLoginClient
 {

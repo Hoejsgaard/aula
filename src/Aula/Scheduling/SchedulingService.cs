@@ -3,8 +3,11 @@ using NCrontab;
 using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using Aula.Bots;
+using Aula.Integration;
+using Aula.Configuration;
 
-namespace Aula;
+namespace Aula.Scheduling;
 
 public interface ISchedulingService
 {

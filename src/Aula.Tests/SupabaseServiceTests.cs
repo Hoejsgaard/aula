@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Moq;
+using Aula.Configuration;
+using ConfigSupabase = Aula.Configuration.Supabase;
 
 namespace Aula.Tests;
 
@@ -11,17 +13,17 @@ public class SupabaseServiceTests
     public SupabaseServiceTests()
     {
         var loggerFactory = new LoggerFactory();
-        
+
         _testConfig = new Config
         {
-            Supabase = new Supabase
+            Supabase = new ConfigSupabase
             {
                 Url = "https://test.supabase.co",
                 Key = "test-key",
                 ServiceRoleKey = "test-service-role-key"
             }
         };
-        
+
         _supabaseService = new SupabaseService(_testConfig, loggerFactory);
     }
 
@@ -29,7 +31,7 @@ public class SupabaseServiceTests
     public void Constructor_WithValidConfig_InitializesCorrectly()
     {
         // Arrange & Act - Constructor called in setup
-        
+
         // Assert
         Assert.NotNull(_supabaseService);
     }
@@ -40,7 +42,7 @@ public class SupabaseServiceTests
         // Arrange
         var invalidConfig = new Config
         {
-            Supabase = new Supabase
+            Supabase = new ConfigSupabase
             {
                 Url = "",
                 ServiceRoleKey = ""
@@ -94,7 +96,7 @@ public class SupabaseServiceTests
     {
         // Act & Assert - Should not throw during construction
         Assert.NotNull(_supabaseService);
-        
+
         // Verify parameters are within expected ranges
         Assert.True(weekNumber > 0 && weekNumber <= 53);
         Assert.True(year > 2000 && year < 3000);

@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json.Linq;
+using Aula.Tools;
+using Aula.Configuration;
 
 namespace Aula.Tests;
 
@@ -38,9 +40,9 @@ public class AiToolsManagerTests
         var childName = "Alice";
 
         _mockSupabaseService.Setup(s => s.AddReminderAsync(
-            It.IsAny<string>(), 
-            It.IsAny<DateOnly>(), 
-            It.IsAny<TimeOnly>(), 
+            It.IsAny<string>(),
+            It.IsAny<DateOnly>(),
+            It.IsAny<TimeOnly>(),
             It.IsAny<string>()))
             .ReturnsAsync(123);
 
@@ -71,9 +73,9 @@ public class AiToolsManagerTests
         // Assert
         Assert.Contains("Error: Invalid date format", result);
         _mockSupabaseService.Verify(s => s.AddReminderAsync(
-            It.IsAny<string>(), 
-            It.IsAny<DateOnly>(), 
-            It.IsAny<TimeOnly>(), 
+            It.IsAny<string>(),
+            It.IsAny<DateOnly>(),
+            It.IsAny<TimeOnly>(),
             It.IsAny<string>()), Times.Never);
     }
 
@@ -83,19 +85,19 @@ public class AiToolsManagerTests
         // Arrange
         var testReminders = new List<Reminder>
         {
-            new Reminder 
-            { 
-                Id = 1, 
-                Text = "Reminder 1", 
+            new Reminder
+            {
+                Id = 1,
+                Text = "Reminder 1",
                 RemindDate = DateOnly.FromDateTime(DateTime.Today.AddDays(1)),
                 RemindTime = new TimeOnly(9, 0),
                 ChildName = "Alice",
                 IsSent = false
             },
-            new Reminder 
-            { 
-                Id = 2, 
-                Text = "Reminder 2", 
+            new Reminder
+            {
+                Id = 2,
+                Text = "Reminder 2",
                 RemindDate = DateOnly.FromDateTime(DateTime.Today.AddDays(2)),
                 RemindTime = new TimeOnly(14, 30),
                 ChildName = "Bob",
@@ -218,9 +220,9 @@ public class AiToolsManagerTests
         var dateTime = DateTime.Now.AddDays(1).ToString("yyyy-MM-dd HH:mm");
 
         _mockSupabaseService.Setup(s => s.AddReminderAsync(
-            It.IsAny<string>(), 
-            It.IsAny<DateOnly>(), 
-            It.IsAny<TimeOnly>(), 
+            It.IsAny<string>(),
+            It.IsAny<DateOnly>(),
+            It.IsAny<TimeOnly>(),
             It.IsAny<string>()))
             .ReturnsAsync(456);
 

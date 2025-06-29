@@ -1,3 +1,6 @@
+using Aula.Configuration;
+using ConfigChild = Aula.Configuration.Child;
+
 namespace Aula.Tests;
 
 public class DataModelTests
@@ -325,7 +328,7 @@ public class DataModelTests
     public void Child_PropertiesFromConfig_WorkCorrectly()
     {
         // Arrange & Act
-        var child = new Child
+        var child = new ConfigChild
         {
             FirstName = "Emma",
             LastName = "Wilson",
@@ -338,7 +341,7 @@ public class DataModelTests
         Assert.Equal("Wilson", child.LastName);
         Assert.Equal("green", child.Colour);
         Assert.Equal("emma.wilson@example.com", child.GoogleCalendarId);
-        
+
         // Test full name logic if it exists
         var expectedFullName = $"{child.FirstName} {child.LastName}";
         Assert.Equal("Emma Wilson", expectedFullName);
@@ -354,7 +357,7 @@ public class DataModelTests
     {
         // Arrange & Act
         var reminder = new Reminder();
-        
+
         if (shouldAccept)
         {
             reminder.CreatedBy = createdBy ?? "bot";

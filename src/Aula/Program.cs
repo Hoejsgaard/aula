@@ -4,6 +4,12 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Aula.Bots;
+using Aula.Channels;
+using Aula.Integration;
+using Aula.Scheduling;
+using Aula.Tools;
+using Aula.Configuration;
 
 namespace Aula;
 
