@@ -117,8 +117,7 @@ public class ConversationContextTests
         Assert.Contains("Today: True", result);
         Assert.Contains("Tomorrow: False", result);
         Assert.Contains("Homework: True", result);
-        // Age should be around 3.5 minutes - check for either comma or period as decimal separator
-        Assert.True(result.Contains("Age: 3.") || result.Contains("Age: 3,"), $"Expected age around 3.5 minutes, got: {result}");
+        Assert.Contains("Age: 3.", result); // Should be around 3.5 minutes (using InvariantCulture)
         Assert.Contains("minutes", result);
     }
 
@@ -140,8 +139,7 @@ public class ConversationContextTests
         Assert.Contains("Today: False", result);
         Assert.Contains("Tomorrow: False", result);
         Assert.Contains("Homework: False", result);
-        // Age should be around 1.0 minutes - check for either comma or period as decimal separator
-        Assert.True(result.Contains("Age: 1.") || result.Contains("Age: 1,") || result.Contains("Age: 0,") || result.Contains("Age: 0."), $"Expected age around 1.0 minutes, got: {result}");
+        Assert.Contains("Age: 1.", result); // Should be around 1.0 minutes (using InvariantCulture)
     }
 
     [Fact]
@@ -159,8 +157,7 @@ public class ConversationContextTests
 
         // Assert
         Assert.Contains("Child: ", result);
-        // Age should be approximately 0.5 minutes (30 seconds), but allow for timing variations and locale differences
-        Assert.True(result.Contains("Age: 0.") || result.Contains("Age: 0,") || result.Contains("Age: 1.") || result.Contains("Age: 1,"), $"Expected age around 0.5 minutes, got: {result}");
+        Assert.Contains("Age: 0.5", result); // 30 seconds = 0.5 minutes (using InvariantCulture)
     }
 
     [Fact]
@@ -177,7 +174,7 @@ public class ConversationContextTests
         var result = context.ToString();
 
         // Assert
-        // Should show approximately 2.5 minutes (with 1 decimal place), but allow for timing variations and locale differences
-        Assert.True(result.Contains("Age: 2.") || result.Contains("Age: 2,"), $"Expected age around 2.5 minutes, got: {result}");
+        // Should show approximately 2.5 minutes (with 1 decimal place) using InvariantCulture
+        Assert.Contains("Age: 2.5", result);
     }
 }
