@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using System.Globalization;
 
 namespace Aula.Utilities;
 
@@ -14,7 +15,7 @@ public class ConversationContext
 
     public override string ToString()
     {
-        return $"Child: {LastChildName ?? "none"}, Today: {WasAboutToday}, Tomorrow: {WasAboutTomorrow}, Homework: {WasAboutHomework}, Age: {(DateTime.Now - Timestamp).TotalMinutes:F1} minutes";
+        return $"Child: {LastChildName ?? "none"}, Today: {WasAboutToday}, Tomorrow: {WasAboutTomorrow}, Homework: {WasAboutHomework}, Age: {(DateTime.Now - Timestamp).TotalMinutes.ToString("F1", CultureInfo.InvariantCulture)} minutes";
     }
 }
 
