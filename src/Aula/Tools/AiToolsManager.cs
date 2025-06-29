@@ -1,19 +1,20 @@
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
 using Aula.Configuration;
+using Aula.Services;
 
 namespace Aula.Tools;
 
 public class AiToolsManager
 {
     private readonly ISupabaseService supabaseService;
-    private readonly IDataManager dataManager;
+    private readonly IDataService dataService;
     private readonly ILogger logger;
 
-    public AiToolsManager(ISupabaseService supabaseService, IDataManager dataManager, ILoggerFactory loggerFactory)
+    public AiToolsManager(ISupabaseService supabaseService, IDataService dataService, ILoggerFactory loggerFactory)
     {
         this.supabaseService = supabaseService;
-        this.dataManager = dataManager;
+        this.dataService = dataService;
         logger = loggerFactory.CreateLogger<AiToolsManager>();
     }
 
@@ -107,7 +108,7 @@ public class AiToolsManager
     {
         try
         {
-            var allChildren = dataManager.GetChildren();
+            var allChildren = dataService.GetChildren();
             var children = string.IsNullOrEmpty(childName)
                 ? allChildren
                 : allChildren.Where(c => $"{c.FirstName} {c.LastName}".Contains(childName, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -120,7 +121,7 @@ public class AiToolsManager
             var weekLetterSummaries = new List<string>();
             foreach (var child in children)
             {
-                var weekLetter = dataManager.GetWeekLetter(child);
+                var weekLetter = dataService.GetWeekLetter(child);
                 if (weekLetter != null)
                 {
                     var summary = ExtractSummaryFromWeekLetter(weekLetter);
@@ -146,7 +147,7 @@ public class AiToolsManager
         try
         {
             var targetDate = string.IsNullOrEmpty(date) ? DateTime.Today : DateTime.Parse(date);
-            var child = dataManager.GetChildren().FirstOrDefault(c =>
+            var child = dataService.GetChildren().FirstOrDefault(c =>
                 $"{c.FirstName} {c.LastName}".Contains(childName, StringComparison.OrdinalIgnoreCase));
 
             if (child == null)
@@ -154,7 +155,7 @@ public class AiToolsManager
                 return $"❌ Child '{childName}' not found.";
             }
 
-            var weekLetter = dataManager.GetWeekLetter(child);
+            var weekLetter = dataService.GetWeekLetter(child);
             if (weekLetter == null)
             {
                 return $"📝 No week letter available for {child.FirstName} {child.LastName}.";

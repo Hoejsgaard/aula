@@ -1,4 +1,7 @@
 using Xunit;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Aula.Utilities;
 
 namespace Aula.Tests;
 

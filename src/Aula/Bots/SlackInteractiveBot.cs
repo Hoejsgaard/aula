@@ -13,6 +13,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Aula.Integration;
 using Aula.Configuration;
+using Aula.Services;
+using Aula.Utilities;
 
 namespace Aula.Bots;
 

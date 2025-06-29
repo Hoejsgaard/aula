@@ -3,13 +3,14 @@ using Moq;
 using Newtonsoft.Json.Linq;
 using Aula.Tools;
 using Aula.Configuration;
+using Aula.Services;
 
 namespace Aula.Tests;
 
 public class AiToolsManagerTests
 {
     private readonly Mock<ISupabaseService> _mockSupabaseService;
-    private readonly Mock<IDataManager> _mockDataManager;
+    private readonly Mock<IDataService> _mockDataManager;
     private readonly ILoggerFactory _loggerFactory;
     private readonly AiToolsManager _aiToolsManager;
     private readonly List<Child> _testChildren;
@@ -17,7 +18,7 @@ public class AiToolsManagerTests
     public AiToolsManagerTests()
     {
         _mockSupabaseService = new Mock<ISupabaseService>();
-        _mockDataManager = new Mock<IDataManager>();
+        _mockDataManager = new Mock<IDataService>();
         _loggerFactory = new LoggerFactory();
 
         _testChildren = new List<Child>

@@ -3,20 +3,20 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 
-namespace Aula;
+namespace Aula.Services;
 
-public class DataManager : IDataManager
+public class DataService : IDataService
 {
     private readonly IMemoryCache _cache;
     private readonly ILogger _logger;
     private readonly Config _config;
     private readonly TimeSpan _cacheExpiration = TimeSpan.FromHours(1);
 
-    public DataManager(IMemoryCache cache, Config config, ILoggerFactory loggerFactory)
+    public DataService(IMemoryCache cache, Config config, ILoggerFactory loggerFactory)
     {
         _cache = cache;
         _config = config;
-        _logger = loggerFactory.CreateLogger(nameof(DataManager));
+        _logger = loggerFactory.CreateLogger(nameof(DataService));
     }
 
     public void CacheWeekLetter(Child child, JObject weekLetter)

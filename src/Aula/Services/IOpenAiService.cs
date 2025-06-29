@@ -1,7 +1,7 @@
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 
-namespace Aula;
+namespace Aula.Services;
 
 public enum ChatInterface
 {

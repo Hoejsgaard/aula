@@ -3,13 +3,14 @@ using Moq;
 using Newtonsoft.Json.Linq;
 using Aula.Integration;
 using Aula.Configuration;
+using Aula.Services;
 
 namespace Aula.Tests;
 
 public class AgentServiceTests
 {
     private readonly Mock<IMinUddannelseClient> _minUddannelseClientMock;
-    private readonly Mock<IDataManager> _dataManagerMock;
+    private readonly Mock<IDataService> _dataManagerMock;
     private readonly Mock<IOpenAiService> _openAiServiceMock;
     private readonly Mock<ILoggerFactory> _loggerFactoryMock;
     private readonly Mock<ILogger> _loggerMock;
@@ -20,7 +21,7 @@ public class AgentServiceTests
     public AgentServiceTests()
     {
         _minUddannelseClientMock = new Mock<IMinUddannelseClient>();
-        _dataManagerMock = new Mock<IDataManager>();
+        _dataManagerMock = new Mock<IDataService>();
         _openAiServiceMock = new Mock<IOpenAiService>();
         _loggerMock = new Mock<ILogger>();
         _loggerFactoryMock = new Mock<ILoggerFactory>();

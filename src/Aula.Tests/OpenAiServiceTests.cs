@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Xunit;
 using Aula.Tools;
 using Aula.Configuration;
+using Aula.Services;
 
 namespace Aula.Tests;
 
@@ -22,7 +23,7 @@ public class OpenAiServiceTests
         _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
         _mockAiToolsManager = new Mock<AiToolsManager>(
             Mock.Of<ISupabaseService>(),
-            Mock.Of<IDataManager>(),
+            Mock.Of<IDataService>(),
             _mockLoggerFactory.Object);
     }
 

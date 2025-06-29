@@ -1,20 +1,21 @@
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
+using Aula.Services;
 
 namespace Aula.Integration;
 
 public class AgentService : IAgentService
 {
     private readonly IMinUddannelseClient _minUddannelseClient;
-    private readonly IDataManager _dataManager;
+    private readonly IDataService _dataManager;
     private readonly IOpenAiService _openAiService;
     private readonly ILogger _logger;
     private bool _isLoggedIn;
 
     public AgentService(
         IMinUddannelseClient minUddannelseClient,
-        IDataManager dataManager,
+        IDataService dataManager,
         IOpenAiService openAiService,
         ILoggerFactory loggerFactory)
     {

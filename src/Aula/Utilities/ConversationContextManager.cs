@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace Aula;
+namespace Aula.Utilities;
 
 public class ConversationContext
 {

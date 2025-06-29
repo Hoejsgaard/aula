@@ -1,9 +1,9 @@
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 
-namespace Aula;
+namespace Aula.Services;
 
-public interface IDataManager
+public interface IDataService
 {
     void CacheWeekLetter(Child child, JObject weekLetter);
     JObject? GetWeekLetter(Child child);

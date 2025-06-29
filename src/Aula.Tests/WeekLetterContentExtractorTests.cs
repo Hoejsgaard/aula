@@ -2,6 +2,7 @@ using Xunit;
 using Newtonsoft.Json.Linq;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Aula.Utilities;
 
 namespace Aula.Tests;
 
