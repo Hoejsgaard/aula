@@ -82,6 +82,7 @@ Configuration is handled through `appsettings.json` with sections for:
 ### Git Commits
 - Use semantic prefixes: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`
 - Common scopes: `unilogin`, `minuddannelse`, `aula`, `auth`, `api`, `secrets`, `infra`, `tests`
+- Do NOT add "🤖 Generated with Claude Code" or similar attribution comments
 
 ## Target Framework
 - .NET 9.0
