@@ -146,7 +146,7 @@ public class Program
         }
     }
 
-    private static IServiceProvider ConfigureServices()
+    public static IServiceProvider ConfigureServices()
     {
         var services = new ServiceCollection();
 
