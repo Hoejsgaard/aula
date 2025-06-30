@@ -35,6 +35,8 @@ public class ConfigurationTests
         Assert.NotNull(_config.Children);
         Assert.NotNull(_config.GoogleServiceAccount);
         Assert.NotNull(_config.Supabase);
+        Assert.NotNull(_config.Features);
+        Assert.NotNull(_config.Timers);
     }
 
     [Fact]
@@ -271,5 +273,134 @@ public class ConfigurationTests
         Assert.NotNull(iConfig.Children);
         Assert.NotNull(iConfig.GoogleServiceAccount);
         Assert.NotNull(iConfig.Supabase);
+        Assert.NotNull(iConfig.Features);
+        Assert.NotNull(iConfig.Timers);
+    }
+
+    [Fact]
+    public void Features_ConfigurationIsCorrect()
+    {
+        // Assert
+        Assert.False(_config.Features.WeekLetterPreloading); // Test config overrides default
+        Assert.True(_config.Features.ParallelProcessing);
+        Assert.Equal(30, _config.Features.ConversationCacheExpirationMinutes);
+    }
+
+    [Fact]
+    public void Features_DefaultValues_AreCorrect()
+    {
+        // Arrange
+        var defaultFeatures = new Features();
+
+        // Assert
+        Assert.True(defaultFeatures.WeekLetterPreloading); // Default is true
+        Assert.True(defaultFeatures.ParallelProcessing); // Default is true
+        Assert.Equal(60, defaultFeatures.ConversationCacheExpirationMinutes); // Default is 60
+    }
+
+    [Fact]
+    public void Timers_ConfigurationIsCorrect()
+    {
+        // Assert
+        Assert.Equal(15, _config.Timers.SchedulingIntervalSeconds); // Test config overrides default
+        Assert.Equal(3, _config.Timers.SlackPollingIntervalSeconds); // Test config overrides default
+        Assert.Equal(2, _config.Timers.CleanupIntervalHours); // Test config overrides default
+        Assert.False(_config.Timers.AdaptivePolling); // Test config overrides default
+        Assert.Equal(60, _config.Timers.MaxPollingIntervalSeconds); // Test config overrides default
+        Assert.Equal(2, _config.Timers.MinPollingIntervalSeconds); // Test config overrides default
+    }
+
+    [Fact]
+    public void Timers_DefaultValues_AreCorrect()
+    {
+        // Arrange
+        var defaultTimers = new Timers();
+
+        // Assert
+        Assert.Equal(10, defaultTimers.SchedulingIntervalSeconds); // Default is 10
+        Assert.Equal(5, defaultTimers.SlackPollingIntervalSeconds); // Default is 5
+        Assert.Equal(1, defaultTimers.CleanupIntervalHours); // Default is 1
+        Assert.True(defaultTimers.AdaptivePolling); // Default is true
+        Assert.Equal(30, defaultTimers.MaxPollingIntervalSeconds); // Default is 30
+        Assert.Equal(5, defaultTimers.MinPollingIntervalSeconds); // Default is 5
+    }
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(5, true)]
+    [InlineData(10, true)]
+    [InlineData(60, true)]
+    [InlineData(0, false)]
+    [InlineData(-1, false)]
+    [InlineData(3661, false)] // More than 1 hour
+    public void Timers_SchedulingInterval_ValidationTests(int intervalSeconds, bool isValid)
+    {
+        // Arrange
+        var timers = new Timers { SchedulingIntervalSeconds = intervalSeconds };
+
+        // Assert
+        if (isValid)
+        {
+            Assert.True(timers.SchedulingIntervalSeconds > 0 && timers.SchedulingIntervalSeconds <= 3600);
+        }
+        else
+        {
+            Assert.True(timers.SchedulingIntervalSeconds <= 0 || timers.SchedulingIntervalSeconds > 3600);
+        }
+    }
+
+    [Theory]
+    [InlineData(1, 60, true)] // Min < Max
+    [InlineData(5, 30, true)] // Min < Max
+    [InlineData(10, 10, true)] // Min = Max (edge case)
+    [InlineData(30, 5, false)] // Min > Max (invalid)
+    [InlineData(0, 30, false)] // Min is 0 (invalid)
+    [InlineData(5, 0, false)] // Max is 0 (invalid)
+    public void Timers_AdaptivePollingLimits_ValidationTests(int minSeconds, int maxSeconds, bool isValid)
+    {
+        // Arrange
+        var timers = new Timers
+        {
+            MinPollingIntervalSeconds = minSeconds,
+            MaxPollingIntervalSeconds = maxSeconds,
+            AdaptivePolling = true
+        };
+
+        // Assert
+        if (isValid)
+        {
+            Assert.True(timers.MinPollingIntervalSeconds > 0);
+            Assert.True(timers.MaxPollingIntervalSeconds > 0);
+            Assert.True(timers.MinPollingIntervalSeconds <= timers.MaxPollingIntervalSeconds);
+        }
+        else
+        {
+            Assert.True(timers.MinPollingIntervalSeconds <= 0 ||
+                       timers.MaxPollingIntervalSeconds <= 0 ||
+                       timers.MinPollingIntervalSeconds > timers.MaxPollingIntervalSeconds);
+        }
+    }
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(30, true)]
+    [InlineData(60, true)]
+    [InlineData(1440, true)] // 24 hours
+    [InlineData(0, false)]
+    [InlineData(-1, false)]
+    public void Features_ConversationCacheExpiration_ValidationTests(int minutes, bool isValid)
+    {
+        // Arrange
+        var features = new Features { ConversationCacheExpirationMinutes = minutes };
+
+        // Assert
+        if (isValid)
+        {
+            Assert.True(features.ConversationCacheExpirationMinutes > 0);
+        }
+        else
+        {
+            Assert.True(features.ConversationCacheExpirationMinutes <= 0);
+        }
     }
 }

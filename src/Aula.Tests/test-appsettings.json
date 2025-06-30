@@ -52,5 +52,18 @@
     "Url": "https://test.supabase.co",
     "Key": "test-public-key",
     "ServiceRoleKey": "test-service-role-key"
+  },
+  "Features": {
+    "WeekLetterPreloading": false,
+    "ParallelProcessing": true,
+    "ConversationCacheExpirationMinutes": 30
+  },
+  "Timers": {
+    "SchedulingIntervalSeconds": 15,
+    "SlackPollingIntervalSeconds": 3,
+    "CleanupIntervalHours": 2,
+    "AdaptivePolling": false,
+    "MaxPollingIntervalSeconds": 60,
+    "MinPollingIntervalSeconds": 2
   }
 }
