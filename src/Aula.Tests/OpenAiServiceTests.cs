@@ -43,7 +43,7 @@ public class OpenAiServiceTests
             mockLoggerFactory.Object);
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() =>
+        Assert.Throws<ArgumentException>(() =>
             new OpenAiService(string.Empty, mockLoggerFactory.Object, mockAiToolsManager.Object));
     }
 
