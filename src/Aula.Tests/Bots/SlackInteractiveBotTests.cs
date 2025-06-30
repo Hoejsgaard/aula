@@ -27,6 +27,7 @@ public class SlackInteractiveBotTests : IDisposable
     private readonly Config _testConfig;
     private readonly SlackInteractiveBot _slackBot;
     private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler;
+    private readonly HttpClient _httpClient;
     private bool _disposed = false;
 
     public SlackInteractiveBotTests()
@@ -38,6 +39,8 @@ public class SlackInteractiveBotTests : IDisposable
         _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
 
         _mockLoggerFactory.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
+        
+        _httpClient = new HttpClient(_mockHttpMessageHandler.Object);
 
         _testConfig = new Config
         {
@@ -58,7 +61,7 @@ public class SlackInteractiveBotTests : IDisposable
             }
         };
 
-        _slackBot = new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object);
+        _slackBot = new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object, _httpClient);
     }
 
     [Fact]
@@ -71,7 +74,7 @@ public class SlackInteractiveBotTests : IDisposable
     public void Constructor_WithNullAgentService_ThrowsArgumentNullException()
     {
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new SlackInteractiveBot(null!, _testConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object));
+            new SlackInteractiveBot(null!, _testConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object, _httpClient));
         Assert.Equal("agentService", exception.ParamName);
     }
 
@@ -79,7 +82,7 @@ public class SlackInteractiveBotTests : IDisposable
     public void Constructor_WithNullConfig_ThrowsArgumentNullException()
     {
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new SlackInteractiveBot(_mockAgentService.Object, null!, _mockLoggerFactory.Object, _mockSupabaseService.Object));
+            new SlackInteractiveBot(_mockAgentService.Object, null!, _mockLoggerFactory.Object, _mockSupabaseService.Object, _httpClient));
         Assert.Equal("config", exception.ParamName);
     }
 
@@ -87,7 +90,7 @@ public class SlackInteractiveBotTests : IDisposable
     public void Constructor_WithNullLoggerFactory_ThrowsArgumentNullException()
     {
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new SlackInteractiveBot(_mockAgentService.Object, _testConfig, null!, _mockSupabaseService.Object));
+            new SlackInteractiveBot(_mockAgentService.Object, _testConfig, null!, _mockSupabaseService.Object, _httpClient));
         Assert.Equal("loggerFactory", exception.ParamName);
     }
 
@@ -95,7 +98,7 @@ public class SlackInteractiveBotTests : IDisposable
     public void Constructor_WithNullSupabaseService_ThrowsArgumentNullException()
     {
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _mockLoggerFactory.Object, null!));
+            new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _mockLoggerFactory.Object, null!, _httpClient));
         Assert.Equal("supabaseService", exception.ParamName);
     }
 
@@ -379,6 +382,7 @@ public class SlackInteractiveBotTests : IDisposable
         if (!_disposed)
         {
             _slackBot?.Dispose();
+            _httpClient?.Dispose();
             _disposed = true;
         }
     }

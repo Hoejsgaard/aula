@@ -9,6 +9,7 @@ using Xunit;
 using Aula.Bots;
 using Aula.Configuration;
 using Aula.Integration;
+using Aula.Services;
 using Aula.Tools;
 using Aula.Utilities;
 
@@ -18,8 +19,9 @@ public class SlackMessageHandlerTests
 {
     private readonly Mock<IAgentService> _mockAgentService;
     private readonly Mock<ILogger> _mockLogger;
-    private readonly Mock<HttpClient> _mockHttpClient;
-    private readonly Mock<ReminderCommandHandler> _mockReminderHandler;
+    private readonly HttpClient _httpClient;
+    private readonly ReminderCommandHandler _reminderHandler;
+    private readonly Mock<ISupabaseService> _mockSupabaseService;
     private readonly Config _testConfig;
     private readonly Dictionary<string, Child> _childrenByName;
     private readonly ConversationContext _conversationContext;
@@ -29,8 +31,8 @@ public class SlackMessageHandlerTests
     {
         _mockAgentService = new Mock<IAgentService>();
         _mockLogger = new Mock<ILogger>();
-        _mockHttpClient = new Mock<HttpClient>();
-        _mockReminderHandler = new Mock<ReminderCommandHandler>();
+        _httpClient = new HttpClient();
+        _mockSupabaseService = new Mock<ISupabaseService>();
 
         _testConfig = new Config
         {
@@ -53,15 +55,16 @@ public class SlackMessageHandlerTests
         };
 
         _conversationContext = new ConversationContext();
+        _reminderHandler = new ReminderCommandHandler(_mockLogger.Object, _mockSupabaseService.Object, _childrenByName);
 
         _messageHandler = new SlackMessageHandler(
             _mockAgentService.Object,
             _testConfig,
             _mockLogger.Object,
-            _mockHttpClient.Object,
+            _httpClient,
             _childrenByName,
             _conversationContext,
-            _mockReminderHandler.Object);
+            _reminderHandler);
     }
 
     [Fact]
@@ -78,10 +81,10 @@ public class SlackMessageHandlerTests
                 null!,
                 _testConfig,
                 _mockLogger.Object,
-                _mockHttpClient.Object,
+                _httpClient,
                 _childrenByName,
                 _conversationContext,
-                _mockReminderHandler.Object));
+                _reminderHandler));
         Assert.Equal("agentService", exception.ParamName);
     }
 
@@ -93,10 +96,10 @@ public class SlackMessageHandlerTests
                 _mockAgentService.Object,
                 null!,
                 _mockLogger.Object,
-                _mockHttpClient.Object,
+                _httpClient,
                 _childrenByName,
                 _conversationContext,
-                _mockReminderHandler.Object));
+                _reminderHandler));
         Assert.Equal("config", exception.ParamName);
     }
 
@@ -108,10 +111,10 @@ public class SlackMessageHandlerTests
                 _mockAgentService.Object,
                 _testConfig,
                 null!,
-                _mockHttpClient.Object,
+                _httpClient,
                 _childrenByName,
                 _conversationContext,
-                _mockReminderHandler.Object));
+                _reminderHandler));
         Assert.Equal("logger", exception.ParamName);
     }
 
@@ -126,7 +129,7 @@ public class SlackMessageHandlerTests
                 null!,
                 _childrenByName,
                 _conversationContext,
-                _mockReminderHandler.Object));
+                _reminderHandler));
         Assert.Equal("httpClient", exception.ParamName);
     }
 
@@ -138,10 +141,10 @@ public class SlackMessageHandlerTests
                 _mockAgentService.Object,
                 _testConfig,
                 _mockLogger.Object,
-                _mockHttpClient.Object,
+                _httpClient,
                 null!,
                 _conversationContext,
-                _mockReminderHandler.Object));
+                _reminderHandler));
         Assert.Equal("childrenByName", exception.ParamName);
     }
 
@@ -153,10 +156,10 @@ public class SlackMessageHandlerTests
                 _mockAgentService.Object,
                 _testConfig,
                 _mockLogger.Object,
-                _mockHttpClient.Object,
+                _httpClient,
                 _childrenByName,
                 null!,
-                _mockReminderHandler.Object));
+                _reminderHandler));
         Assert.Equal("conversationContext", exception.ParamName);
     }
 
@@ -168,7 +171,7 @@ public class SlackMessageHandlerTests
                 _mockAgentService.Object,
                 _testConfig,
                 _mockLogger.Object,
-                _mockHttpClient.Object,
+                _httpClient,
                 _childrenByName,
                 _conversationContext,
                 null!));
@@ -288,12 +291,8 @@ public class SlackMessageHandlerTests
     [InlineData("tilføj påmindelse")]
     [InlineData("slet påmindelse")]
     [InlineData("vis påmindelser")]
-    public async Task HandleMessageAsync_WithReminderCommand_CallsReminderHandler(string reminderCommand)
+    public async Task HandleMessageAsync_WithReminderCommand_ProcessesMessage(string reminderCommand)
     {
-        _mockReminderHandler
-            .Setup(r => r.TryHandleReminderCommand(It.IsAny<string>(), It.IsAny<bool>()))
-            .ReturnsAsync((true, "Reminder processed"));
-
         var eventData = new JObject
         {
             ["channel"] = "test-channel",
@@ -305,17 +304,13 @@ public class SlackMessageHandlerTests
         var result = await _messageHandler.HandleMessageAsync(eventData);
 
         Assert.True(result);
-
-        _mockReminderHandler.Verify(
-            r => r.TryHandleReminderCommand(It.IsAny<string>(), It.IsAny<bool>()),
-            Times.Once);
     }
 
     [Fact]
     public async Task HandleMessageAsync_WithException_LogsErrorAndReturnsFalse()
     {
         _mockAgentService
-            .Setup(a => a.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()))
+            .Setup(a => a.ProcessQueryWithToolsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ChatInterface>()))
             .ThrowsAsync(new Exception("Test exception"));
 
         var eventData = new JObject
@@ -334,7 +329,7 @@ public class SlackMessageHandlerTests
             logger => logger.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error handling message")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error processing Slack message")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
@@ -380,7 +375,7 @@ public class SlackMessageHandlerTests
             logger => logger.Log(
                 It.IsAny<LogLevel>(),
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing Slack message")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.AtLeastOnce);

@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
@@ -13,46 +14,24 @@ public static class TelegramTestMessageFactory
         string firstName = "Test",
         string? username = "testuser")
     {
-        // Use reflection to create a Message object since properties are read-only
-        var message = Activator.CreateInstance(typeof(Message), true) as Message;
+        // Create JSON representation and deserialize using Newtonsoft.Json (same as Telegram.Bot)
+        var messageJson = $$"""
+        {
+            "message_id": {{messageId}},
+            "date": {{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}},
+            "chat": {
+                "id": {{chatId}},
+                "type": "{{chatType.ToString().ToLower()}}"
+            },
+            "from": {
+                "id": 123,
+                "is_bot": false,
+                "first_name": "{{firstName}}"{{(string.IsNullOrEmpty(username) ? "" : $@", ""username"": ""{username}""")}}
+            }{{(text == null ? "" : $@", ""text"": ""{text}""")}}
+        }
+        """;
         
-        // Set the Type property using reflection
-        var typeProperty = typeof(Message).GetProperty(nameof(Message.Type));
-        typeProperty?.SetValue(message, MessageType.Text);
-        
-        // Set the Text property using reflection
-        var textProperty = typeof(Message).GetProperty(nameof(Message.Text));
-        textProperty?.SetValue(message, text);
-        
-        // Set the MessageId property using reflection
-        var messageIdProperty = typeof(Message).GetProperty(nameof(Message.MessageId));
-        messageIdProperty?.SetValue(message, messageId);
-        
-        // Create a Chat object
-        var chat = Activator.CreateInstance(typeof(Chat), true) as Chat;
-        var chatIdProperty = typeof(Chat).GetProperty(nameof(Chat.Id));
-        chatIdProperty?.SetValue(chat, chatId);
-        var chatTypeProperty = typeof(Chat).GetProperty(nameof(Chat.Type));
-        chatTypeProperty?.SetValue(chat, chatType);
-        
-        // Set the Chat property using reflection
-        var chatProperty = typeof(Message).GetProperty(nameof(Message.Chat));
-        chatProperty?.SetValue(message, chat);
-        
-        // Create a User object
-        var user = Activator.CreateInstance(typeof(User), true) as User;
-        var userIdProperty = typeof(User).GetProperty(nameof(User.Id));
-        userIdProperty?.SetValue(user, 123L);
-        var firstNameProperty = typeof(User).GetProperty(nameof(User.FirstName));
-        firstNameProperty?.SetValue(user, firstName);
-        var usernameProperty = typeof(User).GetProperty(nameof(User.Username));
-        usernameProperty?.SetValue(user, username);
-        
-        // Set the From property using reflection
-        var fromProperty = typeof(Message).GetProperty(nameof(Message.From));
-        fromProperty?.SetValue(message, user);
-        
-        return message!;
+        return JsonConvert.DeserializeObject<Message>(messageJson)!;
     }
     
     public static Message CreateNonTextMessage(
@@ -61,34 +40,24 @@ public static class TelegramTestMessageFactory
         ChatType chatType = ChatType.Private,
         int messageId = 1)
     {
-        var message = Activator.CreateInstance(typeof(Message), true) as Message;
+        var messageJson = $$"""
+        {
+            "message_id": {{messageId}},
+            "date": {{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}},
+            "chat": {
+                "id": {{chatId}},
+                "type": "{{chatType.ToString().ToLower()}}"
+            },
+            "from": {
+                "id": 123,
+                "is_bot": false,
+                "first_name": "Test",
+                "username": "testuser"
+            },
+            "photo": [{"file_id": "test", "file_unique_id": "test", "width": 100, "height": 100, "file_size": 1000}]
+        }
+        """;
         
-        var typeProperty = typeof(Message).GetProperty(nameof(Message.Type));
-        typeProperty?.SetValue(message, messageType);
-        
-        var messageIdProperty = typeof(Message).GetProperty(nameof(Message.MessageId));
-        messageIdProperty?.SetValue(message, messageId);
-        
-        var chat = Activator.CreateInstance(typeof(Chat), true) as Chat;
-        var chatIdProperty = typeof(Chat).GetProperty(nameof(Chat.Id));
-        chatIdProperty?.SetValue(chat, chatId);
-        var chatTypeProperty = typeof(Chat).GetProperty(nameof(Chat.Type));
-        chatTypeProperty?.SetValue(chat, chatType);
-        
-        var chatProperty = typeof(Message).GetProperty(nameof(Message.Chat));
-        chatProperty?.SetValue(message, chat);
-        
-        var user = Activator.CreateInstance(typeof(User), true) as User;
-        var userIdProperty = typeof(User).GetProperty(nameof(User.Id));
-        userIdProperty?.SetValue(user, 123L);
-        var firstNameProperty = typeof(User).GetProperty(nameof(User.FirstName));
-        firstNameProperty?.SetValue(user, "Test");
-        var usernameProperty = typeof(User).GetProperty(nameof(User.Username));
-        usernameProperty?.SetValue(user, "testuser");
-        
-        var fromProperty = typeof(Message).GetProperty(nameof(Message.From));
-        fromProperty?.SetValue(message, user);
-        
-        return message!;
+        return JsonConvert.DeserializeObject<Message>(messageJson)!;
     }
 }
