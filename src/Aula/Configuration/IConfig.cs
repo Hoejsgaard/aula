@@ -9,4 +9,5 @@ public interface IConfig
     Telegram Telegram { get; set; }
     OpenAi OpenAi { get; set; }
     Supabase Supabase { get; set; }
+    Features Features { get; set; }
 }

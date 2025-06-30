@@ -6,5 +6,6 @@ public class Slack
     public string ApiToken { get; set; } = string.Empty;
     public bool EnableInteractiveBot { get; set; } = false;
     public string ChannelId { get; set; } = string.Empty;
-    public bool PostWeekLettersOnStartup { get; set; } = true; // Default to true for backward compatibility
+    public bool PostWeekLettersOnStartup { get; set; } = true;
+    public bool Enabled { get; set; } = true;
 }

@@ -333,75 +333,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
 
     private bool IsFollowUpQuestion(string text)
     {
-        if (string.IsNullOrEmpty(text))
-        {
-            return false;
-        }
-
-        text = text.ToLowerInvariant();
-
-        // Check for explicit follow-up phrases
-        bool hasFollowUpPhrase = text.Contains("hvad med") ||
-                               text.Contains("what about") ||
-                               text.Contains("how about") ||
-                               text.Contains("hvordan med") ||
-                               text.StartsWith("og ") ||
-                               text.StartsWith("and ") ||
-                               text.Contains("og hvad") ||
-                               text.Contains("and what") ||
-                               text.Contains("også") ||
-                               text.Contains("also") ||
-                               text.Contains("likewise") ||
-                               text == "og?" ||
-                               text == "and?";
-
-        // Check if this is a short message
-        bool isShortMessage = text.Length < 15;
-
-        // Check if the message contains a child name
-        bool hasChildName = false;
-        foreach (var childName in _childrenByName.Keys)
-        {
-            if (text.Contains(childName.ToLowerInvariant()))
-            {
-                hasChildName = true;
-                break;
-            }
-        }
-
-        // Also check for first names
-        if (!hasChildName)
-        {
-            foreach (var child in _childrenByName.Values)
-            {
-                string firstName = child.FirstName.Split(' ')[0].ToLowerInvariant();
-                if (text.Contains(firstName.ToLowerInvariant()))
-                {
-                    hasChildName = true;
-                    break;
-                }
-            }
-        }
-
-        // Check if the message contains time references
-        bool hasTimeReference = text.Contains("today") || text.Contains("tomorrow") ||
-                              text.Contains("i dag") || text.Contains("i morgen");
-
-        // Special case for very short messages that are likely follow-ups
-        if (isShortMessage && (text.Contains("?") || text == "ok" || text == "okay"))
-        {
-            _logger.LogInformation("Detected likely follow-up based on short message: {Text}", text);
-            return true;
-        }
-
-        bool result = hasFollowUpPhrase || (isShortMessage && hasChildName && !hasTimeReference);
-
-        if (result)
-        {
-            _logger.LogInformation("Detected follow-up question: {Text}", text);
-        }
-
-        return result;
+        return FollowUpQuestionDetector.IsFollowUpQuestion(text, _childrenByName.Values.ToList(), _logger);
     }
 
     // Dead methods removed:
