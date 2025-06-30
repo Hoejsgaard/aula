@@ -108,8 +108,13 @@ public class SlackInteractiveBot : IDisposable
         // Get the current week number
         int weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Now);
 
-        // Send welcome message in Danish with children info
-        await SendMessageInternal($"Jeg er online og har ugeplan for {childrenList} for Uge {weekNumber}");
+        // Send welcome message in Danish with children info and usage hints
+        await SendMessageInternal($"🤖 Jeg er online og har ugeplan for {childrenList} for Uge {weekNumber}\n\n" +
+                                 "Du kan spørge mig om:\n" +
+                                 "• Aktiviteter for en bestemt dag: 'Hvad skal Emma i dag?'\n" +
+                                 "• Oprette påmindelser: 'Mind mig om at hente Hans kl 15'\n" +
+                                 "• Se ugeplaner: 'Vis ugeplanen for denne uge'\n" +
+                                 "• Hjælp: 'hjælp' eller 'help'");
 
         _logger.LogInformation("Slack polling bot started");
     }
@@ -271,6 +276,13 @@ public class SlackInteractiveBot : IDisposable
 
     private async Task SendMessageInternal(string text)
     {
+        // Slack has a 4000 character limit for messages
+        if (text.Length > 4000)
+        {
+            _logger.LogWarning("Message truncated due to length: {Length} characters", text.Length);
+            text = text.Substring(0, 3900) + "... (truncated)";
+        }
+
         try
         {
             _logger.LogInformation("Sending message to Slack");
