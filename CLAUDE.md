@@ -2,6 +2,11 @@
 
 This file provides guidance for Claude Code (claude.ai/code) when working with code in this repository.
 
+---
+## 🤖 AI ASSISTANCE NOTICE
+**Significant portions of this codebase have been developed, improved, and maintained with assistance from Claude AI (claude.ai/code). This includes test coverage improvements, code quality enhancements, architectural decisions, and comprehensive CodeRabbit feedback resolution. Claude has been instrumental in achieving the current state of 581 tests, 52.78% line coverage, and maintaining code quality standards.**
+---
+
 ## Commands
 
 ### Build and Test
@@ -82,7 +87,7 @@ Configuration is handled through `appsettings.json` with sections for:
 ### Git Commits
 - Use semantic prefixes: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`
 - Common scopes: `unilogin`, `minuddannelse`, `aula`, `auth`, `api`, `secrets`, `infra`, `tests`
-- Do NOT add "🤖 Generated with Claude Code" or similar attribution comments
+- **IMPORTANT**: Do NOT add "🤖 Generated with Claude Code" or ANY Anthropic/Claude attribution comments in commits, pull requests, or code
 
 ## Target Framework
 - .NET 9.0
