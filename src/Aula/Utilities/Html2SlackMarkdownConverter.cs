@@ -40,7 +40,7 @@ public class Html2SlackMarkdownConverter
         catch (Exception)
         {
             // If HTML parsing fails, return the original input stripped of HTML tags
-            return System.Text.RegularExpressions.Regex.Replace(html, "<.*?>", string.Empty);
+            return Regex.Replace(html, "<.*?>", string.Empty);
         }
     }
     private void CleanHtmlDocument(HtmlDocument htmlDoc)

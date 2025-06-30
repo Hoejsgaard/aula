@@ -28,7 +28,6 @@ public class GoogleCalendar
             ApplicationName = "AulaBot"
         });
 
-        // Your calendar management logic here
     }
 
     private string GetJsonKey(GoogleServiceAccount serviceAccount)
@@ -66,7 +65,7 @@ public class GoogleCalendar
         return await request.ExecuteAsync();
     }
 
-    public async Task<IList<Event>> GetEventsThisWeeek(string calendarId)
+    public async Task<IList<Event>> GetEventsThisWeek(string calendarId)
     {
         var events = await GetEventsForCurrentWeek(calendarId);
 

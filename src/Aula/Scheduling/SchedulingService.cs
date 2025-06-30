@@ -90,7 +90,18 @@ public class SchedulingService : ISchedulingService
             _isRunning = false;
         }
 
-        _schedulingTimer?.Dispose();
+        try
+        {
+            _schedulingTimer?.Dispose();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Timer was already disposed
+        }
+
+        // Wait for running tasks to complete (with timeout)
+        // await Task.WhenAny(Task.WhenAll(_runningTasks), Task.Delay(TimeSpan.FromSeconds(30)));
+
         _logger.LogInformation("Scheduling service stopped");
 
         return Task.CompletedTask;

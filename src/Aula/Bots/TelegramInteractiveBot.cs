@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -29,7 +30,7 @@ public class TelegramInteractiveBot
     private readonly ITelegramBotClient _telegramClient;
     private readonly ISupabaseService _supabaseService;
     private readonly Dictionary<string, Child> _childrenByName;
-    private readonly HashSet<string> _postedWeekLetterHashes = new HashSet<string>();
+    private readonly ConcurrentDictionary<string, byte> _postedWeekLetterHashes = new ConcurrentDictionary<string, byte>();
     private CancellationTokenSource? _cancellationTokenSource;
     private readonly ReminderCommandHandler _reminderHandler;
     // Language detection arrays removed - GPT handles language detection naturally
@@ -49,15 +50,21 @@ public class TelegramInteractiveBot
     }
 
     // Track conversation contexts by chat ID
-    private readonly Dictionary<long, ConversationContext> _conversationContexts = new Dictionary<long, ConversationContext>();
+    private readonly ConcurrentDictionary<long, ConversationContext> _conversationContexts = new ConcurrentDictionary<long, ConversationContext>();
 
     private void UpdateConversationContext(long chatId, string? childName)
     {
-        _conversationContexts[chatId] = new ConversationContext
-        {
-            LastChildName = childName,
-            Timestamp = DateTime.Now
-        };
+        _conversationContexts.AddOrUpdate(chatId,
+            new ConversationContext
+            {
+                LastChildName = childName,
+                Timestamp = DateTime.Now
+            },
+            (key, existing) => new ConversationContext
+            {
+                LastChildName = childName,
+                Timestamp = DateTime.Now
+            });
 
         _logger.LogInformation("Updated conversation context for chat {ChatId}: {Context}", chatId, _conversationContexts[chatId]);
     }
@@ -376,22 +383,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
 
     private async Task SendMessageInternal(long chatId, string text)
     {
-        try
-        {
-            _logger.LogInformation("Sending message to chat {ChatId}: {TextLength} characters", chatId, text.Length);
-
-            await _telegramClient.SendTextMessageAsync(
-                chatId: new ChatId(chatId),
-                text: text,
-                parseMode: ParseMode.Html
-            );
-
-            _logger.LogInformation("Message sent successfully to chat {ChatId}", chatId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error sending message to chat {ChatId}", chatId);
-        }
+        await SendMessageInternal(chatId.ToString(), text);
     }
 
     private async Task<bool> SendMessageToChannel(string message)
@@ -444,7 +436,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
             var hash = ComputeHash(weekLetterContent);
 
             // Check if we've already posted this week letter
-            if (_postedWeekLetterHashes.Contains(hash))
+            if (_postedWeekLetterHashes.ContainsKey(hash))
             {
                 _logger.LogInformation("Week letter for {ChildName} already posted (hash: {Hash})", childName, hash);
                 return;
@@ -457,7 +449,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
             if (success)
             {
                 // Add the hash to avoid duplicates
-                _postedWeekLetterHashes.Add(hash);
+                _postedWeekLetterHashes.TryAdd(hash, 0);
                 _logger.LogInformation("Week letter for {ChildName} posted successfully", childName);
             }
             else
