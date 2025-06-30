@@ -508,33 +508,7 @@ Current day context: Today is {DateTime.Now.ToString("dddd, MMMM dd, yyyy")}";
         {
             _logger.LogInformation("Starting intent analysis for query: {Query}", query);
 
-            var analysisPrompt = $@"Analyze this user query and determine what they want to do:
-
-Query: ""{query}""
-
-Determine if this query requires any of these ACTIONS:
-- CREATE_REMINDER: User wants to set up a reminder/notification
-- LIST_REMINDERS: User wants to see their current reminders
-- DELETE_REMINDER: User wants to remove a reminder
-- GET_CURRENT_TIME: User wants to know the current date/time
-- HELP: User wants help or available commands
-
-If the query requires an ACTION, respond with: TOOL_CALL: [ACTION_NAME]
-If it's a question about children's school activities, week letters, or schedules, respond with: INFORMATION_QUERY
-
-Examples:
-- ""Remind me tomorrow at 8 AM about TestChild1's soccer"" → TOOL_CALL: CREATE_REMINDER
-- ""Kan du minde mig om at hente øl om 2 timer?"" → TOOL_CALL: CREATE_REMINDER
-- ""What are my reminders?"" → TOOL_CALL: LIST_REMINDERS  
-- ""Vis mine påmindelser"" → TOOL_CALL: LIST_REMINDERS
-- ""Delete reminder 2"" → TOOL_CALL: DELETE_REMINDER
-- ""What time is it?"" → TOOL_CALL: GET_CURRENT_TIME
-- ""Hvad er klokken?"" → TOOL_CALL: GET_CURRENT_TIME
-- ""What does Emma have today?"" → INFORMATION_QUERY
-- ""Hvad skal TestChild2 i dag?"" → INFORMATION_QUERY
-- ""Show me this week's letter"" → INFORMATION_QUERY
-
-Analyze the query and respond accordingly:";
+            var analysisPrompt = IntentAnalysisPrompts.GetFormattedPrompt(query);
 
             var chatRequest = new ChatCompletionCreateRequest
             {
@@ -679,6 +653,19 @@ CHILD: [child name or NONE]";
 
     private Task<string> HandleRegularAulaQuery(string query, string contextKey, ChatInterface chatInterface)
     {
+        // Analyze the query to provide more specific guidance
+        var lowerQuery = query.ToLowerInvariant();
+
+        if (lowerQuery.Contains("activity") || lowerQuery.Contains("aktivitet"))
+        {
+            return Task.FromResult("To ask about activities, try: 'What activities does [child name] have today?' or 'Hvad skal [child name] i dag?'");
+        }
+
+        if (lowerQuery.Contains("remind") || lowerQuery.Contains("mind"))
+        {
+            return Task.FromResult("To create reminders, try: 'Remind me to pick up [child] at 3pm tomorrow' or 'Mind mig om at hente [child] kl 15 i morgen'");
+        }
+
         // For general information queries, direct the user to use more specific commands
         // or return a helpful message about available functionality
         _logger.LogInformation("Handling general Aula query: {Query}", query);
