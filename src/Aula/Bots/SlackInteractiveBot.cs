@@ -234,8 +234,18 @@ public class SlackInteractiveBot : IDisposable
                 // Process messages in chronological order (oldest first)
                 foreach (var message in userMessages.OrderBy(m => m["ts"]?.ToString()))
                 {
+                    // Create a proper event data structure that includes the channel
+                    var eventData = new JObject
+                    {
+                        ["channel"] = _config.Slack.ChannelId,
+                        ["text"] = message["text"],
+                        ["ts"] = message["ts"],
+                        ["thread_ts"] = message["thread_ts"],
+                        ["user"] = message["user"]
+                    };
+
                     // Process the message immediately with higher priority
-                    await _messageHandler.HandleMessageAsync((JObject)message);
+                    await _messageHandler.HandleMessageAsync(eventData);
 
                     // Update the latest timestamp if this message is newer
                     string messageTs = message["ts"]?.ToString() ?? "";
