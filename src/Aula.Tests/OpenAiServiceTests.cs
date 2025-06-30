@@ -59,7 +59,7 @@ public class OpenAiServiceTests
 
         // Act & Assert - Verify internal constructor exists
         var internalConstructor = constructors.FirstOrDefault(c =>
-            c.GetParameters().Length == 3 &&
+            (c.GetParameters().Length == 3 || c.GetParameters().Length == 4) &&
             c.GetParameters().Any(p => p.ParameterType.Name.Contains("OpenAI")));
 
         Assert.NotNull(internalConstructor);

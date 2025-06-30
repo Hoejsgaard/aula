@@ -24,7 +24,7 @@ public class OpenAiService : IOpenAiService
     private readonly AiToolsManager _aiToolsManager;
     private readonly ConcurrentDictionary<string, List<ChatMessage>> _conversationHistory = new();
     private readonly ConcurrentDictionary<string, string> _currentChildContext = new();
-    private readonly string _aiModel = Models.Gpt_4; // Default model, could be made configurable via constructor
+    private readonly string _aiModel;
 
     // Constants for conversation history management
     private const int MaxConversationHistoryRegular = 12;
@@ -33,7 +33,7 @@ public class OpenAiService : IOpenAiService
     private const int ConversationContextLimit = 10;
     private const int ConversationStartMessages = 2;
 
-    public OpenAiService(string apiKey, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager)
+    public OpenAiService(string apiKey, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, string? model = null)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new ArgumentException("API key cannot be null or empty", nameof(apiKey));
@@ -42,6 +42,7 @@ public class OpenAiService : IOpenAiService
         if (aiToolsManager == null)
             throw new ArgumentNullException(nameof(aiToolsManager));
 
+        _aiModel = model ?? Models.Gpt_4;
         _openAiClient = new OpenAIService(new OpenAiOptions()
         {
             ApiKey = apiKey
@@ -50,11 +51,12 @@ public class OpenAiService : IOpenAiService
         _aiToolsManager = aiToolsManager;
     }
 
-    internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager)
+    internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, string? model = null)
     {
         _openAiClient = openAiClient;
         _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
         _aiToolsManager = aiToolsManager;
+        _aiModel = model ?? Models.Gpt_4;
     }
 
     private static (string childName, string className, string weekNumber) ExtractWeekLetterMetadata(JObject weekLetter)
@@ -571,27 +573,7 @@ Current day context: Today is {DateTime.Now.ToString("dddd, MMMM dd, yyyy")}";
     private async Task<string> HandleCreateReminderQuery(string query)
     {
         // Use LLM to extract reminder details from natural language
-        var extractionPrompt = $@"Extract reminder details from this natural language request:
-
-Query: ""{query}""
-
-Extract:
-1. Description: What to remind about
-2. DateTime: When to remind (convert to yyyy-MM-dd HH:mm format)
-3. ChildName: If mentioned, the child's name (optional)
-
-For relative dates (current time is {DateTime.Now:yyyy-MM-dd HH:mm}):
-- ""tomorrow"" = {DateTime.Today.AddDays(1):yyyy-MM-dd}
-- ""today"" = {DateTime.Today:yyyy-MM-dd}
-- ""next Monday"" = calculate the next Monday
-- ""in 2 hours"" = {DateTime.Now.AddHours(2):yyyy-MM-dd HH:mm}
-- ""om 2 minutter"" = {DateTime.Now.AddMinutes(2):yyyy-MM-dd HH:mm}
-- ""om 30 minutter"" = {DateTime.Now.AddMinutes(30):yyyy-MM-dd HH:mm}
-
-Respond in this exact format:
-DESCRIPTION: [extracted description]
-DATETIME: [yyyy-MM-dd HH:mm]
-CHILD: [child name or NONE]";
+        var extractionPrompt = ReminderExtractionPrompts.GetExtractionPrompt(query, DateTime.Now);
 
         var chatRequest = new ChatCompletionCreateRequest
         {
@@ -613,15 +595,22 @@ CHILD: [child name or NONE]";
                 var content = response.Choices.First().Message.Content ?? "";
                 _logger.LogInformation("Reminder extraction completed successfully");
 
-                // Parse the structured response
-                var lines = content.Split('\n');
-                var description = lines.FirstOrDefault(l => l.StartsWith("DESCRIPTION:"))?.Replace("DESCRIPTION:", "").Trim() ?? "Reminder";
-                var dateTime = lines.FirstOrDefault(l => l.StartsWith("DATETIME:"))?.Replace("DATETIME:", "").Trim() ?? DateTime.Now.AddHours(1).ToString("yyyy-MM-dd HH:mm");
-                var childName = lines.FirstOrDefault(l => l.StartsWith("CHILD:"))?.Replace("CHILD:", "").Trim();
+                // Parse the structured response with validation
+                var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                var description = ExtractValue(lines, "DESCRIPTION") ?? "Reminder";
+                var dateTimeStr = ExtractValue(lines, "DATETIME") ?? DateTime.Now.AddHours(1).ToString("yyyy-MM-dd HH:mm");
+                var childName = ExtractValue(lines, "CHILD");
+
+                // Validate datetime format
+                if (!DateTime.TryParseExact(dateTimeStr, "yyyy-MM-dd HH:mm", null, System.Globalization.DateTimeStyles.None, out _))
+                {
+                    _logger.LogWarning("Invalid datetime format from AI: {DateTime}", dateTimeStr);
+                    dateTimeStr = DateTime.Now.AddHours(1).ToString("yyyy-MM-dd HH:mm");
+                }
 
                 if (childName == "NONE") childName = null;
 
-                return await _aiToolsManager.CreateReminderAsync(description, dateTime, childName);
+                return await _aiToolsManager.CreateReminderAsync(description, dateTimeStr, childName);
             }
             else
             {
@@ -681,5 +670,11 @@ CHILD: [child name or NONE]";
         return Task.FromResult($"I can help you with school-related questions! Here are some things you can ask:\n\n" +
                               string.Join("\n", availableCommands) +
                               "\n\nTry being more specific about what you'd like to know.");
+    }
+
+    private static string? ExtractValue(string[] lines, string prefix)
+    {
+        var line = lines.FirstOrDefault(l => l.StartsWith($"{prefix}:"));
+        return line?.Substring(prefix.Length + 1).Trim();
     }
 }

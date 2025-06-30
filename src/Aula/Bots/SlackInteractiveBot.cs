@@ -103,7 +103,8 @@ public class SlackInteractiveBot : IDisposable
         _logger.LogInformation("Slack cleanup timer started - running every {IntervalHours} hours", _config.Timers.CleanupIntervalHours);
 
         // Build a list of available children (first names only)
-        string childrenList = string.Join(" og ", _childrenByName.Values.Select(c => c.FirstName.Split(' ')[0]));
+        string childrenList = string.Join(" og ", _childrenByName.Values.Select(c =>
+            c.FirstName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? c.FirstName));
 
         // Get the current week number
         int weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Now);
@@ -280,7 +281,7 @@ public class SlackInteractiveBot : IDisposable
         if (text.Length > 4000)
         {
             _logger.LogWarning("Message truncated due to length: {Length} characters", text.Length);
-            text = text.Substring(0, 3900) + "... (truncated)";
+            text = text[..3900] + "... (truncated)";
         }
 
         try
@@ -454,9 +455,8 @@ public class SlackInteractiveBot : IDisposable
 
     private string ComputeHash(string input)
     {
-        using var sha = System.Security.Cryptography.SHA256.Create();
         var bytes = System.Text.Encoding.UTF8.GetBytes(input);
-        var hash = sha.ComputeHash(bytes);
+        var hash = System.Security.Cryptography.SHA256.HashData(bytes);
         return Convert.ToBase64String(hash);
     }
 
