@@ -1,8 +1,10 @@
 ﻿using System.Globalization;
+using Microsoft.Extensions.Logging;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Calendar.v3;
 using Google.Apis.Calendar.v3.Data;
 using Google.Apis.Services;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 
@@ -12,13 +14,15 @@ public class GoogleCalendar
 {
     private readonly CalendarService _calendarService;
     private readonly string _prefix;
+    private readonly ILogger _logger;
 
 
-    public GoogleCalendar(GoogleServiceAccount serviceAccount, string prefix)
+    public GoogleCalendar(GoogleServiceAccount serviceAccount, string prefix, ILoggerFactory loggerFactory)
     {
         if (string.IsNullOrEmpty(prefix)) throw new ArgumentNullException(nameof(prefix));
         if (prefix.Length < 3) throw new ArgumentException("Prefix must be at least 3 chars");
         _prefix = prefix;
+        _logger = loggerFactory.CreateLogger<GoogleCalendar>();
         var credential = GoogleCredential.FromJson(GetJsonKey(serviceAccount))
             .CreateScoped(CalendarService.Scope.Calendar);
 
@@ -32,18 +36,21 @@ public class GoogleCalendar
 
     private string GetJsonKey(GoogleServiceAccount serviceAccount)
     {
-        return $@"{{
-	            ""type"": ""{serviceAccount.Type}"",
-	            ""project_id"": ""{serviceAccount.ProjectId}"",
-	            ""private_key_id"": ""{serviceAccount.PrivateKeyId}"",
-	            ""private_key"": ""{serviceAccount.PrivateKey}"",
-	            ""client_email"": ""{serviceAccount.ClientEmail}"",
-	            ""client_id"": ""{serviceAccount.ClientId}"",
-	            ""auth_uri"": ""{serviceAccount.AuthUri}"",
-	            ""token_uri"": ""{serviceAccount.TokenUri}"",
-	            ""auth_provider_x509_cert_url"": ""{serviceAccount.AuthProviderX509CertUrl}"",
-	            ""client_x509_cert_url"": ""{serviceAccount.ClientX509CertUrl}"",
-	        }}";
+        var credentialObject = new
+        {
+            type = serviceAccount.Type,
+            project_id = serviceAccount.ProjectId,
+            private_key_id = serviceAccount.PrivateKeyId,
+            private_key = serviceAccount.PrivateKey,
+            client_email = serviceAccount.ClientEmail,
+            client_id = serviceAccount.ClientId,
+            auth_uri = serviceAccount.AuthUri,
+            token_uri = serviceAccount.TokenUri,
+            auth_provider_x509_cert_url = serviceAccount.AuthProviderX509CertUrl,
+            client_x509_cert_url = serviceAccount.ClientX509CertUrl
+        };
+
+        return JsonConvert.SerializeObject(credentialObject);
     }
 
     private async Task<Events> GetEventsForCurrentWeek(string calendarId)
@@ -76,7 +83,7 @@ public class GoogleCalendar
     {
         // Calculate start and end of the week
         var weekStart = DateOnly.FromDateTime(dateInWeek.ToDateTime(TimeOnly.MinValue)
-            .AddDays(-(int)dateInWeek.DayOfWeek + (int)CultureInfo.CurrentCulture.DateTimeFormat.FirstDayOfWeek));
+            .AddDays(-(int)dateInWeek.DayOfWeek + (int)CultureInfo.InvariantCulture.DateTimeFormat.FirstDayOfWeek));
         var weekEnd = weekStart.AddDays(7);
 
         if (await ClearEvents(googleCalendarId, weekStart, weekEnd, _prefix))
@@ -96,12 +103,13 @@ public class GoogleCalendar
 
             var events = await request.ExecuteAsync();
 
-            foreach (var eventItem in events.Items.Where(e => e.Summary.StartsWith(prefix)))
+            foreach (var eventItem in events.Items.Where(e => e.Summary?.StartsWith(prefix) == true))
                 await _calendarService.Events.Delete(calendarId, eventItem.Id).ExecuteAsync();
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to clear events for calendar {CalendarId} with prefix {Prefix}", calendarId, _prefix);
             return false;
         }
     }
@@ -116,7 +124,7 @@ public class GoogleCalendar
             if (events != null)
                 foreach (var jEvent in events)
                 {
-                    var summary = _prefix + " " + jEvent["subject"];
+                    var summary = (_prefix.TrimEnd() + " " + jEvent["subject"]).Trim();
                     var location = jEvent["location"]?.ToString() ?? "";
                     var start = jEvent["timeBegin"]?.ToString();
                     var end = jEvent["timeEnd"]?.ToString();
@@ -128,19 +136,20 @@ public class GoogleCalendar
                         Location = location,
                         Start = new EventDateTime
                         {
-                            DateTimeDateTimeOffset = DateTimeOffset.Parse(start)
+                            DateTimeDateTimeOffset = DateTimeOffset.Parse(start, CultureInfo.InvariantCulture)
                         },
                         End = new EventDateTime
                         {
-                            DateTimeDateTimeOffset = DateTimeOffset.Parse(end)
+                            DateTimeDateTimeOffset = DateTimeOffset.Parse(end, CultureInfo.InvariantCulture)
                         }
                     };
 
                     await _calendarService.Events.Insert(newEvent, calendarId).ExecuteAsync();
                 }
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to clear events for calendar {CalendarId} with prefix {Prefix}", calendarId, _prefix);
             return false;
         }
 

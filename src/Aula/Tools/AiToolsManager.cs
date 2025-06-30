@@ -146,7 +146,11 @@ public class AiToolsManager
     {
         try
         {
-            var targetDate = string.IsNullOrEmpty(date) ? DateTime.Today : DateTime.Parse(date);
+            var targetDate = DateTime.Today;
+            if (!string.IsNullOrEmpty(date) && !DateTime.TryParse(date, out targetDate))
+            {
+                return $"❌ Invalid date format: '{date}'. Please use a valid date format.";
+            }
             var child = _dataService.GetChildren().FirstOrDefault(c =>
                 $"{c.FirstName} {c.LastName}".Contains(childName, StringComparison.OrdinalIgnoreCase));
 

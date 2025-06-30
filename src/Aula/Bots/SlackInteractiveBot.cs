@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -31,11 +32,11 @@ public class SlackInteractiveBot : IDisposable
     private string _lastTimestamp = "0"; // Start from the beginning of time
     private readonly object _lockObject = new object();
     private int _pollingInProgress = 0;
-    private readonly HashSet<string> _postedWeekLetterHashes = new HashSet<string>();
+    private readonly ConcurrentDictionary<string, byte> _postedWeekLetterHashes = new ConcurrentDictionary<string, byte>();
     // Track our own message IDs to avoid processing them
-    private readonly HashSet<string> _sentMessageIds = new HashSet<string>();
+    private readonly ConcurrentDictionary<string, byte> _sentMessageIds = new ConcurrentDictionary<string, byte>();
     // Keep track of when messages were sent to allow cleanup
-    private readonly Dictionary<string, DateTime> _messageTimestamps = new Dictionary<string, DateTime>();
+    private readonly ConcurrentDictionary<string, DateTime> _messageTimestamps = new ConcurrentDictionary<string, DateTime>();
     // Language detection arrays removed - GPT handles language detection naturally
 
     // Conversation context tracking
@@ -223,7 +224,7 @@ public class SlackInteractiveBot : IDisposable
                 {
                     // Skip messages we sent ourselves (by checking the ID)
                     string messageId = m["ts"]?.ToString() ?? "";
-                    if (!string.IsNullOrEmpty(messageId) && _sentMessageIds.Contains(messageId))
+                    if (!string.IsNullOrEmpty(messageId) && _sentMessageIds.ContainsKey(messageId))
                     {
                         // Skip our own message (removed log spam)
                         return false;
@@ -319,6 +320,8 @@ public class SlackInteractiveBot : IDisposable
 
     // DetectLanguage method removed - GPT handles language detection naturally
 
+    // TODO: Consider refactoring this complex method for better maintainability.
+    // The method is over 100 lines with deeply nested logic and could be broken down into smaller, focused methods.
     private string? ExtractChildName(string text)
     {
         if (string.IsNullOrEmpty(text))
@@ -474,8 +477,8 @@ public class SlackInteractiveBot : IDisposable
                 string messageId = data["ts"]?.ToString() ?? "";
                 if (!string.IsNullOrEmpty(messageId))
                 {
-                    _sentMessageIds.Add(messageId);
-                    _messageTimestamps[messageId] = DateTime.UtcNow;
+                    _sentMessageIds.TryAdd(messageId, 0);
+                    _messageTimestamps.TryAdd(messageId, DateTime.UtcNow);
                     _logger.LogInformation("Stored sent message ID: {MessageId}", messageId);
                 }
                 _logger.LogInformation("Message sent successfully");
@@ -545,14 +548,14 @@ public class SlackInteractiveBot : IDisposable
         string hash = ComputeHash(weekLetter);
 
         // Check if we've already posted this week letter
-        if (_postedWeekLetterHashes.Contains(hash))
+        if (_postedWeekLetterHashes.ContainsKey(hash))
         {
             _logger.LogInformation("Week letter for {ChildName} already posted, skipping", childName);
             return;
         }
 
         // Add the hash to our set
-        _postedWeekLetterHashes.Add(hash);
+        _postedWeekLetterHashes.TryAdd(hash, 0);
 
         // Format the message with a title
         string message = $"*Ugeplan for {childName}: {weekLetterTitle}*\n\n{weekLetter}";
@@ -594,8 +597,8 @@ public class SlackInteractiveBot : IDisposable
                 string messageId = data["ts"]?.ToString() ?? "";
                 if (!string.IsNullOrEmpty(messageId))
                 {
-                    _sentMessageIds.Add(messageId);
-                    _messageTimestamps[messageId] = DateTime.UtcNow;
+                    _sentMessageIds.TryAdd(messageId, 0);
+                    _messageTimestamps.TryAdd(messageId, DateTime.UtcNow);
                     _logger.LogInformation("Stored week letter message ID: {MessageId}", messageId);
                 }
                 _logger.LogInformation("Week letter for {ChildName} posted successfully", childName);
@@ -649,8 +652,8 @@ public class SlackInteractiveBot : IDisposable
             // Remove them from both collections
             foreach (var messageId in oldMessageIds)
             {
-                _sentMessageIds.Remove(messageId);
-                _messageTimestamps.Remove(messageId);
+                _sentMessageIds.TryRemove(messageId, out _);
+                _messageTimestamps.TryRemove(messageId, out _);
                 removedCount++;
             }
 

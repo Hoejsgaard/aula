@@ -24,9 +24,24 @@ public class OpenAiService : IOpenAiService
     private readonly AiToolsManager _aiToolsManager;
     private readonly ConcurrentDictionary<string, List<ChatMessage>> _conversationHistory = new();
     private readonly ConcurrentDictionary<string, string> _currentChildContext = new();
+    private readonly string _aiModel = Models.Gpt_4; // Default model, could be made configurable via constructor
+
+    // Constants for conversation history management
+    private const int MaxConversationHistoryRegular = 12;
+    private const int MaxConversationHistoryWeekLetter = 20;
+    private const int ConversationTrimAmount = 4;
+    private const int ConversationContextLimit = 10;
+    private const int ConversationStartMessages = 2;
 
     public OpenAiService(string apiKey, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager)
     {
+        if (string.IsNullOrWhiteSpace(apiKey))
+            throw new ArgumentException("API key cannot be null or empty", nameof(apiKey));
+        if (loggerFactory == null)
+            throw new ArgumentNullException(nameof(loggerFactory));
+        if (aiToolsManager == null)
+            throw new ArgumentNullException(nameof(aiToolsManager));
+
         _openAiClient = new OpenAIService(new OpenAiOptions()
         {
             ApiKey = apiKey
@@ -42,13 +57,8 @@ public class OpenAiService : IOpenAiService
         _aiToolsManager = aiToolsManager;
     }
 
-    public async Task<string> SummarizeWeekLetterAsync(JObject weekLetter, ChatInterface chatInterface = ChatInterface.Slack)
+    private static (string childName, string className, string weekNumber) ExtractWeekLetterMetadata(JObject weekLetter)
     {
-        _logger.LogInformation("Summarizing week letter for {ChatInterface}", chatInterface);
-
-        var weekLetterContent = ExtractWeekLetterContent(weekLetter);
-
-        // Extract metadata from the week letter
         string childName = "unknown";
         string className = "unknown";
         string weekNumber = "unknown";
@@ -62,6 +72,16 @@ public class OpenAiService : IOpenAiService
 
         // Fallback to old format if needed
         if (weekLetter["child"] != null) childName = weekLetter["child"]?.ToString() ?? "unknown";
+
+        return (childName, className, weekNumber);
+    }
+
+    public async Task<string> SummarizeWeekLetterAsync(JObject weekLetter, ChatInterface chatInterface = ChatInterface.Slack)
+    {
+        _logger.LogInformation("Summarizing week letter for {ChatInterface}", chatInterface);
+
+        var weekLetterContent = ExtractWeekLetterContent(weekLetter);
+        var (childName, className, weekNumber) = ExtractWeekLetterMetadata(weekLetter);
         if (weekLetter["class"] != null) className = weekLetter["class"]?.ToString() ?? "unknown";
         if (weekLetter["week"] != null) weekNumber = weekLetter["week"]?.ToString() ?? "unknown";
 
@@ -77,7 +97,7 @@ public class OpenAiService : IOpenAiService
         var chatRequest = new ChatCompletionCreateRequest
         {
             Messages = messages,
-            Model = Models.Gpt_4,
+            Model = _aiModel,
             Temperature = 0.7f
         };
 
@@ -243,10 +263,10 @@ public class OpenAiService : IOpenAiService
 
     private void TrimConversationHistoryIfNeeded(string contextKey)
     {
-        if (_conversationHistory[contextKey].Count > 12)
+        if (_conversationHistory[contextKey].Count > MaxConversationHistoryRegular)
         {
-            _conversationHistory[contextKey] = _conversationHistory[contextKey].Take(2)
-                .Concat(_conversationHistory[contextKey].Skip(_conversationHistory[contextKey].Count - 10))
+            _conversationHistory[contextKey] = _conversationHistory[contextKey].Take(ConversationStartMessages)
+                .Concat(_conversationHistory[contextKey].Skip(_conversationHistory[contextKey].Count - ConversationContextLimit))
                 .ToList();
 
             _logger.LogInformation("🔎 TRACE: Trimmed conversation history to prevent token overflow");
@@ -275,7 +295,7 @@ public class OpenAiService : IOpenAiService
         var chatRequest = new ChatCompletionCreateRequest
         {
             Messages = _conversationHistory[contextKey],
-            Model = Models.Gpt_4,
+            Model = _aiModel,
             Temperature = 0.7f
         };
 
@@ -299,21 +319,7 @@ public class OpenAiService : IOpenAiService
         _logger.LogInformation("Extracting key information from week letter for {ChatInterface}", chatInterface);
 
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
-
-        // Extract metadata from the week letter
-        string childName = "unknown";
-        string className = "unknown";
-        string weekNumber = "unknown";
-
-        // Try to get metadata from the ugebreve array
-        if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
-        {
-            className = ugebreve[0]?["klasseNavn"]?.ToString() ?? "unknown";
-            weekNumber = ugebreve[0]?["uge"]?.ToString() ?? "unknown";
-        }
-
-        // Fallback to old format if needed
-        if (weekLetter["child"] != null) childName = weekLetter["child"]?.ToString() ?? "unknown";
+        var (childName, className, weekNumber) = ExtractWeekLetterMetadata(weekLetter);
         if (weekLetter["class"] != null) className = weekLetter["class"]?.ToString() ?? "unknown";
         if (weekLetter["week"] != null) weekNumber = weekLetter["week"]?.ToString() ?? "unknown";
 
@@ -331,7 +337,7 @@ public class OpenAiService : IOpenAiService
         var chatRequest = new ChatCompletionCreateRequest
         {
             Messages = messages,
-            Model = Models.Gpt_4,
+            Model = _aiModel,
             Temperature = 0.3f
         };
 
@@ -417,7 +423,7 @@ Current day context: Today is {DateTime.Now.ToString("dddd, MMMM dd, yyyy")}";
         var chatRequest = new ChatCompletionCreateRequest
         {
             Messages = messages,
-            Model = Models.Gpt_4,
+            Model = _aiModel,
             Temperature = 0.3f
         };
 
@@ -430,9 +436,9 @@ Current day context: Today is {DateTime.Now.ToString("dddd, MMMM dd, yyyy")}";
             _conversationHistory[contextKeyToUse].Add(ChatMessage.FromUser(question));
             _conversationHistory[contextKeyToUse].Add(ChatMessage.FromAssistant(answer));
 
-            if (_conversationHistory[contextKeyToUse].Count > 20)
+            if (_conversationHistory[contextKeyToUse].Count > MaxConversationHistoryWeekLetter)
             {
-                _conversationHistory[contextKeyToUse] = _conversationHistory[contextKeyToUse].Skip(4).ToList();
+                _conversationHistory[contextKeyToUse] = _conversationHistory[contextKeyToUse].Skip(ConversationTrimAmount).ToList();
             }
 
             return answer;
@@ -536,7 +542,7 @@ Analyze the query and respond accordingly:";
 
             var chatRequest = new ChatCompletionCreateRequest
             {
-                Model = Models.Gpt_4,
+                Model = _aiModel,
                 Messages = new List<ChatMessage>
             {
                 ChatMessage.FromSystem(analysisPrompt)
@@ -619,7 +625,7 @@ CHILD: [child name or NONE]";
 
         var chatRequest = new ChatCompletionCreateRequest
         {
-            Model = Models.Gpt_4,
+            Model = _aiModel,
             Messages = new List<ChatMessage>
             {
                 ChatMessage.FromSystem(extractionPrompt)
@@ -677,26 +683,20 @@ CHILD: [child name or NONE]";
 
     private Task<string> HandleRegularAulaQuery(string query, string contextKey, ChatInterface chatInterface)
     {
-        // For information queries, we need to get week letters and use the existing AskQuestionAboutChildrenAsync
-        try
+        // For general information queries, direct the user to use more specific commands
+        // or return a helpful message about available functionality
+        _logger.LogInformation("Handling general Aula query: {Query}", query);
+
+        var availableCommands = new[]
         {
-            // We need to get the children and their week letters to answer the question
-            // Since we don't have direct access to AgentService here, we'll need to pass this through
-            // For now, return a message indicating this should be handled by the existing system
+            "📅 Ask about specific activities: 'What activities does [child name] have this week?'",
+            "⏰ Create reminders: 'Remind me to pick up [child] at 3pm tomorrow'",
+            "📚 Get week letters: 'Show me this week's letter for [child name]'",
+            "📋 List children: 'Show me week letters'"
+        };
 
-            // Get all children from DataManager (we have access through AiToolsManager)
-            var allChildren = _aiToolsManager.GetWeekLetters(); // This gets basic info
-
-            // The proper way is to fall back to the existing AskQuestionAboutChildrenAsync
-            // but we need the week letters in the right format. Let me implement a bridge method.
-
-            // For now, let's indicate that this should use the fallback
-            return Task.FromResult("FALLBACK_TO_EXISTING_SYSTEM");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error handling regular Aula query");
-            return Task.FromResult("❌ I couldn't process your question about school activities right now.");
-        }
+        return Task.FromResult($"I can help you with school-related questions! Here are some things you can ask:\n\n" +
+                              string.Join("\n", availableCommands) +
+                              "\n\nTry being more specific about what you'd like to know.");
     }
 }

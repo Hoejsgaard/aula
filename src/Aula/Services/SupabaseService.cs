@@ -309,7 +309,8 @@ public class SupabaseService : ISupabaseService
             // Get retry settings from database
             var task = await GetScheduledTaskAsync("WeeklyLetterCheck");
             var retryHours = task?.RetryIntervalHours ?? 1;
-            var maxRetries = task?.MaxRetryHours ?? 48;
+            var maxRetryHours = task?.MaxRetryHours ?? 48;
+            var maxAttempts = maxRetryHours / retryHours; // Calculate max attempts based on retry duration
 
             // Create new
             var retryAttempt = new RetryAttempt
@@ -320,7 +321,7 @@ public class SupabaseService : ISupabaseService
                 AttemptCount = 1,
                 LastAttempt = DateTime.UtcNow,
                 NextAttempt = DateTime.UtcNow.AddHours(retryHours),
-                MaxAttempts = maxRetries
+                MaxAttempts = maxAttempts
             };
 
             await _supabase

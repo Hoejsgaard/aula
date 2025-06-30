@@ -28,6 +28,7 @@ public class TelegramInteractiveBot
     private readonly Config _config;
     private readonly ILogger _logger;
     private readonly ITelegramBotClient _telegramClient;
+    private readonly TelegramClient _telegramWeekLetterClient;
     private readonly ISupabaseService _supabaseService;
     private readonly Dictionary<string, Child> _childrenByName;
     private readonly ConcurrentDictionary<string, byte> _postedWeekLetterHashes = new ConcurrentDictionary<string, byte>();
@@ -83,6 +84,7 @@ public class TelegramInteractiveBot
         if (_config.Telegram.Enabled && !string.IsNullOrEmpty(_config.Telegram.Token))
         {
             _telegramClient = new TelegramBotClient(_config.Telegram.Token);
+            _telegramWeekLetterClient = new TelegramClient(_config);
         }
         else
         {
@@ -443,8 +445,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
             }
 
             // Post the week letter using the existing TelegramClient functionality
-            var telegramClient = new TelegramClient(_config);
-            bool success = await telegramClient.PostWeekLetter(_config.Telegram.ChannelId, weekLetter, child);
+            bool success = await _telegramWeekLetterClient.PostWeekLetter(_config.Telegram.ChannelId, weekLetter, child);
 
             if (success)
             {
