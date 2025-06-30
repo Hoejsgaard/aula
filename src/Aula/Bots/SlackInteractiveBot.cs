@@ -16,6 +16,7 @@ using Aula.Integration;
 using Aula.Configuration;
 using Aula.Services;
 using Aula.Utilities;
+using Aula.Tools;
 
 namespace Aula.Bots;
 
@@ -37,19 +38,10 @@ public class SlackInteractiveBot : IDisposable
     private readonly ConcurrentDictionary<string, byte> _sentMessageIds = new ConcurrentDictionary<string, byte>();
     // Keep track of when messages were sent to allow cleanup
     private readonly ConcurrentDictionary<string, DateTime> _messageTimestamps = new ConcurrentDictionary<string, DateTime>();
-    private ConversationContext _conversationContext = new ConversationContext();
+    private readonly SlackMessageHandler _messageHandler;
     // Language detection arrays removed - GPT handles language detection naturally
 
-    private void UpdateConversationContext(string? childName, bool isAboutToday, bool isAboutTomorrow, bool isAboutHomework)
-    {
-        _conversationContext.LastChildName = childName;
-        _conversationContext.WasAboutToday = isAboutToday;
-        _conversationContext.WasAboutTomorrow = isAboutTomorrow;
-        _conversationContext.WasAboutHomework = isAboutHomework;
-        _conversationContext.Timestamp = DateTime.Now;
-
-        _logger.LogInformation("Updated conversation context: {Context}", _conversationContext);
-    }
+    // Conversation context management moved to SlackMessageHandler
 
     private readonly ISupabaseService _supabaseService;
 
@@ -68,6 +60,10 @@ public class SlackInteractiveBot : IDisposable
         _childrenByName = _config.Children.ToDictionary(
             c => c.FirstName.ToLowerInvariant(),
             c => c);
+
+        var conversationContext = new ConversationContext();
+        var reminderHandler = new ReminderCommandHandler(_logger, _supabaseService, _childrenByName);
+        _messageHandler = new SlackMessageHandler(_agentService, _config, _logger, _httpClient, _childrenByName, conversationContext, reminderHandler);
     }
 
     public async Task Start()
@@ -233,7 +229,7 @@ public class SlackInteractiveBot : IDisposable
                 foreach (var message in userMessages.OrderBy(m => m["ts"]?.ToString()))
                 {
                     // Process the message immediately with higher priority
-                    await ProcessMessage(message["text"]?.ToString() ?? "");
+                    await _messageHandler.HandleMessageAsync((JObject)message);
 
                     // Update the latest timestamp if this message is newer
                     string messageTs = message["ts"]?.ToString() ?? "";
@@ -264,152 +260,7 @@ public class SlackInteractiveBot : IDisposable
         });
     }
 
-    private async Task ProcessMessage(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return;
-        }
-
-        _logger.LogInformation("Processing message: {Text}", text);
-
-        // Skip system messages and announcements that don't need a response
-        if (text.Contains("has joined the channel") ||
-            text.Contains("added an integration") ||
-            text.Contains("added to the channel") ||
-            text.StartsWith("<http"))
-        {
-            _logger.LogInformation("Skipping system message or announcement");
-            return;
-        }
-
-        // Check for help command first
-        if (await TryHandleHelpCommand(text))
-        {
-            return;
-        }
-
-        // Use the new tool-based processing that can handle both tools and regular questions
-        string contextKey = $"slack-{_config.Slack.ChannelId}";
-        string response = await _agentService.ProcessQueryWithToolsAsync(text, contextKey, ChatInterface.Slack);
-        await SendMessageInternal(response);
-    }
-
-    // IsFollowUpQuestion method removed - dead code
-
-    // DetectLanguage method removed - GPT handles language detection naturally
-
-    // TODO: Consider refactoring this complex method for better maintainability.
-    // The method is over 100 lines with deeply nested logic and could be broken down into smaller, focused methods.
-    private string? ExtractChildName(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return null;
-        }
-
-        text = text.ToLowerInvariant();
-
-        // For very short follow-up questions with no clear child name, use the last child from context
-        if (text.Length < 15 &&
-            (_conversationContext.IsStillValid && _conversationContext.LastChildName != null) &&
-            (text.Contains("what about") || text.Contains("how about") ||
-             text.Contains("hvad med") || text.Contains("hvordan med") ||
-             text.StartsWith("og") || text.StartsWith("and")))
-        {
-            // Try to extract a different child name from the follow-up
-            foreach (var childName in _childrenByName.Keys)
-            {
-                // Use word boundary to avoid partial matches
-                if (Regex.IsMatch(text, $@"\b{Regex.Escape(childName)}\b", RegexOptions.IgnoreCase))
-                {
-                    _logger.LogInformation("Found child name in follow-up: {ChildName}", childName);
-                    return childName;
-                }
-            }
-
-            // Check for first names only in follow-up questions
-            foreach (var child in _childrenByName.Values)
-            {
-                string firstName = child.FirstName.Split(' ')[0].ToLowerInvariant();
-                // Use word boundary to avoid partial matches
-                if (Regex.IsMatch(text, $@"\b{Regex.Escape(firstName)}\b", RegexOptions.IgnoreCase))
-                {
-                    string matchedKey = _childrenByName.Keys.FirstOrDefault(k =>
-                        k.StartsWith(firstName, StringComparison.OrdinalIgnoreCase)) ?? "";
-                    _logger.LogInformation("Found first name in follow-up: {FirstName} -> {ChildName}", firstName, matchedKey);
-                    return matchedKey;
-                }
-            }
-
-            // If no child name found in the follow-up, use the last child from context
-            _logger.LogInformation("No child name in follow-up, using context: {ChildName}", _conversationContext.LastChildName);
-            return _conversationContext.LastChildName;
-        }
-
-        // Check for "og hvad med X" or "and what about X" patterns
-        string[] followUpPhrases = { "hvad med", "what about", "how about", "hvordan med", "og hvad", "and what" };
-        foreach (var phrase in followUpPhrases)
-        {
-            int index = text.IndexOf(phrase);
-            if (index >= 0)
-            {
-                string afterPhrase = text.Substring(index + phrase.Length).Trim();
-                _logger.LogInformation("Follow-up phrase detected: '{Phrase}', text after: '{AfterPhrase}'", phrase, afterPhrase);
-
-                // First check for full names
-                foreach (var childName in _childrenByName.Keys)
-                {
-                    if (Regex.IsMatch(afterPhrase, $@"\b{Regex.Escape(childName)}\b", RegexOptions.IgnoreCase))
-                    {
-                        _logger.LogInformation("Found child name after follow-up phrase: {ChildName}", childName);
-                        return childName;
-                    }
-                }
-
-                // Then check for first names
-                foreach (var child in _childrenByName.Values)
-                {
-                    string firstName = child.FirstName.Split(' ')[0].ToLowerInvariant();
-                    if (Regex.IsMatch(afterPhrase, $@"\b{Regex.Escape(firstName)}\b", RegexOptions.IgnoreCase))
-                    {
-                        string matchedKey = _childrenByName.Keys.FirstOrDefault(k =>
-                            k.StartsWith(firstName, StringComparison.OrdinalIgnoreCase)) ?? "";
-                        _logger.LogInformation("Found first name after follow-up phrase: {FirstName} -> {ChildName}", firstName, matchedKey);
-                        return matchedKey;
-                    }
-                }
-            }
-        }
-
-        // Standard child name extraction - check for each child name in the text
-        foreach (var childName in _childrenByName.Keys)
-        {
-            // Use word boundary to avoid partial matches
-            if (Regex.IsMatch(text, $@"\b{Regex.Escape(childName)}\b", RegexOptions.IgnoreCase))
-            {
-                _logger.LogInformation("Found full child name in text: {ChildName}", childName);
-                return childName;
-            }
-        }
-
-        // Check for first names only
-        foreach (var child in _childrenByName.Values)
-        {
-            string firstName = child.FirstName.Split(' ')[0].ToLowerInvariant();
-            // Use word boundary to avoid partial matches
-            if (Regex.IsMatch(text, $@"\b{Regex.Escape(firstName)}\b", RegexOptions.IgnoreCase))
-            {
-                string matchedKey = _childrenByName.Keys.FirstOrDefault(k =>
-                    k.StartsWith(firstName, StringComparison.OrdinalIgnoreCase)) ?? "";
-                _logger.LogInformation("Found first name in text: {FirstName} -> {ChildName}", firstName, matchedKey);
-                return matchedKey;
-            }
-        }
-
-        _logger.LogInformation("No child name found in text");
-        return null;
-    }
+    // Message processing logic moved to SlackMessageHandler
 
 
 

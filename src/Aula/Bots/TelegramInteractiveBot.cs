@@ -33,15 +33,9 @@ public class TelegramInteractiveBot
     private readonly Dictionary<string, Child> _childrenByName;
     private readonly ConcurrentDictionary<string, byte> _postedWeekLetterHashes = new ConcurrentDictionary<string, byte>();
     private CancellationTokenSource? _cancellationTokenSource;
-    private readonly ReminderCommandHandler _reminderHandler;
-    private readonly ConversationContextManager<long> _conversationContextManager;
+    private readonly TelegramMessageHandler _messageHandler;
     // Language detection arrays removed - GPT handles language detection naturally
 
-    private void UpdateConversationContext(long chatId, string? childName)
-    {
-        _conversationContextManager.UpdateContext(chatId, childName);
-        _logger.LogInformation("Updated conversation context for chat {ChatId}", chatId);
-    }
 
     public TelegramInteractiveBot(
         IAgentService agentService,
@@ -68,8 +62,9 @@ public class TelegramInteractiveBot
             c => c.FirstName.ToLowerInvariant(),
             c => c);
 
-        _reminderHandler = new ReminderCommandHandler(_logger, _supabaseService, _childrenByName);
-        _conversationContextManager = new ConversationContextManager<long>(_logger);
+        var reminderHandler = new ReminderCommandHandler(_logger, _supabaseService, _childrenByName);
+        var conversationContextManager = new ConversationContextManager<long>(_logger);
+        _messageHandler = new TelegramMessageHandler(_agentService, _config, _logger, _supabaseService, _childrenByName, conversationContextManager, reminderHandler);
     }
 
     public async Task Start()
@@ -152,16 +147,6 @@ public class TelegramInteractiveBot
             return;
         }
 
-        // Only process text messages
-        if (message.Text is not { } messageText)
-        {
-            _logger.LogWarning("Message does not contain text");
-            return;
-        }
-
-        var chatId = message.Chat.Id;
-
-        _logger.LogInformation("Received message from {ChatId}: {Message}", chatId, messageText);
         _logger.LogInformation("Message from user: {FirstName} {LastName} (@{Username})",
             message.From?.FirstName ?? "Unknown",
             message.From?.LastName ?? "",
@@ -170,8 +155,8 @@ public class TelegramInteractiveBot
             message.Chat.Type,
             message.Chat.Title ?? "N/A");
 
-        // Process the message
-        await ProcessMessage(chatId, messageText);
+        // Delegate to message handler
+        await _messageHandler.HandleMessageAsync(botClient, message, cancellationToken);
     }
 
     private Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
@@ -187,144 +172,7 @@ public class TelegramInteractiveBot
         return Task.CompletedTask;
     }
 
-    private async Task ProcessMessage(long chatId, string text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            _logger.LogWarning("Empty message received, skipping processing");
-            return;
-        }
-
-        _logger.LogInformation("Processing message from {ChatId}: {Text}", chatId, text);
-
-        try
-        {
-            // Check for help command first
-            if (await TryHandleHelpCommand(chatId, text))
-            {
-                return;
-            }
-
-            // Use the new tool-based processing that can handle both tools and regular questions
-            string contextKey = $"telegram-{chatId}";
-            string response = await _agentService.ProcessQueryWithToolsAsync(text, contextKey, ChatInterface.Telegram);
-            await SendMessageInternal(chatId, response);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing message: {Message}", text);
-        }
-    }
-
-    private async Task<bool> TryHandleHelpCommand(long chatId, string text)
-    {
-        var normalizedText = text.Trim().ToLowerInvariant();
-
-        // English help commands
-        if (normalizedText == "help" || normalizedText == "--help" || normalizedText == "?" ||
-            normalizedText == "commands" || normalizedText == "/help" || normalizedText == "/start")
-        {
-            await SendMessageInternal(chatId, GetEnglishHelpMessage());
-            return true;
-        }
-
-        // Danish help commands  
-        if (normalizedText == "hjælp" || normalizedText == "kommandoer" || normalizedText == "/hjælp")
-        {
-            await SendMessageInternal(chatId, GetDanishHelpMessage());
-            return true;
-        }
-
-        return false;
-    }
-
-    private string GetEnglishHelpMessage()
-    {
-        return """
-📚 <b>AulaBot Commands &amp; Usage</b>
-
-<b>🤖 Interactive Questions:</b>
-Ask me anything about your children's school activities in natural language:
-• "What does TestChild2 have today?"
-• "Does TestChild1 have homework tomorrow?"
-• "What activities are planned this week?"
-
-<b>⏰ Reminder Commands:</b>
-• Send "remind me tomorrow at 8:00 that TestChild1 has Haver til maver"
-• Send "remind me 25/12 at 7:30 that Christmas breakfast"
-• Send "list reminders" - Show all reminders
-• Send "delete reminder 1" - Delete reminder with ID 1
-
-<b>📅 Automatic Features:</b>
-• Weekly letters posted every Sunday at 16:00
-• Morning reminders sent when scheduled
-• Retry logic for missing content
-
-<b>💬 Language Support:</b>
-Ask questions in English or Danish - I'll respond in the same language!
-
-<b>ℹ️ Tips:</b>
-• Use "today", "tomorrow", or specific dates
-• Mention child names for targeted questions
-• Follow-up questions maintain context for 10 minutes
-""";
-    }
-
-    private string GetDanishHelpMessage()
-    {
-        return """
-📚 <b>AulaBot Kommandoer &amp; Brug</b>
-
-<b>🤖 Interaktive Spørgsmål:</b>
-Spørg mig om hvad som helst vedrørende dine børns skoleaktiviteter på naturligt sprog:
-• "Hvad skal TestChild2 i dag?"
-• "Har TestChild1 lektier i morgen?"
-• "Hvilke aktiviteter er planlagt denne uge?"
-
-<b>⏰ Påmindelseskommandoer:</b>
-• Send "husk mig i morgen kl 8:00 at TestChild1 har Haver til maver"
-• Send "husk mig 25/12 kl 7:30 at julefrokost"
-• Send "vis påmindelser" - Vis alle påmindelser
-• Send "slet påmindelse 1" - Slet påmindelse med ID 1
-
-<b>📅 Automatiske Funktioner:</b>
-• Ugebreve postes hver søndag kl. 16:00
-• Morgenpåmindelser sendes når planlagt
-• Genforøgelseslogik for manglende indhold
-
-<b>💬 Sprogunderstøttelse:</b>
-Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
-
-<b>ℹ️ Tips:</b>
-• Brug "i dag", "i morgen", eller specifikke datoer
-• Nævn børnenes navne for målrettede spørgsmål
-• Opfølgningsspørgsmål bevarer kontekst i 10 minutter
-""";
-    }
-
-    private async Task<bool> TryHandleReminderCommand(long chatId, string text, bool isEnglish)
-    {
-        var (handled, response) = await _reminderHandler.TryHandleReminderCommand(text, isEnglish);
-
-        if (handled && response != null)
-        {
-            await SendMessageInternal(chatId, response);
-        }
-
-        return handled;
-    }
-
-    private bool IsFollowUpQuestion(string text)
-    {
-        return FollowUpQuestionDetector.IsFollowUpQuestion(text, _childrenByName.Values.ToList(), _logger);
-    }
-
-    // Dead methods removed:
-    // - DetectLanguage() - GPT handles language detection naturally
-    // - ExtractChildName() - not used anywhere
-    // - HandleAulaQuestion() - not used anywhere
-
-    // HandleAulaQuestion method removed - dead code
+    // Message handling logic moved to TelegramMessageHandler
 
 
     public async Task SendMessage(long chatId, string text)
