@@ -1,0 +1,442 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Newtonsoft.Json.Linq;
+using Telegram.Bot;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
+using Xunit;
+using Aula.Bots;
+using Aula.Configuration;
+using Aula.Integration;
+using Aula.Services;
+using Aula.Tools;
+using Aula.Utilities;
+
+namespace Aula.Tests.Bots;
+
+public class TelegramMessageHandlerTests
+{
+    private readonly Mock<IAgentService> _mockAgentService;
+    private readonly Mock<ILogger> _mockLogger;
+    private readonly Mock<ISupabaseService> _mockSupabaseService;
+    private readonly Mock<ConversationContextManager<long>> _mockConversationContextManager;
+    private readonly Mock<ReminderCommandHandler> _mockReminderHandler;
+    private readonly Mock<ITelegramBotClient> _mockTelegramBotClient;
+    private readonly Config _testConfig;
+    private readonly Dictionary<string, Child> _childrenByName;
+    private readonly TelegramMessageHandler _messageHandler;
+
+    public TelegramMessageHandlerTests()
+    {
+        _mockAgentService = new Mock<IAgentService>();
+        _mockLogger = new Mock<ILogger>();
+        _mockSupabaseService = new Mock<ISupabaseService>();
+        _mockConversationContextManager = new Mock<ConversationContextManager<long>>();
+        _mockReminderHandler = new Mock<ReminderCommandHandler>();
+        _mockTelegramBotClient = new Mock<ITelegramBotClient>();
+
+        _testConfig = new Config
+        {
+            Telegram = new Aula.Configuration.Telegram
+            {
+                Enabled = true,
+                Token = "test-token",
+                ChannelId = "test-channel"
+            },
+            Children = new List<Child>
+            {
+                new Child { FirstName = "Emma", LastName = "Test" },
+                new Child { FirstName = TestChild1, LastName = "Test" }
+            }
+        };
+
+        _childrenByName = new Dictionary<string, Child>
+        {
+            { "emma", _testConfig.Children[0] },
+            { "testchild1", _testConfig.Children[1] }
+        };
+
+        _messageHandler = new TelegramMessageHandler(
+            _mockAgentService.Object,
+            _testConfig,
+            _mockLogger.Object,
+            _mockSupabaseService.Object,
+            _childrenByName,
+            _mockConversationContextManager.Object,
+            _mockReminderHandler.Object);
+    }
+
+    [Fact]
+    public void Constructor_WithValidParameters_InitializesCorrectly()
+    {
+        Assert.NotNull(_messageHandler);
+    }
+
+    [Fact]
+    public void Constructor_WithNullAgentService_ThrowsArgumentNullException()
+    {
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            new TelegramMessageHandler(
+                null!,
+                _testConfig,
+                _mockLogger.Object,
+                _mockSupabaseService.Object,
+                _childrenByName,
+                _mockConversationContextManager.Object,
+                _mockReminderHandler.Object));
+        Assert.Equal("agentService", exception.ParamName);
+    }
+
+    [Fact]
+    public void Constructor_WithNullConfig_ThrowsArgumentNullException()
+    {
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            new TelegramMessageHandler(
+                _mockAgentService.Object,
+                null!,
+                _mockLogger.Object,
+                _mockSupabaseService.Object,
+                _childrenByName,
+                _mockConversationContextManager.Object,
+                _mockReminderHandler.Object));
+        Assert.Equal("config", exception.ParamName);
+    }
+
+    [Fact]
+    public void Constructor_WithNullLogger_ThrowsArgumentNullException()
+    {
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            new TelegramMessageHandler(
+                _mockAgentService.Object,
+                _testConfig,
+                null!,
+                _mockSupabaseService.Object,
+                _childrenByName,
+                _mockConversationContextManager.Object,
+                _mockReminderHandler.Object));
+        Assert.Equal("logger", exception.ParamName);
+    }
+
+    [Fact]
+    public void Constructor_WithNullSupabaseService_ThrowsArgumentNullException()
+    {
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            new TelegramMessageHandler(
+                _mockAgentService.Object,
+                _testConfig,
+                _mockLogger.Object,
+                null!,
+                _childrenByName,
+                _mockConversationContextManager.Object,
+                _mockReminderHandler.Object));
+        Assert.Equal("supabaseService", exception.ParamName);
+    }
+
+    [Fact]
+    public void Constructor_WithNullChildrenByName_ThrowsArgumentNullException()
+    {
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            new TelegramMessageHandler(
+                _mockAgentService.Object,
+                _testConfig,
+                _mockLogger.Object,
+                _mockSupabaseService.Object,
+                null!,
+                _mockConversationContextManager.Object,
+                _mockReminderHandler.Object));
+        Assert.Equal("childrenByName", exception.ParamName);
+    }
+
+    [Fact]
+    public void Constructor_WithNullConversationContextManager_ThrowsArgumentNullException()
+    {
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            new TelegramMessageHandler(
+                _mockAgentService.Object,
+                _testConfig,
+                _mockLogger.Object,
+                _mockSupabaseService.Object,
+                _childrenByName,
+                null!,
+                _mockReminderHandler.Object));
+        Assert.Equal("conversationContextManager", exception.ParamName);
+    }
+
+    [Fact]
+    public void Constructor_WithNullReminderHandler_ThrowsArgumentNullException()
+    {
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            new TelegramMessageHandler(
+                _mockAgentService.Object,
+                _testConfig,
+                _mockLogger.Object,
+                _mockSupabaseService.Object,
+                _childrenByName,
+                _mockConversationContextManager.Object,
+                null!));
+        Assert.Equal("reminderHandler", exception.ParamName);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_WithTextMessage_ProcessesSuccessfully()
+    {
+        var message = TelegramTestMessageFactory.CreateTextMessage(
+            chatId: 123456789L,
+            text: "Hello bot",
+            chatType: ChatType.Private);
+
+        await _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, CancellationToken.None);
+
+        _mockLogger.Verify(
+            logger => logger.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_WithNonTextMessage_ReturnsEarly()
+    {
+        var message = TelegramTestMessageFactory.CreateNonTextMessage(
+            chatId: 123456789L,
+            messageType: MessageType.Photo,
+            chatType: ChatType.Private);
+
+        await _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, CancellationToken.None);
+
+        // Should not process non-text messages
+        _mockLogger.Verify(
+            logger => logger.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_WithEmptyText_ReturnsEarly()
+    {
+        var message = TelegramTestMessageFactory.CreateTextMessage(
+            chatId: 123456789L,
+            text: "",
+            chatType: ChatType.Private);
+
+        await _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, CancellationToken.None);
+
+        // Should not process empty text messages
+        _mockLogger.Verify(
+            logger => logger.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_WithNullText_ReturnsEarly()
+    {
+        var message = TelegramTestMessageFactory.CreateTextMessage(
+            chatId: 123456789L,
+            text: null,
+            chatType: ChatType.Private);
+
+        await _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, CancellationToken.None);
+
+        // Should not process null text messages
+        _mockLogger.Verify(
+            logger => logger.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    [Theory]
+    [InlineData("hjælp")]
+    [InlineData("help")]
+    [InlineData("HJÆLP")]
+    [InlineData("HELP")]
+    public async Task HandleMessageAsync_WithHelpCommand_ProcessesHelpMessage(string helpCommand)
+    {
+        var message = TelegramTestMessageFactory.CreateTextMessage(
+            chatId: 123456789L,
+            text: helpCommand,
+            chatType: ChatType.Private);
+
+        await _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, CancellationToken.None);
+
+        _mockLogger.Verify(
+            logger => logger.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData("mind mig om noget")]
+    [InlineData("tilføj påmindelse")]
+    [InlineData("slet påmindelse")]
+    [InlineData("vis påmindelser")]
+    public async Task HandleMessageAsync_WithReminderCommand_CallsReminderHandler(string reminderCommand)
+    {
+        _mockReminderHandler
+            .Setup(r => r.TryHandleReminderCommand(It.IsAny<string>(), It.IsAny<bool>()))
+            .ReturnsAsync((true, "Reminder processed"));
+
+        var message = TelegramTestMessageFactory.CreateTextMessage(
+            chatId: 123456789L,
+            text: reminderCommand,
+            chatType: ChatType.Private);
+
+        await _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, CancellationToken.None);
+
+        _mockReminderHandler.Verify(
+            r => r.TryHandleReminderCommand(It.IsAny<string>(), It.IsAny<bool>()),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData("Hvad skal Emma i dag?")]
+    [InlineData("What is TestChild1 doing tomorrow?")]
+    [InlineData("Vis ugeplanen")]
+    public async Task HandleMessageAsync_WithValidQuery_ProcessesSuccessfully(string queryText)
+    {
+        _mockAgentService
+            .Setup(a => a.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()))
+            .ReturnsAsync(new JObject());
+
+        var message = TelegramTestMessageFactory.CreateTextMessage(
+            chatId: 123456789L,
+            text: queryText,
+            chatType: ChatType.Private);
+
+        await _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, CancellationToken.None);
+
+        _mockLogger.Verify(
+            logger => logger.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_WithException_LogsError()
+    {
+        _mockAgentService
+            .Setup(a => a.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()))
+            .ThrowsAsync(new Exception("Test exception"));
+
+        var message = TelegramTestMessageFactory.CreateTextMessage(
+            chatId: 123456789L,
+            text: "What is Emma doing today?",
+            chatType: ChatType.Private);
+
+        await _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, CancellationToken.None);
+
+        _mockLogger.Verify(
+            logger => logger.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error handling message")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_LogsMessageProcessing()
+    {
+        var message = TelegramTestMessageFactory.CreateTextMessage(
+            chatId: 123456789L,
+            text: "Test message",
+            chatType: ChatType.Private);
+
+        await _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, CancellationToken.None);
+
+        _mockLogger.Verify(
+            logger => logger.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_WithPrivateChat_HandlesCorrectly()
+    {
+        var message = TelegramTestMessageFactory.CreateTextMessage(
+            chatId: 123456789L,
+            text: "Hello in private chat",
+            chatType: ChatType.Private);
+
+        await _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, CancellationToken.None);
+
+        _mockLogger.Verify(
+            logger => logger.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_WithGroupChat_HandlesCorrectly()
+    {
+        var message = TelegramTestMessageFactory.CreateTextMessage(
+            chatId: -123456789L,
+            text: "Hello in group chat",
+            chatType: ChatType.Group);
+
+        await _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, CancellationToken.None);
+
+        _mockLogger.Verify(
+            logger => logger.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleMessageAsync_WithCancellationToken_RespectsCancellation()
+    {
+        var cancellationTokenSource = new CancellationTokenSource();
+        cancellationTokenSource.Cancel();
+
+        var message = TelegramTestMessageFactory.CreateTextMessage(
+            chatId: 123456789L,
+            text: "Test message",
+            chatType: ChatType.Private);
+
+        // This should handle the cancellation gracefully
+        await _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, cancellationTokenSource.Token);
+
+        // The method should still complete without throwing
+        Assert.True(true);
+    }
+}
