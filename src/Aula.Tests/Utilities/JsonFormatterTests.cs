@@ -1,5 +1,6 @@
 using Xunit;
 using Aula.Utilities;
+using Newtonsoft.Json;
 
 namespace Aula.Tests.Utilities;
 

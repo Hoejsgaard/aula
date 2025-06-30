@@ -40,7 +40,7 @@ public class ReminderExtractionPromptsTests
     {
         // Arrange
         var query = "test query";
-        var currentTime = DateTime.Now;
+        var currentTime = new DateTime(2025, 6, 30, 14, 30, 0);
 
         // Act
         var result = ReminderExtractionPrompts.GetExtractionPrompt(query, currentTime);
@@ -56,7 +56,7 @@ public class ReminderExtractionPromptsTests
     {
         // Arrange
         var query = "test query";
-        var currentTime = DateTime.Now;
+        var currentTime = new DateTime(2025, 6, 30, 14, 30, 0);
 
         // Act
         var result = ReminderExtractionPrompts.GetExtractionPrompt(query, currentTime);
@@ -150,7 +150,7 @@ public class ReminderExtractionPromptsTests
     public void GetExtractionPrompt_WithRealQueries_EmbedsQueryCorrectly(string query)
     {
         // Arrange
-        var currentTime = DateTime.Now;
+        var currentTime = new DateTime(2025, 6, 30, 14, 30, 0);
 
         // Act
         var result = ReminderExtractionPrompts.GetExtractionPrompt(query, currentTime);
@@ -164,7 +164,7 @@ public class ReminderExtractionPromptsTests
     {
         // Arrange
         var query = "Remind me about \"TestChild1's soccer\" & Emma's dance at 8:00 PM";
-        var currentTime = DateTime.Now;
+        var currentTime = new DateTime(2025, 6, 30, 14, 30, 0);
 
         // Act
         var result = ReminderExtractionPrompts.GetExtractionPrompt(query, currentTime);
@@ -181,7 +181,7 @@ public class ReminderExtractionPromptsTests
     {
         // Arrange
         var query = "test query";
-        var currentTime = DateTime.Now;
+        var currentTime = new DateTime(2025, 6, 30, 14, 30, 0);
 
         // Act
         var result = ReminderExtractionPrompts.GetExtractionPrompt(query, currentTime);
@@ -198,7 +198,7 @@ public class ReminderExtractionPromptsTests
     {
         // Arrange
         var query = "test query";
-        var currentTime = DateTime.Now;
+        var currentTime = new DateTime(2025, 6, 30, 14, 30, 0);
 
         // Act
         var result = ReminderExtractionPrompts.GetExtractionPrompt(query, currentTime);
@@ -213,7 +213,7 @@ public class ReminderExtractionPromptsTests
     {
         // Arrange
         var query = "test query";
-        var currentTime = DateTime.Now;
+        var currentTime = new DateTime(2025, 6, 30, 14, 30, 0);
 
         // Act
         var result = ReminderExtractionPrompts.GetExtractionPrompt(query, currentTime);
@@ -250,14 +250,14 @@ public class ReminderExtractionPromptsTests
     {
         // Arrange
         var query = "test query";
-        var currentTime = DateTime.Now;
+        var currentTime = new DateTime(2025, 6, 30, 14, 30, 0);
 
         // Act
         var result = ReminderExtractionPrompts.GetExtractionPrompt(query, currentTime);
 
         // Assert - Response format should be clearly defined
         Assert.Contains("Respond in this exact format:", result);
-        
+
         // Check that all three required fields are in the response format
         var formatSection = result.Split("Respond in this exact format:")[1];
         Assert.Contains("DESCRIPTION:", formatSection);

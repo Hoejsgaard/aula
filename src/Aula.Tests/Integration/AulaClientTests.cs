@@ -12,7 +12,7 @@ public class AulaClientTests
     {
         // Arrange & Act
         var client = new AulaClient("testuser", "testpass");
-        
+
         // Assert - Constructor should not throw and should inherit from UniLoginClient
         Assert.NotNull(client);
         Assert.IsAssignableFrom<UniLoginClient>(client);
@@ -44,7 +44,7 @@ public class AulaClientTests
     {
         // Arrange & Act
         var client = new AulaClient("", "");
-        
+
         // Assert
         Assert.NotNull(client);
     }

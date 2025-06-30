@@ -30,10 +30,10 @@ public static class TelegramTestMessageFactory
             }{{(text == null ? "" : $@", ""text"": ""{text}""")}}
         }
         """;
-        
+
         return JsonConvert.DeserializeObject<Message>(messageJson)!;
     }
-    
+
     public static Message CreateNonTextMessage(
         long chatId = 123456789L,
         MessageType messageType = MessageType.Photo,
@@ -57,7 +57,7 @@ public static class TelegramTestMessageFactory
             "photo": [{"file_id": "test", "file_unique_id": "test", "width": 100, "height": 100, "file_size": 1000}]
         }
         """;
-        
+
         return JsonConvert.DeserializeObject<Message>(messageJson)!;
     }
 }

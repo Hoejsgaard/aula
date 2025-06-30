@@ -9,13 +9,14 @@ namespace Aula.Tests.Integration;
 /// <summary>
 /// A testable version of MinUddannelseClient that allows injecting an HttpClient for testing
 /// </summary>
-public class TestableMinUddannelseClient : IMinUddannelseClient
+public class TestableMinUddannelseClient : IMinUddannelseClient, IDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly string _username;
     private readonly string _password;
     private JObject _userProfile = new();
     private bool _loggedIn;
+    private bool _disposed;
 
     public TestableMinUddannelseClient(HttpClient httpClient, string username, string password)
     {
@@ -51,7 +52,7 @@ public class TestableMinUddannelseClient : IMinUddannelseClient
         if (!_loggedIn)
             throw new InvalidOperationException("Not logged in");
 
-        var url = $"https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}&elevId=123&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+        var url = $"https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}&elevId={GetChildId(child)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
         var response = await _httpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
@@ -64,12 +65,29 @@ public class TestableMinUddannelseClient : IMinUddannelseClient
         if (!_loggedIn)
             throw new InvalidOperationException("Not logged in");
 
-        var url = $"https://www.minuddannelse.net/api/stamdata/aulaskema/getElevSkema?elevId=123&tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+        var url = $"https://www.minuddannelse.net/api/stamdata/aulaskema/getElevSkema?elevId={GetChildId(child)}&tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
         var response = await _httpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
 
         return JObject.Parse(json);
+    }
+
+    private string GetChildId(Child child)
+    {
+        // In tests, we'll use the first name as a simple ID mapping
+        // This matches the mock user profile we set up in LoginAsync
+        if (_userProfile["boern"] is JArray children)
+        {
+            foreach (var kid in children)
+            {
+                if (kid["fornavn"]?.ToString() == child.FirstName)
+                {
+                    return kid["id"]?.ToString() ?? "123";
+                }
+            }
+        }
+        return "123"; // Default fallback for tests
     }
 
     private int GetIsoWeekNumber(DateOnly date)
@@ -78,5 +96,14 @@ public class TestableMinUddannelseClient : IMinUddannelseClient
         var calendarWeekRule = cultureInfo.DateTimeFormat.CalendarWeekRule;
         var firstDayOfWeek = cultureInfo.DateTimeFormat.FirstDayOfWeek;
         return cultureInfo.Calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue), calendarWeekRule, firstDayOfWeek);
+    }
+
+    public void Dispose()
+    {
+        if (!_disposed)
+        {
+            _httpClient?.Dispose();
+            _disposed = true;
+        }
     }
 }

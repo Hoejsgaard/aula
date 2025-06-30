@@ -313,8 +313,8 @@ public class DataModelTests
         var originalContent = "Week 42 letter content";
         var modifiedContent = "Week 42 letter content - updated";
 
-        var originalHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(originalContent)));
-        var modifiedHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(modifiedContent)));
+        var originalHash = ComputeTestHash(originalContent);
+        var modifiedHash = ComputeTestHash(modifiedContent);
 
         var postedLetter1 = new PostedLetter { ContentHash = originalHash };
         var postedLetter2 = new PostedLetter { ContentHash = modifiedHash };
@@ -369,5 +369,10 @@ public class DataModelTests
             // For null values, should use default
             Assert.Equal("bot", reminder.CreatedBy);
         }
+    }
+
+    private static string ComputeTestHash(string content)
+    {
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content)));
     }
 }

@@ -13,7 +13,7 @@ public class ConfigurationTests
 
     public ConfigurationTests()
     {
-        var configPath = Path.Combine(Directory.GetCurrentDirectory(), "test-appsettings.json");
+        var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test-appsettings.json");
 
         _configuration = new ConfigurationBuilder()
             .AddJsonFile(configPath, optional: false, reloadOnChange: false)

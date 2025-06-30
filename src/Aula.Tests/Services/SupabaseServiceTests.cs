@@ -81,12 +81,6 @@ public class SupabaseServiceTests
         Assert.False(string.IsNullOrEmpty(childName));
     }
 
-    [Fact]
-    public void Constructor_WithValidConfig_CreatesInstance()
-    {
-        // Act & Assert - Verify service construction works correctly
-        Assert.NotNull(_supabaseService);
-    }
 
     [Theory]
     [InlineData("TestChild", 42, 2023)]

@@ -274,7 +274,7 @@ public class SlackMessageHandlerTests
         var result = await _messageHandler.HandleMessageAsync(eventData);
 
         Assert.True(result);
-        
+
         // Verify logging occurred for help command processing
         _mockLogger.Verify(
             logger => logger.Log(

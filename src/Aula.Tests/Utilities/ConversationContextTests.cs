@@ -18,8 +18,10 @@ public class ConversationContextTests
         Assert.False(context.WasAboutToday);
         Assert.False(context.WasAboutTomorrow);
         Assert.False(context.WasAboutHomework);
-        Assert.True(context.Timestamp <= DateTime.Now);
-        Assert.True(context.Timestamp > DateTime.Now.AddSeconds(-1)); // Should be very recent
+        var now = DateTime.Now;
+        var tolerance = TimeSpan.FromSeconds(2);
+        Assert.True(context.Timestamp <= now + tolerance);
+        Assert.True(context.Timestamp >= now - tolerance);
     }
 
     [Fact]

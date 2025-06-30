@@ -278,7 +278,7 @@ public class SchedulingServiceIntegrationTests
         };
 
         var slackBot = new SlackInteractiveBot(_mockAgentService.Object, config, _mockLoggerFactory.Object, _mockSupabaseService.Object);
-        
+
         var service = new SchedulingService(
             _mockLoggerFactory.Object,
             _mockSupabaseService.Object,

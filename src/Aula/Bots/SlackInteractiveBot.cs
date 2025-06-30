@@ -104,7 +104,8 @@ public class SlackInteractiveBot : IDisposable
         // Start message ID cleanup timer
         var cleanupInterval = TimeSpan.FromHours(_config.Timers.CleanupIntervalHours);
         _cleanupTimer = new Timer(CleanupOldMessageIds, null, cleanupInterval, cleanupInterval);
-        _logger.LogInformation("Slack cleanup timer started - running every {IntervalHours} hours", _config.Timers.CleanupIntervalHours);
+        var hourUnit = _config.Timers.CleanupIntervalHours == 1 ? "hour" : "hours";
+        _logger.LogInformation("Slack cleanup timer started - running every {IntervalHours} {HourUnit}", _config.Timers.CleanupIntervalHours, hourUnit);
 
         // Build a list of available children (first names only)
         string childrenList = string.Join(" og ", _childrenByName.Values.Select(c =>
