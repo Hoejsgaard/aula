@@ -38,7 +38,7 @@ public class SupabaseServiceTests
     }
 
     [Fact]
-    public void InitializeAsync_WithInvalidConfig_ReturnsFailure()
+    public void Constructor_WithInvalidConfig_DoesNotThrow()
     {
         // Arrange
         var invalidConfig = new Config
@@ -50,11 +50,9 @@ public class SupabaseServiceTests
             }
         };
         var loggerFactory = new LoggerFactory();
-        var invalidService = new SupabaseService(invalidConfig, loggerFactory);
 
-        // Act & Assert - Should handle invalid config gracefully
-        // The actual behavior depends on Supabase client implementation
-        // For unit testing, we just verify the service can be created
+        // Act & Assert - Should handle invalid config gracefully during construction
+        var invalidService = new SupabaseService(invalidConfig, loggerFactory);
         Assert.NotNull(invalidService);
     }
 
@@ -69,7 +67,7 @@ public class SupabaseServiceTests
     }
 
     [Fact]
-    public void AddReminderAsync_WithValidData_DoesNotThrow()
+    public void ReminderData_WithValidParameters_AreValid()
     {
         // Arrange
         var text = "Test reminder";
@@ -77,28 +75,26 @@ public class SupabaseServiceTests
         var time = new TimeOnly(10, 0);
         var childName = "TestChild";
 
-        // Act & Assert - Should not throw during construction
+        // Act & Assert - Verify reminder data parameters are valid
         Assert.NotNull(_supabaseService);
         Assert.NotEmpty(text);
         Assert.False(string.IsNullOrEmpty(childName));
     }
 
     [Fact]
-    public void GetPendingRemindersAsync_WithoutInitialize_DoesNotThrow()
+    public void Constructor_WithValidConfig_CreatesInstance()
     {
-        // Act & Assert - Should not throw during construction
+        // Act & Assert - Verify service construction works correctly
         Assert.NotNull(_supabaseService);
     }
 
     [Theory]
     [InlineData("TestChild", 42, 2023)]
     [InlineData("AnotherChild", 1, 2024)]
-    public void HasWeekLetterBeenPostedAsync_WithDifferentParams_DoesNotThrow(string childName, int weekNumber, int year)
+    public void WeekLetterParameters_WithValidValues_AreInValidRange(string childName, int weekNumber, int year)
     {
-        // Act & Assert - Should not throw during construction
+        // Act & Assert - Verify week letter parameters are within expected ranges
         Assert.NotNull(_supabaseService);
-
-        // Verify parameters are within expected ranges
         Assert.True(weekNumber > 0 && weekNumber <= 53);
         Assert.True(year > 2000 && year < 3000);
         Assert.False(string.IsNullOrEmpty(childName));

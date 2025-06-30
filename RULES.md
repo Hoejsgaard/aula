@@ -19,10 +19,10 @@ This document outlines the key development rules and practices for the Aula proj
 ## Development Workflow
 
 - Always run these commands after code changes:
-  - `dotnet build`
-  - `dotnet test`
-  - `dotnet format`
-- Do not commit changes unless all of the above pass
+  - `dotnet build src/Aula.sln`
+  - `dotnet test src/Aula.Tests`
+  - `dotnet format src/Aula.sln`
+- Do not commit changes unless all of the above commands pass
 - Add missing tests before introducing new logic
 - Fix all tests when refactoring interfaces
 

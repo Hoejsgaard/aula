@@ -12,7 +12,7 @@
 - App appears to run normally
 
 **Root Cause:**
-The SchedulingService timer was never starting due to a startup order issue. Interactive bots (particularly Slack polling) were blocking the main startup thread, preventing the SchedulingService initialization from completing.
+The SchedulingService timer was never starting due to a startup order issue. Interactive bots (particularly Slack polling) were blocking the main startup thread, preventing SchedulingService initialization from completing.
 
 **Investigation Steps:**
 1. Check for "🔥 TIMER FIRED" messages in logs - if missing, timer isn't running
@@ -58,16 +58,16 @@ Sent reminder X to Telegram
 ## Common Debugging Patterns
 
 ### Timer Not Firing
-**Check for:** Missing "🔥 TIMER FIRED" messages
-**Cause:** SchedulingService not started or async void exceptions
+**Check for:** Missing "🔥 TIMER FIRED" messages  
+**Cause:** SchedulingService not started or async void exceptions  
 **Fix:** Ensure proper startup order and Task.Run wrapper
 
 ### Startup Blocking
-**Check for:** Logs stopping after bot initialization
-**Cause:** Blocking calls in startup sequence
+**Check for:** Logs stopping after bot initialization  
+**Cause:** Blocking calls in startup sequence  
 **Fix:** Move critical services before potentially blocking operations
 
 ### Silent Failures
-**Check for:** Expected operations not logging
-**Cause:** Unhandled exceptions in async void methods
+**Check for:** Expected operations not logging  
+**Cause:** Unhandled exceptions in async void methods  
 **Fix:** Use proper async Task patterns with exception handling

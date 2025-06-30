@@ -6,21 +6,21 @@
 3. Create a new project
 
 ## 2. Get Your Credentials
-After creating your project, you'll need these values for `appsettings.json`:
+After creating your project, you'll need the following values for `appsettings.json`:
 
 ### Supabase URL
 - Go to Project Settings → API
 - Copy the "Project URL" (looks like: `https://abcdefghijklmnop.supabase.co`)
-- Replace `YOUR_SUPABASE_PROJECT_URL` in appsettings.json
+- Replace `YOUR_SUPABASE_PROJECT_URL` in `appsettings.json`
 
 ### Anon Key
 - In the same API settings page
 - Copy the "anon public" key (starts with `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.`)
-- Replace `YOUR_SUPABASE_ANON_KEY` in appsettings.json
+- Replace `YOUR_SUPABASE_ANON_KEY` in `appsettings.json`
 
 ### Service Role Key (Optional but Recommended)
 - Copy the "service_role" key (also starts with `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.`)
-- Replace `YOUR_SUPABASE_SERVICE_ROLE_KEY` in appsettings.json
+- Replace `YOUR_SUPABASE_SERVICE_ROLE_KEY` in `appsettings.json`
 - This key has admin privileges - keep it secure!
 
 ## 3. Create Database Tables

@@ -61,8 +61,9 @@ public class SchedulingService : ISchedulingService
         }
 
         // Start the timer first, then check for missed reminders in background
-        _schedulingTimer = new Timer(CheckScheduledTasksWrapper, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
-        _logger.LogInformation("Scheduling service timer started - checking every 10 seconds");
+        var timerInterval = TimeSpan.FromSeconds(_config.Timers.SchedulingIntervalSeconds);
+        _schedulingTimer = new Timer(CheckScheduledTasksWrapper, null, TimeSpan.Zero, timerInterval);
+        _logger.LogInformation("Scheduling service timer started - checking every {IntervalSeconds} seconds", _config.Timers.SchedulingIntervalSeconds);
 
         // Check for missed reminders in background to avoid blocking startup
         _ = Task.Run(async () =>

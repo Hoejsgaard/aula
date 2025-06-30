@@ -27,6 +27,7 @@ public class SlackInteractiveBot : IDisposable
     private readonly Dictionary<string, Child> _childrenByName;
     private bool _isRunning;
     private Timer? _pollingTimer;
+    private Timer? _cleanupTimer;
     private string _lastTimestamp = "0"; // Start from the beginning of time
     private readonly object _lockObject = new object();
     private int _pollingInProgress = 0;
@@ -116,10 +117,14 @@ public class SlackInteractiveBot : IDisposable
 
         // Start polling
         _isRunning = true;
-        _pollingTimer = new Timer(PollMessages, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
+        var pollingInterval = TimeSpan.FromSeconds(_config.Timers.SlackPollingIntervalSeconds);
+        _pollingTimer = new Timer(PollMessages, null, TimeSpan.Zero, pollingInterval);
+        _logger.LogInformation("Slack polling started - checking every {IntervalSeconds} seconds", _config.Timers.SlackPollingIntervalSeconds);
 
-        // Start message ID cleanup timer (run every hour)
-        var cleanupTimer = new Timer(CleanupOldMessageIds, null, TimeSpan.FromHours(1), TimeSpan.FromHours(1));
+        // Start message ID cleanup timer
+        var cleanupInterval = TimeSpan.FromHours(_config.Timers.CleanupIntervalHours);
+        _cleanupTimer = new Timer(CleanupOldMessageIds, null, cleanupInterval, cleanupInterval);
+        _logger.LogInformation("Slack cleanup timer started - running every {IntervalHours} hours", _config.Timers.CleanupIntervalHours);
 
         // Build a list of available children (first names only)
         string childrenList = string.Join(" og ", _childrenByName.Values.Select(c => c.FirstName.Split(' ')[0]));
@@ -924,6 +929,7 @@ Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
     {
         _httpClient?.Dispose();
         _pollingTimer?.Dispose();
+        _cleanupTimer?.Dispose();
         GC.SuppressFinalize(this);
     }
 }

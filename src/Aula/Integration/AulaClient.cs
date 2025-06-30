@@ -4,7 +4,7 @@ namespace Aula.Integration;
 
 public class AulaClient : UniLoginClient
 {
-    private const string _aulaApi = "https://www.aula.dk/api/v17/";
+    private const string AulaApi = "https://www.aula.dk/api/v17/";
 
     public AulaClient(string username, string password) : base(username, password,
         "https://www.aula.dk/auth/login.php?type=unilogin", "https://www.aula.dk/portal/")
@@ -13,7 +13,7 @@ public class AulaClient : UniLoginClient
 
     public async Task<JObject> GetProfile()
     {
-        var response = await HttpClient.GetAsync(_aulaApi + "?method=profiles.getProfilesByLogin");
+        var response = await HttpClient.GetAsync(AulaApi + "?method=profiles.getProfilesByLogin");
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         return JObject.Parse(json);
@@ -21,7 +21,7 @@ public class AulaClient : UniLoginClient
 
     public async Task<JObject> GetProfileContext()
     {
-        var response = await HttpClient.GetAsync(_aulaApi + "?method=profiles.getProfileContext");
+        var response = await HttpClient.GetAsync(AulaApi + "?method=profiles.getProfileContext");
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         return JObject.Parse(json);

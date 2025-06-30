@@ -85,23 +85,7 @@ public class OpenAiServiceTests
         service.ClearConversationHistory(); // Clear all
     }
 
-    [Fact]
-    public void WeekLetterContentExtractor_ExtractContent_HandlesValidInput()
-    {
-        // This tests the utility method that OpenAiService uses internally
-        // Arrange
-        var weekLetter = CreateTestWeekLetter();
-        var mockLogger = new Mock<ILogger>();
-
-        // Act
-        var result = WeekLetterContentExtractor.ExtractContent(weekLetter, mockLogger.Object);
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Contains("Matematik: Brøker og decimaltal", result);
-        Assert.Contains("H.C. Andersen eventyr", result);
-    }
+    // WeekLetterContentExtractor tests moved to WeekLetterContentExtractorTests.cs
 
     [Theory]
     [InlineData(ChatInterface.Slack)]

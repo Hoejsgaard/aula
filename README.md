@@ -75,7 +75,7 @@ This is a **hard requirement** - the bot will not work on major cloud platforms.
 2. Copy `appsettings.json.example` to `appsettings.json`
 3. Fill in your UniLogin credentials, OpenAI API key, and platform configurations
 4. **Ensure hosting environment** can reach MinUddannelse (not on blocked cloud providers)
-5. **Set up database**: Follow [Supabase Setup Guide](SUPABASE_SETUP.md) for reminders and scheduling
+5. **Set up database**: Follow the [Supabase Setup Guide](SUPABASE_SETUP.md) for reminders and scheduling
 6. Build and run the application
 
 **Additional Documentation:**
@@ -192,4 +192,4 @@ The bot supports both Danish and English questions and will respond in the same 
 
 ### Slack Integration
 
-Refer to the original documentation for setting up Slack integration.
+Refer to the Slack Configuration section above for setting up Slack integration.

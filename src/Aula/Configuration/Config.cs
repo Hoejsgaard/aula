@@ -10,4 +10,5 @@ public class Config : IConfig
     public OpenAi OpenAi { get; set; } = new();
     public Supabase Supabase { get; set; } = new();
     public Features Features { get; set; } = new();
+    public Timers Timers { get; set; } = new();
 }
