@@ -4,7 +4,11 @@
 		"Password": "Your unilogin password"
 	},
 	"Slack": {
-		"WebhookUrl": "channel webhook"
+		"WebhookUrl": "channel webhook",
+		"ApiToken": "xoxb-your-bot-token-here", // Bot User OAuth Token from Slack API
+		"EnableInteractiveBot": false, // Set to true to enable interactive Slack bot
+		"ChannelId": "C0123456789", // Channel ID where the bot will listen and respond
+		"PostWeekLettersOnStartup": false // Set to false to disable automatic posting of week letters on startup
 	},
 	"Children": [
 		{
@@ -34,8 +38,17 @@
 		"UniverseDomain": "googleapis.com"
 	},
 	"Telegram": {
-		"BotName": "Name of your bot",
-		"Token": "Token of your bot",
-		"ChannelId": "ID of your channel - use a bot to retrieve it"
+		"Enabled": false, // Set to true to enable Telegram integration
+		"BotName": "YourAulaBot", // Name of your Telegram bot (for reference only)
+		"Token": "123456789:ABCDEF-your-bot-token-here", // Bot token from BotFather (https://t.me/botfather)
+		"ChannelId": "@yourchannel or -100123456789", // Channel username (with @ prefix) or chat ID for posting week letters
+		"PostWeekLettersOnStartup": false // Set to true to enable automatic posting of week letters on startup
+		// For private chats or groups, use the numeric chat ID
+		// For public channels, you can use the channel username with @ prefix
+		// For private channels, you need to use the numeric ID which starts with -100
+	},
+	"OpenAi": {
+		"ApiKey": "your-openai-api-key",
+		"Model": "gpt-4" 
 	}
 }

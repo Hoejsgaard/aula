@@ -32,13 +32,18 @@ public class Functions
 			var minUddannelseClient = new MinUddannelseClient(_config.UniLogin.Username, _config.UniLogin.Password);
 
 			var slackBot = new SlackBot(_config.Slack.WebhookUrl);
-			var telegram = new TelegramClient(_config.Telegram.Token);
+			var telegram = new TelegramClient(_config);
 
 			foreach (var child in _config.Children)
 			{
 				var weekLetter =
 					await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today.AddDays(2)));
-				await telegram.PostWeekLetter(_config.Telegram.ChannelId, weekLetter, child);
+				
+				if (_config.Telegram.Enabled)
+				{
+					await telegram.PostWeekLetter(_config.Telegram.ChannelId, weekLetter, child);
+				}
+				
 				await slackBot.PostWeekLetter(weekLetter, child);
 			}
 

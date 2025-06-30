@@ -1,0 +1,56 @@
+{
+  "UniLogin": {
+    "Username": "test-user",
+    "Password": "test-password"
+  },
+  "Slack": {
+    "WebhookUrl": "https://hooks.slack.com/test",
+    "ApiToken": "xoxb-test-token",
+    "EnableInteractiveBot": true,
+    "ChannelId": "C1234567890",
+    "PostWeekLettersOnStartup": true
+  },
+  "Telegram": {
+    "Enabled": true,
+    "BotName": "TestBot",
+    "Token": "123456789:AABBCCDDEEFFGGHHTest",
+    "ChannelId": "@testchannel",
+    "PostWeekLettersOnStartup": false
+  },
+  "OpenAi": {
+    "ApiKey": "sk-test-key",
+    "Model": "gpt-4"
+  },
+  "Children": [
+    {
+      "FirstName": "Alice",
+      "LastName": "Johnson",
+      "Colour": "blue",
+      "GoogleCalendarId": "alice@example.com"
+    },
+    {
+      "FirstName": "Bob",
+      "LastName": "Smith",
+      "Colour": "red",
+      "GoogleCalendarId": "bob@example.com"
+    }
+  ],
+  "GoogleServiceAccount": {
+    "Type": "service_account",
+    "ProjectId": "test-project",
+    "PrivateKeyId": "test-key-id",
+    "PrivateKey": "-----BEGIN PRIVATE KEY-----\ntest-private-key\n-----END PRIVATE KEY-----\n",
+    "ClientEmail": "test@test-project.iam.gserviceaccount.com",
+    "ClientId": "123456789",
+    "AuthUri": "https://accounts.google.com/o/oauth2/auth",
+    "TokenUri": "https://oauth2.googleapis.com/token",
+    "AuthProviderX509CertUrl": "https://www.googleapis.com/oauth2/v1/certs",
+    "ClientX509CertUrl": "https://www.googleapis.com/robot/v1/metadata/x509/test%40test-project.iam.gserviceaccount.com",
+    "UniverseDomain": "googleapis.com"
+  },
+  "Supabase": {
+    "Url": "https://test.supabase.co",
+    "Key": "test-public-key",
+    "ServiceRoleKey": "test-service-role-key"
+  }
+}

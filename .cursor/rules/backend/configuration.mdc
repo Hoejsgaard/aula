@@ -1,0 +1,11 @@
+---
+description: 
+globs: appsettings.Development.json,appsettings.json
+alwaysApply: false
+---
+# Configuration Rules
+
+- Use appsettings.Development.json for local secrets (gitignored)
+- Use appsettings.json for structure with placeholder values (committed)
+
+- Never commit real secrets or credentials
