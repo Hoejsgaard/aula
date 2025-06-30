@@ -448,20 +448,6 @@ public class SlackInteractiveBot : IDisposable
         return Convert.ToBase64String(hash);
     }
 
-    private string GetDanishDayName(DayOfWeek dayOfWeek)
-    {
-        return dayOfWeek switch
-        {
-            DayOfWeek.Monday => "mandag",
-            DayOfWeek.Tuesday => "tirsdag",
-            DayOfWeek.Wednesday => "onsdag",
-            DayOfWeek.Thursday => "torsdag",
-            DayOfWeek.Friday => "fredag",
-            DayOfWeek.Saturday => "lørdag",
-            DayOfWeek.Sunday => "søndag",
-            _ => "ukendt dag"
-        };
-    }
 
 
 
@@ -507,108 +493,6 @@ public class SlackInteractiveBot : IDisposable
             _logger.LogError(ex, "Error cleaning up old message IDs");
         }
     }
-
-    // Helper method to detect if a question contains relative time references
-    private bool ContainsRelativeTimeReference(string text)
-    {
-        string lowerText = text.ToLowerInvariant();
-
-        // Check for common relative time words in Danish and English
-        string[] relativeTimeWords = new[]
-        {
-            "tomorrow", "yesterday", "today", "next week", "last week", "tonight", "this morning",
-            "i morgen", "i går", "i dag", "næste uge", "sidste uge", "i aften", "i morges"
-        };
-
-        return relativeTimeWords.Any(word => lowerText.Contains(word));
-    }
-
-    private async Task<bool> TryHandleHelpCommand(string text)
-    {
-        var normalizedText = text.Trim().ToLowerInvariant();
-
-        // English help commands
-        if (normalizedText == "help" || normalizedText == "--help" || normalizedText == "?" || normalizedText == "commands")
-        {
-            await SendMessageInternal(GetEnglishHelpMessage());
-            return true;
-        }
-
-        // Danish help commands  
-        if (normalizedText == "hjælp" || normalizedText == "kommandoer")
-        {
-            await SendMessageInternal(GetDanishHelpMessage());
-            return true;
-        }
-
-        return false;
-    }
-
-    private string GetEnglishHelpMessage()
-    {
-        return """
-📚 *AulaBot Commands & Usage*
-
-*🤖 Interactive Questions:*
-Ask me anything about your children's school activities in natural language:
-• "What does Søren have today?"
-• "Does Hans have homework tomorrow?"
-• "What activities are planned this week?"
-
-*⏰ Reminder Commands:*
-• `remind me tomorrow at 8:00 that Hans has Haver til maver`
-• `remind me 25/12 at 7:30 that Christmas breakfast`
-• `list reminders` - Show all reminders
-• `delete reminder 1` - Delete reminder with ID 1
-
-*📅 Automatic Features:*
-• Weekly letters posted every Sunday at 16:00
-• Morning reminders sent when scheduled
-• Retry logic for missing content
-
-*💬 Language Support:*
-Ask questions in English or Danish - I'll respond in the same language!
-
-*ℹ️ Tips:*
-• Use "today", "tomorrow", or specific dates
-• Mention child names for targeted questions
-• Follow-up questions maintain context for 10 minutes
-""";
-    }
-
-    private string GetDanishHelpMessage()
-    {
-        return """
-📚 *AulaBot Kommandoer & Brug*
-
-*🤖 Interaktive Spørgsmål:*
-Spørg mig om hvad som helst vedrørende dine børns skoleaktiviteter på naturligt sprog:
-• "Hvad skal Søren i dag?"
-• "Har Hans lektier i morgen?"
-• "Hvilke aktiviteter er planlagt denne uge?"
-
-*⏰ Påmindelseskommandoer:*
-• `husk mig i morgen kl 8:00 at Hans har Haver til maver`
-• `husk mig 25/12 kl 7:30 at julefrokost`
-• `vis påmindelser` - Vis alle påmindelser
-• `slet påmindelse 1` - Slet påmindelse med ID 1
-
-*📅 Automatiske Funktioner:*
-• Ugebreve postes hver søndag kl. 16:00
-• Morgenpåmindelser sendes når planlagt
-• Genforøgelseslogik for manglende indhold
-
-*💬 Sprogunderstøttelse:*
-Stil spørgsmål på engelsk eller dansk - jeg svarer på samme sprog!
-
-*ℹ️ Tips:*
-• Brug "i dag", "i morgen", eller specifikke datoer
-• Nævn børnenes navne for målrettede spørgsmål
-• Opfølgningsspørgsmål bevarer kontekst i 10 minutter
-""";
-    }
-
-    // Reminder functionality removed - dead code eliminated
 
 
 

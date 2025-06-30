@@ -65,7 +65,8 @@ public class SlackMessageHandler
             string response = await _agentService.ProcessQueryWithToolsAsync(text, contextKey, ChatInterface.Slack);
 
             // Update conversation context
-            UpdateConversationContext(childName, false, false, false);
+            var (isAboutToday, isAboutTomorrow, isAboutHomework) = ExtractContextFlags(text);
+            UpdateConversationContext(childName, isAboutToday, isAboutTomorrow, isAboutHomework);
 
             // Send response to Slack
             await SendMessageToSlack(channel, response, threadTs);
@@ -99,8 +100,6 @@ public class SlackMessageHandler
         var json = JsonSerializer.Serialize(payload);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        _httpClient.DefaultRequestHeaders.Clear();
-        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_config.Slack.ApiToken}");
 
         try
         {
@@ -262,5 +261,14 @@ public class SlackMessageHandler
         _conversationContext.Timestamp = DateTime.Now;
 
         _logger.LogInformation("Updated conversation context: {Context}", _conversationContext);
+    }
+
+    private (bool isAboutToday, bool isAboutTomorrow, bool isAboutHomework) ExtractContextFlags(string text)
+    {
+        var lowerText = text.ToLowerInvariant();
+        bool isAboutToday = lowerText.Contains("today") || lowerText.Contains("i dag");
+        bool isAboutTomorrow = lowerText.Contains("tomorrow") || lowerText.Contains("i morgen");
+        bool isAboutHomework = lowerText.Contains("homework") || lowerText.Contains("lektier");
+        return (isAboutToday, isAboutTomorrow, isAboutHomework);
     }
 }

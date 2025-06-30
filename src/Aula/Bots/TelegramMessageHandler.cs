@@ -150,11 +150,6 @@ Jeg kan hjælpe dig med information om dine børns skoleaktiviteter fra Aula.
 • Brug naturligt sprog - ingen særlige kommandoer nødvendige";
     }
 
-    private bool IsReminderCommand(string messageText)
-    {
-        var lowerText = messageText.ToLowerInvariant();
-        return lowerText.Contains("remind") || lowerText.Contains("påmind");
-    }
 
     private string? ExtractChildNameFromText(string text)
     {

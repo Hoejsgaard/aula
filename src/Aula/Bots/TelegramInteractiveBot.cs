@@ -293,41 +293,5 @@ public class TelegramInteractiveBot
         return Convert.ToBase64String(bytes);
     }
 
-    private string GetDanishDayName(DayOfWeek dayOfWeek)
-    {
-        return dayOfWeek switch
-        {
-            DayOfWeek.Monday => "mandag",
-            DayOfWeek.Tuesday => "tirsdag",
-            DayOfWeek.Wednesday => "onsdag",
-            DayOfWeek.Thursday => "torsdag",
-            DayOfWeek.Friday => "fredag",
-            DayOfWeek.Saturday => "lørdag",
-            DayOfWeek.Sunday => "søndag",
-            _ => "ukendt dag"
-        };
-    }
 
-    private bool ContainsRelativeTimeReference(string text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return false;
-        }
-
-        text = text.ToLowerInvariant();
-
-        // Check for common time references in Danish and English
-        return text.Contains("i dag") || text.Contains("i morgen") || text.Contains("i går") ||
-               text.Contains("today") || text.Contains("tomorrow") || text.Contains("yesterday") ||
-               text.Contains("denne uge") || text.Contains("this week") ||
-               text.Contains("næste uge") || text.Contains("next week") ||
-               text.Contains("mandag") || text.Contains("monday") ||
-               text.Contains("tirsdag") || text.Contains("tuesday") ||
-               text.Contains("onsdag") || text.Contains("wednesday") ||
-               text.Contains("torsdag") || text.Contains("thursday") ||
-               text.Contains("fredag") || text.Contains("friday") ||
-               text.Contains("lørdag") || text.Contains("saturday") ||
-               text.Contains("søndag") || text.Contains("sunday");
-    }
 }

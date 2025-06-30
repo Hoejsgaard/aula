@@ -82,8 +82,6 @@ public class OpenAiService : IOpenAiService
 
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
         var (childName, className, weekNumber) = ExtractWeekLetterMetadata(weekLetter);
-        if (weekLetter["class"] != null) className = weekLetter["class"]?.ToString() ?? "unknown";
-        if (weekLetter["week"] != null) weekNumber = weekLetter["week"]?.ToString() ?? "unknown";
 
         var messages = new List<ChatMessage>
         {
@@ -320,8 +318,6 @@ public class OpenAiService : IOpenAiService
 
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
         var (childName, className, weekNumber) = ExtractWeekLetterMetadata(weekLetter);
-        if (weekLetter["class"] != null) className = weekLetter["class"]?.ToString() ?? "unknown";
-        if (weekLetter["week"] != null) weekNumber = weekLetter["week"]?.ToString() ?? "unknown";
 
         var messages = new List<ChatMessage>
         {
