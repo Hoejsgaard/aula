@@ -49,13 +49,17 @@ public class SlackInteractiveBot : IDisposable
         IAgentService agentService,
         Config config,
         ILoggerFactory loggerFactory,
-        ISupabaseService supabaseService)
+        ISupabaseService supabaseService,
+        HttpClient? httpClient = null)
     {
         _agentService = agentService ?? throw new ArgumentNullException(nameof(agentService));
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<SlackInteractiveBot>();
-        _httpClient = new HttpClient();
-        _httpClient.Timeout = TimeSpan.FromSeconds(30); // Add 30 second timeout
+        _httpClient = httpClient ?? new HttpClient();
+        if (httpClient == null)
+        {
+            _httpClient.Timeout = TimeSpan.FromSeconds(30); // Add 30 second timeout
+        }
         _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
         _childrenByName = _config.Children.ToDictionary(
             c => c.FirstName.ToLowerInvariant(),

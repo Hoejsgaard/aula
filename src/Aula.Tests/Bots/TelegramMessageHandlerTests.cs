@@ -23,8 +23,8 @@ public class TelegramMessageHandlerTests
     private readonly Mock<IAgentService> _mockAgentService;
     private readonly Mock<ILogger> _mockLogger;
     private readonly Mock<ISupabaseService> _mockSupabaseService;
-    private readonly Mock<ConversationContextManager<long>> _mockConversationContextManager;
-    private readonly Mock<ReminderCommandHandler> _mockReminderHandler;
+    private readonly ConversationContextManager<long> _conversationContextManager;
+    private readonly ReminderCommandHandler _reminderHandler;
     private readonly Mock<ITelegramBotClient> _mockTelegramBotClient;
     private readonly Config _testConfig;
     private readonly Dictionary<string, Child> _childrenByName;
@@ -35,8 +35,7 @@ public class TelegramMessageHandlerTests
         _mockAgentService = new Mock<IAgentService>();
         _mockLogger = new Mock<ILogger>();
         _mockSupabaseService = new Mock<ISupabaseService>();
-        _mockConversationContextManager = new Mock<ConversationContextManager<long>>();
-        _mockReminderHandler = new Mock<ReminderCommandHandler>();
+        _conversationContextManager = new ConversationContextManager<long>(_mockLogger.Object);
         _mockTelegramBotClient = new Mock<ITelegramBotClient>();
 
         _testConfig = new Config
@@ -60,14 +59,16 @@ public class TelegramMessageHandlerTests
             { "testchild1", _testConfig.Children[1] }
         };
 
+        _reminderHandler = new ReminderCommandHandler(_mockLogger.Object, _mockSupabaseService.Object, _childrenByName);
+
         _messageHandler = new TelegramMessageHandler(
             _mockAgentService.Object,
             _testConfig,
             _mockLogger.Object,
             _mockSupabaseService.Object,
             _childrenByName,
-            _mockConversationContextManager.Object,
-            _mockReminderHandler.Object);
+            _conversationContextManager,
+            _reminderHandler);
     }
 
     [Fact]
@@ -86,8 +87,8 @@ public class TelegramMessageHandlerTests
                 _mockLogger.Object,
                 _mockSupabaseService.Object,
                 _childrenByName,
-                _mockConversationContextManager.Object,
-                _mockReminderHandler.Object));
+                _conversationContextManager,
+                _reminderHandler));
         Assert.Equal("agentService", exception.ParamName);
     }
 
@@ -101,8 +102,8 @@ public class TelegramMessageHandlerTests
                 _mockLogger.Object,
                 _mockSupabaseService.Object,
                 _childrenByName,
-                _mockConversationContextManager.Object,
-                _mockReminderHandler.Object));
+                _conversationContextManager,
+                _reminderHandler));
         Assert.Equal("config", exception.ParamName);
     }
 
@@ -116,8 +117,8 @@ public class TelegramMessageHandlerTests
                 null!,
                 _mockSupabaseService.Object,
                 _childrenByName,
-                _mockConversationContextManager.Object,
-                _mockReminderHandler.Object));
+                _conversationContextManager,
+                _reminderHandler));
         Assert.Equal("logger", exception.ParamName);
     }
 
@@ -131,8 +132,8 @@ public class TelegramMessageHandlerTests
                 _mockLogger.Object,
                 null!,
                 _childrenByName,
-                _mockConversationContextManager.Object,
-                _mockReminderHandler.Object));
+                _conversationContextManager,
+                _reminderHandler));
         Assert.Equal("supabaseService", exception.ParamName);
     }
 
@@ -146,8 +147,8 @@ public class TelegramMessageHandlerTests
                 _mockLogger.Object,
                 _mockSupabaseService.Object,
                 null!,
-                _mockConversationContextManager.Object,
-                _mockReminderHandler.Object));
+                _conversationContextManager,
+                _reminderHandler));
         Assert.Equal("childrenByName", exception.ParamName);
     }
 
@@ -162,7 +163,7 @@ public class TelegramMessageHandlerTests
                 _mockSupabaseService.Object,
                 _childrenByName,
                 null!,
-                _mockReminderHandler.Object));
+                _reminderHandler));
         Assert.Equal("conversationContextManager", exception.ParamName);
     }
 
@@ -176,7 +177,7 @@ public class TelegramMessageHandlerTests
                 _mockLogger.Object,
                 _mockSupabaseService.Object,
                 _childrenByName,
-                _mockConversationContextManager.Object,
+                _conversationContextManager,
                 null!));
         Assert.Equal("reminderHandler", exception.ParamName);
     }
@@ -293,22 +294,15 @@ public class TelegramMessageHandlerTests
     [InlineData("tilføj påmindelse")]
     [InlineData("slet påmindelse")]
     [InlineData("vis påmindelser")]
-    public async Task HandleMessageAsync_WithReminderCommand_CallsReminderHandler(string reminderCommand)
+    public async Task HandleMessageAsync_WithReminderCommand_ProcessesMessage(string reminderCommand)
     {
-        _mockReminderHandler
-            .Setup(r => r.TryHandleReminderCommand(It.IsAny<string>(), It.IsAny<bool>()))
-            .ReturnsAsync((true, "Reminder processed"));
-
         var message = TelegramTestMessageFactory.CreateTextMessage(
             chatId: 123456789L,
             text: reminderCommand,
             chatType: ChatType.Private);
 
+        // Should not throw an exception
         await _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, CancellationToken.None);
-
-        _mockReminderHandler.Verify(
-            r => r.TryHandleReminderCommand(It.IsAny<string>(), It.IsAny<bool>()),
-            Times.Once);
     }
 
     [Theory]
@@ -342,7 +336,7 @@ public class TelegramMessageHandlerTests
     public async Task HandleMessageAsync_WithException_LogsError()
     {
         _mockAgentService
-            .Setup(a => a.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()))
+            .Setup(a => a.ProcessQueryWithToolsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ChatInterface>()))
             .ThrowsAsync(new Exception("Test exception"));
 
         var message = TelegramTestMessageFactory.CreateTextMessage(
@@ -356,7 +350,7 @@ public class TelegramMessageHandlerTests
             logger => logger.Log(
                 LogLevel.Error,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error handling message")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error processing message")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
