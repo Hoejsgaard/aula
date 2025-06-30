@@ -4,7 +4,7 @@ using Aula.Configuration;
 using ConfigSlack = Aula.Configuration.Slack;
 using ConfigTelegram = Aula.Configuration.Telegram;
 
-namespace Aula.Tests;
+namespace Aula.Tests.Configuration;
 
 public class ConfigurationTests
 {

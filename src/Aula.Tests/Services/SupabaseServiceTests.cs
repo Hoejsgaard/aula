@@ -4,7 +4,7 @@ using Aula.Configuration;
 using Aula.Services;
 using ConfigSupabase = Aula.Configuration.Supabase;
 
-namespace Aula.Tests;
+namespace Aula.Tests.Services;
 
 public class SupabaseServiceTests
 {

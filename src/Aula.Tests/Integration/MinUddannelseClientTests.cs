@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq;
 using Aula.Integration;
 using Aula.Configuration;
 
-namespace Aula.Tests;
+namespace Aula.Tests.Integration;
 
 public class MinUddannelseClientTests
 {

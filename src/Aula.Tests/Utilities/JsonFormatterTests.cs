@@ -1,7 +1,7 @@
 using Xunit;
 using Aula.Utilities;
 
-namespace Aula.Tests;
+namespace Aula.Tests.Utilities;
 
 public class JsonFormatterTests
 {

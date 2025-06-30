@@ -10,7 +10,7 @@ using Aula.Utilities;
 using System;
 using System.Linq;
 
-namespace Aula.Tests;
+namespace Aula.Tests.Services;
 
 public class OpenAiServiceTests
 {

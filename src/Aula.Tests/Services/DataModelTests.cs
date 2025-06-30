@@ -2,7 +2,7 @@ using Aula.Configuration;
 using ConfigChild = Aula.Configuration.Child;
 using Aula.Services;
 
-namespace Aula.Tests;
+namespace Aula.Tests.Services;
 
 public class DataModelTests
 {
