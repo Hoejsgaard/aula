@@ -202,7 +202,11 @@ public class JsonFormatterTests
     public void Prettify_WithIncompleteJson_ThrowsException(string incompleteJson)
     {
         // Act & Assert
-        Assert.ThrowsAny<Exception>(() => JsonFormatter.Prettify(incompleteJson));
+        var exception = Assert.ThrowsAny<Exception>(() => JsonFormatter.Prettify(incompleteJson));
+        Assert.True(exception is Newtonsoft.Json.JsonException ||
+                   exception is Newtonsoft.Json.JsonReaderException ||
+                   exception is Newtonsoft.Json.JsonWriterException ||
+                   exception is Newtonsoft.Json.JsonSerializationException);
     }
 
     [Fact]

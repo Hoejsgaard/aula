@@ -21,9 +21,12 @@ public class SlackBot
 
     public Task<bool> PushWeekLetter(JObject weekLetter)
     {
+        if (weekLetter == null)
+            return Task.FromResult(false);
+
         var markdown =
-            _html2MarkdownConverter.Convert(weekLetter["ugebreve"]?[0]?["indhold"]?.ToString().Replace("**", "*") ??
-                                            "");
+            _html2MarkdownConverter.Convert(weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "")
+                .Replace("**", "*");
 
         var message = new SlackMessage
         {

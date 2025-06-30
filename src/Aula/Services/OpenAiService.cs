@@ -6,6 +6,7 @@ using OpenAI.ObjectModels.ResponseModels;
 using OpenAI.Managers;
 using OpenAI;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
@@ -21,8 +22,8 @@ public class OpenAiService : IOpenAiService
     private readonly OpenAIService _openAiClient;
     private readonly ILogger _logger;
     private readonly AiToolsManager _aiToolsManager;
-    private readonly Dictionary<string, List<ChatMessage>> _conversationHistory = new();
-    private readonly Dictionary<string, string> _currentChildContext = new();
+    private readonly ConcurrentDictionary<string, List<ChatMessage>> _conversationHistory = new();
+    private readonly ConcurrentDictionary<string, string> _currentChildContext = new();
 
     public OpenAiService(string apiKey, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager)
     {
@@ -453,8 +454,8 @@ Current day context: Today is {DateTime.Now.ToString("dddd, MMMM dd, yyyy")}";
         }
         else if (_conversationHistory.ContainsKey(contextKey))
         {
-            _conversationHistory.Remove(contextKey);
-            _currentChildContext.Remove(contextKey);
+            _conversationHistory.TryRemove(contextKey, out _);
+            _currentChildContext.TryRemove(contextKey, out _);
             _logger.LogInformation("Cleared conversation history and child context for {ContextKey}", contextKey);
         }
     }

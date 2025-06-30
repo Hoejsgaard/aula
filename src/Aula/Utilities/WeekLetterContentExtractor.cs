@@ -9,7 +9,8 @@ public static class WeekLetterContentExtractor
     {
         try
         {
-            var content = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
+            var ugebreve = weekLetter["ugebreve"] as JArray;
+            var content = (ugebreve?.Count > 0 ? ugebreve[0]?["indhold"]?.ToString() : null) ?? "";
 
             if (string.IsNullOrEmpty(content))
             {

@@ -7,15 +7,15 @@ namespace Aula.Tools;
 
 public class AiToolsManager
 {
-    private readonly ISupabaseService supabaseService;
-    private readonly IDataService dataService;
-    private readonly ILogger logger;
+    private readonly ISupabaseService _supabaseService;
+    private readonly IDataService _dataService;
+    private readonly ILogger _logger;
 
     public AiToolsManager(ISupabaseService supabaseService, IDataService dataService, ILoggerFactory loggerFactory)
     {
-        this.supabaseService = supabaseService;
-        this.dataService = dataService;
-        logger = loggerFactory.CreateLogger<AiToolsManager>();
+        _supabaseService = supabaseService;
+        _dataService = dataService;
+        _logger = loggerFactory.CreateLogger<AiToolsManager>();
     }
 
     public async Task<string> CreateReminderAsync(string description, string dateTime, string? childName = null)
@@ -30,16 +30,16 @@ public class AiToolsManager
             var date = DateOnly.FromDateTime(parsedDateTime);
             var time = TimeOnly.FromDateTime(parsedDateTime);
 
-            var reminderId = await supabaseService.AddReminderAsync(description, date, time, childName);
+            var reminderId = await _supabaseService.AddReminderAsync(description, date, time, childName);
 
             var childInfo = string.IsNullOrEmpty(childName) ? "" : $" for {childName}";
-            logger.LogInformation("Created reminder: {Description} at {DateTime}{ChildInfo}", description, parsedDateTime, childInfo);
+            _logger.LogInformation("Created reminder: {Description} at {DateTime}{ChildInfo}", description, parsedDateTime, childInfo);
 
             return $"✅ Reminder created: '{description}' for {parsedDateTime:yyyy-MM-dd HH:mm}{childInfo}";
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to create reminder");
+            _logger.LogError(ex, "Failed to create reminder");
             return "❌ Failed to create reminder. Please try again.";
         }
     }
@@ -48,7 +48,7 @@ public class AiToolsManager
     {
         try
         {
-            var reminders = await supabaseService.GetAllRemindersAsync();
+            var reminders = await _supabaseService.GetAllRemindersAsync();
 
             if (!string.IsNullOrEmpty(childName))
             {
@@ -75,7 +75,7 @@ public class AiToolsManager
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to list reminders");
+            _logger.LogError(ex, "Failed to list reminders");
             return "❌ Failed to retrieve reminders. Please try again.";
         }
     }
@@ -84,7 +84,7 @@ public class AiToolsManager
     {
         try
         {
-            var reminders = await supabaseService.GetAllRemindersAsync();
+            var reminders = await _supabaseService.GetAllRemindersAsync();
 
             if (reminderNumber < 1 || reminderNumber > reminders.Count)
             {
@@ -92,14 +92,14 @@ public class AiToolsManager
             }
 
             var reminderToDelete = reminders.OrderBy(r => r.RemindDate).ThenBy(r => r.RemindTime).ElementAt(reminderNumber - 1);
-            await supabaseService.DeleteReminderAsync(reminderToDelete.Id);
+            await _supabaseService.DeleteReminderAsync(reminderToDelete.Id);
 
-            logger.LogInformation("Deleted reminder: {Text}", reminderToDelete.Text);
+            _logger.LogInformation("Deleted reminder: {Text}", reminderToDelete.Text);
             return $"✅ Deleted reminder: '{reminderToDelete.Text}'";
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to delete reminder");
+            _logger.LogError(ex, "Failed to delete reminder");
             return "❌ Failed to delete reminder. Please try again.";
         }
     }
@@ -108,7 +108,7 @@ public class AiToolsManager
     {
         try
         {
-            var allChildren = dataService.GetChildren();
+            var allChildren = _dataService.GetChildren();
             var children = string.IsNullOrEmpty(childName)
                 ? allChildren
                 : allChildren.Where(c => $"{c.FirstName} {c.LastName}".Contains(childName, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -121,7 +121,7 @@ public class AiToolsManager
             var weekLetterSummaries = new List<string>();
             foreach (var child in children)
             {
-                var weekLetter = dataService.GetWeekLetter(child);
+                var weekLetter = _dataService.GetWeekLetter(child);
                 if (weekLetter != null)
                 {
                     var summary = ExtractSummaryFromWeekLetter(weekLetter);
@@ -137,7 +137,7 @@ public class AiToolsManager
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get week letters");
+            _logger.LogError(ex, "Failed to get week letters");
             return "❌ Failed to retrieve week letters. Please try again.";
         }
     }
@@ -147,7 +147,7 @@ public class AiToolsManager
         try
         {
             var targetDate = string.IsNullOrEmpty(date) ? DateTime.Today : DateTime.Parse(date);
-            var child = dataService.GetChildren().FirstOrDefault(c =>
+            var child = _dataService.GetChildren().FirstOrDefault(c =>
                 $"{c.FirstName} {c.LastName}".Contains(childName, StringComparison.OrdinalIgnoreCase));
 
             if (child == null)
@@ -155,7 +155,7 @@ public class AiToolsManager
                 return $"❌ Child '{childName}' not found.";
             }
 
-            var weekLetter = dataService.GetWeekLetter(child);
+            var weekLetter = _dataService.GetWeekLetter(child);
             if (weekLetter == null)
             {
                 return $"📝 No week letter available for {child.FirstName} {child.LastName}.";
@@ -181,7 +181,7 @@ public class AiToolsManager
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to get child activities");
+            _logger.LogError(ex, "Failed to get child activities");
             return "❌ Failed to retrieve activities. Please try again.";
         }
     }
