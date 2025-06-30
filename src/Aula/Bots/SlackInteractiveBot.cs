@@ -37,37 +37,16 @@ public class SlackInteractiveBot : IDisposable
     private readonly ConcurrentDictionary<string, byte> _sentMessageIds = new ConcurrentDictionary<string, byte>();
     // Keep track of when messages were sent to allow cleanup
     private readonly ConcurrentDictionary<string, DateTime> _messageTimestamps = new ConcurrentDictionary<string, DateTime>();
-    // Language detection arrays removed - GPT handles language detection naturally
-
-    // Conversation context tracking
-    private class ConversationContext
-    {
-        public string? LastChildName { get; set; }
-        public bool WasAboutToday { get; set; }
-        public bool WasAboutTomorrow { get; set; }
-        public bool WasAboutHomework { get; set; }
-        public DateTime Timestamp { get; set; } = DateTime.Now;
-
-        public bool IsStillValid => (DateTime.Now - Timestamp).TotalMinutes < 10; // Context expires after 10 minutes
-
-        public override string ToString()
-        {
-            return $"Child: {LastChildName ?? "none"}, Today: {WasAboutToday}, Tomorrow: {WasAboutTomorrow}, Homework: {WasAboutHomework}, Age: {(DateTime.Now - Timestamp).TotalMinutes:F1} minutes";
-        }
-    }
-
     private ConversationContext _conversationContext = new ConversationContext();
+    // Language detection arrays removed - GPT handles language detection naturally
 
     private void UpdateConversationContext(string? childName, bool isAboutToday, bool isAboutTomorrow, bool isAboutHomework)
     {
-        _conversationContext = new ConversationContext
-        {
-            LastChildName = childName,
-            WasAboutToday = isAboutToday,
-            WasAboutTomorrow = isAboutTomorrow,
-            WasAboutHomework = isAboutHomework,
-            Timestamp = DateTime.Now
-        };
+        _conversationContext.LastChildName = childName;
+        _conversationContext.WasAboutToday = isAboutToday;
+        _conversationContext.WasAboutTomorrow = isAboutTomorrow;
+        _conversationContext.WasAboutHomework = isAboutHomework;
+        _conversationContext.Timestamp = DateTime.Now;
 
         _logger.LogInformation("Updated conversation context: {Context}", _conversationContext);
     }
