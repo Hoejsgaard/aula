@@ -1,0 +1,159 @@
+@coderabbitai[bot] commented on this pull request.
+
+Actionable comments posted: 1
+
+♻️ Duplicate comments (1)
+src/Aula/Services/OpenAiService.cs (1)
+27-27: AI model should be configurable as suggested in previous reviews
+
+The AI model is still hardcoded despite previous feedback. This limits flexibility for different environments and cost optimization.
+
+-private readonly string _aiModel = Models.Gpt_4; // Default model, could be made configurable via constructor
++private readonly string _aiModel;
+
+// In constructor:
++public OpenAiService(string apiKey, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, string model = Models.Gpt_4)
++{
++    // ... existing validation ...
++    _aiModel = model;
++    // ... rest of constructor
++}
+🧹 Nitpick comments (5)
+src/Aula/Bots/SlackInteractiveBot.cs (3)
+106-106: Improve robustness of children name extraction
+
+The current implementation splits on space and takes the first element, which could be fragile if names have unexpected formats.
+
+-string childrenList = string.Join(" og ", _childrenByName.Values.Select(c => c.FirstName.Split(' ')[0]));
++string childrenList = string.Join(" og ", _childrenByName.Values.Select(c => 
++    c.FirstName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? c.FirstName));
+280-284: Use safer string truncation method
+
+The current Substring approach doesn't handle edge cases well and could throw exceptions.
+
+-if (text.Length > 4000)
+-{
+-    _logger.LogWarning("Message truncated due to length: {Length} characters", text.Length);
+-    text = text.Substring(0, 3900) + "... (truncated)";
+-}
++if (text.Length > 4000)
++{
++    _logger.LogWarning("Message truncated due to length: {Length} characters", text.Length);
++    text = text[..3900] + "... (truncated)";
++}
+457-461: Use recommended SHA256 creation pattern
+
+The current pattern doesn't guarantee proper disposal in all scenarios.
+
+-using var sha = System.Security.Cryptography.SHA256.Create();
+-var bytes = System.Text.Encoding.UTF8.GetBytes(input);
+-var hash = sha.ComputeHash(bytes);
+-return Convert.ToBase64String(hash);
++var bytes = System.Text.Encoding.UTF8.GetBytes(input);
++var hash = System.Security.Cryptography.SHA256.HashData(bytes);
++return Convert.ToBase64String(hash);
+src/Aula/Services/OpenAiService.cs (2)
+574-594: Consider extracting complex prompt generation to a utility class
+
+The reminder extraction prompt is quite complex and hardcoded. Consider extracting this to a dedicated prompt utility class for better maintainability.
+
+Create a new utility class:
+
+public static class ReminderExtractionPrompts
+{
+    public static string GetExtractionPrompt(string query, DateTime currentTime)
+    {
+        return $@"Extract reminder details from this natural language request:
+
+Query: ""{query}""
+
+Extract:
+1. Description: What to remind about
+2. DateTime: When to remind (convert to yyyy-MM-dd HH:mm format)
+3. ChildName: If mentioned, the child's name (optional)
+
+For relative dates (current time is {currentTime:yyyy-MM-dd HH:mm}):
+- ""tomorrow"" = {currentTime.Date.AddDays(1):yyyy-MM-dd}
+- ""today"" = {currentTime.Date:yyyy-MM-dd}
+- ""next Monday"" = calculate the next Monday
+- ""in 2 hours"" = {currentTime.AddHours(2):yyyy-MM-dd HH:mm}
+- ""om 2 minutter"" = {currentTime.AddMinutes(2):yyyy-MM-dd HH:mm}
+- ""om 30 minutter"" = {currentTime.AddMinutes(30):yyyy-MM-dd HH:mm}
+
+Respond in this exact format:
+DESCRIPTION: [extracted description]
+DATETIME: [yyyy-MM-dd HH:mm]
+CHILD: [child name or NONE]";
+    }
+}
+617-622: Improve parsing robustness with better error handling
+
+The current parsing logic could fail silently if the AI response format changes. Consider adding validation and fallback handling.
+
+-// Parse the structured response
+-var lines = content.Split('\n');
+-var description = lines.FirstOrDefault(l => l.StartsWith("DESCRIPTION:"))?.Replace("DESCRIPTION:", "").Trim() ?? "Reminder";
+-var dateTime = lines.FirstOrDefault(l => l.StartsWith("DATETIME:"))?.Replace("DATETIME:", "").Trim() ?? DateTime.Now.AddHours(1).ToString("yyyy-MM-dd HH:mm");
+-var childName = lines.FirstOrDefault(l => l.StartsWith("CHILD:"))?.Replace("CHILD:", "").Trim();
++// Parse the structured response with validation
++var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
++var description = ExtractValue(lines, "DESCRIPTION") ?? "Reminder";
++var dateTimeStr = ExtractValue(lines, "DATETIME") ?? DateTime.Now.AddHours(1).ToString("yyyy-MM-dd HH:mm");
++var childName = ExtractValue(lines, "CHILD");
+
++// Validate datetime format
++if (!DateTime.TryParseExact(dateTimeStr, "yyyy-MM-dd HH:mm", null, DateTimeStyles.None, out _))
++{
++    _logger.LogWarning("Invalid datetime format from AI: {DateTime}", dateTimeStr);
++    dateTimeStr = DateTime.Now.AddHours(1).ToString("yyyy-MM-dd HH:mm");
++}
+Add helper method:
+
+private static string? ExtractValue(string[] lines, string prefix)
+{
+    var line = lines.FirstOrDefault(l => l.StartsWith($"{prefix}:"));
+    return line?.Substring(prefix.Length + 1).Trim();
+}
+📜 Review details
+Configuration used: CodeRabbit UI
+Review profile: CHILL
+Plan: Pro
+
+📥 Commits
+Reviewing files that changed from the base of the PR and between 7d756eb and 0a8e4ef.
+
+📒 Files selected for processing (3)
+src/Aula/Bots/SlackInteractiveBot.cs (1 hunks)
+src/Aula/Services/OpenAiService.cs (1 hunks)
+src/Aula/Utilities/IntentAnalysisPrompts.cs (1 hunks)
+🔇 Additional comments (1)
+src/Aula/Utilities/IntentAnalysisPrompts.cs (1)
+1-42: LGTM - Well-structured intent analysis utility
+
+The class provides a clean abstraction for AI intent analysis with good bilingual support. The prompt structure is well-defined and the examples cover the main use cases effectively.
+
+In src/Aula/Bots/SlackInteractiveBot.cs:
+
+> +        _httpClient = new HttpClient();
++        _httpClient.Timeout = TimeSpan.FromSeconds(30); // Add 30 second timeout
+🛠️ Refactor suggestion
+
+Consider using IHttpClientFactory for better resource management
+
+Creating HttpClient instances directly can lead to socket exhaustion issues. Consider injecting IHttpClientFactory or a named HttpClient instead.
+
+-_httpClient = new HttpClient();
+-_httpClient.Timeout = TimeSpan.FromSeconds(30); // Add 30 second timeout
++// Constructor should accept IHttpClientFactory
++// _httpClient = httpClientFactory.CreateClient("SlackApi");
+Committable suggestion skipped: line range outside the PR's diff.
+
+🤖 Prompt for AI Agents
+In src/Aula/Bots/SlackInteractiveBot.cs around lines 57 to 58, the HttpClient is
+being instantiated directly, which can cause socket exhaustion. Refactor the
+code to inject an IHttpClientFactory into the class and use it to create the
+HttpClient instance. This improves resource management and avoids socket
+exhaustion issues.
+—
+Reply to this email directly, view it on GitHub, or unsubscribe.
+You are receiving this because you authored the thread.
