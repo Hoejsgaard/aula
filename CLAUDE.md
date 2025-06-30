@@ -9,7 +9,7 @@ This file provides guidance for Claude Code (claude.ai/code) when working with c
 # Build the solution
 dotnet build src/Aula.sln
 
-# Run tests
+# Run tests (270 tests, 26% coverage)
 dotnet test src/Aula.Tests
 
 # Format code
@@ -34,23 +34,25 @@ Do not commit changes unless all commands pass.
 
 ### Project Structure
 - **src/Aula/**: Main console application - fetches data from Aula (Danish school platform) and posts to Slack/Telegram
-- **src/Aula.Tests/**: Unit tests using xUnit and Moq
+- **src/Aula.Tests/**: Unit tests using xUnit and Moq (270 tests, 26% code coverage)
 - **src/Aula.Api/**: Azure Functions API project (separate deployment)
 
 ### Core Components
 - **Program.cs**: Entry point that configures DI, starts interactive bots, and optionally posts weekly letters on startup
 - **AgentService**: Core service that handles Aula login and data retrieval via MinUddannelseClient
 - **SlackInteractiveBot/TelegramInteractiveBot**: Interactive bots that answer questions about children's school activities using OpenAI
-- **OpenAiService**: LLM integration for responding to user queries about school data
-- **DataManager**: Manages children's data and weekly letters
+- **OpenAiService**: LLM integration for responding to user queries about school data (switched to gpt-3.5-turbo for cost optimization)
+- **DataManager**: Manages children's data and weekly letters with 1-hour memory cache
 - **ConversationContextManager**: Handles conversation context for interactive bots
+- **SchedulingService**: Database-driven task scheduling with cron expressions
 
 ### Key Integrations
 - **Aula Platform**: Danish school communication system accessed via UniLogin authentication
-- **Slack**: Webhook posting + interactive bot with Socket Mode
+- **Slack**: Webhook posting + interactive bot with Socket Mode (5-second polling)
 - **Telegram**: Bot API for posting + interactive conversations  
-- **OpenAI**: GPT models for answering questions about school activities
+- **OpenAI**: GPT-3.5-turbo for answering questions about school activities (cost-optimized)
 - **Google Calendar**: Schedule integration via service account
+- **Supabase**: PostgreSQL database for reminders, posted letters, scheduling, and app state
 
 ### Configuration
 Configuration is handled through `appsettings.json` with sections for:
@@ -58,7 +60,10 @@ Configuration is handled through `appsettings.json` with sections for:
 - Slack (webhook URL, bot token, channel settings)
 - Telegram (bot token, channel ID)
 - Google Calendar (service account, calendar IDs per child)
-- OpenAI API settings
+- OpenAI API settings (gpt-3.5-turbo, 2000 max tokens)
+- Supabase database connection
+- Features (preloading, parallel processing, caching)
+- Timers (polling intervals, cleanup schedules)
 
 ## Code Style Rules (from RULES.md)
 
@@ -83,51 +88,158 @@ Configuration is handled through `appsettings.json` with sections for:
 - EnableNETAnalyzers and TreatWarningsAsErrors are enabled
 - Tests use xUnit with Moq for mocking
 
-## Current Development State (as of 2025-06-29)
+## Current Development Roadmap (2025-06-30)
 
-### Recently Completed Code Quality Improvements
-The codebase underwent a comprehensive cleanup focused on eliminating duplicate code and improving testability:
+### Recently Completed (2025-06-29)
+✅ **Code Quality Improvements**: Eliminated duplicate code, improved testability
+✅ **Shared Utilities**: WeekLetterContentExtractor, ReminderCommandHandler, ConversationContextManager
+✅ **OpenAI Cost Optimization**: Switched from GPT-4 to GPT-3.5-turbo (~95% cost reduction)
+✅ **Test Coverage**: Grew from 87 to 270 tests with comprehensive utility testing
 
-#### Shared Utilities Created
-- **WeekLetterContentExtractor**: Static utility for extracting content from week letters (JObject/dynamic)
-- **ReminderCommandHandler**: Consolidated ~220 lines of duplicate reminder code from both interactive bots
-- **ConversationContextManager<TKey>**: Generic conversation context management with expiration logic
-- **IMessageSender**: Interface abstraction with Slack/Telegram implementations
+### Priority Development Tasks
 
-#### Refactoring Completed
-- **OpenAiService.AskQuestionAboutWeekLetterAsync**: Decomposed 120+ line method into 13 focused functions
-- **Dead code removal**: ~200+ lines removed from SlackInteractiveBot, TelegramInteractiveBot
-- **Import cleanup**: Removed unused using statements across all files
+#### 1. Test Infrastructure Restructuring (HIGH PRIORITY)
+**Current State**: 270 tests, 26% coverage, good utility coverage but poor interactive bot coverage
+**Goals**:
+- Restructure test organization to match main project structure
+- Add comprehensive tests for SlackInteractiveBot and TelegramInteractiveBot
+- Improve integration test coverage for core services
+- Target 80%+ code coverage with focus on critical paths
 
-#### Tests Added (202 total tests, up from 87)
-- **WeekLetterContentExtractorTests**: 14 tests covering JSON/dynamic extraction, error handling
-- **ConversationContextTests**: 10 tests covering properties, expiration, ToString formatting  
-- **ConversationContextManagerTests**: 15 tests covering generic operations, lifecycle management
-- **ReminderCommandHandlerTests**: 38 tests covering regex patterns, date parsing, child name extraction
+**Action Items**:
+- Refactor interactive bots to improve testability (reduce constructor dependencies)
+- Remove duplicate ConversationContext classes, use shared ConversationContextManager
+- Extract message handling logic into separate, testable classes
+- Add comprehensive mocking for HTTP clients and external services
 
-### Next Priority: Refactoring Interactive Bots Before Testing
+#### 2. Week Letter Automation Enhancement (HIGH PRIORITY)
+**Current State**: Weekly fetching Sundays at 4 PM, basic scheduling, retry logic
+**Goals**:
+- Implement smart default scheduling (Sunday 4 PM local time if none configured)
+- Add CRUD operations for schedule management via LLM
+- Enhance timing configuration and timezone handling
 
-#### Issues Identified in TelegramInteractiveBot & SlackInteractiveBot
-Both classes have code quality issues that make testing problematic:
+**Action Items**:
+- Add startup schedule initialization if none exists
+- Implement LLM-powered schedule modification commands
+- Add timezone-aware scheduling configuration
+- Improve retry logic with exponential backoff
 
-1. **Duplicate ConversationContext classes** - Should use shared ConversationContextManager
-2. **Manual conversation context management** - Duplicates functionality we already abstracted
-3. **Long constructors with many dependencies** - Hard to mock and test
-4. **Mixed responsibilities** - Bot management, conversation tracking, message handling combined
+#### 3. Crown Jewel Feature: Intelligent Automatic Reminders (HIGH PRIORITY)
+**Vision**: Extract actionable items from week letters and create automatic reminders
+**Examples**:
+- "Light backpack with food only" → Reminder night before
+- "Bikes to destination X" → Morning reminder to check bike/helmet
+- "Special clothing needed" → Reminder to prepare items
+- "Permission slip due" → Multiple reminders until completed
 
-#### Recommended Refactoring Approach
-1. **Remove duplicate ConversationContext classes** and use ConversationContextManager<long> for Telegram, ConversationContextManager<string> for Slack
-2. **Extract message handling logic** into separate, testable classes
-3. **Simplify constructors** by reducing direct dependencies
-4. **Improve separation of concerns** between bot lifecycle and message processing
+**Implementation Plan**:
+- Extend OpenAI integration with specialized reminder extraction prompts
+- Create structured reminder templates for common school scenarios
+- Add automatic reminder scheduling based on week letter content
+- Implement smart timing (night before, morning of, etc.)
+- Add parent feedback loop for reminder effectiveness
 
-#### After Refactoring: Add Tests
-Once refactored, create comprehensive tests for:
-- **TelegramInteractiveBot**: Message handling, conversation context, command processing
-- **SlackInteractiveBot**: Similar coverage plus Socket Mode polling logic  
-- **OpenAiService**: Improve existing tests with proper HTTP client mocking
+#### 4. Channel Architecture Modernization (MEDIUM PRIORITY)
+**Current State**: Hardcoded Slack and Telegram implementations
+**Goals**:
+- Abstract channels as configurable set rather than two hardcoded options
+- Enable easy addition of new channels (Discord, Teams, email, etc.)
+- Standardize message handling and formatting
 
-### Development Philosophy
+**Action Items**:
+- Create IChannel interface with standardized methods
+- Implement ChannelManager for multi-channel coordination
+- Refactor configuration to support dynamic channel sets
+- Abstract message formatting and interactive capabilities
+
+#### 5. Configuration Restructuring (MEDIUM PRIORITY)
+**Goals**:
+- Move children under MinUddannelse configuration section
+- Improve configuration validation and error handling
+- Add configuration migration support
+
+**Action Items**:
+- Restructure appsettings.json schema
+- Move `Children` array under `MinUddannelse` section  
+- Add configuration validation at startup
+- Update configuration classes and dependency injection
+
+#### 6. Calendar Integration Testing & Enhancement (MEDIUM PRIORITY)
+**Current State**: Google Calendar integration present but untested since refactoring
+**Goals**:
+- Verify calendar functionality works with current architecture
+- Enhance calendar integration with reminder synchronization
+- Update documentation and configuration examples
+
+**Action Items**:
+- Test current Google Calendar service integration
+- Add calendar sync for automatic reminders
+- Create calendar integration tests
+- Document setup process and troubleshooting
+
+#### 7. Documentation & Infrastructure (LOW PRIORITY)
+**Goals**:
+- Update Supabase documentation to match current schema
+- Improve setup documentation and examples
+- Add architecture diagrams and flow charts
+
+**Action Items**:
+- Document current Supabase table schema and usage
+- Create setup guide for new developers
+- Add troubleshooting guide for common issues
+- Document the crown jewel automatic reminder feature
+
+## Development Philosophy
+
+### Testing Strategy
 - **Refactor first, test afterwards** - Never compromise code quality by forcing tests onto problematic code
 - **Focus on shared utilities** - Extract common patterns before duplicating test code
 - **Comprehensive test coverage** - Aim for edge cases, error handling, and proper mocking
+- **Integration testing** - Test critical paths end-to-end
+
+### Architecture Principles
+- **Shared abstractions** - Use interfaces and dependency injection consistently
+- **Configuration-driven** - Make behavior configurable rather than hardcoded
+- **Fail gracefully** - Handle external service failures without crashing
+- **Cost-conscious** - Optimize expensive operations (OpenAI calls, database queries)
+
+### AI Integration Best Practices
+- **Cost optimization** - Use appropriate model for task complexity
+- **Token management** - Implement conversation trimming and caching
+- **Multi-language** - Support both English and Danish interactions
+- **Structured prompts** - Use templated, efficient prompt construction
+- **Context preservation** - Maintain conversation history intelligently
+
+## Current Feature Status
+
+### ✅ Fully Implemented
+- Week letter fetching and posting to channels
+- Interactive Q&A about school activities
+- Manual reminder commands (add/list/delete)
+- Conversation context management
+- Multi-child support with name-based lookups
+- Content deduplication and caching
+- Database-driven scheduling
+- Cost-optimized OpenAI integration
+
+### 🚧 In Progress  
+- Test coverage improvements
+- Interactive bot refactoring for better testability
+
+### 📋 Planned
+- Intelligent automatic reminder extraction from week letters
+- Channel architecture abstraction
+- Configuration restructuring
+- Enhanced calendar integration
+- Comprehensive documentation updates
+
+### 🎯 Vision: The Perfect School Assistant
+The end goal is an AI-powered family assistant that:
+- Automatically extracts and schedules reminders from school communications
+- Provides intelligent, contextual responses about children's activities
+- Seamlessly integrates with family calendars and communication channels
+- Learns from family patterns to provide increasingly helpful automation
+- Reduces mental load on parents while ensuring nothing important is missed
+
+This system should feel like having a highly organized, never-forgetting family assistant that understands the complexities of school life and family logistics.
