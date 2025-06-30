@@ -330,70 +330,98 @@ public class SchedulingService : ISchedulingService
 
     private async Task CheckAndPostWeekLetter(Child child, ScheduledTask task)
     {
+        var (weekNumber, year) = GetCurrentWeekAndYear();
+
         try
         {
             _logger.LogInformation("Checking week letter for {ChildName}", child.FirstName);
 
-            var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Now);
-            var year = DateTime.Now.Year;
-
-            // Check if we've already posted this week letter
-            var alreadyPosted = await _supabaseService.HasWeekLetterBeenPostedAsync(child.FirstName, weekNumber, year);
-            if (alreadyPosted)
-            {
-                _logger.LogInformation("Week letter for {ChildName} week {WeekNumber}/{Year} already posted",
-                    child.FirstName, weekNumber, year);
+            if (await IsWeekLetterAlreadyPosted(child.FirstName, weekNumber, year))
                 return;
-            }
 
-            // Try to get the week letter
-            var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
+            var weekLetter = await TryGetWeekLetter(child, weekNumber, year);
             if (weekLetter == null)
-            {
-                _logger.LogWarning("No week letter available for {ChildName}, will retry later", child.FirstName);
-                await _supabaseService.IncrementRetryAttemptAsync(child.FirstName, weekNumber, year);
                 return;
-            }
 
-            // Extract content and compute hash
-            var content = ExtractWeekLetterContent(weekLetter);
-            if (string.IsNullOrEmpty(content))
-            {
-                _logger.LogWarning("Week letter content is empty for {ChildName}", child.FirstName);
-                await _supabaseService.IncrementRetryAttemptAsync(child.FirstName, weekNumber, year);
+            var result = await ValidateAndProcessWeekLetterContent(weekLetter, child.FirstName, weekNumber, year);
+            if (result.content == null)
                 return;
-            }
 
-            var contentHash = ComputeContentHash(content);
-
-            // Check if this exact content was already posted (in case of manual posting)
-            var existingPosts = await _supabaseService.GetAppStateAsync($"last_posted_hash_{child.FirstName}");
-            if (existingPosts == contentHash)
-            {
-                _logger.LogInformation("Week letter content unchanged for {ChildName}, marking as posted", child.FirstName);
-                await _supabaseService.MarkWeekLetterAsPostedAsync(child.FirstName, weekNumber, year, contentHash, true, _config.Telegram.Enabled);
+            if (await IsContentAlreadyPosted(child.FirstName, result.contentHash!, weekNumber, year))
                 return;
-            }
 
-            // Post the week letter
-            await PostWeekLetter(child, weekLetter, content);
-
-            // Mark as posted and store hash
-            await _supabaseService.MarkWeekLetterAsPostedAsync(child.FirstName, weekNumber, year, contentHash, true, _config.Telegram.Enabled);
-            await _supabaseService.SetAppStateAsync($"last_posted_hash_{child.FirstName}", contentHash);
-            await _supabaseService.MarkRetryAsSuccessfulAsync(child.FirstName, weekNumber, year);
+            await PostAndMarkWeekLetter(child, weekLetter, result.content, result.contentHash!, weekNumber, year);
 
             _logger.LogInformation("Successfully posted week letter for {ChildName}", child.FirstName);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing week letter for {ChildName}", child.FirstName);
-
-            // Increment retry count
-            var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Now);
-            var year = DateTime.Now.Year;
             await _supabaseService.IncrementRetryAttemptAsync(child.FirstName, weekNumber, year);
         }
+    }
+
+    private static (int weekNumber, int year) GetCurrentWeekAndYear()
+    {
+        var now = DateTime.Now;
+        return (System.Globalization.ISOWeek.GetWeekOfYear(now), now.Year);
+    }
+
+    private async Task<bool> IsWeekLetterAlreadyPosted(string childName, int weekNumber, int year)
+    {
+        var alreadyPosted = await _supabaseService.HasWeekLetterBeenPostedAsync(childName, weekNumber, year);
+        if (alreadyPosted)
+        {
+            _logger.LogInformation("Week letter for {ChildName} week {WeekNumber}/{Year} already posted",
+                childName, weekNumber, year);
+        }
+        return alreadyPosted;
+    }
+
+    private async Task<dynamic?> TryGetWeekLetter(Child child, int weekNumber, int year)
+    {
+        var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
+        if (weekLetter == null)
+        {
+            _logger.LogWarning("No week letter available for {ChildName}, will retry later", child.FirstName);
+            await _supabaseService.IncrementRetryAttemptAsync(child.FirstName, weekNumber, year);
+        }
+        return weekLetter;
+    }
+
+    private async Task<(string? content, string? contentHash)> ValidateAndProcessWeekLetterContent(dynamic weekLetter, string childName, int weekNumber, int year)
+    {
+        var content = ExtractWeekLetterContent(weekLetter);
+        if (string.IsNullOrEmpty(content))
+        {
+            _logger.LogWarning("Week letter content is empty for {ChildName}", childName);
+            await _supabaseService.IncrementRetryAttemptAsync(childName, weekNumber, year);
+            return (null, null);
+        }
+
+        var contentHash = ComputeContentHash(content);
+        return (content, contentHash);
+    }
+
+    private async Task<bool> IsContentAlreadyPosted(string childName, string contentHash, int weekNumber, int year)
+    {
+        var existingPosts = await _supabaseService.GetAppStateAsync($"last_posted_hash_{childName}");
+        if (existingPosts == contentHash)
+        {
+            _logger.LogInformation("Week letter content unchanged for {ChildName}, marking as posted", childName);
+            await _supabaseService.MarkWeekLetterAsPostedAsync(childName, weekNumber, year, contentHash, true, _config.Telegram.Enabled);
+            return true;
+        }
+        return false;
+    }
+
+    private async Task PostAndMarkWeekLetter(Child child, dynamic weekLetter, string content, string contentHash, int weekNumber, int year)
+    {
+        await PostWeekLetter(child, weekLetter, content);
+
+        await _supabaseService.MarkWeekLetterAsPostedAsync(child.FirstName, weekNumber, year, contentHash, true, _config.Telegram.Enabled);
+        await _supabaseService.SetAppStateAsync($"last_posted_hash_{child.FirstName}", contentHash);
+        await _supabaseService.MarkRetryAsSuccessfulAsync(child.FirstName, weekNumber, year);
     }
 
     private string ExtractWeekLetterContent(dynamic weekLetter)

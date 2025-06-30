@@ -123,87 +123,115 @@ public class TelegramClient
         doc.LoadHtml(html);
 
         // Replace <br> tags with <br/>
-        var brTags = doc.DocumentNode.SelectNodes("//br");
+        var brTags = doc.DocumentNode?.SelectNodes("//br");
         if (brTags != null)
         {
-            foreach (var tag in brTags)
+            foreach (var tag in brTags.ToList())
             {
+                if (tag?.ParentNode == null) continue;
+
                 var parent = tag.ParentNode;
-                if (parent != null)
+                var newNode = HtmlNode.CreateNode("<br/>");
+                if (newNode != null)
                 {
-                    parent.ReplaceChild(HtmlNode.CreateNode("<br/>"), tag);
+                    parent.ReplaceChild(newNode, tag);
                 }
             }
         }
 
         // Replace <div> tags with line breaks
-        var divTags = doc.DocumentNode.SelectNodes("//div");
+        var divTags = doc.DocumentNode?.SelectNodes("//div");
         if (divTags != null)
         {
-            foreach (var tag in divTags)
+            foreach (var tag in divTags.ToList())
             {
+                if (tag?.ParentNode == null) continue;
+
                 // Create a new text node with the inner HTML
-                var innerContent = tag.InnerHtml;
+                var innerContent = tag.InnerHtml ?? string.Empty;
                 var parent = tag.ParentNode;
                 if (parent != null)
                 {
                     // First insert the content
                     var contentNode = HtmlNode.CreateNode(innerContent);
-                    parent.ReplaceChild(contentNode, tag);
+                    if (contentNode != null)
+                    {
+                        parent.ReplaceChild(contentNode, tag);
 
-                    // Then add a line break after it
-                    var brNode = HtmlNode.CreateNode("<br/>");
-                    parent.InsertAfter(brNode, contentNode);
+                        // Then add a line break after it
+                        var brNode = HtmlNode.CreateNode("<br/>");
+                        if (brNode != null)
+                        {
+                            parent.InsertAfter(brNode, contentNode);
+                        }
+                    }
                 }
             }
         }
 
         // Replace <p> tags with line breaks
-        var pTags = doc.DocumentNode.SelectNodes("//p");
+        var pTags = doc.DocumentNode?.SelectNodes("//p");
         if (pTags != null)
         {
-            foreach (var tag in pTags)
+            foreach (var tag in pTags.ToList())
             {
+                if (tag?.ParentNode == null) continue;
+
                 // Create a new text node with the inner HTML
-                var innerContent = tag.InnerHtml;
+                var innerContent = tag.InnerHtml ?? string.Empty;
                 var parent = tag.ParentNode;
                 if (parent != null)
                 {
                     // First insert the content
                     var contentNode = HtmlNode.CreateNode(innerContent);
-                    parent.ReplaceChild(contentNode, tag);
+                    if (contentNode != null)
+                    {
+                        parent.ReplaceChild(contentNode, tag);
 
-                    // Then add two line breaks after it
-                    var br1 = HtmlNode.CreateNode("<br/>");
-                    parent.InsertAfter(br1, contentNode);
-                    var br2 = HtmlNode.CreateNode("<br/>");
-                    parent.InsertAfter(br2, br1);
+                        // Then add two line breaks after it
+                        var br1 = HtmlNode.CreateNode("<br/>");
+                        if (br1 != null)
+                        {
+                            parent.InsertAfter(br1, contentNode);
+                            var br2 = HtmlNode.CreateNode("<br/>");
+                            if (br2 != null)
+                            {
+                                parent.InsertAfter(br2, br1);
+                            }
+                        }
+                    }
                 }
             }
         }
 
         // Convert <strong> to <b>
-        var strongTags = doc.DocumentNode.SelectNodes("//strong");
+        var strongTags = doc.DocumentNode?.SelectNodes("//strong");
         if (strongTags != null)
         {
-            foreach (var tag in strongTags)
+            foreach (var tag in strongTags.ToList())
             {
-                tag.Name = "b";
+                if (tag != null)
+                {
+                    tag.Name = "b";
+                }
             }
         }
 
         // Convert <em> to <i>
-        var emTags = doc.DocumentNode.SelectNodes("//em");
+        var emTags = doc.DocumentNode?.SelectNodes("//em");
         if (emTags != null)
         {
-            foreach (var tag in emTags)
+            foreach (var tag in emTags.ToList())
             {
-                tag.Name = "i";
+                if (tag != null)
+                {
+                    tag.Name = "i";
+                }
             }
         }
 
         // Remove all other unsupported tags but keep their content
-        var allNodes = doc.DocumentNode.SelectNodes("//*");
+        var allNodes = doc.DocumentNode?.SelectNodes("//*");
         if (allNodes != null)
         {
             var supportedTags = new HashSet<string> { "b", "i", "u", "s", "a", "code", "pre", "br" };
@@ -230,7 +258,7 @@ public class TelegramClient
         }
 
         // Get the sanitized HTML
-        var sanitizedHtml = doc.DocumentNode.InnerHtml;
+        var sanitizedHtml = doc.DocumentNode?.InnerHtml ?? string.Empty;
 
         // Fix common HTML entities
         sanitizedHtml = sanitizedHtml

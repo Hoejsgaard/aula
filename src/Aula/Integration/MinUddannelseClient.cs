@@ -111,12 +111,30 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
             throw new Exception("No UserProfile found");
 
         var scriptText = script.InnerText;
-        var startIndex = scriptText.IndexOf("window.__tempcontext__['currentUser'] = ") +
-                         "window.__tempcontext__['currentUser'] = ".Length;
+        if (string.IsNullOrWhiteSpace(scriptText))
+            throw new Exception("Script content is empty");
+
+        var contextStart = "window.__tempcontext__['currentUser'] = ";
+        var startIndex = scriptText.IndexOf(contextStart);
+        if (startIndex == -1)
+            throw new Exception("UserProfile context not found in script");
+
+        startIndex += contextStart.Length;
         var endIndex = scriptText.IndexOf(";", startIndex);
+        if (endIndex == -1 || endIndex <= startIndex)
+            throw new Exception("Invalid UserProfile context format");
 
         var jsonText = scriptText.Substring(startIndex, endIndex - startIndex).Trim();
+        if (string.IsNullOrWhiteSpace(jsonText))
+            throw new Exception("Extracted JSON text is empty");
 
-        return JObject.Parse(jsonText);
+        try
+        {
+            return JObject.Parse(jsonText);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to parse UserProfile JSON: {ex.Message}");
+        }
     }
 }
