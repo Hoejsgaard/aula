@@ -84,11 +84,8 @@ public class Program
             TelegramInteractiveBot? telegramInteractiveBot = null;
             if (config.Telegram.Enabled && !string.IsNullOrEmpty(config.Telegram.Token))
             {
-                telegramInteractiveBot = serviceProvider.GetService<TelegramInteractiveBot>();
-                if (telegramInteractiveBot != null)
-                {
-                    await telegramInteractiveBot.Start();
-                }
+                telegramInteractiveBot = serviceProvider.GetRequiredService<TelegramInteractiveBot>();
+                await telegramInteractiveBot.Start();
             }
 
             // Check if we need to post week letters on startup for either Slack or Telegram
