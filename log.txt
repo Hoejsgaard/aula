@@ -1,0 +1,186 @@
+14:05:14 info: Program[0]
+      Starting aula
+14:05:14 info: Aula.Services.SupabaseService[0]
+      Initializing Supabase connection
+14:05:14 info: Aula.Services.SupabaseService[0]
+      Supabase client initialized successfully
+14:05:16 info: Aula.Services.SupabaseService[0]
+      Supabase connection test successful
+14:05:16 info: Program[0]
+      Supabase connection test successful
+14:05:16 info: Program[0]
+      Preloading week letters for all children
+14:05:16 info: AgentService[0]
+      Logging in to MinUddannelse
+14:05:19 info: AgentService[0]
+      Getting all children
+14:05:19 info: AgentService[0]
+      Found 2 children
+14:05:19 info: AgentService[0]
+      ?? MONITOR: GetWeekLetterAsync for Soren Johannes for date 06/30/2025, useCache: False
+14:05:19 info: AgentService[0]
+      ?? MONITOR: Fetching fresh week letter for Soren Johannes for date 06/30/2025
+14:05:20 info: AgentService[0]
+      ?? MONITOR: Raw week letter structure for Soren Johannes: errorMessage, ugebreve, klasser
+14:05:20 info: AgentService[0]
+      ?? MONITOR: Week letter for Soren Johannes contains 1 ugebreve items, first item has keys: klasseNavn, uge, indhold
+14:05:20 info: AgentService[0]
+      ?? MONITOR: Week letter content length for Soren Johannes: 48 characters
+14:05:20 info: AgentService[0]
+      ?? MONITOR: Week letter content starts with: Der er ikke skrevet nogen ugenoter til denne uge
+14:05:20 info: AgentService[0]
+      ?? MONITOR: Added child name to week letter: Soren Johannes
+14:05:20 info: DataService[0]
+      Cached week letter for Soren Johannes
+14:05:20 info: AgentService[0]
+      ?? MONITOR: Cached week letter for Soren Johannes
+14:05:20 info: Program[0]
+      Preloaded week letter for Soren Johannes
+14:05:20 info: AgentService[0]
+      ?? MONITOR: GetWeekLetterAsync for Hans Martin for date 06/30/2025, useCache: False
+14:05:20 info: AgentService[0]
+      ?? MONITOR: Fetching fresh week letter for Hans Martin for date 06/30/2025
+14:05:20 info: AgentService[0]
+      ?? MONITOR: Raw week letter structure for Hans Martin: errorMessage, ugebreve, klasser
+14:05:20 info: AgentService[0]
+      ?? MONITOR: Week letter for Hans Martin contains 1 ugebreve items, first item has keys: klasseNavn, uge, indhold
+14:05:20 info: AgentService[0]
+      ?? MONITOR: Week letter content length for Hans Martin: 48 characters
+14:05:20 info: AgentService[0]
+      ?? MONITOR: Week letter content starts with: Der er ikke skrevet nogen ugenoter til denne uge
+14:05:20 info: AgentService[0]
+      ?? MONITOR: Added child name to week letter: Hans Martin
+14:05:20 info: DataService[0]
+      Cached week letter for Hans Martin
+14:05:20 info: AgentService[0]
+      ?? MONITOR: Cached week letter for Hans Martin
+14:05:20 info: Program[0]
+      Preloaded week letter for Hans Martin
+14:05:20 info: Program[0]
+      ?? About to start SchedulingService
+14:05:20 info: Program[0]
+      ?? Got SchedulingService instance, calling StartAsync
+14:05:20 info: Aula.Scheduling.SchedulingService[0]
+      Starting scheduling service
+14:05:20 info: Aula.Scheduling.SchedulingService[0]
+      Scheduling service timer started - checking every 10 seconds
+14:05:20 info: Program[0]
+      ?? SchedulingService.StartAsync completed
+14:05:20 info: Aula.Scheduling.SchedulingService[0]
+      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 06/30/2025 14:05:20
+14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
+      Starting Slack polling bot
+14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
+      Initial timestamp set to: 1751285120.000000
+14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
+      Slack polling started - checking every 5 seconds
+14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
+      Slack cleanup timer started - running every 1 hours
+14:05:20 info: Aula.Scheduling.SchedulingService[0]
+      Checking for missed reminders on startup
+14:05:20 info: Aula.Services.SupabaseService[0]
+      Checking for pending reminders. Current UTC: 06/30/2025 12:05:20, Local: 06/30/2025 14:05:20
+14:05:20 info: Aula.Scheduling.SchedulingService[0]
+      ?? Timer fired: Checking scheduled tasks and reminders at 06/30/2025 14:05:20 (UTC: 06/30/2025 12:05:20)
+14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
+      Sending message to Slack
+14:05:20 info: Aula.Scheduling.SchedulingService[0]
+      ?? ExecutePendingReminders called at 06/30/2025 14:05:20 (UTC: 06/30/2025 12:05:20)
+14:05:20 info: Aula.Services.SupabaseService[0]
+      Checking for pending reminders. Current UTC: 06/30/2025 12:05:20, Local: 06/30/2025 14:05:20
+14:05:20 info: Aula.Services.SupabaseService[0]
+      Found 0 pending reminders
+14:05:20 info: Aula.Scheduling.SchedulingService[0]
+      No missed reminders found on startup
+14:05:20 info: Aula.Services.SupabaseService[0]
+      Found 0 pending reminders
+14:05:20 info: Aula.Scheduling.SchedulingService[0]
+      No pending reminders found
+14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
+      Stored sent message ID: 1751285119.563119
+14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
+      Message sent successfully
+14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
+      Slack polling bot started
+14:05:20 info: Program[0]
+      Aula started
+14:05:30 info: Aula.Scheduling.SchedulingService[0]
+      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 06/30/2025 14:05:30
+14:05:30 info: Aula.Scheduling.SchedulingService[0]
+      ?? Timer fired: Checking scheduled tasks and reminders at 06/30/2025 14:05:30 (UTC: 06/30/2025 12:05:30)
+14:05:30 info: Aula.Scheduling.SchedulingService[0]
+      ?? ExecutePendingReminders called at 06/30/2025 14:05:30 (UTC: 06/30/2025 12:05:30)
+14:05:30 info: Aula.Services.SupabaseService[0]
+      Checking for pending reminders. Current UTC: 06/30/2025 12:05:30, Local: 06/30/2025 14:05:30
+14:05:30 info: Aula.Services.SupabaseService[0]
+      Found 0 pending reminders
+14:05:30 info: Aula.Scheduling.SchedulingService[0]
+      No pending reminders found
+14:05:30 info: Aula.Bots.SlackInteractiveBot[0]
+      Found 1 new user messages
+14:05:30 info: Aula.Bots.SlackInteractiveBot[0]
+      Processing Slack message in channel C06CVUAEL82: er der noget ugebrev for Soren?
+14:05:30 info: Aula.Bots.SlackInteractiveBot[0]
+      Found first name in text: soren johannes
+14:05:30 info: AgentService[0]
+      Processing query with tools: er der noget ugebrev for Soren?
+14:05:30 info: OpenAiService[0]
+      Processing query with intelligent tool selection: er der noget ugebrev for Soren?
+14:05:30 info: OpenAiService[0]
+      Starting intent analysis for query: er der noget ugebrev for Soren?
+14:05:30 info: OpenAiService[0]
+      Sending intent analysis request to OpenAI
+14:05:32 info: OpenAiService[0]
+      Intent analysis completed successfully: INFORMATION_QUERY
+14:05:32 info: OpenAiService[0]
+      Intent analysis result: INFORMATION_QUERY
+14:05:32 info: OpenAiService[0]
+      Handling general Aula query: er der noget ugebrev for Soren?
+14:05:32 info: Aula.Bots.SlackInteractiveBot[0]
+      Updated conversation context: Child: soren johannes, Today: False, Tomorrow: False, Homework: False, Age: 0.0 minutes
+14:05:32 info: Aula.Bots.SlackInteractiveBot[0]
+      Message sent successfully to Slack channel C06CVUAEL82
+14:05:32 info: Aula.Bots.SlackInteractiveBot[0]
+      Sent response to Slack channel C06CVUAEL82
+14:05:32 info: Aula.Bots.SlackInteractiveBot[0]
+      Updated last timestamp to 1751285127.604869
+14:05:35 info: Aula.Bots.SlackInteractiveBot[0]
+      Found 1 new user messages
+14:05:35 info: Aula.Bots.SlackInteractiveBot[0]
+      Processing Slack message in channel C06CVUAEL82: hvad skal Soren i dag?
+14:05:35 info: Aula.Bots.SlackInteractiveBot[0]
+      Found first name in text: soren johannes
+14:05:35 info: AgentService[0]
+      Processing query with tools: hvad skal Soren i dag?
+14:05:35 info: OpenAiService[0]
+      Processing query with intelligent tool selection: hvad skal Soren i dag?
+14:05:35 info: OpenAiService[0]
+      Starting intent analysis for query: hvad skal Soren i dag?
+14:05:35 info: OpenAiService[0]
+      Sending intent analysis request to OpenAI
+14:05:36 info: OpenAiService[0]
+      Intent analysis completed successfully: INFORMATION_QUERY
+14:05:36 info: OpenAiService[0]
+      Intent analysis result: INFORMATION_QUERY
+14:05:36 info: OpenAiService[0]
+      Handling general Aula query: hvad skal Soren i dag?
+14:05:36 info: Aula.Bots.SlackInteractiveBot[0]
+      Updated conversation context: Child: soren johannes, Today: True, Tomorrow: False, Homework: False, Age: 0.0 minutes
+14:05:37 info: Aula.Bots.SlackInteractiveBot[0]
+      Message sent successfully to Slack channel C06CVUAEL82
+14:05:37 info: Aula.Bots.SlackInteractiveBot[0]
+      Sent response to Slack channel C06CVUAEL82
+14:05:37 info: Aula.Bots.SlackInteractiveBot[0]
+      Updated last timestamp to 1751285134.012459
+14:05:40 info: Aula.Scheduling.SchedulingService[0]
+      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 06/30/2025 14:05:40
+14:05:40 info: Aula.Scheduling.SchedulingService[0]
+      ?? Timer fired: Checking scheduled tasks and reminders at 06/30/2025 14:05:40 (UTC: 06/30/2025 12:05:40)
+14:05:40 info: Aula.Scheduling.SchedulingService[0]
+      ?? ExecutePendingReminders called at 06/30/2025 14:05:40 (UTC: 06/30/2025 12:05:40)
+14:05:40 info: Aula.Services.SupabaseService[0]
+      Checking for pending reminders. Current UTC: 06/30/2025 12:05:40, Local: 06/30/2025 14:05:40
+14:05:40 info: Aula.Services.SupabaseService[0]
+      Found 0 pending reminders
+14:05:40 info: Aula.Scheduling.SchedulingService[0]
+      No pending reminders found

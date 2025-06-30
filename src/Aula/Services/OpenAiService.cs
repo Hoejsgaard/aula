@@ -656,6 +656,9 @@ Current day context: Today is {DateTime.Now.ToString("dddd, MMMM dd, yyyy")}";
         }
 
         // For general information queries, delegate to the existing week letter system
+        // CRITICAL: Must return "FALLBACK_TO_EXISTING_SYSTEM" to trigger AgentService fallback logic
+        // DO NOT return generic help text here - it causes language mismatch (Danish->English) 
+        // and prevents proper week letter processing
         _logger.LogInformation("Delegating Aula query to existing system: {Query}", query);
         return Task.FromResult("FALLBACK_TO_EXISTING_SYSTEM");
     }
