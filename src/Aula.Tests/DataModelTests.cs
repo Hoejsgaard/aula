@@ -326,10 +326,10 @@ public class DataModelTests
     }
 
     [Fact]
-    public void Child_PropertiesFromConfig_WorkCorrectly()
+    public void ConfigChild_Properties_WorkCorrectly()
     {
         // Arrange & Act
-        var child = new ConfigChild
+        var configChild = new ConfigChild
         {
             FirstName = "Emma",
             LastName = "Wilson",
@@ -338,13 +338,13 @@ public class DataModelTests
         };
 
         // Assert
-        Assert.Equal("Emma", child.FirstName);
-        Assert.Equal("Wilson", child.LastName);
-        Assert.Equal("green", child.Colour);
-        Assert.Equal("emma.wilson@example.com", child.GoogleCalendarId);
+        Assert.Equal("Emma", configChild.FirstName);
+        Assert.Equal("Wilson", configChild.LastName);
+        Assert.Equal("green", configChild.Colour);
+        Assert.Equal("emma.wilson@example.com", configChild.GoogleCalendarId);
 
         // Test full name logic if it exists
-        var expectedFullName = $"{child.FirstName} {child.LastName}";
+        var expectedFullName = $"{configChild.FirstName} {configChild.LastName}";
         Assert.Equal("Emma Wilson", expectedFullName);
     }
 

@@ -156,15 +156,15 @@ public class AiToolsManagerTests
     }
 
     [Fact]
-    public async Task DeleteReminderAsync_WithInvalidId_ReturnsError()
+    public async Task DeleteReminderAsync_WithInvalidReminderNumber_ReturnsError()
     {
         // Arrange
-        var invalidId = 999;
+        var invalidReminderNumber = 999; // 1-based index that doesn't exist in list
         _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
             .ReturnsAsync(new List<Reminder>());
 
         // Act
-        var result = await _aiToolsManager.DeleteReminderAsync(invalidId);
+        var result = await _aiToolsManager.DeleteReminderAsync(invalidReminderNumber);
 
         // Assert
         Assert.Contains("❌ Invalid reminder number", result);

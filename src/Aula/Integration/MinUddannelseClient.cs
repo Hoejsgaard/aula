@@ -31,9 +31,9 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
         var json = await response.Content.ReadAsStringAsync();
 
         var weekLetter = JObject.Parse(json);
-        var weekLettterArray = weekLetter["ugebreve"] as JArray;
+        var weekLetterArray = weekLetter["ugebreve"] as JArray;
 
-        if (weekLettterArray == null || !weekLettterArray.Any())
+        if (weekLetterArray == null || !weekLetterArray.Any())
         {
             var nullObject = new JObject
             {

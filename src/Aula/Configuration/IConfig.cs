@@ -10,4 +10,5 @@ public interface IConfig
     OpenAi OpenAi { get; set; }
     Supabase Supabase { get; set; }
     Features Features { get; set; }
+    Timers Timers { get; set; }
 }

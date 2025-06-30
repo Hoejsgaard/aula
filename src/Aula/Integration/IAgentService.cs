@@ -17,8 +17,8 @@ public interface IAgentService
     Task<JObject> ExtractKeyInformationFromWeekLetterAsync(Child child, DateOnly date, ChatInterface chatInterface = ChatInterface.Slack);
 
     // Child management methods
-    Task<Child?> GetChildByNameAsync(string childName);
-    Task<IEnumerable<Child>> GetAllChildrenAsync();
+    ValueTask<Child?> GetChildByNameAsync(string childName);
+    ValueTask<IEnumerable<Child>> GetAllChildrenAsync();
     Task<string> AskQuestionAboutChildrenAsync(Dictionary<string, JObject> childrenWeekLetters, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack);
     Task<string> ProcessQueryWithToolsAsync(string query, string contextKey, ChatInterface chatInterface = ChatInterface.Slack);
 }

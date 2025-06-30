@@ -182,7 +182,7 @@ public class AgentService : IAgentService
         return await _openAiService.ExtractKeyInformationAsync(weekLetter, chatInterface);
     }
 
-    public Task<Child?> GetChildByNameAsync(string childName)
+    public ValueTask<Child?> GetChildByNameAsync(string childName)
     {
         _logger.LogInformation("Getting child by name: {ChildName}", childName);
         var child = _dataManager.GetChildren()
@@ -197,15 +197,15 @@ public class AgentService : IAgentService
             _logger.LogInformation("Found child: {ChildName}", child.FirstName);
         }
 
-        return Task.FromResult(child);
+        return ValueTask.FromResult(child);
     }
 
-    public Task<IEnumerable<Child>> GetAllChildrenAsync()
+    public ValueTask<IEnumerable<Child>> GetAllChildrenAsync()
     {
         _logger.LogInformation("Getting all children");
         var children = _dataManager.GetChildren();
         _logger.LogInformation("Found {Count} children", children.Count());
-        return Task.FromResult(children);
+        return ValueTask.FromResult(children);
     }
 
     public async Task<string> AskQuestionAboutChildrenAsync(Dictionary<string, JObject> childrenWeekLetters, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack)

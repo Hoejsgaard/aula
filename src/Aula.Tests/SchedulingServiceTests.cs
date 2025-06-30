@@ -115,7 +115,7 @@ public class SchedulingServiceTests
     }
 
     [Fact]
-    public async Task StartAsync_CallsSupabaseServices_VerifyInteractions()
+    public async Task StartAsync_CallsGetPendingRemindersAsync_AtLeastOnce()
     {
         // Arrange
         _mockSupabaseService.Setup(s => s.GetPendingRemindersAsync())
