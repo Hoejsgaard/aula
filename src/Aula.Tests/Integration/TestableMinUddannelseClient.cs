@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using Newtonsoft.Json.Linq;
@@ -57,7 +58,22 @@ public class TestableMinUddannelseClient : IMinUddannelseClient, IDisposable
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
 
-        return JObject.Parse(json);
+        var weekLetter = JObject.Parse(json);
+        var weekLetterArray = weekLetter["ugebreve"] as JArray;
+
+        // Mimic the real MinUddannelseClient behavior for empty arrays
+        if (weekLetterArray == null || !weekLetterArray.Any())
+        {
+            var nullObject = new JObject
+            {
+                ["klasseNavn"] = "N/A",
+                ["uge"] = $"{GetIsoWeekNumber(date)}",
+                ["indhold"] = "Der er ikke skrevet nogen ugenoter til denne uge",
+            };
+            weekLetter["ugebreve"] = new JArray(nullObject);
+        }
+
+        return weekLetter;
     }
 
     public async Task<JObject> GetWeekSchedule(Child child, DateOnly date)
@@ -92,10 +108,10 @@ public class TestableMinUddannelseClient : IMinUddannelseClient, IDisposable
 
     private int GetIsoWeekNumber(DateOnly date)
     {
-        var cultureInfo = System.Globalization.CultureInfo.CurrentCulture;
-        var calendarWeekRule = cultureInfo.DateTimeFormat.CalendarWeekRule;
-        var firstDayOfWeek = cultureInfo.DateTimeFormat.FirstDayOfWeek;
-        return cultureInfo.Calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue), calendarWeekRule, firstDayOfWeek);
+        // ISO 8601 week calculation
+        var dt = date.ToDateTime(TimeOnly.MinValue);
+        var day = (int)System.Globalization.CultureInfo.InvariantCulture.Calendar.GetDayOfWeek(dt);
+        return System.Globalization.CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(dt.AddDays(4 - (day == 0 ? 7 : day)), System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
     }
 
     public void Dispose()

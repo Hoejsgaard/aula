@@ -54,6 +54,13 @@ public class OpenAiService : IOpenAiService
 
     internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, string? model = null)
     {
+        if (openAiClient == null)
+            throw new ArgumentNullException(nameof(openAiClient));
+        if (loggerFactory == null)
+            throw new ArgumentNullException(nameof(loggerFactory));
+        if (aiToolsManager == null)
+            throw new ArgumentNullException(nameof(aiToolsManager));
+
         _openAiClient = openAiClient;
         _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
         _aiToolsManager = aiToolsManager;

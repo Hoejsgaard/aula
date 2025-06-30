@@ -60,7 +60,7 @@ Do not commit changes unless all commands pass.
 - **Supabase**: PostgreSQL database for reminders, posted letters, scheduling, and app state
 
 ### Configuration
-Configuration is handled through `appsettings.json` with sections for:
+Settings are handled through `appsettings.json` with sections for:
 - UniLogin credentials
 - Slack (webhook URL, bot token, channel settings)
 - Telegram (bot token, channel ID)
@@ -168,7 +168,7 @@ Configuration is handled through `appsettings.json` with sections for:
 
 **Action Items**:
 - Create IChannel interface with standardized methods
-- Implement ChannelManager for multi-channel coordination
+- Implement ChannelManager for multichannel coordination
 - Refactor configuration to support dynamic channel sets
 - Abstract message formatting and interactive capabilities
 
