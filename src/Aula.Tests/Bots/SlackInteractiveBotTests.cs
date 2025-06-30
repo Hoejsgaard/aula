@@ -29,6 +29,7 @@ public class SlackInteractiveBotTests : IDisposable
     private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler;
     private readonly HttpClient _httpClient;
     private bool _disposed = false;
+    private const int MaxMessageLength = 5000;
 
     public SlackInteractiveBotTests()
     {
@@ -39,7 +40,7 @@ public class SlackInteractiveBotTests : IDisposable
         _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
 
         _mockLoggerFactory.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
-        
+
         _httpClient = new HttpClient(_mockHttpMessageHandler.Object);
 
         _testConfig = new Config
@@ -157,18 +158,7 @@ public class SlackInteractiveBotTests : IDisposable
     [Fact]
     public async Task SendMessage_WithValidText_SendsSuccessfully()
     {
-        var mockResponse = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new StringContent(JsonConvert.SerializeObject(new { ok = true, ts = "1234567890.123456" }))
-        };
-
-        _mockHttpMessageHandler
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(mockResponse);
+        SetupSuccessfulHttpResponse();
 
         await _slackBot.SendMessage("Test message");
 
@@ -184,19 +174,8 @@ public class SlackInteractiveBotTests : IDisposable
     [Fact]
     public async Task SendMessage_WithLongText_TruncatesMessage()
     {
-        var longMessage = new string('a', 5000);
-        var mockResponse = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new StringContent(JsonConvert.SerializeObject(new { ok = true, ts = "1234567890.123456" }))
-        };
-
-        _mockHttpMessageHandler
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(mockResponse);
+        var longMessage = new string('a', MaxMessageLength);
+        SetupSuccessfulHttpResponse();
 
         await _slackBot.SendMessage(longMessage);
 
@@ -213,18 +192,7 @@ public class SlackInteractiveBotTests : IDisposable
     [Fact]
     public async Task PostWeekLetter_WithValidData_PostsSuccessfully()
     {
-        var mockResponse = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new StringContent(JsonConvert.SerializeObject(new { ok = true, ts = "1234567890.123456" }))
-        };
-
-        _mockHttpMessageHandler
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(mockResponse);
+        SetupSuccessfulHttpResponse();
 
         await _slackBot.PostWeekLetter("Emma", "Test week letter content", "Uge 26");
 
@@ -256,18 +224,7 @@ public class SlackInteractiveBotTests : IDisposable
     public async Task PostWeekLetter_WithDuplicateContent_SkipsDuplicate()
     {
         var weekLetterContent = "Test week letter content";
-        var mockResponse = new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new StringContent(JsonConvert.SerializeObject(new { ok = true, ts = "1234567890.123456" }))
-        };
-
-        _mockHttpMessageHandler
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(mockResponse);
+        SetupSuccessfulHttpResponse();
 
         // Post the same week letter twice
         await _slackBot.PostWeekLetter("Emma", weekLetterContent, "Uge 26");
@@ -362,7 +319,7 @@ public class SlackInteractiveBotTests : IDisposable
     public void Dispose_WhenCalled_DisposesResources()
     {
         _slackBot.Dispose();
-        
+
         // Should not throw
         Assert.True(true);
     }
@@ -372,9 +329,25 @@ public class SlackInteractiveBotTests : IDisposable
     {
         _slackBot.Dispose();
         _slackBot.Dispose();
-        
+
         // Should not throw
         Assert.True(true);
+    }
+
+    private void SetupSuccessfulHttpResponse()
+    {
+        var mockResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(JsonConvert.SerializeObject(new { ok = true, ts = "1234567890.123456" }))
+        };
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(mockResponse);
     }
 
     public void Dispose()

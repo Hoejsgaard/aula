@@ -72,9 +72,9 @@ public class IntentAnalysisPromptsTests
             // Assert - Each example should contain a query and arrow
             Assert.Contains("\"", example); // Should contain quoted query
             Assert.Contains("→", example); // Should contain arrow
-            
+
             // Should end with either TOOL_CALL: ACTION or INFORMATION_QUERY
-            Assert.True(example.EndsWith("INFORMATION_QUERY") || 
+            Assert.True(example.EndsWith("INFORMATION_QUERY") ||
                        example.Contains("TOOL_CALL:"),
                        $"Example doesn't follow expected format: {example}");
         }
@@ -84,7 +84,7 @@ public class IntentAnalysisPromptsTests
     public void ToolExamples_ContainsBothLanguages()
     {
         var examples = IntentAnalysisPrompts.ToolExamples;
-        
+
         // Count English vs Danish examples
         var danishKeys = examples.Keys.Where(k => k.EndsWith("_DANISH")).ToList();
         var englishKeys = examples.Keys.Where(k => !k.EndsWith("_DANISH")).ToList();
@@ -144,12 +144,12 @@ public class IntentAnalysisPromptsTests
 
         // Assert - Should have at least one example for this use case
         Assert.NotEmpty(matchingExamples);
-        
+
         // At least one example should contain similar wording
-        var hasRelevantExample = matchingExamples.Any(ex => 
+        var hasRelevantExample = matchingExamples.Any(ex =>
             ex.Value.ToLower().Contains(queryPattern.ToLower()));
-        
-        Assert.True(hasRelevantExample, 
+
+        Assert.True(hasRelevantExample,
             $"No relevant example found for {expectedKey} with pattern '{queryPattern}'. Examples: {string.Join(", ", matchingExamples.Select(e => e.Value))}");
     }
 

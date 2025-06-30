@@ -146,7 +146,7 @@ public class WeekLetterContentExtractorTests
             x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Week letter content is empty")),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Equals("Week letter content is empty")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);

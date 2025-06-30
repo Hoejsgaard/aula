@@ -42,18 +42,18 @@ public class ProgramTests
         // This test verifies the conditional registration logic
         // The actual implementation depends on appsettings.json configuration
         var serviceProvider = Program.ConfigureServices();
-        
+
         // TelegramInteractiveBot registration depends on config, so we test the service provider works
         Assert.NotNull(serviceProvider);
     }
 
-    [Fact] 
+    [Fact]
     public void ConfigureServices_ShouldConfigureLogging()
     {
         // Arrange & Act
         var serviceProvider = Program.ConfigureServices();
         var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
-        
+
         // Assert
         Assert.NotNull(loggerFactory);
         var logger = loggerFactory.CreateLogger("Test");
@@ -66,7 +66,7 @@ public class ProgramTests
         // Arrange & Act  
         var serviceProvider = Program.ConfigureServices();
         var config = serviceProvider.GetRequiredService<Config>();
-        
+
         // Assert - Config should be bound (not null/default)
         Assert.NotNull(config);
         Assert.NotNull(config.UniLogin);
@@ -80,7 +80,7 @@ public class ProgramTests
     {
         // Arrange & Act
         var serviceProvider = Program.ConfigureServices();
-        
+
         // Assert
         Assert.NotNull(serviceProvider.GetRequiredService<Microsoft.Extensions.Caching.Memory.IMemoryCache>());
     }
@@ -91,7 +91,7 @@ public class ProgramTests
         // Arrange & Act & Assert
         var serviceProvider = Program.ConfigureServices();
         Assert.NotNull(serviceProvider);
-        
+
         // Dispose properly if disposable
         if (serviceProvider is IDisposable disposable)
         {

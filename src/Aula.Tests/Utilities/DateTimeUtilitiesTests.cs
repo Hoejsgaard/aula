@@ -85,7 +85,6 @@ public class DateTimeUtilitiesTests
         var result = DateTimeUtilities.GetDanishDayName(dayOfWeek);
 
         // Assert
-        Assert.Equal(expectedName.ToLower(), result);
         Assert.Equal(expectedName, result); // Should already be lowercase
     }
 }

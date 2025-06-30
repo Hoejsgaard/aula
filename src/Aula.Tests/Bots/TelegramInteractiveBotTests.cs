@@ -100,7 +100,7 @@ public class TelegramInteractiveBotTests
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
             new TelegramInteractiveBot(_mockAgentService.Object, disabledConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object));
-        
+
         Assert.Contains("Telegram bot is not enabled", exception.Message);
     }
 
@@ -115,7 +115,7 @@ public class TelegramInteractiveBotTests
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
             new TelegramInteractiveBot(_mockAgentService.Object, configWithoutToken, _mockLoggerFactory.Object, _mockSupabaseService.Object));
-        
+
         Assert.Contains("token is missing", exception.Message);
     }
 
@@ -157,7 +157,7 @@ public class TelegramInteractiveBotTests
     public void Stop_WhenCalled_LogsInformation()
     {
         var bot = new TelegramInteractiveBot(_mockAgentService.Object, _testConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object);
-        
+
         bot.Stop();
 
         _mockLogger.Verify(

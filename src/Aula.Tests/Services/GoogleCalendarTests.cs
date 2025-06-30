@@ -22,9 +22,9 @@ public class GoogleCalendarTests
     {
         // Arrange
         var testServiceAccount = CreateTestServiceAccount();
-        
+
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new GoogleCalendar(testServiceAccount, null!, _loggerFactory));
     }
 
@@ -33,9 +33,9 @@ public class GoogleCalendarTests
     {
         // Arrange
         var testServiceAccount = CreateTestServiceAccount();
-        
+
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new GoogleCalendar(testServiceAccount, "", _loggerFactory));
     }
 
@@ -44,9 +44,9 @@ public class GoogleCalendarTests
     {
         // Arrange
         var testServiceAccount = CreateTestServiceAccount();
-        
+
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => 
+        Assert.Throws<ArgumentException>(() =>
             new GoogleCalendar(testServiceAccount, "ab", _loggerFactory));
     }
 
@@ -55,11 +55,11 @@ public class GoogleCalendarTests
     {
         // Arrange
         var testServiceAccount = CreateTestServiceAccount();
-        
+
         // Act & Assert - We expect Google API to fail but parameter validation to pass
-        var exception = Assert.ThrowsAny<Exception>(() => 
+        var exception = Assert.ThrowsAny<Exception>(() =>
             new GoogleCalendar(testServiceAccount, "test", _loggerFactory));
-        
+
         // The exception should NOT be ArgumentNullException or ArgumentException
         // It should be a Google API related exception (credential, authentication, etc.)
         Assert.IsNotType<ArgumentNullException>(exception);

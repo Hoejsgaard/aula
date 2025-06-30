@@ -32,6 +32,7 @@ public class OpenAiService : IOpenAiService
     private const int ConversationTrimAmount = 4;
     private const int ConversationContextLimit = 10;
     private const int ConversationStartMessages = 2;
+    private const string FallbackToExistingSystem = "FALLBACK_TO_EXISTING_SYSTEM";
 
     public OpenAiService(string apiKey, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, string? model = null)
     {
@@ -660,7 +661,7 @@ Current day context: Today is {DateTime.Now.ToString("dddd, MMMM dd, yyyy")}";
         // DO NOT return generic help text here - it causes language mismatch (Danish->English) 
         // and prevents proper week letter processing
         _logger.LogInformation("Delegating Aula query to existing system: {Query}", query);
-        return Task.FromResult("FALLBACK_TO_EXISTING_SYSTEM");
+        return Task.FromResult(FallbackToExistingSystem);
     }
 
     private static string? ExtractValue(string[] lines, string prefix)

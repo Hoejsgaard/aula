@@ -27,7 +27,7 @@ public class OpenAiServiceIntegrationTests
         _mockDataService = new Mock<IDataService>();
 
         _mockLoggerFactory.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
-        
+
         _aiToolsManager = new AiToolsManager(_mockSupabaseService.Object, _mockDataService.Object, _mockLoggerFactory.Object);
     }
 
@@ -89,7 +89,7 @@ public class OpenAiServiceIntegrationTests
     public void ClearConversationHistory_WithoutContextKey_DoesNotThrow()
     {
         var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
-        
+
         // Should not throw an exception
         service.ClearConversationHistory();
         Assert.True(true);
@@ -99,7 +99,7 @@ public class OpenAiServiceIntegrationTests
     public void ClearConversationHistory_WithContextKey_DoesNotThrow()
     {
         var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
-        
+
         // Should not throw an exception
         service.ClearConversationHistory("test-context");
         Assert.True(true);
@@ -170,7 +170,7 @@ public class OpenAiServiceIntegrationTests
 
         // Should not throw exception, may return empty or error response
         var result = await service.ProcessQueryWithToolsAsync(query, "context-key", ChatInterface.Slack);
-        
+
         // Just verify it returned something (even if it's an error message)
         Assert.NotNull(result);
     }
@@ -185,7 +185,7 @@ public class OpenAiServiceIntegrationTests
 
         // Should not throw exception, may return error response
         var result = await service.ProcessQueryWithToolsAsync("What is happening?", contextKey, ChatInterface.Slack);
-        
+
         // Just verify it returned something (even if it's an error message)
         Assert.NotNull(result);
     }
@@ -299,9 +299,9 @@ public class OpenAiServiceIntegrationTests
         try
         {
             var result = await service.AskQuestionAboutChildrenAsync(
-                childrenWeekLetters, 
-                "What are both children doing this week?", 
-                "test-context", 
+                childrenWeekLetters,
+                "What are both children doing this week?",
+                "test-context",
                 ChatInterface.Telegram);
             Assert.NotNull(result);
         }
@@ -320,8 +320,8 @@ public class OpenAiServiceIntegrationTests
         try
         {
             var result = await service.ProcessQueryWithToolsAsync(
-                "What reminders do I have?", 
-                "test-context", 
+                "What reminders do I have?",
+                "test-context",
                 ChatInterface.Slack);
             Assert.NotNull(result);
         }
