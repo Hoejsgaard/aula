@@ -655,21 +655,9 @@ Current day context: Today is {DateTime.Now.ToString("dddd, MMMM dd, yyyy")}";
             return Task.FromResult("To create reminders, try: 'Remind me to pick up [child] at 3pm tomorrow' or 'Mind mig om at hente [child] kl 15 i morgen'");
         }
 
-        // For general information queries, direct the user to use more specific commands
-        // or return a helpful message about available functionality
-        _logger.LogInformation("Handling general Aula query: {Query}", query);
-
-        var availableCommands = new[]
-        {
-            "📅 Ask about specific activities: 'What activities does [child name] have this week?'",
-            "⏰ Create reminders: 'Remind me to pick up [child] at 3pm tomorrow'",
-            "📚 Get week letters: 'Show me this week's letter for [child name]'",
-            "📋 List children: 'Show me week letters'"
-        };
-
-        return Task.FromResult($"I can help you with school-related questions! Here are some things you can ask:\n\n" +
-                              string.Join("\n", availableCommands) +
-                              "\n\nTry being more specific about what you'd like to know.");
+        // For general information queries, delegate to the existing week letter system
+        _logger.LogInformation("Delegating Aula query to existing system: {Query}", query);
+        return Task.FromResult("FALLBACK_TO_EXISTING_SYSTEM");
     }
 
     private static string? ExtractValue(string[] lines, string prefix)
