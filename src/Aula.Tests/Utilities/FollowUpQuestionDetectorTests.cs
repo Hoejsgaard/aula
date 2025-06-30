@@ -4,7 +4,7 @@ using Xunit;
 using Aula.Configuration;
 using Aula.Utilities;
 
-namespace Aula.Tests;
+namespace Aula.Tests.Utilities;
 
 public class FollowUpQuestionDetectorTests
 {

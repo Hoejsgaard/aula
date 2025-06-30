@@ -9,7 +9,7 @@ using ConfigSlack = Aula.Configuration.Slack;
 using ConfigTelegram = Aula.Configuration.Telegram;
 using ConfigChild = Aula.Configuration.Child;
 
-namespace Aula.Tests;
+namespace Aula.Tests.Scheduling;
 
 public class SchedulingServiceTests
 {

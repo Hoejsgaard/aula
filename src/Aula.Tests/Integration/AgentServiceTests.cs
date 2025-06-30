@@ -5,7 +5,7 @@ using Aula.Integration;
 using Aula.Configuration;
 using Aula.Services;
 
-namespace Aula.Tests;
+namespace Aula.Tests.Integration;
 
 public class AgentServiceTests
 {

@@ -5,7 +5,7 @@ using Aula.Tools;
 using Aula.Configuration;
 using Aula.Services;
 
-namespace Aula.Tests;
+namespace Aula.Tests.Tools;
 
 public class AiToolsManagerTests
 {

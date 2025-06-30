@@ -5,7 +5,7 @@ using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 using Aula.Services;
 
-namespace Aula.Tests;
+namespace Aula.Tests.Services;
 
 public class DataServiceTests
 {

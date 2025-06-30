@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 using Aula.Integration;
 using Aula.Configuration;
 
-namespace Aula.Tests;
+namespace Aula.Tests.Integration;
 
 /// <summary>
 /// A testable version of MinUddannelseClient that allows injecting an HttpClient for testing
