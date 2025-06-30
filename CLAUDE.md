@@ -9,7 +9,7 @@ This file provides guidance for Claude Code (claude.ai/code) when working with c
 # Build the solution
 dotnet build src/Aula.sln
 
-# Run tests (270 tests, 26% coverage)
+# Run tests (567 tests, 50% line coverage, 42% branch coverage)
 dotnet test src/Aula.Tests
 
 # Format code
@@ -34,7 +34,7 @@ Do not commit changes unless all commands pass.
 
 ### Project Structure
 - **src/Aula/**: Main console application - fetches data from Aula (Danish school platform) and posts to Slack/Telegram
-- **src/Aula.Tests/**: Unit tests using xUnit and Moq (270 tests, 26% code coverage)
+- **src/Aula.Tests/**: Unit tests using xUnit and Moq (567 tests, 50% line coverage)
 - **src/Aula.Api/**: Azure Functions API project (separate deployment)
 
 ### Core Components
@@ -91,27 +91,39 @@ Configuration is handled through `appsettings.json` with sections for:
 
 ## Current Development Roadmap (2025-06-30)
 
-### Recently Completed (2025-06-29)
+### Recently Completed (2025-06-30)
 ✅ **Code Quality Improvements**: Eliminated duplicate code, improved testability
 ✅ **Shared Utilities**: WeekLetterContentExtractor, ReminderCommandHandler, ConversationContextManager
 ✅ **OpenAI Cost Optimization**: Switched from GPT-4 to GPT-3.5-turbo (~95% cost reduction)
-✅ **Test Coverage**: Grew from 87 to 270 tests with comprehensive utility testing
+✅ **Test Coverage**: Grew from 87 to 567 tests with comprehensive utility testing
+✅ **Test Coverage Analysis**: Detailed analysis completed - 50.18% line coverage, 42.18% branch coverage, identified critical gaps and realistic 75% target
 
 ### Priority Development Tasks
 
-#### 1. Test Infrastructure Restructuring (HIGH PRIORITY)
-**Current State**: 270 tests, 26% coverage, good utility coverage but poor interactive bot coverage
-**Goals**:
-- Restructure test organization to match main project structure
-- Add comprehensive tests for SlackInteractiveBot and TelegramInteractiveBot
-- Improve integration test coverage for core services
-- Target 80%+ code coverage with focus on critical paths
+#### 1. Test Coverage Improvement (HIGH PRIORITY)
+**Current State**: 567 tests, 50.18% line coverage, 42.18% branch coverage
+**Goals**: Reach 75% line coverage / 65% branch coverage through 3-phase approach
+**Critical Gaps Identified**:
+- Program.cs (0% coverage) - Application startup logic
+- AulaClient (0% coverage) - Core Aula platform integration  
+- GoogleCalendar (0% coverage) - Calendar integration feature
+- SlackInteractiveBot (21% coverage) - Main interactive functionality
+- Integration layer (27-37% coverage) - UniLoginClient, MinUddannelseClient, AgentService
 
-**Action Items**:
-- Refactor interactive bots to improve testability (reduce constructor dependencies)
-- Remove duplicate ConversationContext classes, use shared ConversationContextManager
-- Extract message handling logic into separate, testable classes
-- Add comprehensive mocking for HTTP clients and external services
+**Phase 1 Action Items** (Target: 65% overall):
+- Add Program.cs startup logic testing with service mocking
+- Implement AulaClient HTTP mocking and API testing
+- Create GoogleCalendar integration tests with Google API mocks
+
+**Phase 2 Action Items** (Target: 70% overall):
+- Improve SlackInteractiveBot message processing coverage (21% → 60%)
+- Enhance integration layer testing (UniLogin, MinUddannelse, Agent services)
+- Add comprehensive error handling and edge case testing
+
+**Phase 3 Action Items** (Target: 75% overall):
+- Polish OpenAiService coverage (60% → 75%)
+- Improve AiToolsManager tool coordination testing (35% → 60%)
+- Add channel abstraction testing (message senders)
 
 #### 2. Week Letter Automation Enhancement (HIGH PRIORITY)
 **Current State**: Weekly fetching Sundays at 4 PM, basic scheduling, retry logic
