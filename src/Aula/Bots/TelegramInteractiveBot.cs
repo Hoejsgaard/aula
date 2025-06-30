@@ -34,40 +34,13 @@ public class TelegramInteractiveBot
     private readonly ConcurrentDictionary<string, byte> _postedWeekLetterHashes = new ConcurrentDictionary<string, byte>();
     private CancellationTokenSource? _cancellationTokenSource;
     private readonly ReminderCommandHandler _reminderHandler;
+    private readonly ConversationContextManager<long> _conversationContextManager;
     // Language detection arrays removed - GPT handles language detection naturally
-
-    // Conversation context tracking
-    private class ConversationContext
-    {
-        public string? LastChildName { get; set; }
-        public DateTime Timestamp { get; set; } = DateTime.Now;
-
-        public bool IsStillValid => (DateTime.Now - Timestamp).TotalMinutes < 10; // Context expires after 10 minutes
-
-        public override string ToString()
-        {
-            return $"Child: {LastChildName ?? "none"}, Age: {(DateTime.Now - Timestamp).TotalMinutes:F1} minutes";
-        }
-    }
-
-    // Track conversation contexts by chat ID
-    private readonly ConcurrentDictionary<long, ConversationContext> _conversationContexts = new ConcurrentDictionary<long, ConversationContext>();
 
     private void UpdateConversationContext(long chatId, string? childName)
     {
-        _conversationContexts.AddOrUpdate(chatId,
-            new ConversationContext
-            {
-                LastChildName = childName,
-                Timestamp = DateTime.Now
-            },
-            (key, existing) => new ConversationContext
-            {
-                LastChildName = childName,
-                Timestamp = DateTime.Now
-            });
-
-        _logger.LogInformation("Updated conversation context for chat {ChatId}: {Context}", chatId, _conversationContexts[chatId]);
+        _conversationContextManager.UpdateContext(chatId, childName);
+        _logger.LogInformation("Updated conversation context for chat {ChatId}", chatId);
     }
 
     public TelegramInteractiveBot(
@@ -96,6 +69,7 @@ public class TelegramInteractiveBot
             c => c);
 
         _reminderHandler = new ReminderCommandHandler(_logger, _supabaseService, _childrenByName);
+        _conversationContextManager = new ConversationContextManager<long>(_logger);
     }
 
     public async Task Start()
