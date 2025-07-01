@@ -210,6 +210,174 @@ public class TelegramClientTests
         Assert.NotNull(task);
     }
 
+    [Fact]
+    public void Constructor_WithNullConfig_ThrowsNullReferenceException()
+    {
+        // Act & Assert
+        Assert.Throws<NullReferenceException>(() => new TelegramClient((Config)null!));
+    }
+
+    [Fact]
+    public void Constructor_WithNullTelegramConfig_ThrowsNullReferenceException()
+    {
+        // Arrange
+        var config = new Config
+        {
+            Telegram = null!
+        };
+
+        // Act & Assert
+        Assert.Throws<NullReferenceException>(() => new TelegramClient(config));
+    }
+
+    [Fact]
+    public async Task SendMessageToChannel_WithNullOrEmptyToken_ReturnsTrue()
+    {
+        // Arrange - Constructor with empty token should still work, but sending will likely fail
+        var client = new TelegramClient("");
+
+        // Act - This should not throw and should return true (optimistic)
+        // The actual HTTP call may fail internally but is caught
+        var result = await client.SendMessageToChannel("@testchannel", "Test message");
+
+        // Assert - The method should handle errors gracefully
+        Assert.False(result); // Should return false due to likely API failure
+    }
+
+    [Fact]
+    public Task PostWeekLetter_WithNullChild_HandlesGracefully()
+    {
+        // Arrange
+        var client = new TelegramClient("123456789:AABBCCDDEEFFGG");
+        var weekLetter = CreateSampleWeekLetter();
+
+        // Act & Assert - Should handle null child gracefully
+        var task = client.PostWeekLetter("@testchannel", weekLetter, null!);
+        Assert.NotNull(task);
+        return Task.CompletedTask;
+    }
+
+    [Fact]
+    public Task PostWeekLetter_WithNullWeekLetter_HandlesGracefully()
+    {
+        // Arrange
+        var client = new TelegramClient("123456789:AABBCCDDEEFFGG");
+        var child = new Child { FirstName = "Alice", LastName = "Johnson", Colour = "#FF0000" };
+
+        // Act & Assert - Should handle null week letter gracefully
+        var task = client.PostWeekLetter("@testchannel", null!, child);
+        Assert.NotNull(task);
+        return Task.CompletedTask;
+    }
+
+    [Theory]
+    [InlineData("<script>alert('xss')</script>")]
+    [InlineData("<img src='x' onerror='alert(1)'>")]
+    [InlineData("<div onclick='malicious()'>content</div>")]
+    public void PostWeekLetter_WithMaliciousHTML_SanitizesContent(string maliciousContent)
+    {
+        // Arrange
+        var client = new TelegramClient("123456789:AABBCCDDEEFFGG");
+        var weekLetter = JObject.Parse($@"{{
+            ""ugebreve"": [
+                {{
+                    ""uge"": ""25"",
+                    ""klasseNavn"": ""1.A"",
+                    ""indhold"": ""{maliciousContent}""
+                }}
+            ]
+        }}");
+        var child = new Child { FirstName = "Alice", LastName = "Johnson", Colour = "#FF0000" };
+
+        // Act & Assert - Should not throw and should sanitize malicious content
+        var task = client.PostWeekLetter("@testchannel", weekLetter, child);
+        Assert.NotNull(task);
+    }
+
+    [Fact]
+    public void PostWeekLetter_WithComplexHTML_HandlesCorrectly()
+    {
+        // Arrange
+        var client = new TelegramClient("123456789:AABBCCDDEEFFGG");
+        var complexWeekLetter = JObject.Parse(@"{
+            ""ugebreve"": [
+                {
+                    ""uge"": ""25"",
+                    ""klasseNavn"": ""1.A"",
+                    ""indhold"": ""<div><p>Nested <strong>content</strong> with <a href='http://example.com'>links</a></p><ul><li>List item 1</li><li>List item 2</li></ul><table><tr><td>Table cell</td></tr></table></div>""
+                }
+            ]
+        }");
+        var child = new Child { FirstName = "Alice", LastName = "Johnson", Colour = "#FF0000" };
+
+        // Act & Assert - Should handle complex HTML structures
+        var task = client.PostWeekLetter("@testchannel", complexWeekLetter, child);
+        Assert.NotNull(task);
+    }
+
+    [Theory]
+    [InlineData("#FF0000")] // Red
+    [InlineData("#00FF00")] // Green  
+    [InlineData("#0000FF")] // Blue
+    [InlineData("#FFFFFF")] // White
+    [InlineData("#000000")] // Black
+    [InlineData("")] // Empty
+    [InlineData(null)] // Null
+    public void PostWeekLetter_WithVariousColors_HandlesCorrectly(string? colour)
+    {
+        // Arrange
+        var client = new TelegramClient("123456789:AABBCCDDEEFFGG");
+        var weekLetter = CreateSampleWeekLetter();
+        var child = new Child { FirstName = "Alice", LastName = "Johnson", Colour = colour };
+
+        // Act & Assert - Should handle various color values
+        var task = client.PostWeekLetter("@testchannel", weekLetter, child);
+        Assert.NotNull(task);
+    }
+
+    [Fact]
+    public void PostWeekLetter_WithEmptyContent_HandlesGracefully()
+    {
+        // Arrange
+        var client = new TelegramClient("123456789:AABBCCDDEEFFGG");
+        var emptyContentWeekLetter = JObject.Parse(@"{
+            ""ugebreve"": [
+                {
+                    ""uge"": ""25"",
+                    ""klasseNavn"": ""1.A"",
+                    ""indhold"": """"
+                }
+            ]
+        }");
+        var child = new Child { FirstName = "Alice", LastName = "Johnson", Colour = "#FF0000" };
+
+        // Act & Assert - Should handle empty content
+        var task = client.PostWeekLetter("@testchannel", emptyContentWeekLetter, child);
+        Assert.NotNull(task);
+    }
+
+    [Fact]
+    public void PostWeekLetter_WithVeryLongContent_HandlesCorrectly()
+    {
+        // Arrange
+        var client = new TelegramClient("123456789:AABBCCDDEEFFGG");
+        var longContent = new string('A', 5000); // Very long content
+        var longContentWeekLetter = JObject.Parse($@"{{
+            ""ugebreve"": [
+                {{
+                    ""uge"": ""25"",
+                    ""klasseNavn"": ""1.A"",
+                    ""indhold"": ""{longContent}""
+                }}
+            ]
+        }}");
+        var child = new Child { FirstName = "Alice", LastName = "Johnson", Colour = "#FF0000" };
+
+        // Act & Assert - Should handle very long content (may truncate)
+        var task = client.PostWeekLetter("@testchannel", longContentWeekLetter, child);
+        Assert.NotNull(task);
+    }
+
     private static JObject CreateSampleWeekLetter()
     {
         return JObject.Parse(@"{

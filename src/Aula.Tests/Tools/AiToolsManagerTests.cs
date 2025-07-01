@@ -241,7 +241,7 @@ public class AiToolsManagerTests
     }
 
     // Phase 1: High-Impact, Low-Effort Tests (+15% coverage)
-    
+
     [Fact]
     public void GetCurrentDateTime_ReturnsCurrentTime()
     {
@@ -265,6 +265,272 @@ public class AiToolsManagerTests
         Assert.Contains("🤖", result);
         Assert.Contains("Available Commands", result);
         Assert.Contains("Reminder", result);
+    }
+
+    [Fact]
+    public void ExtractSummaryFromWeekLetter_WithSummaryField_ReturnsSummary()
+    {
+        // Arrange
+        var weekLetter = JObject.Parse(@"{
+            ""summary"": ""This is a summary of the week"",
+            ""content"": ""This is the full content""
+        }");
+
+        // Use reflection to call the private method
+        var method = typeof(AiToolsManager).GetMethod("ExtractSummaryFromWeekLetter",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        // Act
+        var result = (string)method!.Invoke(_aiToolsManager, new object[] { weekLetter })!;
+
+        // Assert
+        Assert.Equal("This is a summary of the week", result);
+    }
+
+    [Fact]
+    public void ExtractSummaryFromWeekLetter_WithNullSummary_ReturnsEmptyString()
+    {
+        // Arrange
+        var weekLetter = JObject.Parse(@"{
+            ""summary"": null,
+            ""content"": ""This is the content""
+        }");
+
+        // Use reflection to call the private method
+        var method = typeof(AiToolsManager).GetMethod("ExtractSummaryFromWeekLetter",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        // Act
+        var result = (string)method!.Invoke(_aiToolsManager, new object[] { weekLetter })!;
+
+        // Assert - Returns empty string when summary is null (due to JToken behavior)
+        Assert.Equal("", result);
+    }
+
+    [Fact]
+    public void ExtractSummaryFromWeekLetter_WithoutSummaryField_FallsBackToContent()
+    {
+        // Arrange
+        var weekLetter = JObject.Parse(@"{
+            ""content"": ""This is the content""
+        }");
+
+        // Use reflection to call the private method
+        var method = typeof(AiToolsManager).GetMethod("ExtractSummaryFromWeekLetter",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        // Act
+        var result = (string)method!.Invoke(_aiToolsManager, new object[] { weekLetter })!;
+
+        // Assert - Should fall back to content extraction when summary field doesn't exist
+        Assert.Equal("This is the content", result);
+    }
+
+    [Fact]
+    public void ExtractSummaryFromWeekLetter_WithLongContent_TruncatesContent()
+    {
+        // Arrange
+        var longContent = new string('A', 400); // 400 characters
+        var weekLetter = JObject.Parse($@"{{
+            ""content"": ""{longContent}""
+        }}");
+
+        // Use reflection to call the private method
+        var method = typeof(AiToolsManager).GetMethod("ExtractSummaryFromWeekLetter",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        // Act
+        var result = (string)method!.Invoke(_aiToolsManager, new object[] { weekLetter })!;
+
+        // Assert
+        Assert.Equal(303, result.Length); // 300 chars + "..."
+        Assert.EndsWith("...", result);
+        Assert.StartsWith(new string('A', 300), result);
+    }
+
+    [Fact]
+    public void ExtractContentFromWeekLetter_WithContentField_ReturnsContent()
+    {
+        // Arrange
+        var weekLetter = JObject.Parse(@"{
+            ""content"": ""This is the main content"",
+            ""text"": ""This is alternative text""
+        }");
+
+        // Use reflection to call the private method
+        var method = typeof(AiToolsManager).GetMethod("ExtractContentFromWeekLetter",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        // Act
+        var result = (string)method!.Invoke(_aiToolsManager, new object[] { weekLetter })!;
+
+        // Assert
+        Assert.Equal("This is the main content", result);
+    }
+
+    [Fact]
+    public void ExtractContentFromWeekLetter_WithNullContent_ReturnsEmptyString()
+    {
+        // Arrange
+        var weekLetter = JObject.Parse(@"{
+            ""content"": null,
+            ""text"": ""This is the text field""
+        }");
+
+        // Use reflection to call the private method
+        var method = typeof(AiToolsManager).GetMethod("ExtractContentFromWeekLetter",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        // Act
+        var result = (string)method!.Invoke(_aiToolsManager, new object[] { weekLetter })!;
+
+        // Assert - Returns empty string when content is null
+        Assert.Equal("", result);
+    }
+
+    [Fact]
+    public void ExtractContentFromWeekLetter_WithTextField_ReturnsText()
+    {
+        // Arrange
+        var weekLetter = JObject.Parse(@"{
+            ""text"": ""This is the text content""
+        }");
+
+        // Use reflection to call the private method
+        var method = typeof(AiToolsManager).GetMethod("ExtractContentFromWeekLetter",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        // Act
+        var result = (string)method!.Invoke(_aiToolsManager, new object[] { weekLetter })!;
+
+        // Assert
+        Assert.Equal("This is the text content", result);
+    }
+
+    [Fact]
+    public void ExtractContentFromWeekLetter_WithNullText_ReturnsEmptyString()
+    {
+        // Arrange
+        var weekLetter = JObject.Parse(@"{
+            ""text"": null,
+            ""other"": ""some other data""
+        }");
+
+        // Use reflection to call the private method
+        var method = typeof(AiToolsManager).GetMethod("ExtractContentFromWeekLetter",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        // Act
+        var result = (string)method!.Invoke(_aiToolsManager, new object[] { weekLetter })!;
+
+        // Assert - Returns empty string when text is null
+        Assert.Equal("", result);
+    }
+
+    [Fact]
+    public void ExtractContentFromWeekLetter_WithNoContentOrText_ReturnsJsonString()
+    {
+        // Arrange
+        var weekLetter = JObject.Parse(@"{
+            ""title"": ""Week 35"",
+            ""class"": ""3A""
+        }");
+
+        // Use reflection to call the private method
+        var method = typeof(AiToolsManager).GetMethod("ExtractContentFromWeekLetter",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        // Act
+        var result = (string)method!.Invoke(_aiToolsManager, new object[] { weekLetter })!;
+
+        // Assert - Should return JSON string representation
+        Assert.NotNull(result);
+        Assert.Contains("Week 35", result);
+        Assert.Contains("3A", result);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("not-a-number")]
+    [InlineData("2024-13-45")] // Invalid date
+    public async Task CreateReminderAsync_WithInvalidDateTime_ReturnsErrorMessage(string invalidDateTime)
+    {
+        // Act
+        var result = await _aiToolsManager.CreateReminderAsync("Test reminder", invalidDateTime);
+
+        // Assert
+        Assert.Contains("Error: Invalid date format", result);
+        Assert.Contains("yyyy-MM-dd HH:mm", result);
+    }
+
+    [Fact]
+    public async Task DeleteReminderAsync_WithInvalidId_ReturnsErrorMessage()
+    {
+        // Arrange
+        _mockSupabaseService.Setup(s => s.DeleteReminderAsync(999))
+            .Returns(Task.CompletedTask);
+
+        // Set up GetAllRemindersAsync to return empty list (simulating reminder not found)
+        _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
+            .ReturnsAsync(new List<Aula.Services.Reminder>());
+
+        // Act
+        var result = await _aiToolsManager.DeleteReminderAsync(999);
+
+        // Assert
+        Assert.Contains("❌ Invalid reminder number", result);
+        Assert.Contains("between 1 and 0", result);
+    }
+
+    [Fact]
+    public async Task ListRemindersAsync_WithDatabaseError_ReturnsErrorMessage()
+    {
+        // Arrange
+        _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
+            .ThrowsAsync(new Exception("Database connection failed"));
+
+        // Act
+        var result = await _aiToolsManager.ListRemindersAsync();
+
+        // Assert
+        Assert.Contains("❌ Failed to retrieve reminders", result);
+        Assert.Contains("Please try again", result);
+    }
+
+    [Fact]
+    public async Task CreateReminderAsync_WithDatabaseError_ReturnsErrorMessage()
+    {
+        // Arrange
+        var validDateTime = DateTime.Now.AddDays(1).ToString("yyyy-MM-dd HH:mm");
+        _mockSupabaseService.Setup(s => s.AddReminderAsync(
+            It.IsAny<string>(),
+            It.IsAny<DateOnly>(),
+            It.IsAny<TimeOnly>(),
+            It.IsAny<string>()))
+            .ThrowsAsync(new Exception("Database connection failed"));
+
+        // Act
+        var result = await _aiToolsManager.CreateReminderAsync("Test reminder", validDateTime);
+
+        // Assert
+        Assert.Contains("❌ Failed to create reminder", result);
+        Assert.Contains("Please try again", result);
+    }
+
+    [Fact]
+    public async Task DeleteReminderAsync_WithDatabaseError_ReturnsErrorMessage()
+    {
+        // Arrange
+        _mockSupabaseService.Setup(s => s.DeleteReminderAsync(1))
+            .ThrowsAsync(new Exception("Database connection failed"));
+
+        // Act
+        var result = await _aiToolsManager.DeleteReminderAsync(1);
+
+        // Assert
+        Assert.Contains("❌ Failed to delete reminder", result);
+        Assert.Contains("Please try again", result);
     }
 
     [Fact]

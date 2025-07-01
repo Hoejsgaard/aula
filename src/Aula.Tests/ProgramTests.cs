@@ -40,7 +40,7 @@ public class ProgramTests
     public void ConfigureServices_ShouldHandleConditionalTelegramRegistration()
     {
         var serviceProvider = Program.ConfigureServices();
-        
+
         // Verify service provider is created successfully regardless of Telegram config
         Assert.NotNull(serviceProvider);
 
