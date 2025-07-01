@@ -5,10 +5,12 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Reflection;
 using Moq;
 using Moq.Protected;
 using Xunit;
 using Aula.Integration;
+using HtmlAgilityPack;
 
 namespace Aula.Tests.Integration;
 
@@ -352,6 +354,256 @@ public class UniLoginClientTests
         // Client should remain in consistent state
         Assert.Equal("https://success.com", client.GetSuccessUrl());
     }
+
+    [Fact]
+    public void ExtractFormData_WithValidHtml_ParsesFormCorrectly()
+    {
+        // Arrange
+        var client = new TestableUniLoginClient("testuser", "testpass", "https://login.com", "https://success.com");
+        var htmlContent = @"<html><body>
+            <form action=""https://auth.example.com/submit"">
+                <input name=""username"" type=""text"" value="""" />
+                <input name=""password"" type=""password"" value="""" />
+                <input name=""_token"" type=""hidden"" value=""abc123"" />
+                <input name=""_eventId"" type=""hidden"" value=""proceed"" />
+            </form>
+        </body></html>";
+
+        // Act
+        var (actionUrl, formData) = client.TestExtractFormData(htmlContent);
+
+        // Assert
+        Assert.Equal("https://auth.example.com/submit", actionUrl);
+        Assert.Contains("username", formData.Keys);
+        Assert.Contains("password", formData.Keys);
+        Assert.Contains("_token", formData.Keys);
+        Assert.Contains("_eventId", formData.Keys);
+        Assert.Equal("testuser", formData["username"]);
+        Assert.Equal("testpass", formData["password"]);
+        Assert.Equal("abc123", formData["_token"]);
+        Assert.Equal("proceed", formData["_eventId"]);
+    }
+
+    [Fact]
+    public void ExtractFormData_WithNoForm_ThrowsException()
+    {
+        // Arrange
+        var client = new TestableUniLoginClient("user", "pass", "https://login.com", "https://success.com");
+        var htmlContent = "<html><body><div>No form here</div></body></html>";
+
+        // Act & Assert
+        var exception = Assert.Throws<TargetInvocationException>(() => client.TestExtractFormData(htmlContent));
+        Assert.NotNull(exception.InnerException);
+        Assert.Contains("Form not found", exception.InnerException.Message);
+    }
+
+    [Fact]
+    public void ExtractFormData_WithNoAction_ThrowsException()
+    {
+        // Arrange
+        var client = new TestableUniLoginClient("user", "pass", "https://login.com", "https://success.com");
+        var htmlContent = "<html><body><form><input name=\"test\" /></form></body></html>";
+
+        // Act & Assert
+        var exception = Assert.Throws<TargetInvocationException>(() => client.TestExtractFormData(htmlContent));
+        Assert.NotNull(exception.InnerException);
+        Assert.Contains("No action node found", exception.InnerException.Message);
+    }
+
+    [Fact]
+    public void BuildFormData_WithNoInputs_ReturnsDefaultFormData()
+    {
+        // Arrange
+        var client = new TestableUniLoginClient("user", "pass", "https://login.com", "https://success.com");
+        var htmlContent = "<html><body><form action=\"/submit\"></form></body></html>";
+        var doc = new HtmlDocument();
+        doc.LoadHtml(htmlContent);
+
+        // Act
+        var formData = client.TestBuildFormData(doc);
+
+        // Assert
+        Assert.Contains("selectedIdp", formData.Keys);
+        Assert.Equal("uni_idp", formData["selectedIdp"]);
+    }
+
+    [Fact]
+    public void BuildFormData_WithVariousInputTypes_HandlesCorrectly()
+    {
+        // Arrange
+        var client = new TestableUniLoginClient("myuser", "mypass", "https://login.com", "https://success.com");
+        var htmlContent = @"<html><body><form>
+            <input name=""username"" type=""text"" value=""olduser"" />
+            <input name=""password"" type=""password"" value=""oldpass"" />
+            <input name=""hidden_field"" type=""hidden"" value=""hidden_value"" />
+            <input name=""submit"" type=""submit"" value=""Login"" />
+            <input name="""" value=""no_name"" />
+            <input name=""empty_value"" value="""" />
+        </form></body></html>";
+        var doc = new HtmlDocument();
+        doc.LoadHtml(htmlContent);
+
+        // Act
+        var formData = client.TestBuildFormData(doc);
+
+        // Assert
+        Assert.Equal("myuser", formData["username"]); // Should use provided username
+        Assert.Equal("mypass", formData["password"]); // Should use provided password
+        Assert.Equal("hidden_value", formData["hidden_field"]); // Should preserve other values
+        Assert.Equal("Login", formData["submit"]); // Should preserve submit value
+        Assert.False(formData.ContainsKey(""));  // Should skip inputs with no name
+        Assert.Equal("", formData["empty_value"]); // Should handle empty values
+    }
+
+    [Fact]
+    public void CheckIfLoginSuccessful_WithMatchingUrl_ReturnsTrue()
+    {
+        // Arrange
+        var successUrl = "https://app.example.com/dashboard";
+        var client = new TestableUniLoginClient("user", "pass", "https://login.com", successUrl);
+        
+        var response = new HttpResponseMessage
+        {
+            RequestMessage = new HttpRequestMessage
+            {
+                RequestUri = new Uri(successUrl)
+            }
+        };
+
+        // Act
+        var result = client.TestCheckIfLoginSuccessful(response);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void CheckIfLoginSuccessful_WithDifferentUrl_ReturnsFalse()
+    {
+        // Arrange
+        var successUrl = "https://app.example.com/dashboard";
+        var client = new TestableUniLoginClient("user", "pass", "https://login.com", successUrl);
+        
+        var response = new HttpResponseMessage
+        {
+            RequestMessage = new HttpRequestMessage
+            {
+                RequestUri = new Uri("https://different.example.com/page")
+            }
+        };
+
+        // Act
+        var result = client.TestCheckIfLoginSuccessful(response);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void CheckIfLoginSuccessful_WithNullRequestMessage_ReturnsFalse()
+    {
+        // Arrange
+        var client = new TestableUniLoginClient("user", "pass", "https://login.com", "https://success.com");
+        var response = new HttpResponseMessage
+        {
+            RequestMessage = null
+        };
+
+        // Act
+        var result = client.TestCheckIfLoginSuccessful(response);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void CheckIfLoginSuccessful_WithNullRequestUri_ReturnsFalse()
+    {
+        // Arrange
+        var client = new TestableUniLoginClient("user", "pass", "https://login.com", "https://success.com");
+        var response = new HttpResponseMessage
+        {
+            RequestMessage = new HttpRequestMessage
+            {
+                RequestUri = null
+            }
+        };
+
+        // Act
+        var result = client.TestCheckIfLoginSuccessful(response);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Theory]
+    [InlineData("https://example.com/success", "https://example.com/success", true)]
+    [InlineData("https://example.com/success", "https://example.com/different", false)]
+    [InlineData("https://app.test.com/dashboard", "https://app.test.com/dashboard", true)]
+    [InlineData("https://app.test.com/dashboard", "https://app.test.com/dashboard?param=1", false)]
+    [InlineData("http://localhost:3000/home", "http://localhost:3000/home", true)]
+    public void CheckIfLoginSuccessful_WithVariousUrls_ReturnsExpectedResult(string successUrl, string actualUrl, bool expected)
+    {
+        // Arrange
+        var client = new TestableUniLoginClient("user", "pass", "https://login.com", successUrl);
+        var response = new HttpResponseMessage
+        {
+            RequestMessage = new HttpRequestMessage
+            {
+                RequestUri = new Uri(actualUrl)
+            }
+        };
+
+        // Act
+        var result = client.TestCheckIfLoginSuccessful(response);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ExtractFormData_WithEncodedActionUrl_DecodesCorrectly()
+    {
+        // Arrange
+        var client = new TestableUniLoginClient("user", "pass", "https://login.com", "https://success.com");
+        var htmlContent = @"<html><body>
+            <form action=""https://auth.example.com/submit?param=value&amp;other=test"">
+                <input name=""username"" type=""text"" />
+            </form>
+        </body></html>";
+
+        // Act
+        var (actionUrl, formData) = client.TestExtractFormData(htmlContent);
+
+        // Assert
+        Assert.Equal("https://auth.example.com/submit?param=value&other=test", actionUrl);
+    }
+
+    [Fact]
+    public void BuildFormData_HandlesInputsWithoutNameAttribute()
+    {
+        // Arrange
+        var client = new TestableUniLoginClient("user", "pass", "https://login.com", "https://success.com");
+        var htmlContent = @"<html><body><form>
+            <input type=""text"" value=""no_name"" />
+            <input name="""" value=""empty_name"" />
+            <input name=""   "" value=""whitespace_name"" />
+            <input name=""valid"" value=""valid_value"" />
+        </form></body></html>";
+        var doc = new HtmlDocument();
+        doc.LoadHtml(htmlContent);
+
+        // Act
+        var formData = client.TestBuildFormData(doc);
+
+        // Assert
+        Assert.Contains("valid", formData.Keys);
+        Assert.Equal("valid_value", formData["valid"]);
+        
+        // Should not contain inputs without proper names
+        Assert.False(formData.ContainsKey(""));
+        Assert.False(formData.ContainsKey("   "));
+    }
 }
 
 // Testable implementation that exposes protected members for testing
@@ -380,5 +632,24 @@ public class TestableUniLoginClient : UniLoginClient
         // Access the handler through reflection since it's private
         var handlerField = typeof(HttpClient).GetField("_handler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         return handlerField?.GetValue(HttpClient) as HttpClientHandler ?? new HttpClientHandler();
+    }
+
+    public (string, Dictionary<string, string>) TestExtractFormData(string htmlContent)
+    {
+        var method = typeof(UniLoginClient).GetMethod("ExtractFormData", BindingFlags.NonPublic | BindingFlags.Instance);
+        var result = (Tuple<string, Dictionary<string, string>>)method!.Invoke(this, new object[] { htmlContent })!;
+        return (result.Item1, result.Item2);
+    }
+
+    public Dictionary<string, string> TestBuildFormData(HtmlDocument document)
+    {
+        var method = typeof(UniLoginClient).GetMethod("BuildFormData", BindingFlags.NonPublic | BindingFlags.Instance);
+        return (Dictionary<string, string>)method!.Invoke(this, new object[] { document })!;
+    }
+
+    public bool TestCheckIfLoginSuccessful(HttpResponseMessage response)
+    {
+        var method = typeof(UniLoginClient).GetMethod("CheckIfLoginSuccessful", BindingFlags.NonPublic | BindingFlags.Instance);
+        return (bool)method!.Invoke(this, new object[] { response })!;
     }
 }
