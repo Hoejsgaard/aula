@@ -239,4 +239,386 @@ public class AiToolsManagerTests
             It.IsAny<TimeOnly>(),
             null), Times.Once);
     }
+
+    // Phase 1: High-Impact, Low-Effort Tests (+15% coverage)
+    
+    [Fact]
+    public void GetCurrentDateTime_ReturnsCurrentTime()
+    {
+        // Act
+        var result = _aiToolsManager.GetCurrentDateTime();
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Contains(DateTime.Now.ToString("yyyy-MM-dd"), result);
+        Assert.Contains("Today is", result);
+    }
+
+    [Fact]
+    public void GetHelp_ReturnsHelpText()
+    {
+        // Act
+        var result = _aiToolsManager.GetHelp();
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Contains("🤖", result);
+        Assert.Contains("Available Commands", result);
+        Assert.Contains("Reminder", result);
+    }
+
+    [Fact]
+    public async Task CreateReminderAsync_WithSupabaseException_ReturnsError()
+    {
+        // Arrange
+        var description = "Test reminder";
+        var dateTime = DateTime.Now.AddDays(1).ToString("yyyy-MM-dd HH:mm");
+        var childName = "Alice";
+
+        _mockSupabaseService.Setup(s => s.AddReminderAsync(
+            It.IsAny<string>(),
+            It.IsAny<DateOnly>(),
+            It.IsAny<TimeOnly>(),
+            It.IsAny<string>()))
+            .ThrowsAsync(new Exception("Database connection failed"));
+
+        // Act
+        var result = await _aiToolsManager.CreateReminderAsync(description, dateTime, childName);
+
+        // Assert
+        Assert.Contains("❌ Failed to create reminder", result);
+    }
+
+    [Fact]
+    public async Task ListRemindersAsync_WithSupabaseException_ReturnsError()
+    {
+        // Arrange
+        _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
+            .ThrowsAsync(new Exception("Database error"));
+
+        // Act
+        var result = await _aiToolsManager.ListRemindersAsync();
+
+        // Assert
+        Assert.Contains("❌ Failed to retrieve reminders", result);
+    }
+
+    [Fact]
+    public async Task DeleteReminderAsync_WithSupabaseException_ReturnsError()
+    {
+        // Arrange
+        var reminderNumber = 1;
+        var testReminders = new List<Reminder>
+        {
+            new Reminder { Id = 123, Text = "Test reminder", RemindDate = DateOnly.FromDateTime(DateTime.Today), RemindTime = new TimeOnly(10, 0) }
+        };
+
+        _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
+            .ReturnsAsync(testReminders);
+        _mockSupabaseService.Setup(s => s.DeleteReminderAsync(123))
+            .ThrowsAsync(new Exception("Delete operation failed"));
+
+        // Act
+        var result = await _aiToolsManager.DeleteReminderAsync(reminderNumber);
+
+        // Assert
+        Assert.Contains("❌ Failed to delete reminder", result);
+    }
+
+    [Fact]
+    public void GetWeekLetters_WithDataServiceException_ReturnsError()
+    {
+        // Arrange
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.IsAny<Child>()))
+            .Throws(new Exception("Data service error"));
+
+        // Act
+        var result = _aiToolsManager.GetWeekLetters("Alice");
+
+        // Assert
+        Assert.Contains("❌ Failed to retrieve week letters", result);
+    }
+
+    [Fact]
+    public async Task ListRemindersAsync_WithChildNameFilter_ReturnsFiltered()
+    {
+        // Arrange
+        var testReminders = new List<Reminder>
+        {
+            new Reminder
+            {
+                Id = 1,
+                Text = "Alice reminder",
+                RemindDate = DateOnly.FromDateTime(DateTime.Today.AddDays(1)),
+                RemindTime = new TimeOnly(9, 0),
+                ChildName = "Alice",
+                IsSent = false
+            },
+            new Reminder
+            {
+                Id = 2,
+                Text = "Bob reminder",
+                RemindDate = DateOnly.FromDateTime(DateTime.Today.AddDays(2)),
+                RemindTime = new TimeOnly(14, 30),
+                ChildName = "Bob",
+                IsSent = false
+            }
+        };
+
+        _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
+            .ReturnsAsync(testReminders);
+
+        // Act
+        var result = await _aiToolsManager.ListRemindersAsync("Alice");
+
+        // Assert
+        Assert.Contains("Alice reminder", result);
+        Assert.DoesNotContain("Bob reminder", result);
+        Assert.Contains("(Alice)", result);
+        Assert.DoesNotContain("(Bob)", result);
+    }
+
+    // Phase 2: GetChildActivities Comprehensive Testing (+18% coverage)
+
+    [Fact]
+    public void GetChildActivities_WithValidChildAndDate_ReturnsActivities()
+    {
+        // Arrange
+        var childName = "Alice";
+        var dateString = "2024-01-15"; // Monday
+        var weekLetter = CreateTestWeekLetterWithActivities();
+
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice")))
+            .Returns(weekLetter);
+
+        // Act
+        var result = _aiToolsManager.GetChildActivities(childName, dateString);
+
+        // Assert
+        Assert.Contains("Alice Johnson", result);
+        Assert.Contains("Monday", result);
+        Assert.Contains("Math lesson", result);
+        Assert.Contains("Science project", result);
+    }
+
+    [Fact]
+    public void GetChildActivities_WithValidChildAndNullDate_UsesToday()
+    {
+        // Arrange
+        var childName = "Alice";
+        var weekLetter = CreateTestWeekLetterWithActivities();
+
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice")))
+            .Returns(weekLetter);
+
+        // Act
+        var result = _aiToolsManager.GetChildActivities(childName, null);
+
+        // Assert
+        Assert.Contains("Alice Johnson", result);
+        Assert.Contains(DateTime.Today.DayOfWeek.ToString(), result);
+    }
+
+    [Fact]
+    public void GetChildActivities_WithInvalidDate_ReturnsError()
+    {
+        // Arrange
+        var childName = "Alice";
+        var invalidDate = "not-a-date";
+
+        // Act
+        var result = _aiToolsManager.GetChildActivities(childName, invalidDate);
+
+        // Assert
+        Assert.Contains("❌ Invalid date format", result);
+    }
+
+    [Fact]
+    public void GetChildActivities_WithNonExistentChild_ReturnsError()
+    {
+        // Arrange
+        var nonExistentChild = "NonExistentChild";
+        var dateString = "2024-01-15";
+
+        // Act
+        var result = _aiToolsManager.GetChildActivities(nonExistentChild, dateString);
+
+        // Assert
+        Assert.Contains("❌ Child 'NonExistentChild' not found", result);
+    }
+
+    [Fact]
+    public void GetChildActivities_WithNoWeekLetter_ReturnsMessage()
+    {
+        // Arrange
+        var childName = "Alice";
+        var dateString = "2024-01-15";
+
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice")))
+            .Returns((JObject?)null);
+
+        // Act
+        var result = _aiToolsManager.GetChildActivities(childName, dateString);
+
+        // Assert
+        Assert.Contains("📝 No week letter available", result);
+        Assert.Contains("Alice", result);
+    }
+
+    [Fact]
+    public void GetChildActivities_WithMatchingActivities_ReturnsFormatted()
+    {
+        // Arrange
+        var childName = "Alice";
+        var dateString = "2024-01-15"; // Monday
+        var weekLetter = CreateTestWeekLetterWithActivities();
+
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice")))
+            .Returns(weekLetter);
+
+        // Act
+        var result = _aiToolsManager.GetChildActivities(childName, dateString);
+
+        // Assert
+        Assert.Contains("Alice Johnson", result);
+        Assert.Contains("Math lesson", result);
+        Assert.Contains("Science project", result);
+        Assert.Contains("Monday", result);
+    }
+
+    [Fact]
+    public void GetChildActivities_WithNoMatchingActivities_ReturnsMessage()
+    {
+        // Arrange
+        var childName = "Alice";
+        var dateString = "2024-01-20"; // Saturday - likely no school activities
+        var weekLetter = CreateTestWeekLetterWithActivities();
+
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice")))
+            .Returns(weekLetter);
+
+        // Act
+        var result = _aiToolsManager.GetChildActivities(childName, dateString);
+
+        // Assert
+        Assert.Contains("📅 No specific activities found", result);
+        Assert.Contains("Alice", result);
+        Assert.Contains("Saturday", result);
+    }
+
+    [Fact]
+    public void GetChildActivities_WithException_ReturnsError()
+    {
+        // Arrange
+        var childName = "Alice";
+        var dateString = "2024-01-15";
+
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.IsAny<Child>()))
+            .Throws(new Exception("Data access error"));
+
+        // Act
+        var result = _aiToolsManager.GetChildActivities(childName, dateString);
+
+        // Assert
+        Assert.Contains("❌ Failed to retrieve activities", result);
+    }
+
+    // Phase 3: Edge Cases and Complex Scenarios
+
+    [Fact]
+    public void GetWeekLetters_WithAllChildren_ReturnsAll()
+    {
+        // Arrange
+        var aliceWeekLetter = new JObject
+        {
+            ["ugebreve"] = new JArray
+            {
+                new JObject
+                {
+                    ["klasseNavn"] = "3A",
+                    ["uge"] = "42",
+                    ["indhold"] = "Alice's week letter content"
+                }
+            }
+        };
+
+        var bobWeekLetter = new JObject
+        {
+            ["ugebreve"] = new JArray
+            {
+                new JObject
+                {
+                    ["klasseNavn"] = "4B",
+                    ["uge"] = "42",
+                    ["indhold"] = "Bob's week letter content"
+                }
+            }
+        };
+
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice")))
+            .Returns(aliceWeekLetter);
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Bob")))
+            .Returns(bobWeekLetter);
+
+        // Act - null childName should return all children
+        var result = _aiToolsManager.GetWeekLetters(null);
+
+        // Assert
+        Assert.Contains("Alice Johnson", result);
+        Assert.Contains("Bob Smith", result);
+        Assert.Contains("Alice's week letter content", result);
+        Assert.Contains("Bob's week letter content", result);
+    }
+
+    [Fact]
+    public void GetWeekLetters_WithMixedWeekLetterAvailability_ReturnsCorrect()
+    {
+        // Arrange
+        var aliceWeekLetter = new JObject
+        {
+            ["ugebreve"] = new JArray
+            {
+                new JObject
+                {
+                    ["klasseNavn"] = "3A",
+                    ["uge"] = "42",
+                    ["indhold"] = "Alice has a week letter"
+                }
+            }
+        };
+
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice")))
+            .Returns(aliceWeekLetter);
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Bob")))
+            .Returns((JObject?)null);
+
+        // Act
+        var result = _aiToolsManager.GetWeekLetters(null);
+
+        // Assert
+        Assert.Contains("Alice Johnson", result);
+        Assert.Contains("Bob Smith", result);
+        Assert.Contains("Alice has a week letter", result);
+        Assert.Contains("No week letter available", result);
+    }
+
+    private static JObject CreateTestWeekLetterWithActivities()
+    {
+        return JObject.Parse(@"
+        {
+            ""ugebreve"": [
+                {
+                    ""klasseNavn"": ""3A"",
+                    ""uge"": ""3"",
+                    ""indhold"": ""<p>Weekly activities:</p>
+                        <p><strong>Monday:</strong> Math lesson on fractions, Science project presentations</p>
+                        <p><strong>Tuesday:</strong> Art class - painting landscapes</p>
+                        <p><strong>Wednesday:</strong> PE - indoor games due to weather</p>
+                        <p><strong>Thursday:</strong> Danish literature reading</p>
+                        <p><strong>Friday:</strong> Quiz day and free reading time</p>
+                        <p>Have a great week!</p>""
+                }
+            ]
+        }");
+    }
 }
