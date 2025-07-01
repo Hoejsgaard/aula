@@ -1,4 +1,5 @@
 {
+  "disableBypassPermissionsMode": false,
   "permissions": {
     "allow": [
       "Bash(dotnet build:*)",
