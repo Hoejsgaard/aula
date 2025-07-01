@@ -1,5 +1,4 @@
 {
-  "disableBypassPermissionsMode": false,
   "permissions": {
     "allow": [
       "Bash(dotnet build:*)",
@@ -33,8 +32,11 @@
       "Bash(~/.dotnet/tools/reportgenerator -reports:\"/mnt/d/git/aula/src/Aula.Tests/TestResults/60b4240a-5fde-496a-bd0c-639cc2116315/coverage.cobertura.xml\" -targetdir:/tmp/coverage -reporttypes:TextSummary)",
       "Bash(dotnet --version)",
       "Bash(dotnet --list-sdks)",
-      "Bash(verbosity=minimal)"
+      "Bash(verbosity=minimal)",
+      "Bash(~/.dotnet/tools/reportgenerator -reports:\"/mnt/d/git/aula/TestResults/ed2e7fc3-13ef-48b6-bdf8-681443e76859/coverage.cobertura.xml\" -targetdir:/tmp/coverage -reporttypes:TextSummary)",
+      "Bash(python3:*)"
     ],
     "deny": []
-  }
+  },
+  "disableBypassPermissionsMode": false
 }
