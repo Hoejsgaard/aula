@@ -1,686 +1,271 @@
 @coderabbitai[bot] commented on this pull request.
 
-Actionable comments posted: 20
+Actionable comments posted: 3
 
-♻️ Duplicate comments (1)
-src/Aula/Bots/SlackInteractiveBot.cs (1)
-48-71: HttpClient instantiation pattern needs improvement
-
-The direct instantiation of HttpClient when not injected can still lead to socket exhaustion issues, as noted in previous reviews.
-
-Consider using IHttpClientFactory injection as suggested in earlier reviews to improve resource management.
-
-🧹 Nitpick comments (34)
-src/Aula.Tests/Configuration/ConfigurationTests.cs (1)
-178-232: Consider testing actual validation logic instead of duplicating it in tests.
-
-The validation tests for Slack channel IDs and Telegram tokens implement validation logic within the test rather than testing validation that exists in the actual configuration classes. This creates maintenance overhead and doesn't verify the real validation behavior.
-
-If the Config classes have validation methods, test those directly:
-
-// Instead of duplicating validation logic in tests
--        var hasColonAndMinLength = !string.IsNullOrEmpty(token) &&
--                                   token.Contains(':') &&
--                                   token.Length > 10;
--        Assert.Equal(isValidFormat, hasColonAndMinLength);
-
-// Test the actual validation method
-+        Assert.Equal(isValidFormat, config.Telegram.IsValidToken());
-src/Aula.Tests/Services/DataServiceTests.cs (1)
-26-27: Consider using a concrete Config instance instead of a mock.
-
-Since Config appears to be a simple configuration POCO class, using a real instance with test data might be more appropriate than mocking it, especially if the DataService needs to access specific configuration properties.
-
--        var configMock = new Mock<Config>();
--        _dataManager = new DataService(_cache, configMock.Object, _loggerFactoryMock.Object);
-+        var config = new Config { /* set test configuration values */ };
-+        _dataManager = new DataService(_cache, config, _loggerFactoryMock.Object);
-src/Aula.Tests/Utilities/ConversationContextManagerTests.cs (1)
-112-136: Consider the implications of manual timestamp manipulation.
-
-While manually setting the timestamp to test expiration is a pragmatic approach, it bypasses the normal flow of time-based expiration. Consider whether this accurately reflects real-world usage patterns.
-
-For more realistic testing, consider using a time provider abstraction:
-
-// In production code
-public interface ITimeProvider 
-{
-    DateTime Now { get; }
-}
-
-// In tests, inject a controllable time provider
-var mockTimeProvider = new Mock<ITimeProvider>();
-mockTimeProvider.Setup(x => x.Now).Returns(DateTime.Now.AddMinutes(-11));
-This would allow testing expiration without directly manipulating the context object.
-
-src/Aula.Tests/Utilities/WeekLetterContentExtractorTests.cs (2)
-145-152: Improve logger verification robustness.
-
-The logger verification uses a contains check which might be fragile. Consider verifying the exact log level and message structure more precisely.
-
--        mockLogger.Verify(
--            x => x.Log(
--                LogLevel.Warning,
--                It.IsAny<EventId>(),
--                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Week letter content is empty")),
--                It.IsAny<Exception>(),
--                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
--            Times.Once);
-+        mockLogger.Verify(
-+            x => x.Log(
-+                LogLevel.Warning,
-+                It.IsAny<EventId>(),
-+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Equals("Week letter content is empty")),
-+                It.IsAny<Exception>(),
-+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-+            Times.Once);
-258-258: Consider testing edge case with anonymous type indexer access.
-
-The comment indicates forcing a reflection exception, but the current implementation with an anonymous object may not reliably trigger the expected exception path.
-
-Consider using a more explicit approach to trigger the exception:
-
--        dynamic invalidWeekLetter = new { someProperty = "value" };
--        // Force a reflection exception by trying to access non-existent indexer
-+        dynamic invalidWeekLetter = "not an object"; // This will definitely cause an exception when accessing indexer
-src/Aula.Tests/Bots/TelegramInteractiveBotTests.cs (1)
-369-378: Reconsider testing private methods via reflection.
-
-Testing private methods through reflection creates fragile tests. If the hash computation logic is important enough to test, consider making it internal or extracting it to a testable utility.
-
-Consider one of these approaches:
-
-Make the ComputeHash method internal and use InternalsVisibleTo
-Extract hash computation to a separate utility class
-Test the hash behavior indirectly through public methods
-src/Aula.Tests/Services/DataModelTests.cs (2)
-316-317: Extract hash computation to a utility method.
-
-The SHA256 hash computation is duplicated and embedded in the test. Consider extracting this to a helper method or using the same hash computation logic as the actual implementation.
-
--        var originalHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(originalContent)));
--        var modifiedHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(modifiedContent)));
-+        var originalHash = ComputeTestHash(originalContent);
-+        var modifiedHash = ComputeTestHash(modifiedContent);
-+        
-+    private static string ComputeTestHash(string content)
-+    {
-+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content)));
-+    }
-258-261: Simplify validation logic in tests.
-
-The validation logic is embedded in the test, making it harder to understand the actual business rules. Consider testing against the actual validation methods if they exist.
-
-If validation methods exist on the models, test them directly:
-
--        var isValidWeek = weekNumber >= 1 && weekNumber <= 53;
--        var isValidYear = year > 2000 && year < 3000;
--        Assert.Equal(isValid, isValidWeek && isValidYear);
-+        Assert.Equal(isValid, postedLetter.IsValid());
-src/Aula.Tests/Utilities/ConversationContextTests.cs (2)
-21-22: Time-based assertions may be flaky.
-
-Testing with DateTime.Now can be unreliable in test environments. Consider using a fixed timestamp or allowing for a small tolerance.
-
--        Assert.True(context.Timestamp <= DateTime.Now);
--        Assert.True(context.Timestamp > DateTime.Now.AddSeconds(-1)); // Should be very recent
-+        var now = DateTime.Now;
-+        var tolerance = TimeSpan.FromSeconds(2);
-+        Assert.True(context.Timestamp <= now + tolerance);
-+        Assert.True(context.Timestamp >= now - tolerance);
-120-121: Consider culture-invariant assertions for decimal formatting.
-
-The test assumes specific decimal formatting with "3." which might behave differently across cultures. The test correctly uses InvariantCulture concept but should be more explicit.
-
-Consider making the assertion more robust:
-
--        Assert.Contains("Age: 3.", result); // Should be around 3.5 minutes (using InvariantCulture)
-+        Assert.Matches(@"Age: 3\.\d", result); // More flexible pattern matching
-src/Aula.Tests/Utilities/DateTimeUtilitiesTests.cs (1)
-82-90: Simplify redundant assertions in lowercase test.
-
-The test has redundant assertions that validate the same condition twice.
-
-    public void GetDanishDayName_ValidDayOfWeek_ReturnsLowercaseName(DayOfWeek dayOfWeek, string expectedName)
-    {
-        // Act
-        var result = DateTimeUtilities.GetDanishDayName(dayOfWeek);
-
-        // Assert
--       Assert.Equal(expectedName.ToLower(), result);
-        Assert.Equal(expectedName, result); // Should already be lowercase
-    }
-The first assertion is redundant since expectedName is already lowercase in the test data, making the second assertion sufficient.
-
+♻️ Duplicate comments (3)
 src/Aula.Tests/Integration/TestableMinUddannelseClient.cs (1)
-12-25: Consider implementing IDisposable for proper HttpClient cleanup.
+93-99: Fix ISO week number calculation for proper ISO 8601 compliance.
 
-The class accepts an HttpClient but doesn't implement IDisposable for proper resource cleanup, which could lead to resource leaks in tests.
+The current implementation uses CultureInfo.CurrentCulture which may not return true ISO 8601 week numbers, especially for edge cases around year boundaries.
 
--public class TestableMinUddannelseClient : IMinUddannelseClient
-+public class TestableMinUddannelseClient : IMinUddannelseClient, IDisposable
-{
-    private readonly HttpClient _httpClient;
-    private readonly string _username;
-    private readonly string _password;
-    private JObject _userProfile = new();
-    private bool _loggedIn;
-+   private bool _disposed;
+Apply this fix for proper ISO 8601 week number calculation:
 
-+   public void Dispose()
-+   {
-+       if (!_disposed)
-+       {
-+           _httpClient?.Dispose();
-+           _disposed = true;
-+       }
-+   }
-This ensures proper cleanup of the injected HttpClient in test scenarios.
-
-src/Aula.Tests/Scheduling/SchedulingServiceTests.cs (1)
-140-142: Consider more robust async operation handling.
-
-Using Task.Delay(100) for waiting on async operations can be flaky in CI environments or under load.
-
-        // Act
-        await schedulingService.StartAsync();
-
--       // Wait a moment for async operations to complete
--       await Task.Delay(100);
-+       // Wait a moment for async operations to complete with timeout
-+       await Task.Delay(TimeSpan.FromMilliseconds(500));
-Alternatively, consider using more deterministic approaches like completion signals or verify calls with timeout parameters if supported by your mocking framework.
-
-src/Aula.Tests/Services/SupabaseServiceTests.cs (2)
-31-38: Remove duplicate constructor tests.
-
-Both Constructor_WithValidConfig_InitializesCorrectly and Constructor_WithValidConfig_CreatesInstance test the same functionality.
-
--   [Fact]
--   public void Constructor_WithValidConfig_CreatesInstance()
--   {
--       // Act & Assert - Verify service construction works correctly
--       Assert.NotNull(_supabaseService);
--   }
-The first constructor test is sufficient and more descriptive.
-
-Also applies to: 84-89
-
-59-67: Add more comprehensive connection testing.
-
-The connection test only verifies failure without initialization. Consider adding tests for successful connections and error handling scenarios.
-
-Add tests for:
-
-Connection testing after proper initialization
-Connection failure handling with specific error types
-Network timeout scenarios
-Invalid credentials handling
-This would provide better coverage of the SupabaseService's connection capabilities.
-
-src/Aula.Tests/Utilities/IntentAnalysisPromptsTests.cs (1)
-132-154: Consider strengthening use case coverage validation.
-
-The test relies on loose string matching which might produce false positives.
-
-        // At least one example should contain similar wording
-        var hasRelevantExample = matchingExamples.Any(ex => 
--           ex.Value.ToLower().Contains(queryPattern.ToLower()));
-+           ex.Value.ToLower().Contains(queryPattern.ToLower()) || 
-+           ex.Key.ToLower().Contains(queryPattern.ToLower()));
-Consider using more sophisticated pattern matching or regex to ensure the examples truly cover the expected use cases rather than just containing substring matches.
-
-src/Aula.Tests/Bots/TelegramMessageHandlerTests.cs (1)
-188-203: Consider consolidating repetitive logger verification patterns.
-
-The logger verification pattern is repeated throughout multiple tests. Consider extracting this into a helper method to improve maintainability.
-
-+private void VerifyLoggerCalled(string expectedMessage, LogLevel logLevel = LogLevel.Information, Times? times = null)
-+{
-+    _mockLogger.Verify(
-+        logger => logger.Log(
-+            logLevel,
-+            It.IsAny<EventId>(),
-+            It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains(expectedMessage)),
-+            logLevel == LogLevel.Error ? It.IsAny<Exception>() : null,
-+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-+        times ?? Times.Once);
-+}
-log.txt (1)
-78-78: Fix grammatical error in log message.
-
-The static analysis correctly identifies a grammar issue. "1 hours" should be "1 hour".
-
--Slack cleanup timer started - running every 1 hours
-+Slack cleanup timer started - running every 1 hour
-src/Aula.Tests/Services/OpenAiServiceTests.cs (1)
-90-117: Improve ChatInterface enum test coverage.
-
-The current test only verifies enum validity but doesn't test the actual formatting behavior. Consider adding more specific assertions about the expected formatting differences between Slack and Telegram.
-
- [Theory]
- [InlineData(ChatInterface.Slack)]
- [InlineData(ChatInterface.Telegram)]
--public void OpenAiService_GetChatInterfaceInstructions_ReturnsCorrectFormat(ChatInterface chatInterface)
-+public void OpenAiService_ChatInterface_HasExpectedFormatting(ChatInterface chatInterface)
+ private int GetIsoWeekNumber(DateOnly date)
  {
--    // This tests the private helper method's logic indirectly by verifying the enum values
--    // Arrange & Act
-     var isValidInterface = Enum.IsDefined(typeof(ChatInterface), chatInterface);
--
--    // Assert
-     Assert.True(isValidInterface);
- 
--    // Verify that each interface type has specific formatting requirements
-+    // Verify interface-specific expectations
-     switch (chatInterface)
-     {
-         case ChatInterface.Slack:
--            // Slack uses markdown format
--            Assert.True(true); // Slack interface is valid
-+            // Slack should use markdown formatting
-+            Assert.Equal("Slack", chatInterface.ToString());
-             break;
-         case ChatInterface.Telegram:
--            // Telegram uses HTML format  
--            Assert.True(true); // Telegram interface is valid
-+            // Telegram should use HTML formatting
-+            Assert.Equal("Telegram", chatInterface.ToString());
-             break;
-         default:
-             Assert.Fail("Unknown chat interface");
-             break;
-     }
+-    var cultureInfo = System.Globalization.CultureInfo.CurrentCulture;
+-    var calendarWeekRule = cultureInfo.DateTimeFormat.CalendarWeekRule;
+-    var firstDayOfWeek = cultureInfo.DateTimeFormat.FirstDayOfWeek;
+-    return cultureInfo.Calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue), calendarWeekRule, firstDayOfWeek);
++    // ISO 8601 week calculation
++    var dt = date.ToDateTime(TimeOnly.MinValue);
++    var day = (int)CultureInfo.InvariantCulture.Calendar.GetDayOfWeek(dt);
++    return CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(dt.AddDays(4 - (day == 0 ? 7 : day)), CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
  }
-src/Aula.Tests/Bots/TelegramTestMessageFactory.cs (2)
-17-35: Consider adding error handling for JSON deserialization.
+src/Aula/Program.cs (2)
+84-92: Use consistent service resolution pattern for interactive bots.
 
-The factory doesn't handle potential JSON deserialization errors. While this is acceptable for test code, adding basic validation could improve debugging when tests fail.
+The Telegram bot uses GetService while the Slack bot uses GetRequiredService, creating inconsistency in error handling patterns.
 
--return JsonConvert.DeserializeObject<Message>(messageJson)!;
-+try
-+{
-+    return JsonConvert.DeserializeObject<Message>(messageJson) 
-+        ?? throw new InvalidOperationException("Failed to deserialize message JSON");
-+}
-+catch (JsonException ex)
-+{
-+    throw new InvalidOperationException($"Invalid message JSON: {ex.Message}", ex);
-+}
-18-32: Reduce JSON template duplication.
+Apply this diff to use consistent service resolution:
 
-The two factory methods share significant JSON structure. Consider extracting the common parts to reduce duplication and improve maintainability.
+-            TelegramInteractiveBot? telegramInteractiveBot = null;
+-            if (config.Telegram.Enabled && !string.IsNullOrEmpty(config.Telegram.Token))
+-            {
+-                telegramInteractiveBot = serviceProvider.GetService<TelegramInteractiveBot>();
+-                if (telegramInteractiveBot != null)
+-                {
+-                    await telegramInteractiveBot.Start();
+-                }
+-            }
++            TelegramInteractiveBot? telegramInteractiveBot = null;
++            if (config.Telegram.Enabled && !string.IsNullOrEmpty(config.Telegram.Token))
++            {
++                telegramInteractiveBot = serviceProvider.GetRequiredService<TelegramInteractiveBot>();
++                await telegramInteractiveBot.Start();
++            }
+197-202: Optimize configuration check for Telegram bot registration.
 
-+private static string CreateBaseMessageJson(long chatId, ChatType chatType, int messageId)
-+{
-+    return $$"""
-+    {
-+        "message_id": {{messageId}},
-+        "date": {{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}},
-+        "chat": {
-+            "id": {{chatId}},
-+            "type": "{{chatType.ToString().ToLower()}}"
-+        },
-+        "from": {
-+            "id": 123,
-+            "is_bot": false,
-+            "first_name": "Test",
-+            "username": "testuser"
-+        }
-+    """;
-+}
-Also applies to: 43-59
+Creating a temporary Config object just to check if Telegram is enabled is inefficient since the configuration will already be loaded and registered as a service.
 
-src/Aula.Tests/Services/OpenAiServiceIntegrationTests.cs (1)
-167-191: Add more specific validation for graceful handling.
+Consider restructuring the service registration to avoid duplicate configuration binding:
 
-The tests verify that invalid inputs return non-null results but don't validate the quality of error handling. Consider adding assertions about the response content or structure.
+-        // Only register TelegramInteractiveBot if enabled
+-        var tempConfig = new Config();
+-        configuration.Bind(tempConfig);
+-        if (tempConfig.Telegram.Enabled && !string.IsNullOrEmpty(tempConfig.Telegram.Token))
+-        {
+-            services.AddSingleton<TelegramInteractiveBot>();
+-        }
++        // Register TelegramInteractiveBot conditionally
++        services.AddSingleton<TelegramInteractiveBot>(provider =>
++        {
++            var config = provider.GetRequiredService<Config>();
++            if (!config.Telegram.Enabled || string.IsNullOrEmpty(config.Telegram.Token))
++            {
++                throw new InvalidOperationException("TelegramInteractiveBot cannot be instantiated when Telegram is disabled");
++            }
++            return ActivatorUtilities.CreateInstance<TelegramInteractiveBot>(provider);
++        });
+Alternatively, always register the service and handle the enabled check within the bot's Start method.
 
- // Should not throw exception, may return empty or error response
- var result = await service.ProcessQueryWithToolsAsync(query, "context-key", ChatInterface.Slack);
- 
--// Just verify it returned something (even if it's an error message)
--Assert.NotNull(result);
-+// Verify it returned something and that it's a reasonable error response
-+Assert.NotNull(result);
-+Assert.True(result.Length > 0, "Should return a meaningful response even for invalid input");
-+// Could also check for specific error message patterns if the service defines them
-src/Aula.Tests/Channels/TelegramClientTests.cs (1)
-60-66: Consider testing with empty token edge case separately.
+🧹 Nitpick comments (6)
+src/Aula.Tests/Integration/AulaClientTests.cs (1)
+43-50: Consider testing empty string behavior more explicitly.
 
-The theory test accepts empty tokens but doesn't verify specific behavior. Empty tokens might require special handling in the actual implementation.
+While the test verifies that empty strings don't throw exceptions, it might be worth verifying the actual behavior when empty credentials are provided. Consider adding assertions to verify that the client handles empty credentials gracefully in actual usage scenarios.
 
- [Theory]
- [InlineData("123456789:AABBCCDDEEFFGG")]
- [InlineData("987654321:XXYYZZ")]
--[InlineData("")]
- public void Constructor_WithVariousTokens_DoesNotThrow(string token)
+ [Fact]
+ public void Constructor_ShouldInitializeWithValidEmptyStrings()
  {
-     // Act & Assert
-     var client = new TelegramClient(token);
+     // Arrange & Act
+     var client = new AulaClient("", "");
+
+     // Assert
      Assert.NotNull(client);
++    // Note: Consider testing login behavior with empty credentials in integration tests
  }
-
-+[Fact]
-+public void Constructor_WithEmptyToken_HandlesGracefully()
-+{
-+    // Act & Assert
-+    var client = new TelegramClient("");
-+    Assert.NotNull(client);
-+    // Additional assertions about how empty token is handled
-+}
-src/Aula.Tests/Utilities/JsonFormatterTests.cs (2)
-1-4: Add missing using directive for Newtonsoft.Json.
-
-The test references Newtonsoft.Json.JsonReaderException but doesn't import the namespace, relying on fully qualified names in assertions.
-
- using Xunit;
- using Aula.Utilities;
-+using Newtonsoft.Json;
-178-194: Consider adding performance assertion for large JSON test.
-
-The performance test generates a large JSON but doesn't verify timing. Consider adding a timing assertion to ensure the method performs within acceptable limits.
-
- [Fact]
- public void Prettify_WithVeryLargeJson_HandlesPerformantly()
- {
-     // Arrange
-     var largeArray = "[" + string.Join(",", Enumerable.Range(1, 1000).Select(i => $"{{\"id\":{i},\"name\":\"item{i}\"}}")) + "]";
-
-     // Act
-+    var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-     var result = JsonFormatter.Prettify(largeArray);
-+    stopwatch.Stop();
-
-     // Assert
-     Assert.NotNull(result);
-     Assert.NotEmpty(result);
-     Assert.Contains("\"id\"", result);
-     Assert.Contains("\"name\"", result);
-     Assert.Contains("item1", result);
-     Assert.Contains("item1000", result);
-+    Assert.True(stopwatch.ElapsedMilliseconds < 1000, "Should complete within 1 second");
- }
-src/Aula.Tests/Tools/AiToolsManagerTests.cs (1)
-138-156: Consider testing with 0-based vs 1-based index confusion.
-
-The test comment mentions "1-based index, not ID" but could benefit from explicit testing of this conversion to ensure the mapping between user-friendly numbers and internal IDs is correct.
-
- [Fact]
- public async Task DeleteReminderAsync_WithValidNumber_DeletesReminder()
- {
-     // Arrange
--    var reminderNumber = 1; // 1-based index, not ID
-+    var reminderNumber = 1; // User sees reminder #1
-     var testReminders = new List<Reminder>
-     {
--        new Reminder { Id = 123, Text = "Test reminder to delete", RemindDate = DateOnly.FromDateTime(DateTime.Today), RemindTime = new TimeOnly(10, 0) }
-+        new Reminder { Id = 123, Text = "Test reminder to delete", RemindDate = DateOnly.FromDateTime(DateTime.Today), RemindTime = new TimeOnly(10, 0) },
-+        new Reminder { Id = 456, Text = "Another reminder", RemindDate = DateOnly.FromDateTime(DateTime.Today), RemindTime = new TimeOnly(11, 0) }
-     };
-
-     _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
-         .ReturnsAsync(testReminders);
-
-     // Act
-     var result = await _aiToolsManager.DeleteReminderAsync(reminderNumber);
-
-     // Assert
-     Assert.Contains("✅ Deleted reminder", result);
--    _mockSupabaseService.Verify(s => s.DeleteReminderAsync(123), Times.Once); // Verify actual ID is used
-+    _mockSupabaseService.Verify(s => s.DeleteReminderAsync(123), Times.Once); // Verify first reminder's ID (123) is used for reminderNumber 1
-+}
-+
-+[Fact]
-+public async Task DeleteReminderAsync_WithSecondReminder_DeletesCorrectReminder()
-+{
-+    // Test that reminderNumber 2 maps to the second reminder's ID
-+    var reminderNumber = 2;
-+    var testReminders = new List<Reminder>
-+    {
-+        new Reminder { Id = 123, Text = "First reminder", RemindDate = DateOnly.FromDateTime(DateTime.Today), RemindTime = new TimeOnly(10, 0) },
-+        new Reminder { Id = 456, Text = "Second reminder", RemindDate = DateOnly.FromDateTime(DateTime.Today), RemindTime = new TimeOnly(11, 0) }
-+    };
-+
-+    _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
-+        .ReturnsAsync(testReminders);
-+
-+    // Act
-+    var result = await _aiToolsManager.DeleteReminderAsync(reminderNumber);
-+
-+    // Assert
-+    _mockSupabaseService.Verify(s => s.DeleteReminderAsync(456), Times.Once); // Verify second reminder's ID is used
- }
-src/Aula.Tests/Utilities/Html2SlackMarkdownConverterTests.cs (2)
-184-196: Consider making the performance test more reliable.
-
-The hardcoded iteration count of 1000 might cause flaky test behavior depending on the test environment performance.
-
-Consider either:
-
-Reducing the iteration count to a more conservative value like 100
-Adding a timeout attribute to the test
-Making the iteration count configurable via test settings
--var longContent = string.Concat(Enumerable.Repeat("<p>This is a long paragraph with content. </p>", 1000));
-+var longContent = string.Concat(Enumerable.Repeat("<p>This is a long paragraph with content. </p>", 100));
-45-58: Consider verifying actual markdown conversion quality.
-
-While the test confirms content preservation, it doesn't verify that the HTML is properly converted to Slack-flavored markdown format.
-
-Consider adding assertions to verify the conversion produces expected markdown:
-
- // Assert
- Assert.NotNull(result);
- Assert.NotEmpty(result);
- Assert.Contains("Hello world", result);
-+Assert.DoesNotContain("<p>", result); // Verify HTML tags are removed
-+Assert.DoesNotContain("</p>", result);
-src/Aula.Tests/Bots/SlackInteractiveBotTests.cs (2)
-158-182: Consider extracting common HTTP mock setup.
-
-The HTTP mocking setup is repeated across multiple tests, creating code duplication.
-
-Consider extracting to a helper method:
-
-+private void SetupSuccessfulHttpResponse()
-+{
-+    var mockResponse = new HttpResponseMessage(HttpStatusCode.OK)
-+    {
-+        Content = new StringContent(JsonConvert.SerializeObject(new { ok = true, ts = "1234567890.123456" }))
-+    };
-+
-+    _mockHttpMessageHandler
-+        .Protected()
-+        .Setup<Task<HttpResponseMessage>>(
-+            "SendAsync",
-+            ItExpr.IsAny<HttpRequestMessage>(),
-+            ItExpr.IsAny<CancellationToken>())
-+        .ReturnsAsync(mockResponse);
-+}
-Then use SetupSuccessfulHttpResponse() in tests instead of duplicating the setup code.
-
-185-211: Consider using constants for magic values.
-
-The message length limit (5000) and other magic numbers could be extracted as constants for better maintainability.
-
-+private const int MaxMessageLength = 5000;
-+
- [Fact]
- public async Task SendMessage_WithLongText_TruncatesMessage()
- {
-     // Arrange
--    var longMessage = new string('a', 5000);
-+    var longMessage = new string('a', MaxMessageLength);
-src/Aula.Tests/Utilities/ReminderExtractionPromptsTests.cs (1)
-42-52: Consider using fixed DateTime instead of DateTime.Now.
-
-Using DateTime.Now in tests can lead to flaky behavior due to timing variations between test runs.
-
-Consider using a fixed DateTime for more predictable tests:
-
- // Arrange
- var query = "test query";
--var currentTime = DateTime.Now;
-+var currentTime = new DateTime(2025, 6, 30, 14, 30, 0);
 CLAUDE.md (2)
-57-57: Fix word repetition in documentation
+57-58: Fix word duplication in Configuration section header.
 
-Static analysis detected a repeated word "Configuration Configuration" in the text.
+The static analysis tool correctly identified a duplicated word in the section heading.
 
--### Configuration Configuration is handled through `appsettings.json` with sections for:
-+### Configuration 
+Apply this fix:
+
+-- Supabase: PostgreSQL database for reminders, posted letters, scheduling, and app state
+-
+-### Configuration
+-Configuration is handled through `appsettings.json` with sections for:
++- Supabase: PostgreSQL database for reminders, posted letters, scheduling, and app state
++
++### Configuration
 +Configuration is handled through `appsettings.json` with sections for:
-153-153: Consider hyphenation for compound modifier
+166-166: Consider using compound word "multichannel" for consistency.
 
-The term "multi-channel" is typically hyphenated when used as a compound modifier.
+The term "multi-channel" could be written as the compound word "multichannel" for better readability.
 
 -- Implement ChannelManager for multi-channel coordination
-+- Implement ChannelManager for multi-channel coordination
-Note: The current usage appears to already be hyphenated correctly.
++- Implement ChannelManager for multichannel coordination
+src/Aula/Services/OpenAiService.cs (3)
+605-610: Improve datetime parsing flexibility and user feedback
 
-src/Aula/Services/OpenAiService.cs (1)
-659-663: Consider making magic string a named constant
+The current datetime validation only accepts one specific format, which may be too restrictive for natural language processing. Consider supporting multiple common formats and providing better user feedback.
 
-The "FALLBACK_TO_EXISTING_SYSTEM" string is well-documented but would benefit from being a named constant for better maintainability.
+ // Validate datetime format
+-if (!DateTime.TryParseExact(dateTimeStr, "yyyy-MM-dd HH:mm", null, System.Globalization.DateTimeStyles.None, out _))
++var supportedFormats = new[] { "yyyy-MM-dd HH:mm", "yyyy-MM-dd", "MM-dd HH:mm", "dd-MM-yyyy HH:mm" };
++if (!supportedFormats.Any(format => DateTime.TryParseExact(dateTimeStr, format, null, System.Globalization.DateTimeStyles.None, out _)))
+ {
+     _logger.LogWarning("Invalid datetime format from AI: {DateTime}", dateTimeStr);
+     dateTimeStr = DateTime.Now.AddHours(1).ToString("yyyy-MM-dd HH:mm");
++    // Consider returning an error message to user about the fallback
+ }
+632-639: Improve reminder number extraction robustness
 
-+private const string FallbackToExistingSystem = "FALLBACK_TO_EXISTING_SYSTEM";
+The current logic only finds the first integer in the query, which could match unintended numbers. Consider more sophisticated parsing to identify the reminder number more accurately.
 
- // For general information queries, delegate to the existing week letter system
- // CRITICAL: Must return "FALLBACK_TO_EXISTING_SYSTEM" to trigger AgentService fallback logic
- // DO NOT return generic help text here - it causes language mismatch (Danish->English) 
- // and prevents proper week letter processing
- _logger.LogInformation("Delegating Aula query to existing system: {Query}", query);
--return Task.FromResult("FALLBACK_TO_EXISTING_SYSTEM");
-+return Task.FromResult(FallbackToExistingSystem);
+ // Extract reminder number from query
+ var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+-foreach (var word in words)
++
++// Look for patterns like "reminder 2", "number 3", etc.
++for (int i = 0; i < words.Length - 1; i++)
+ {
+-    if (int.TryParse(word, out var reminderNumber))
++    if ((words[i].Equals("reminder", StringComparison.OrdinalIgnoreCase) || 
++         words[i].Equals("number", StringComparison.OrdinalIgnoreCase)) &&
++        int.TryParse(words[i + 1], out var reminderNumber))
+     {
+         return await _aiToolsManager.DeleteReminderAsync(reminderNumber);
+     }
+ }
++
++// Fallback to first integer found
++foreach (var word in words)
++{
++    if (int.TryParse(word, out var reminderNumber))
++    {
++        return await _aiToolsManager.DeleteReminderAsync(reminderNumber);
++    }
++}
+188-188: Consider conditional trace logging for production
+
+The extensive trace logging with emoji prefixes is helpful for debugging but may be too verbose for production environments. Consider using conditional compilation or log level checks to reduce overhead.
+
+-_logger.LogInformation("🔎 TRACE: Updating existing conversation context for {ContextKey}", contextKey);
++if (_logger.IsEnabled(LogLevel.Debug))
++    _logger.LogDebug("TRACE: Updating existing conversation context for {ContextKey}", contextKey);
+Or consider creating a dedicated trace method:
+
+private void LogTrace(string message, params object[] args)
+{
+    if (_logger.IsEnabled(LogLevel.Debug))
+        _logger.LogDebug($"🔎 TRACE: {message}", args);
+}
+Also applies to: 218-218, 231-231, 261-261, 273-273, 279-291
+
 📜 Review details
 Configuration used: CodeRabbit UI
 Review profile: CHILL
 Plan: Pro
 
 📥 Commits
-Reviewing files that changed from the base of the PR and between 5dedefd and 8e8998d.
+Reviewing files that changed from the base of the PR and between 8e8998d and a1f308c.
 
-📒 Files selected for processing (35)
+📒 Files selected for processing (24)
 CLAUDE.md (1 hunks)
-log.txt (1 hunks)
 src/Aula.Tests/Bots/SlackInteractiveBotTests.cs (1 hunks)
 src/Aula.Tests/Bots/SlackMessageHandlerTests.cs (1 hunks)
 src/Aula.Tests/Bots/TelegramInteractiveBotTests.cs (1 hunks)
-src/Aula.Tests/Bots/TelegramMessageHandlerTests.cs (1 hunks)
 src/Aula.Tests/Bots/TelegramTestMessageFactory.cs (1 hunks)
-src/Aula.Tests/Channels/SlackBotTests.cs (1 hunks)
-src/Aula.Tests/Channels/TelegramClientTests.cs (1 hunks)
 src/Aula.Tests/Configuration/ConfigurationTests.cs (1 hunks)
-src/Aula.Tests/Integration/AgentServiceTests.cs (1 hunks)
-src/Aula.Tests/Integration/MinUddannelseClientTests.cs (1 hunks)
+src/Aula.Tests/Integration/AulaClientTests.cs (1 hunks)
 src/Aula.Tests/Integration/TestableMinUddannelseClient.cs (1 hunks)
+src/Aula.Tests/ProgramTests.cs (1 hunks)
 src/Aula.Tests/Scheduling/SchedulingServiceIntegrationTests.cs (1 hunks)
-src/Aula.Tests/Scheduling/SchedulingServiceTests.cs (1 hunks)
 src/Aula.Tests/Services/DataModelTests.cs (1 hunks)
-src/Aula.Tests/Services/DataServiceTests.cs (1 hunks)
+src/Aula.Tests/Services/GoogleCalendarTests.cs (1 hunks)
 src/Aula.Tests/Services/OpenAiServiceIntegrationTests.cs (1 hunks)
-src/Aula.Tests/Services/OpenAiServiceTests.cs (1 hunks)
 src/Aula.Tests/Services/SupabaseServiceTests.cs (1 hunks)
-src/Aula.Tests/Tools/AiToolsManagerTests.cs (1 hunks)
-src/Aula.Tests/Tools/ReminderCommandHandlerTests.cs (1 hunks)
-src/Aula.Tests/Utilities/ConversationContextManagerTests.cs (1 hunks)
 src/Aula.Tests/Utilities/ConversationContextTests.cs (1 hunks)
 src/Aula.Tests/Utilities/DateTimeUtilitiesTests.cs (1 hunks)
-src/Aula.Tests/Utilities/FollowUpQuestionDetectorTests.cs (1 hunks)
-src/Aula.Tests/Utilities/Html2SlackMarkdownConverterTests.cs (1 hunks)
 src/Aula.Tests/Utilities/IntentAnalysisPromptsTests.cs (1 hunks)
 src/Aula.Tests/Utilities/JsonFormatterTests.cs (1 hunks)
 src/Aula.Tests/Utilities/ReminderExtractionPromptsTests.cs (1 hunks)
 src/Aula.Tests/Utilities/WeekLetterContentExtractorTests.cs (1 hunks)
-src/Aula.Tests/test-appsettings.json (1 hunks)
 src/Aula/Bots/SlackInteractiveBot.cs (1 hunks)
+src/Aula/Program.cs (1 hunks)
 src/Aula/Services/OpenAiService.cs (1 hunks)
-src/Aula/appsettings.example.json (1 hunks)
-✅ Files skipped from review due to trivial changes (1)
-src/Aula/appsettings.example.json
-🚧 Files skipped from review as they are similar to previous changes (1)
-src/Aula.Tests/test-appsettings.json
-🧰 Additional context used 🧬 Code Graph Analysis (7) src/Aula.Tests/Integration/TestableMinUddannelseClient.cs (2)
-src/Aula.Tests/Services/OpenAiServiceTests.cs (1)
-JObject (140-165)
-src/Aula/Configuration/Child.cs (1)
-Child (3-9)
-src/Aula.Tests/Utilities/DateTimeUtilitiesTests.cs (1)
-src/Aula/Utilities/DateTimeUtilities.cs (2)
-DateTimeUtilities (3-19)
-GetDanishDayName (5-18)
-src/Aula.Tests/Integration/AgentServiceTests.cs (4)
-src/Aula/Configuration/Child.cs (1)
-Child (3-9)
-src/Aula.Tests/Integration/MinUddannelseClientTests.cs (2)
-Fact (13-31)
-Fact (33-71)
-src/Aula.Tests/Integration/TestableMinUddannelseClient.cs (3)
-Task (27-47)
-Task (49-60)
-Task (62-73)
-src/Aula.Tests/Services/OpenAiServiceTests.cs (1)
-JObject (140-165)
-src/Aula.Tests/Scheduling/SchedulingServiceIntegrationTests.cs (7)
+src/Aula/Utilities/FollowUpQuestionDetector.cs (1 hunks)
+🚧 Files skipped from review as they are similar to previous changes (14)
+src/Aula.Tests/Bots/TelegramInteractiveBotTests.cs
+src/Aula.Tests/Utilities/ConversationContextTests.cs
+src/Aula.Tests/Services/DataModelTests.cs
+src/Aula.Tests/Services/SupabaseServiceTests.cs
+src/Aula.Tests/Utilities/IntentAnalysisPromptsTests.cs
+src/Aula/Utilities/FollowUpQuestionDetector.cs
+src/Aula.Tests/Configuration/ConfigurationTests.cs
+src/Aula.Tests/Utilities/DateTimeUtilitiesTests.cs
+src/Aula.Tests/Bots/TelegramTestMessageFactory.cs
+src/Aula.Tests/Services/OpenAiServiceIntegrationTests.cs
+src/Aula.Tests/Scheduling/SchedulingServiceIntegrationTests.cs
+src/Aula.Tests/Utilities/JsonFormatterTests.cs
+src/Aula.Tests/Bots/SlackInteractiveBotTests.cs
+src/Aula.Tests/Utilities/ReminderExtractionPromptsTests.cs
+🧰 Additional context used 🧬 Code Graph Analysis (1) src/Aula/Program.cs (13)
+src/Aula/Bots/SlackInteractiveBot.cs (7)
+Task (73-126)
+Task (288-291)
+Task (293-349)
+Task (351-395)
+Task (397-469)
+SlackInteractiveBot (23-533)
+SlackInteractiveBot (48-71)
+src/Aula/Bots/TelegramInteractiveBot.cs (11)
+Task (70-126)
+Task (139-160)
+Task (162-173)
+Task (178-181)
+Task (183-186)
+Task (188-206)
+Task (208-211)
+Task (213-236)
+Task (238-287)
+TelegramInteractiveBot (25-297)
+TelegramInteractiveBot (40-68)
+src/Aula/Channels/SlackBot.cs (5)
+Task (22-38)
+Task (40-65)
+SlackBot (8-83)
+SlackBot (13-14)
+SlackBot (16-20)
 src/Aula/Configuration/Config.cs (1)
 Config (3-14)
+src/Aula/Channels/TelegramClient.cs (3)
+TelegramClient (15-272)
+TelegramClient (21-29)
+TelegramClient (31-36)
+src/Aula/Scheduling/SchedulingService.cs (2)
+SchedulingService (20-537)
+SchedulingService (32-46)
 src/Aula/Configuration/Slack.cs (1)
 Slack (3-11)
 src/Aula/Configuration/Telegram.cs (1)
 Telegram (3-11)
-src/Aula/Configuration/Child.cs (1)
-Child (3-9)
-src/Aula.Tests/Bots/SlackMessageHandlerTests.cs (18)
-Fact (70-74)
-Fact (76-89)
-Fact (91-104)
-Fact (106-119)
-Fact (121-134)
-Fact (136-149)
-Fact (151-164)
-Fact (166-179)
-Fact (181-195)
-Fact (197-211)
-Fact (213-226)
-Fact (228-242)
-Fact (244-257)
-Fact (309-336)
-Fact (361-382)
-Theory (259-287)
-Theory (289-307)
-Theory (338-359)
-src/Aula.Tests/Bots/SlackInteractiveBotTests.cs (1)
-Fact (67-71)
-src/Aula.Tests/Bots/TelegramInteractiveBotTests.cs (3)
-Theory (286-313)
-Theory (315-341)
-Theory (361-379)
-src/Aula.Tests/Utilities/JsonFormatterTests.cs (1)
-src/Aula/Utilities/JsonFormatter.cs (2)
-JsonFormatter (5-11)
-Prettify (7-10)
-src/Aula.Tests/Utilities/ReminderExtractionPromptsTests.cs (1)
-src/Aula/Utilities/ReminderExtractionPrompts.cs (2)
-ReminderExtractionPrompts (3-29)
-GetExtractionPrompt (5-28)
-src/Aula/Services/OpenAiService.cs (5)
-src/Aula/Tools/AiToolsManager.cs (4)
-AiToolsManager (8-250)
-AiToolsManager (14-19)
-GetCurrentDateTime (193-197)
-GetHelp (199-220)
-src/Aula/Utilities/WeekLetterContentExtractor.cs (3)
-WeekLetterContentExtractor (6-46)
-ExtractContent (8-27)
-ExtractContent (29-45)
-src/Aula/Services/IOpenAiService.cs (1)
-ClearConversationHistory (26-26)
-src/Aula/Utilities/IntentAnalysisPrompts.cs (2)
-IntentAnalysisPrompts (3-42)
-GetFormattedPrompt (37-41)
-src/Aula/Utilities/ReminderExtractionPrompts.cs (2)
-ReminderExtractionPrompts (3-29)
-GetExtractionPrompt (5-28)
+src/Aula/Services/DataService.cs (2)
+DataService (8-76)
+DataService (15-20)
+src/Aula/Services/OpenAiService.cs (3)
+OpenAiService (20-672)
+OpenAiService (37-53)
+OpenAiService (55-61)
+src/Aula/Configuration/OpenAi.cs (1)
+OpenAi (3-10)
+src/Aula/Integration/AgentService.cs (2)
+AgentService (8-283)
+AgentService (16-26)
+src/Aula/Services/SupabaseService.cs (2)
+SupabaseService (40-386)
+SupabaseService (46-50)
 🪛 LanguageTool CLAUDE.md
 [duplication] ~57-~57: Possible typo: you repeated a word.
 Context: ...tters, scheduling, and app state
@@ -690,1547 +275,182 @@ Configuration is handled through appsettings.json w...
 
 (ENGLISH_WORD_REPEAT_RULE)
 
-[misspelling] ~153-~153: This word is normally spelled as one.
+[misspelling] ~166-~166: This word is normally spelled as one.
 Context: ...methods
 
 Implement ChannelManager for multi-channel coordination
 Refactor configuration ...
 (EN_COMPOUNDS_MULTI_CHANNEL)
 
-[locale-violation] ~197-~197: In American English, ‘afterward’ is the preferred variant. ‘Afterwards’ is more commonly used in British English and other dialects.
-Context: ...ting Strategy
+🔇 Additional comments (26)
+src/Aula.Tests/Integration/AulaClientTests.cs (1)
+1-51: Excellent comprehensive constructor validation tests.
 
-Refactor first, test afterwards - Never compromise code quality by fo...
-(AFTERWARDS_US)
+The test suite provides thorough coverage of the AulaClient constructor validation, including null parameter checks, inheritance verification, and edge cases. The tests follow proper AAA pattern and have clear, descriptive names.
 
-log.txt
-[style] ~30-~30: The word ‘til’ with one ‘l’ is informal. Consider replacing it.
-Context: ...ith: Der er ikke skrevet nogen ugenoter til denne uge 14:05:20 info: AgentService[0...
+src/Aula.Tests/Utilities/WeekLetterContentExtractorTests.cs (2)
+1-299: Outstanding comprehensive test coverage for WeekLetterContentExtractor.
 
-(TIL)
+This test suite exemplifies excellent unit testing practices:
 
-[style] ~50-~50: The word ‘til’ with one ‘l’ is informal. Consider replacing it.
-Context: ...ith: Der er ikke skrevet nogen ugenoter til denne uge 14:05:20 info: AgentService[0...
+Comprehensive edge case coverage: Tests handle null, empty, and missing data scenarios
+Proper logging verification: Uses Moq to verify warning and error logging behavior
+Clean test data: Excellent use of raw string literals for JSON test data
+Dynamic and strongly-typed testing: Covers both JObject and dynamic input scenarios
+Exception handling validation: Ensures graceful error handling with proper logging
+The test structure follows AAA pattern consistently and includes meaningful assertions for all scenarios.
 
-(TIL)
+145-152: Verify logger mock setup for extension method calls.
 
-[grammar] ~78-~78: Please verify that the plural noun “hours” is in agreement with the quantifier “1”. Did you mean to use the singular form?
-Context: ...k cleanup timer started - running every 1 hours 14:05:20 info: Aula.Scheduling.Scheduli...
+The logger verification correctly uses It.IsAnyType for structured logging, which is the proper approach for testing ILogger extension methods that use structured logging.
 
-(ONE_PLURAL)
+src/Aula.Tests/Services/GoogleCalendarTests.cs (3)
+14-18: Good practice using real LoggerFactory for testing.
 
-🔇 Additional comments (52)
-src/Aula.Tests/Configuration/ConfigurationTests.cs (1)
-118-121: Verify timestamp manipulation is properly testing expiration logic.
+Using a real ILoggerFactory instead of mocking avoids issues with extension method calls and provides more realistic test behavior. Setting the minimum level to Critical keeps test output clean.
 
-The test manually sets the timestamp to simulate expiration, but this approach bypasses the actual expiration checking logic that would normally be used in production.
+69-84: Excellent realistic test data for GoogleServiceAccount.
 
-Ensure that this test approach accurately reflects how expiration is checked in the real ConversationContext implementation. Consider whether a more realistic approach (like dependency injection of a time provider) would be more appropriate.
+The CreateTestServiceAccount method provides comprehensive test data that closely resembles real Google service account JSON structure, including proper URL formats and realistic field values. The dummy private key is appropriate for testing.
 
-src/Aula.Tests/Channels/SlackBotTests.cs (1)
-56-66: LGTM! Good null input handling test.
+43-51: Prefix minimum length requirement confirmed.
 
-The test correctly verifies that passing null to PushWeekLetter returns false rather than throwing an exception, which demonstrates proper defensive programming.
+The GoogleCalendar constructor enforces prefix.Length < 3 and throws ArgumentException("Prefix must be at least 3 chars"). Your test correctly matches this rule, so no changes are needed.
 
-src/Aula.Tests/Services/DataServiceTests.cs (1)
-38-61: LGTM! Well-structured caching test.
+src/Aula.Tests/ProgramTests.cs (2)
+19-37: Comprehensive service registration validation.
 
-The test properly verifies both the storage and retrieval aspects of caching, with appropriate JSON structure validation.
+Excellent test coverage of all core services in the DI container. The test verifies that ConfigureServices() properly registers all essential components including clients, services, scheduling, and bot implementations.
 
-src/Aula.Tests/Utilities/ConversationContextManagerTests.cs (2)
-242-272: LGTM! Excellent generic type testing.
+63-76: Thorough configuration binding validation.
 
-The tests for different key types (int, Guid) demonstrate that the generic implementation works correctly across various key types, which is essential for a generic utility class.
+The test properly verifies that all configuration sections (UniLogin, Slack, Telegram, OpenAi) are bound and not null, ensuring the configuration system is working correctly.
 
-274-288: LGTM! Good null handling verification.
+src/Aula.Tests/Integration/TestableMinUddannelseClient.cs (3)
+76-91: Child ID extraction properly implemented.
 
-The test confirms that null child names are handled gracefully, which is important for defensive programming and avoiding unexpected exceptions.
+The GetChildId method now correctly extracts the child ID from the provided Child parameter by matching the first name against the mock user profile. This addresses the previous hardcoded value issue and provides more realistic test behavior.
 
-src/Aula.Tests/Utilities/FollowUpQuestionDetectorTests.cs (1)
-17-23: LGTM! Excellent test data setup.
+12-26: Well-designed test double with proper dependency injection.
 
-The test data includes a good variety of child names with different characteristics (compound first names, Unicode characters), which ensures robust testing of the follow-up question detection logic.
+The testable client design allows for HTTP client injection, making it suitable for integration testing scenarios. The constructor properly stores dependencies and the class implements the required interface.
 
-src/Aula.Tests/Utilities/ConversationContextTests.cs (1)
-61-71: LGTM! Excellent boundary testing.
+101-108: Proper disposal pattern implementation.
 
-The test correctly verifies the exact boundary condition for conversation validity (exactly 10 minutes), which is crucial for ensuring the business logic works as expected.
+The disposal implementation correctly handles the injected HttpClient and includes disposal guard pattern to prevent multiple disposals.
 
-src/Aula.Tests/Utilities/DateTimeUtilitiesTests.cs (3)
-7-22: Excellent comprehensive test coverage.
+src/Aula/Program.cs (2)
+49-66: LGTM! Excellent error handling and data preloading strategy.
 
-This test method effectively validates all valid DayOfWeek enum values with their corresponding Danish translations. The use of [Theory] with [InlineData] provides clear and maintainable test cases.
+The per-child error handling during preloading ensures that one failing child doesn't prevent others from loading, and the comprehensive error logging provides good visibility into issues.
 
-24-35: Good edge case testing for invalid enum values.
+122-141: LGTM! Robust application lifecycle management.
 
-Testing the behavior with an invalid enum cast (DayOfWeek)999 ensures the method handles unexpected input gracefully by returning "ukendt dag".
+The cancellation token implementation with graceful shutdown handling is well-implemented and follows .NET best practices for long-running applications.
 
-56-72: Excellent uniqueness validation.
+src/Aula.Tests/Bots/SlackMessageHandlerTests.cs (4)
+30-68: LGTM! Comprehensive test setup with proper dependency injection.
 
-This test ensures all Danish day names are unique, which is a critical requirement for proper localization. The use of HashSet<string> for uniqueness checking is efficient and the assertion message provides helpful debugging information.
+The constructor properly initializes all dependencies with appropriate test data and mock objects. The use of actual HttpClient instead of mocking it is a good choice for integration-style testing.
 
-src/Aula.Tests/Scheduling/SchedulingServiceTests.cs (2)
-21-36: Well-structured test setup with comprehensive configuration.
+70-179: LGTM! Thorough constructor validation testing.
 
-The test configuration includes all necessary components (Slack, Telegram, Children) and uses proper mocking patterns. This provides a solid foundation for testing the SchedulingService.
+All constructor parameters are validated with appropriate ArgumentNullException tests, ensuring proper defensive programming practices.
 
-83-85: Excellent resource management and disposal handling.
+259-287: LGTM! Good use of parameterized tests for help commands.
 
-The tests properly handle resource cleanup by disposing the SlackInteractiveBot and include helpful comments about TelegramInteractiveBot not implementing IDisposable. This prevents resource leaks in the test suite.
+The Theory with InlineData approach effectively tests multiple help command variations (Danish/English, case variations) in a concise manner.
 
-Also applies to: 113-115, 149-151
+310-336: LGTM! Proper exception testing with verification.
 
-src/Aula.Tests/Utilities/IntentAnalysisPromptsTests.cs (4)
-7-36: Excellent template validation coverage.
+The test correctly verifies both the return value and the logging behavior when exceptions occur, ensuring proper error handling is in place.
 
-These tests comprehensively validate the analysis template structure, including required placeholders and tool action documentation. The systematic approach ensures the template contains all necessary components for AI intent analysis.
+src/Aula/Bots/SlackInteractiveBot.cs (5)
+48-71: LGTM! Excellent dependency injection and initialization.
 
-67-81: Robust format validation for tool examples.
+The constructor properly validates all dependencies and provides a good default for HttpClient with appropriate timeout configuration. The delegation to SlackMessageHandler shows good separation of concerns.
 
-The format validation ensures consistency across all tool examples, checking for proper structure with quotes, arrows, and correct ending patterns. This is crucial for AI prompt reliability.
+73-126: LGTM! Robust startup sequence with comprehensive validation.
 
-83-95: Good bilingual support validation.
+The start method properly validates configuration, sets up HTTP client authentication, initializes timestamps, and sends a helpful welcome message. The logging provides good visibility into the startup process.
 
-Testing for both English and Danish examples ensures proper internationalization support. The distinction between _DANISH suffixed keys and regular keys provides clear language separation.
+135-282: LGTM! Well-implemented concurrent polling with proper error handling.
 
-171-186: Excellent tool call format enforcement.
+The polling implementation correctly uses Interlocked.Exchange to prevent concurrent executions, handles Slack API responses robustly, and includes proper message filtering to avoid processing bot messages.
 
-The validation ensures tool call examples follow the correct format with proper action naming conventions (uppercase, no spaces, underscore separation). This maintains consistency for AI processing.
+397-469: LGTM! Efficient duplicate detection and robust posting.
 
-src/Aula.Tests/Bots/TelegramMessageHandlerTests.cs (3)
-33-72: Excellent test setup with comprehensive test data.
+The SHA256 hash-based duplicate detection prevents redundant posts, and the error handling ensures graceful failure without affecting other operations.
 
-The constructor setup is well-structured with proper mocking and realistic test configuration. The test config includes proper child data that mirrors production scenarios.
+481-522: LGTM! Thoughtful cleanup strategy with appropriate retention.
 
-74-183: Thorough constructor parameter validation.
-
-Excellent coverage of all constructor parameters with proper null validation tests. Each test correctly verifies the parameter name in the exception, which aids in debugging.
-
-268-290: Good use of Theory and InlineData for parameterized testing.
-
-The help command tests effectively use parameterized testing to cover multiple language variants (Danish and English) and case variations.
-
-src/Aula.Tests/Services/OpenAiServiceTests.cs (3)
-17-33: Good constructor validation with proper mocking.
-
-The test properly validates that the OpenAiService can be instantiated with valid parameters and uses appropriate mocking for dependencies.
-
-50-66: Creative use of reflection for internal constructor verification.
-
-The reflection-based test to verify the internal constructor's existence is a clever approach for ensuring testability without exposing implementation details.
-
-167-172: Good documentation of test limitations.
-
-The comment explaining why a regression test wasn't added is valuable documentation. It shows awareness of testing trade-offs and provides context for future maintainers.
-
-src/Aula.Tests/Bots/TelegramTestMessageFactory.cs (1)
-7-63: Well-implemented test factory with modern C# features.
-
-The factory effectively uses raw string literals and string interpolation to create realistic Telegram message objects. The approach of using JSON deserialization mirrors how the actual Telegram.Bot library works.
-
-src/Aula.Tests/Services/OpenAiServiceIntegrationTests.cs (3)
-34-86: Comprehensive constructor parameter validation.
-
-Excellent coverage of all constructor scenarios including edge cases like whitespace-only API keys. The tests properly validate both ArgumentException and ArgumentNullException scenarios.
-
-194-221: Good approach to testing API integration with fallback handling.
-
-The pattern of attempting API calls and gracefully handling expected failures due to test API keys is a practical approach for integration testing. It validates the call structure while acknowledging testing limitations.
-
-348-359: Good multi-conversation context testing.
-
-The test properly validates that different conversation contexts are handled independently, which is crucial for the bot's conversation management functionality.
-
-src/Aula.Tests/Channels/TelegramClientTests.cs (1)
-213-224: Good helper method for creating test data.
-
-The CreateSampleWeekLetter method is well-structured and provides realistic test data with HTML content that tests the sanitization functionality.
-
-src/Aula.Tests/Utilities/JsonFormatterTests.cs (1)
-196-210: Excellent comprehensive exception testing.
-
-The theory test for incomplete JSON with multiple exception types properly handles the different exception types that Newtonsoft.Json might throw. This demonstrates good understanding of the underlying library behavior.
-
-src/Aula.Tests/Integration/AgentServiceTests.cs (2)
-21-44: Well-structured test setup with proper dependency injection.
-
-The constructor properly sets up all mocks and creates realistic test data. The test child and date setup provides good baseline data for all tests.
-
-90-121: Excellent caching behavior verification.
-
-This test properly verifies that the service fetches from the API when data is not cached and then caches the result. The mock verifications ensure both the cache miss and the subsequent caching behavior.
-
-src/Aula.Tests/Tools/AiToolsManagerTests.cs (1)
-174-203: Good test for child name filtering with proper mocking.
-
-The test properly sets up different return values for different children and verifies that filtering works correctly. The assertions check both positive and negative cases.
-
-src/Aula.Tests/Scheduling/SchedulingServiceIntegrationTests.cs (2)
-266-295: Excellent parameterized test for different configurations.
-
-This theory test properly validates that the service works with different bot enablement configurations, covering all possible combinations of Slack and Telegram settings.
-
-142-154: Good validation that TelegramBot can be null.
-
-This test properly verifies that the SchedulingService can handle a null TelegramBot, which is important for configurations where Telegram is not enabled.
-
-src/Aula.Tests/Bots/SlackInteractiveBotTests.cs (1)
-21-31: Excellent test structure and resource management.
-
-The test class properly implements IDisposable and includes comprehensive constructor validation. The disposal pattern is correctly implemented to prevent resource leaks.
-
-src/Aula.Tests/Bots/SlackMessageHandlerTests.cs (3)
-70-89: Excellent constructor validation coverage.
-
-The comprehensive null parameter validation ensures robust error handling for all constructor dependencies. This follows best practices for defensive programming.
-
-259-287: Well-designed parameterized tests for command handling.
-
-The use of Theory and InlineData attributes effectively tests multiple command variations (English and Danish) with a single test method, reducing code duplication while ensuring comprehensive coverage.
-
-310-336: Thorough exception handling validation.
-
-The test properly verifies both the return value and logging behavior when exceptions occur, ensuring the error handling is complete and observable.
-
-src/Aula.Tests/Utilities/ReminderExtractionPromptsTests.cs (2)
-113-125: Excellent bilingual support testing.
-
-The tests thoroughly verify both English and Danish relative time expressions, ensuring the prompt generation works correctly for both languages. This demonstrates good internationalization awareness.
-
-226-246: Well-designed parameterized test for time calculations.
-
-The theory-based test with different minute offsets provides good coverage of the time calculation logic while keeping the test code concise.
-
-src/Aula.Tests/Tools/ReminderCommandHandlerTests.cs (4)
-55-90: Exemplary parameterized test design for bilingual support.
-
-The test effectively covers multiple command formats, languages, and child name extraction scenarios using Theory and InlineData. The validation of both English and Danish responses demonstrates excellent internationalization testing.
-
-170-225: Comprehensive list reminders testing with proper data setup.
-
-The test creates realistic reminder data with different states (sent/pending) and validates the correct ordering, formatting, and bilingual response handling. The mock verification ensures proper service interaction.
-
-444-477: Excellent child name extraction validation.
-
-The test thoroughly validates the child name detection logic using the configured children dictionary, ensuring names are properly matched and associated with reminders. This demonstrates good integration testing of the parsing logic.
-
-480-528: Sophisticated ordering verification test.
-
-The test creates realistic data with different dates and times, then validates the correct chronological ordering in the response. The array-based index checking provides robust verification of the sorting logic.
-
-src/Aula/Bots/SlackInteractiveBot.cs (3)
-73-125: Well-structured startup process
-
-The Start method demonstrates good practices with proper validation, configuration setup, and user-friendly welcome messaging.
-
-134-281: Excellent asynchronous polling implementation
-
-The polling mechanism demonstrates proper thread safety with Interlocked, correct Fire-and-Forget pattern usage, and comprehensive message filtering. The error handling and logging are appropriate.
-
-470-475: Appropriate hash function for content deduplication
-
-Using SHA256 for week letter content hashing is a good choice for deduplication purposes.
+The 24-hour message ID retention and automatic hash cache clearing when it grows too large shows good memory management practices.
 
 CLAUDE.md (1)
-1-246: Comprehensive and well-structured documentation
+1-259: LGTM! Comprehensive and well-structured documentation.
 
-This documentation provides excellent guidance for development workflow, architecture understanding, and AI-assisted development. The roadmap and development philosophy sections are particularly valuable.
+This documentation provides excellent guidance for Claude Code with detailed commands, architecture overview, development roadmap, and clear vision. The coverage of testing strategy, architecture principles, and feature status is particularly valuable for understanding the codebase.
 
-src/Aula/Services/OpenAiService.cs (5)
-29-35: Well-defined constants improve maintainability
+src/Aula/Services/OpenAiService.cs (3)
+265-275: Excellent conversation management implementation
 
-The use of named constants for conversation history management parameters is excellent for maintainability and readability.
+The conversation trimming logic now uses well-named constants instead of magic numbers, making the code much more maintainable and self-documenting. The logic correctly preserves system messages while limiting conversation history to prevent token overflow.
 
-36-60: Excellent constructor implementation with proper validation
+501-505: Excellent error handling implementation
 
-The constructor demonstrates good practices with comprehensive parameter validation and configurable model support. The internal constructor for testing is a nice touch.
+The service demonstrates robust error handling with comprehensive try-catch blocks, user-friendly error messages, and detailed logging for debugging. The consistent pattern of logging technical details while returning helpful messages to users is well-implemented.
 
-62-79: Good refactoring to eliminate code duplication
+Also applies to: 541-545, 567-571, 622-626
 
-The extraction of common metadata logic into a separate method successfully addresses the DRY principle violation mentioned in previous reviews.
+644-665: Well-implemented fallback system
 
-478-570: Sophisticated and well-implemented tool processing system
+The HandleRegularAulaQuery method now correctly implements the fallback mechanism with the constant FallbackToExistingSystem. The detailed comments explain the critical nature of this return value and why generic help text should be avoided. This properly addresses the previous incomplete implementation issue.
 
-The intent analysis and tool routing system demonstrates excellent architecture with proper error handling, fallback mechanisms, and comprehensive logging. The separation of concerns between different tool types is well-executed.
-
-573-626: Robust reminder extraction with excellent validation
-
-The reminder extraction implementation demonstrates good practices with structured prompt usage, datetime validation with fallback, and comprehensive error handling.
-
-In src/Aula.Tests/Configuration/ConfigurationTests.cs:
-
-> +using Microsoft.Extensions.Configuration;
-+using System.IO;
-+using Aula.Configuration;
-+using ConfigSlack = Aula.Configuration.Slack;
-+using ConfigTelegram = Aula.Configuration.Telegram;
-+
-+namespace Aula.Tests.Configuration;
-+
-+public class ConfigurationTests
-+{
-+    private readonly IConfiguration _configuration;
-+    private readonly Config _config;
-+
-+    public ConfigurationTests()
-+    {
-+        var configPath = Path.Combine(Directory.GetCurrentDirectory(), "test-appsettings.json");
-🛠️ Refactor suggestion
-
-Consider using a more reliable path resolution for the test configuration file.
-
-The current approach using Directory.GetCurrentDirectory() can be brittle as it depends on the working directory when tests are executed, which may vary between different test runners or CI environments.
-
--        var configPath = Path.Combine(Directory.GetCurrentDirectory(), "test-appsettings.json");
-+        var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test-appsettings.json");
-Alternatively, consider using Assembly.GetExecutingAssembly().Location to get a more stable base path.
-
-📝 Committable suggestion
-‼️ IMPORTANT
-Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
-
-⬇️ Suggested change
--        var configPath = Path.Combine(Directory.GetCurrentDirectory(), "test-appsettings.json");
-+        var configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test-appsettings.json");
-🤖 Prompt for AI Agents
-In src/Aula.Tests/Configuration/ConfigurationTests.cs at line 16, replace the
-use of Directory.GetCurrentDirectory() with a more stable path resolution method
-by using Assembly.GetExecutingAssembly().Location to determine the base
-directory. This change ensures the test configuration file path is reliably
-resolved regardless of the working directory or test runner environment.
-In src/Aula.Tests/Integration/MinUddannelseClientTests.cs:
-
-> +    public async Task GetWeekLetter_ReturnsWeekLetter_WhenApiReturnsData()
-+    {
-+        // Arrange
-+        var mockHandler = new Mock<HttpMessageHandler>();
-+
-+        // Setup mock response for GetWeekLetter
-+        mockHandler.Protected()
-+            .Setup<Task<HttpResponseMessage>>(
-+                "SendAsync",
-+                ItExpr.IsAny<HttpRequestMessage>(),
-+                ItExpr.IsAny<CancellationToken>())
-+            .ReturnsAsync(new HttpResponseMessage
-+            {
-+                StatusCode = HttpStatusCode.OK,
-+                Content = new StringContent("{\"ugebreve\": [{\"klasseNavn\": \"Test Class\", \"uge\": \"42\", \"indhold\": \"Test content\"}]}")
-+            });
-+
-+        var httpClient = new HttpClient(mockHandler.Object);
-+        var client = new TestableMinUddannelseClient(httpClient, "username", "password");
-+
-+        var child = new Child { FirstName = "Test", LastName = "Child" };
-+        var date = new DateOnly(2023, 10, 16); // Week 42 of 2023
-+
-+        // Login first
-+        await client.LoginAsync();
-+
-+        // Act
-+        var result = await client.GetWeekLetter(child, date);
-+
-+        // Assert
-+        Assert.NotNull(result);
-+        Assert.NotNull(result["ugebreve"]);
-+        var weekLetters = result["ugebreve"] as JArray;
-+        Assert.NotNull(weekLetters);
-+        Assert.Equal("Test Class", weekLetters[0]["klasseNavn"]?.ToString());
-+        Assert.Equal("42", weekLetters[0]["uge"]?.ToString());
-+        Assert.Equal("Test content", weekLetters[0]["indhold"]?.ToString());
-+    }
-🛠️ Refactor suggestion
-
-Consider adding error handling and edge case coverage.
-
-The current test only covers the happy path where the API returns valid JSON. Consider adding tests for common failure scenarios to ensure robust error handling.
-
-Add tests for:
-
-HTTP error responses (404, 500, etc.)
-Invalid JSON responses
-Network timeouts
-Authentication failures
-Example:
-
-[Fact]
-public async Task GetWeekLetter_ThrowsException_WhenApiReturnsError()
-{
-    // Arrange
-    var mockHandler = new Mock<HttpMessageHandler>();
-    mockHandler.Protected()
-        .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
-        .ReturnsAsync(new HttpResponseMessage
-        {
-            StatusCode = HttpStatusCode.InternalServerError,
-            Content = new StringContent("Server Error")
-        });
-
-    var httpClient = new HttpClient(mockHandler.Object);
-    var client = new TestableMinUddannelseClient(httpClient, "username", "password");
-
-    // Act & Assert
-    await Assert.ThrowsAsync<HttpRequestException>(() => client.GetWeekLetter(child, date));
-}
-🤖 Prompt for AI Agents
-In src/Aula.Tests/Integration/MinUddannelseClientTests.cs around lines 34 to 71,
-the existing test only covers the successful API response scenario. To improve
-robustness, add new test methods that simulate and verify behavior for error
-cases such as HTTP error responses (e.g., 404, 500), invalid JSON responses,
-network timeouts, and authentication failures. Use mocked HttpMessageHandler to
-return these error conditions and assert that the client handles them
-appropriately, for example by throwing exceptions or returning expected error
-results.
-In src/Aula.Tests/Integration/MinUddannelseClientTests.cs:
-
-> +        var mockHandler = new Mock<HttpMessageHandler>();
-+
-+        // Setup mock response for GetWeekLetter
-+        mockHandler.Protected()
-+            .Setup<Task<HttpResponseMessage>>(
-+                "SendAsync",
-+                ItExpr.IsAny<HttpRequestMessage>(),
-+                ItExpr.IsAny<CancellationToken>())
-+            .ReturnsAsync(new HttpResponseMessage
-+            {
-+                StatusCode = HttpStatusCode.OK,
-+                Content = new StringContent("{\"ugebreve\": [{\"klasseNavn\": \"Test Class\", \"uge\": \"42\", \"indhold\": \"Test content\"}]}")
-+            });
-+
-+        var httpClient = new HttpClient(mockHandler.Object);
-+        var client = new TestableMinUddannelseClient(httpClient, "username", "password");
-💡 Verification agent
-
-🧩 Analysis chain
-Verify TestableMinUddannelseClient implementation exists.
-
-The test references TestableMinUddannelseClient which isn't defined in the provided code. Ensure this test helper class is properly implemented and accessible.
-
-🏁 Script executed:
-
-#!/bin/bash
-# Search for TestableMinUddannelseClient implementation
-ast-grep --pattern 'class TestableMinUddannelseClient'
-Length of output: 6382
-
-TestableMinUddannelseClient helper class is present; expand test coverage
-
-The TestableMinUddannelseClient helper is defined in src/Aula.Tests/Integration/TestableMinUddannelseClient.cs, so there’s no missing reference. However, the current tests only exercise the happy-path. Please add scenarios to cover error cases, for example:
-
-Non-200 HTTP responses (e.g., 401 Unauthorized, 404 Not Found) and verify the client surfaces appropriate exceptions or return values.
-Simulated network failures/timeouts to ensure retry or error-handling logic behaves as expected.
-🤖 Prompt for AI Agents
-In src/Aula.Tests/Integration/MinUddannelseClientTests.cs at line 52, the test
-currently only covers the successful case using TestableMinUddannelseClient. Add
-new test methods to simulate error scenarios such as non-200 HTTP responses like
-401 Unauthorized and 404 Not Found, verifying that the client throws the
-expected exceptions or returns appropriate error results. Also, add tests that
-simulate network failures or timeouts to confirm the client's retry or
-error-handling logic works correctly. Use the TestableMinUddannelseClient to
-mock these conditions.
-In src/Aula.Tests/Channels/SlackBotTests.cs:
-
-> +    public void PostWeekLetter_WithValidInputs_DoesNotThrow()
-+    {
-+        // Arrange
-+        var slackBot = new SlackBot("https://hooks.slack.com/test");
-+        var weekLetter = CreateSampleWeekLetter();
-+        var child = new Child
-+        {
-+            FirstName = "Alice",
-+            LastName = "Johnson",
-+            Colour = "#FF0000"
-+        };
-+
-+        // Act & Assert - Should not throw when constructing message
-+        var task = slackBot.PostWeekLetter(weekLetter, child);
-+        Assert.NotNull(task);
-+    }
-+
-+    [Fact]
-+    public void SendTestMessage_WithMessage_DoesNotThrow()
-+    {
-+        // Arrange
-+        var slackBot = new SlackBot("https://hooks.slack.com/test");
-+        var testMessage = "Test message";
-+
-+        // Act & Assert
-+        var task = slackBot.SendTestMessage(testMessage);
-+        Assert.NotNull(task);
-+    }
-🛠️ Refactor suggestion
-
-Consider testing actual behavior instead of just execution.
-
-These tests only verify that methods don't throw exceptions and return non-null tasks, but they don't validate the actual HTTP requests being made or the message content being sent.
-
-Consider using an HTTP client mock to verify the actual webhook calls:
-
-[Fact]
-public async Task SendTestMessage_SendsCorrectHttpRequest()
-{
-    // Arrange
-    var mockHandler = new Mock<HttpMessageHandler>();
-    var expectedContent = "";
-    
-    mockHandler.Protected()
-        .Setup<Task<HttpResponseMessage>>("SendAsync", 
-            ItExpr.Is<HttpRequestMessage>(req => 
-                req.Method == HttpMethod.Post && 
-                req.RequestUri.ToString().Contains("hooks.slack.com")),
-            ItExpr.IsAny<CancellationToken>())
-        .Callback<HttpRequestMessage, CancellationToken>((req, _) => {
-            expectedContent = req.Content.ReadAsStringAsync().Result;
-        })
-        .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK));
-
-    var httpClient = new HttpClient(mockHandler.Object);
-    var slackBot = new SlackBot(httpClient, "https://hooks.slack.com/test");
-
-    // Act
-    await slackBot.SendTestMessage("Test message");
-
-    // Assert
-    Assert.Contains("Test message", expectedContent);
-    mockHandler.Protected().Verify("SendAsync", Times.Once(), 
-        ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
-}
-🤖 Prompt for AI Agents
-In src/Aula.Tests/Channels/SlackBotTests.cs around lines 69 to 96, the current
-tests only check that methods do not throw exceptions and return non-null tasks,
-but they do not verify the actual HTTP requests or message content sent by
-SlackBot. To fix this, introduce an HTTP client mock (e.g., using Moq) to
-intercept and verify the outgoing HTTP requests, ensuring the correct webhook
-URL is called and the message content matches expectations. Refactor the
-SlackBot constructor to accept an HttpClient instance for easier testing, then
-write tests that assert the HTTP request method, URL, and payload content, and
-verify the SendAsync method is called exactly once.
-In src/Aula.Tests/Utilities/FollowUpQuestionDetectorTests.cs:
-
-> +    public void IsFollowUpQuestion_WithNullLogger_ThrowsArgumentNullException()
-+    {
-+        // Act & Assert - Logger is required for logging
-+        Assert.Throws<ArgumentNullException>(() =>
-+            FollowUpQuestionDetector.IsFollowUpQuestion("what about Emma", _testChildren, null!));
-+    }
-💡 Verification agent
-
-🧩 Analysis chain
-Verify that null logger actually throws ArgumentNullException.
-
-The test expects ArgumentNullException when logger is null, but this should be verified against the actual implementation. If the method handles null loggers gracefully (as many utilities do), this test would be incorrect.
-
-🏁 Script executed:
-
-#!/bin/bash
-# Check if FollowUpQuestionDetector.IsFollowUpQuestion validates the logger parameter
-ast-grep --pattern 'IsFollowUpQuestion($_, $_, $_) {
-  $$$
-}'
-Length of output: 63
-
-Let's pull the actual implementation to see if logger is null-guarded:
-
-🏁 Script executed:
-
-#!/bin/bash
-# Locate and dump the IsFollowUpQuestion implementation
-rg -n "public static.*IsFollowUpQuestion" -A 50
-Length of output: 4410
-
-Ensure IsFollowUpQuestion null-guards the logger parameter
-
-The current implementation never checks logger for null, so passing in null will cause a NullReferenceException on the first log call—not the expected ArgumentNullException. To satisfy the existing test and improve API correctness, add a null‐check at the top of the method:
-
-• Location: src/Aula/Utilities/FollowUpQuestionDetector.cs, within public static bool IsFollowUpQuestion(...)
-• Suggested change:
-
- public static bool IsFollowUpQuestion(string text, List<Child> children, ILogger logger)
- {
-+    if (logger == null) 
-+        throw new ArgumentNullException(nameof(logger));
-     if (string.IsNullOrWhiteSpace(text))
-         return false;
-
-     var normalizedText = text.ToLowerInvariant();
-     … 
-This ensures the test
-
-Assert.Throws<ArgumentNullException>(
-    () => FollowUpQuestionDetector.IsFollowUpQuestion("what about Emma", _testChildren, null!));
-will pass as written.
-
-🤖 Prompt for AI Agents
-In src/Aula/Utilities/FollowUpQuestionDetector.cs within the public static bool
-IsFollowUpQuestion method, add a null check for the logger parameter at the very
-beginning of the method. If logger is null, throw an ArgumentNullException to
-ensure the method fails fast and matches the expected behavior tested in
-src/Aula.Tests/Utilities/FollowUpQuestionDetectorTests.cs lines 273-278. This
-will prevent a NullReferenceException later and satisfy the existing test that
-expects an ArgumentNullException when logger is null.
-In src/Aula.Tests/Bots/TelegramInteractiveBotTests.cs:
-
-> +        // Now use reflection to set the disabled config
-+        var configField = typeof(TelegramInteractiveBot).GetField("_config", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-+        configField?.SetValue(bot, disabledConfig);
-🛠️ Refactor suggestion
-
-Minimize reliance on reflection for testing.
-
-Using reflection to modify private fields makes tests brittle and tightly coupled to implementation details. Consider adding a protected/internal method or property for testing configuration changes.
-
-Instead of using reflection, consider:
-
-Adding an internal property for testing configuration overrides
-Using dependency injection to provide test-specific configurations
-Making the configuration field protected for easier testing
-🤖 Prompt for AI Agents
-In src/Aula.Tests/Bots/TelegramInteractiveBotTests.cs around lines 140 to 142,
-avoid using reflection to set the private _config field as it makes tests
-brittle. Instead, refactor the TelegramInteractiveBot class to expose an
-internal or protected setter or method that allows updating the configuration
-for testing purposes. Alternatively, modify the constructor or use dependency
-injection to pass in test-specific configurations, enabling tests to set the
-config without relying on reflection.
-In src/Aula.Tests/Bots/TelegramInteractiveBotTests.cs:
-
-> +        try
-+        {
-+            await bot.SendMessage(chatId, "Test message");
-+        }
-+        catch (Exception)
-+        {
-+            // Expected to fail due to mocked setup, but we're testing the method signature
-+        }
-🛠️ Refactor suggestion
-
-Avoid swallowing exceptions in tests.
-
-Catching and ignoring all exceptions can hide real issues. Consider being more specific about expected exceptions or testing the actual behavior.
-
--        try
--        {
--            await bot.SendMessage(chatId, "Test message");
--        }
--        catch (Exception)
--        {
--            // Expected to fail due to mocked setup, but we're testing the method signature
--        }
-+        // Test should verify the actual behavior, not just method signature
-+        var exception = await Assert.ThrowsAnyAsync<Exception>(() => bot.SendMessage(chatId, "Test message"));
-+        Assert.NotNull(exception);
-📝 Committable suggestion
-‼️ IMPORTANT
-Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
-
-⬇️ Suggested change
--        try
--        {
--            await bot.SendMessage(chatId, "Test message");
--        }
--        catch (Exception)
--        {
--            // Expected to fail due to mocked setup, but we're testing the method signature
--        }
-+        // Test should verify the actual behavior, not just method signature
-+        var exception = await Assert.ThrowsAnyAsync<Exception>(() => bot.SendMessage(chatId, "Test message"));
-+        Assert.NotNull(exception);
-🤖 Prompt for AI Agents
-In src/Aula.Tests/Bots/TelegramInteractiveBotTests.cs around lines 295 to 302,
-the test currently catches and ignores all exceptions, which can hide real
-issues. Modify the catch block to catch only the specific expected exception
-type or use an assertion to verify that the exception is thrown. Alternatively,
-refactor the test to verify the method's behavior without swallowing exceptions.
-In src/Aula.Tests/Services/DataModelTests.cs:
-
-> +using Aula.Configuration;
-+using ConfigChild = Aula.Configuration.Child;
-+using Aula.Services;
-+
-⚠️ Potential issue
-
-Add missing using statement for xUnit.
-
-The test file uses xUnit [Fact] and [Theory] attributes but doesn't include the using Xunit; statement.
-
- using Aula.Configuration;
- using ConfigChild = Aula.Configuration.Child;
- using Aula.Services;
-+using Xunit;
-📝 Committable suggestion
-‼️ IMPORTANT
-Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
-
-⬇️ Suggested change
--using Aula.Configuration;
--using ConfigChild = Aula.Configuration.Child;
--using Aula.Services;
--
-+using Aula.Configuration;
-+using ConfigChild = Aula.Configuration.Child;
-+using Aula.Services;
-+using Xunit;
-🤖 Prompt for AI Agents
-In src/Aula.Tests/Services/DataModelTests.cs at the top of the file (lines 1 to
-4), add the missing using statement "using Xunit;" to enable recognition of
-xUnit attributes like [Fact] and [Theory]. This will ensure the test attributes
-are properly referenced and the tests compile correctly.
-In src/Aula.Tests/Integration/TestableMinUddannelseClient.cs:
-
-> +                    ["id"] = "123",
-+                    ["fornavn"] = "Test",
-+                    ["efternavn"] = "Child"
-+                }
-+            }
-+        };
-+
-+        return Task.FromResult(true);
-+    }
-+
-+    public async Task<JObject> GetWeekLetter(Child child, DateOnly date)
-+    {
-+        if (!_loggedIn)
-+            throw new InvalidOperationException("Not logged in");
-+
-+        var url = $"https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}&elevId=123&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
-⚠️ Potential issue
-
-Replace hardcoded child ID with dynamic value.
-
-The child ID is hardcoded as "123" in both API calls, but the method accepts a Child parameter that should be used instead.
-
--       var url = $"https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}&elevId=123&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
-+       var url = $"https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}&elevId={GetChildId(child)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
--       var url = $"https://www.minuddannelse.net/api/stamdata/aulaskema/getElevSkema?elevId=123&tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
-+       var url = $"https://www.minuddannelse.net/api/stamdata/aulaskema/getElevSkema?elevId={GetChildId(child)}&tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
-Add a helper method to extract or map the child ID from the Child parameter.
-
-Also applies to: 67-67
-
-🤖 Prompt for AI Agents
-In src/Aula.Tests/Integration/TestableMinUddannelseClient.cs at lines 54 and 67,
-the child ID is hardcoded as "123" in the API URLs. Replace this hardcoded value
-by extracting the child ID dynamically from the provided Child parameter.
-Implement a helper method to retrieve or map the child ID from the Child object
-and use it in the URL construction to ensure the correct child ID is used in the
-API calls.
-In src/Aula.Tests/Integration/TestableMinUddannelseClient.cs:
-
-> +    private int GetIsoWeekNumber(DateOnly date)
-+    {
-+        var cultureInfo = System.Globalization.CultureInfo.CurrentCulture;
-+        var calendarWeekRule = cultureInfo.DateTimeFormat.CalendarWeekRule;
-+        var firstDayOfWeek = cultureInfo.DateTimeFormat.FirstDayOfWeek;
-+        return cultureInfo.Calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue), calendarWeekRule, firstDayOfWeek);
-+    }
-🛠️ Refactor suggestion
-
-Fix ISO week number calculation.
-
-The current implementation uses CultureInfo.CurrentCulture which may not return true ISO 8601 week numbers, especially for edge cases around year boundaries.
-
-    private int GetIsoWeekNumber(DateOnly date)
-    {
--       var cultureInfo = System.Globalization.CultureInfo.CurrentCulture;
--       var calendarWeekRule = cultureInfo.DateTimeFormat.CalendarWeekRule;
--       var firstDayOfWeek = cultureInfo.DateTimeFormat.FirstDayOfWeek;
--       return cultureInfo.Calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue), calendarWeekRule, firstDayOfWeek);
-+       // ISO 8601 week calculation
-+       var dt = date.ToDateTime(TimeOnly.MinValue);
-+       var day = (int)CultureInfo.CurrentCulture.Calendar.GetDayOfWeek(dt);
-+       return CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(dt.AddDays(4 - (day == 0 ? 7 : day)), CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
-    }
-This ensures proper ISO 8601 week number calculation with Monday as the first day of the week and the first four-day week rule.
-
-📝 Committable suggestion
-‼️ IMPORTANT
-Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
-
-⬇️ Suggested change
--    private int GetIsoWeekNumber(DateOnly date)
--    {
--        var cultureInfo = System.Globalization.CultureInfo.CurrentCulture;
--        var calendarWeekRule = cultureInfo.DateTimeFormat.CalendarWeekRule;
--        var firstDayOfWeek = cultureInfo.DateTimeFormat.FirstDayOfWeek;
--        return cultureInfo.Calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue), calendarWeekRule, firstDayOfWeek);
--    }
-+    private int GetIsoWeekNumber(DateOnly date)
-+    {
-+        // ISO 8601 week calculation
-+        var dt = date.ToDateTime(TimeOnly.MinValue);
-+        var day = (int)CultureInfo.CurrentCulture.Calendar.GetDayOfWeek(dt);
-+        return CultureInfo.CurrentCulture.Calendar.GetWeekOfYear(
-+            dt.AddDays(4 - (day == 0 ? 7 : day)),
-+            CalendarWeekRule.FirstFourDayWeek,
-+            DayOfWeek.Monday);
-+    }
-🤖 Prompt for AI Agents
-In src/Aula.Tests/Integration/TestableMinUddannelseClient.cs around lines 75 to
-81, the GetIsoWeekNumber method incorrectly uses CultureInfo.CurrentCulture,
-which can yield non-ISO 8601 week numbers. To fix this, replace the current
-culture with CultureInfo.InvariantCulture, set the CalendarWeekRule to
-FirstFourDayWeek, and set the firstDayOfWeek to Monday to correctly calculate
-ISO 8601 week numbers.
-In src/Aula.Tests/Services/SupabaseServiceTests.cs:
+In src/Aula.Tests/ProgramTests.cs:
 
 > +    [Fact]
-+    public void ReminderData_WithValidParameters_AreValid()
++    public void ConfigureServices_WithTelegramDisabled_ShouldNotRegisterTelegramBot()
 +    {
-+        // Arrange
-+        var text = "Test reminder";
-+        var date = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
-+        var time = new TimeOnly(10, 0);
-+        var childName = "TestChild";
++        // This test verifies the conditional registration logic
++        // The actual implementation depends on appsettings.json configuration
++        var serviceProvider = Program.ConfigureServices();
 +
-+        // Act & Assert - Verify reminder data parameters are valid
-+        Assert.NotNull(_supabaseService);
-+        Assert.NotEmpty(text);
-+        Assert.False(string.IsNullOrEmpty(childName));
++        // TelegramInteractiveBot registration depends on config, so we test the service provider works
++        Assert.NotNull(serviceProvider);
 +    }
 🛠️ Refactor suggestion
 
-Enhance parameter validation tests to include actual service calls.
+Improve conditional Telegram bot registration test.
 
-These tests only validate parameters in isolation without testing how the service handles them. Consider testing actual service method calls with these parameters.
-
-    [Fact]
--   public void ReminderData_WithValidParameters_AreValid()
-+   public async Task SaveReminderAsync_WithValidParameters_DoesNotThrow()
-    {
-        // Arrange
-        var text = "Test reminder";
-        var date = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
-        var time = new TimeOnly(10, 0);
-        var childName = "TestChild";
-
--       // Act & Assert - Verify reminder data parameters are valid
--       Assert.NotNull(_supabaseService);
--       Assert.NotEmpty(text);
--       Assert.False(string.IsNullOrEmpty(childName));
-+       // Act & Assert - Should not throw with valid parameters
-+       var exception = await Record.ExceptionAsync(async () =>
-+           await _supabaseService.SaveReminderAsync(text, date, time, childName));
-+       
-+       Assert.Null(exception);
-    }
-This approach tests the actual service behavior rather than just parameter validation.
-
-Also applies to: 91-101
-
-🤖 Prompt for AI Agents
-In src/Aula.Tests/Services/SupabaseServiceTests.cs around lines 69 to 82, the
-test only checks parameter validity without invoking the SupabaseService
-methods. Update the test to call the relevant service method(s) using these
-parameters and assert the expected outcomes or behaviors. This will ensure the
-test verifies the service's handling of valid inputs, not just the input
-validity. Apply a similar approach to the test at lines 91 to 101.
-In src/Aula.Tests/Bots/TelegramMessageHandlerTests.cs:
-
-> +    public async Task HandleMessageAsync_WithCancellationToken_RespectsCancellation()
-+    {
-+        var cancellationTokenSource = new CancellationTokenSource();
-+        cancellationTokenSource.Cancel();
-+
-+        var message = TelegramTestMessageFactory.CreateTextMessage(
-+            chatId: 123456789L,
-+            text: "Test message",
-+            chatType: ChatType.Private);
-+
-+        // This should handle the cancellation gracefully
-+        await _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, cancellationTokenSource.Token);
-+
-+        // The method should still complete without throwing
-+        Assert.True(true);
-+    }
-🛠️ Refactor suggestion
-
-Enhance cancellation token test coverage.
-
-The cancellation test only verifies that the method completes without throwing. Consider testing that the cancellation token is actually respected and operations are cancelled appropriately.
+The current test for conditional Telegram bot registration doesn't actually verify the conditional logic. Consider enhancing this test to verify both scenarios (enabled/disabled).
 
  [Fact]
- public async Task HandleMessageAsync_WithCancellationToken_RespectsCancellation()
+-public void ConfigureServices_WithTelegramDisabled_ShouldNotRegisterTelegramBot()
++public void ConfigureServices_ShouldHandleConditionalTelegramRegistration()
  {
-     var cancellationTokenSource = new CancellationTokenSource();
+-    // This test verifies the conditional registration logic
+-    // The actual implementation depends on appsettings.json configuration
+     var serviceProvider = Program.ConfigureServices();
 +    
-+    // Setup mock to delay processing so we can test cancellation
-+    _mockAgentService
-+        .Setup(a => a.ProcessQueryWithToolsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ChatInterface>()))
-+        .Returns(async () => 
++    // Verify service provider is created successfully regardless of Telegram config
++    Assert.NotNull(serviceProvider);
+     
+-    // TelegramInteractiveBot registration depends on config, so we test the service provider works
+-    Assert.NotNull(serviceProvider);
++    // Try to resolve TelegramInteractiveBot - should either succeed or fail gracefully
++    try
++    {
++        var telegramBot = serviceProvider.GetService<TelegramInteractiveBot>();
++        // If resolved, verify it's properly configured
++        if (telegramBot != null)
 +        {
-+            await Task.Delay(1000, cancellationTokenSource.Token);
-+            return "response";
-+        });
-+
-     cancellationTokenSource.Cancel();
-
-     var message = TelegramTestMessageFactory.CreateTextMessage(
-         chatId: 123456789L,
-         text: "Test message",
-         chatType: ChatType.Private);
-
--    // This should handle the cancellation gracefully
--    await _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, cancellationTokenSource.Token);
-+    // Should throw OperationCanceledException or handle cancellation gracefully
-+    await Assert.ThrowsAnyAsync<OperationCanceledException>(() => 
-+        _messageHandler.HandleMessageAsync(_mockTelegramBotClient.Object, message, cancellationTokenSource.Token));
--
--    // The method should still complete without throwing
--    Assert.True(true);
- }
-🤖 Prompt for AI Agents
-In src/Aula.Tests/Bots/TelegramMessageHandlerTests.cs around lines 420 to 435,
-the test for cancellation token only checks that the method completes without
-throwing, but does not verify that cancellation is actually respected. Update
-the test to assert that the operation was cancelled by checking for an
-OperationCanceledException or by verifying that the cancellation token's
-IsCancellationRequested property is true during execution. You can also mock
-dependencies to confirm that no further processing occurs after cancellation.
-In log.txt:
-
-> +14:05:20 info: Aula.Scheduling.SchedulingService[0]
-+      ?? ExecutePendingReminders called at 06/30/2025 14:05:20 (UTC: 06/30/2025 12:05:20)
-+14:05:20 info: Aula.Services.SupabaseService[0]
-+      Checking for pending reminders. Current UTC: 06/30/2025 12:05:20, Local: 06/30/2025 14:05:20
-+14:05:20 info: Aula.Services.SupabaseService[0]
-+      Found 0 pending reminders
-+14:05:20 info: Aula.Scheduling.SchedulingService[0]
-+      No missed reminders found on startup
-+14:05:20 info: Aula.Services.SupabaseService[0]
-+      Found 0 pending reminders
-+14:05:20 info: Aula.Scheduling.SchedulingService[0]
-+      No pending reminders found
-+14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
-+      Stored sent message ID: 1751285119.563119
-+14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
-+      Message sent successfully
-+14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
-+      Slack polling bot started
-+14:05:20 info: Program[0]
-+      Aula started
-+14:05:30 info: Aula.Scheduling.SchedulingService[0]
-+      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 06/30/2025 14:05:30
-+14:05:30 info: Aula.Scheduling.SchedulingService[0]
-+      ?? Timer fired: Checking scheduled tasks and reminders at 06/30/2025 14:05:30 (UTC: 06/30/2025 12:05:30)
-+14:05:30 info: Aula.Scheduling.SchedulingService[0]
-+      ?? ExecutePendingReminders called at 06/30/2025 14:05:30 (UTC: 06/30/2025 12:05:30)
-+14:05:30 info: Aula.Services.SupabaseService[0]
-+      Checking for pending reminders. Current UTC: 06/30/2025 12:05:30, Local: 06/30/2025 14:05:30
-+14:05:30 info: Aula.Services.SupabaseService[0]
-+      Found 0 pending reminders
-+14:05:30 info: Aula.Scheduling.SchedulingService[0]
-+      No pending reminders found
-+14:05:30 info: Aula.Bots.SlackInteractiveBot[0]
-+      Found 1 new user messages
-+14:05:30 info: Aula.Bots.SlackInteractiveBot[0]
-+      Processing Slack message in channel C06CVUAEL82: er der noget ugebrev for Soren?
-+14:05:30 info: Aula.Bots.SlackInteractiveBot[0]
-+      Found first name in text: soren johannes
-+14:05:30 info: AgentService[0]
-+      Processing query with tools: er der noget ugebrev for Soren?
-+14:05:30 info: OpenAiService[0]
-+      Processing query with intelligent tool selection: er der noget ugebrev for Soren?
-+14:05:30 info: OpenAiService[0]
-+      Starting intent analysis for query: er der noget ugebrev for Soren?
-+14:05:30 info: OpenAiService[0]
-+      Sending intent analysis request to OpenAI
-+14:05:32 info: OpenAiService[0]
-+      Intent analysis completed successfully: INFORMATION_QUERY
-+14:05:32 info: OpenAiService[0]
-+      Intent analysis result: INFORMATION_QUERY
-+14:05:32 info: OpenAiService[0]
-+      Handling general Aula query: er der noget ugebrev for Soren?
-+14:05:32 info: Aula.Bots.SlackInteractiveBot[0]
-+      Updated conversation context: Child: soren johannes, Today: False, Tomorrow: False, Homework: False, Age: 0.0 minutes
-+14:05:32 info: Aula.Bots.SlackInteractiveBot[0]
-+      Message sent successfully to Slack channel C06CVUAEL82
-+14:05:32 info: Aula.Bots.SlackInteractiveBot[0]
-+      Sent response to Slack channel C06CVUAEL82
-+14:05:32 info: Aula.Bots.SlackInteractiveBot[0]
-+      Updated last timestamp to 1751285127.604869
-+14:05:35 info: Aula.Bots.SlackInteractiveBot[0]
-+      Found 1 new user messages
-+14:05:35 info: Aula.Bots.SlackInteractiveBot[0]
-+      Processing Slack message in channel C06CVUAEL82: hvad skal Soren i dag?
-+14:05:35 info: Aula.Bots.SlackInteractiveBot[0]
-+      Found first name in text: soren johannes
-+14:05:35 info: AgentService[0]
-+      Processing query with tools: hvad skal Soren i dag?
-+14:05:35 info: OpenAiService[0]
-+      Processing query with intelligent tool selection: hvad skal Soren i dag?
-+14:05:35 info: OpenAiService[0]
-+      Starting intent analysis for query: hvad skal Soren i dag?
-+14:05:35 info: OpenAiService[0]
-+      Sending intent analysis request to OpenAI
-+14:05:36 info: OpenAiService[0]
-+      Intent analysis completed successfully: INFORMATION_QUERY
-+14:05:36 info: OpenAiService[0]
-+      Intent analysis result: INFORMATION_QUERY
-+14:05:36 info: OpenAiService[0]
-+      Handling general Aula query: hvad skal Soren i dag?
-+14:05:36 info: Aula.Bots.SlackInteractiveBot[0]
-+      Updated conversation context: Child: soren johannes, Today: True, Tomorrow: False, Homework: False, Age: 0.0 minutes
-+14:05:37 info: Aula.Bots.SlackInteractiveBot[0]
-+      Message sent successfully to Slack channel C06CVUAEL82
-+14:05:37 info: Aula.Bots.SlackInteractiveBot[0]
-+      Sent response to Slack channel C06CVUAEL82
-+14:05:37 info: Aula.Bots.SlackInteractiveBot[0]
-+      Updated last timestamp to 1751285134.012459
-+14:05:40 info: Aula.Scheduling.SchedulingService[0]
-+      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 06/30/2025 14:05:40
-+14:05:40 info: Aula.Scheduling.SchedulingService[0]
-+      ?? Timer fired: Checking scheduled tasks and reminders at 06/30/2025 14:05:40 (UTC: 06/30/2025 12:05:40)
-+14:05:40 info: Aula.Scheduling.SchedulingService[0]
-+      ?? ExecutePendingReminders called at 06/30/2025 14:05:40 (UTC: 06/30/2025 12:05:40)
-+14:05:40 info: Aula.Services.SupabaseService[0]
-+      Checking for pending reminders. Current UTC: 06/30/2025 12:05:40, Local: 06/30/2025 14:05:40
-+14:05:40 info: Aula.Services.SupabaseService[0]
-+      Found 0 pending reminders
-+14:05:40 info: Aula.Scheduling.SchedulingService[0]
-+      No pending reminders found
-🛠️ Refactor suggestion
-
-Review logging practices for production readiness.
-
-The log shows successful application startup and operation, which is good. However, there are several monitoring messages prefixed with "??" that appear to be debug logging. Consider cleaning these up for production.
-
-Lines with debug markers (e.g., lines 20, 22, 24, etc.) should either:
-
-Be removed if they're temporary debugging
-Use a dedicated debug log level if they're needed for troubleshooting
-Be reformatted as proper informational messages
-Example cleanup:
-
--?? MONITOR: GetWeekLetterAsync for Soren Johannes for date 06/30/2025, useCache: False
-+Getting week letter for Soren Johannes (date: 06/30/2025, useCache: False)
-📝 Committable suggestion
-‼️ IMPORTANT
-Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
-
-⬇️ Suggested change
--14:05:14 info: Program[0]
--      Starting aula
--14:05:14 info: Aula.Services.SupabaseService[0]
--      Initializing Supabase connection
--14:05:14 info: Aula.Services.SupabaseService[0]
--      Supabase client initialized successfully
--14:05:16 info: Aula.Services.SupabaseService[0]
--      Supabase connection test successful
--14:05:16 info: Program[0]
--      Supabase connection test successful
--14:05:16 info: Program[0]
--      Preloading week letters for all children
--14:05:16 info: AgentService[0]
--      Logging in to MinUddannelse
--14:05:19 info: AgentService[0]
--      Getting all children
--14:05:19 info: AgentService[0]
--      Found 2 children
--14:05:19 info: AgentService[0]
--      ?? MONITOR: GetWeekLetterAsync for Soren Johannes for date 06/30/2025, useCache: False
--14:05:19 info: AgentService[0]
--      ?? MONITOR: Fetching fresh week letter for Soren Johannes for date 06/30/2025
--14:05:20 info: AgentService[0]
--      ?? MONITOR: Raw week letter structure for Soren Johannes: errorMessage, ugebreve, klasser
--14:05:20 info: AgentService[0]
--      ?? MONITOR: Week letter for Soren Johannes contains 1 ugebreve items, first item has keys: klasseNavn, uge, indhold
--14:05:20 info: AgentService[0]
--      ?? MONITOR: Week letter content length for Soren Johannes: 48 characters
--14:05:20 info: AgentService[0]
--      ?? MONITOR: Week letter content starts with: Der er ikke skrevet nogen ugenoter til denne uge
--14:05:20 info: AgentService[0]
--      ?? MONITOR: Added child name to week letter: Soren Johannes
--14:05:20 info: DataService[0]
--      Cached week letter for Soren Johannes
--14:05:20 info: AgentService[0]
--      ?? MONITOR: Cached week letter for Soren Johannes
--14:05:20 info: Program[0]
--      Preloaded week letter for Soren Johannes
--14:05:20 info: AgentService[0]
--      ?? MONITOR: GetWeekLetterAsync for Hans Martin for date 06/30/2025, useCache: False
--14:05:20 info: AgentService[0]
--      ?? MONITOR: Fetching fresh week letter for Hans Martin for date 06/30/2025
--14:05:20 info: AgentService[0]
--      ?? MONITOR: Raw week letter structure for Hans Martin: errorMessage, ugebreve, klasser
--14:05:20 info: AgentService[0]
--      ?? MONITOR: Week letter for Hans Martin contains 1 ugebreve items, first item has keys: klasseNavn, uge, indhold
--14:05:20 info: AgentService[0]
--      ?? MONITOR: Week letter content length for Hans Martin: 48 characters
--14:05:20 info: AgentService[0]
--      ?? MONITOR: Week letter content starts with: Der er ikke skrevet nogen ugenoter til denne uge
--14:05:20 info: AgentService[0]
--      ?? MONITOR: Added child name to week letter: Hans Martin
--14:05:20 info: DataService[0]
--      Cached week letter for Hans Martin
--14:05:20 info: AgentService[0]
--      ?? MONITOR: Cached week letter for Hans Martin
--14:05:20 info: Program[0]
--      Preloaded week letter for Hans Martin
--14:05:20 info: Program[0]
--      ?? About to start SchedulingService
--14:05:20 info: Program[0]
--      ?? Got SchedulingService instance, calling StartAsync
--14:05:20 info: Aula.Scheduling.SchedulingService[0]
--      Starting scheduling service
--14:05:20 info: Aula.Scheduling.SchedulingService[0]
--      Scheduling service timer started - checking every 10 seconds
--14:05:20 info: Program[0]
--      ?? SchedulingService.StartAsync completed
--14:05:20 info: Aula.Scheduling.SchedulingService[0]
--      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 06/30/2025 14:05:20
--14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
--      Starting Slack polling bot
--14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
--      Initial timestamp set to: 1751285120.000000
--14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
--      Slack polling started - checking every 5 seconds
--14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
--      Slack cleanup timer started - running every 1 hours
--14:05:20 info: Aula.Scheduling.SchedulingService[0]
--      Checking for missed reminders on startup
--14:05:20 info: Aula.Services.SupabaseService[0]
--      Checking for pending reminders. Current UTC: 06/30/2025 12:05:20, Local: 06/30/2025 14:05:20
--14:05:20 info: Aula.Scheduling.SchedulingService[0]
--      ?? Timer fired: Checking scheduled tasks and reminders at 06/30/2025 14:05:20 (UTC: 06/30/2025 12:05:20)
--14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
--      Sending message to Slack
--14:05:20 info: Aula.Scheduling.SchedulingService[0]
--      ?? ExecutePendingReminders called at 06/30/2025 14:05:20 (UTC: 06/30/2025 12:05:20)
--14:05:20 info: Aula.Services.SupabaseService[0]
--      Checking for pending reminders. Current UTC: 06/30/2025 12:05:20, Local: 06/30/2025 14:05:20
--14:05:20 info: Aula.Services.SupabaseService[0]
--      Found 0 pending reminders
--14:05:20 info: Aula.Scheduling.SchedulingService[0]
--      No missed reminders found on startup
--14:05:20 info: Aula.Services.SupabaseService[0]
--      Found 0 pending reminders
--14:05:20 info: Aula.Scheduling.SchedulingService[0]
--      No pending reminders found
--14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
--      Stored sent message ID: 1751285119.563119
--14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
--      Message sent successfully
--14:05:20 info: Aula.Bots.SlackInteractiveBot[0]
--      Slack polling bot started
--14:05:20 info: Program[0]
--      Aula started
--14:05:30 info: Aula.Scheduling.SchedulingService[0]
--      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 06/30/2025 14:05:30
--14:05:30 info: Aula.Scheduling.SchedulingService[0]
--      ?? Timer fired: Checking scheduled tasks and reminders at 06/30/2025 14:05:30 (UTC: 06/30/2025 12:05:30)
--14:05:30 info: Aula.Scheduling.SchedulingService[0]
--      ?? ExecutePendingReminders called at 06/30/2025 14:05:30 (UTC: 06/30/2025 12:05:30)
--14:05:30 info: Aula.Services.SupabaseService[0]
--      Checking for pending reminders. Current UTC: 06/30/2025 12:05:30, Local: 06/30/2025 14:05:30
--14:05:30 info: Aula.Services.SupabaseService[0]
--      Found 0 pending reminders
--14:05:30 info: Aula.Scheduling.SchedulingService[0]
--      No pending reminders found
--14:05:30 info: Aula.Bots.SlackInteractiveBot[0]
--      Found 1 new user messages
--14:05:30 info: Aula.Bots.SlackInteractiveBot[0]
--      Processing Slack message in channel C06CVUAEL82: er der noget ugebrev for Soren?
--14:05:30 info: Aula.Bots.SlackInteractiveBot[0]
--      Found first name in text: soren johannes
--14:05:30 info: AgentService[0]
--      Processing query with tools: er der noget ugebrev for Soren?
--14:05:30 info: OpenAiService[0]
--      Processing query with intelligent tool selection: er der noget ugebrev for Soren?
--14:05:30 info: OpenAiService[0]
--      Starting intent analysis for query: er der noget ugebrev for Soren?
--14:05:30 info: OpenAiService[0]
--      Sending intent analysis request to OpenAI
--14:05:32 info: OpenAiService[0]
--      Intent analysis completed successfully: INFORMATION_QUERY
--14:05:32 info: OpenAiService[0]
--      Intent analysis result: INFORMATION_QUERY
--14:05:32 info: OpenAiService[0]
--      Handling general Aula query: er der noget ugebrev for Soren?
--14:05:32 info: Aula.Bots.SlackInteractiveBot[0]
--      Updated conversation context: Child: soren johannes, Today: False, Tomorrow: False, Homework: False, Age: 0.0 minutes
--14:05:32 info: Aula.Bots.SlackInteractiveBot[0]
--      Message sent successfully to Slack channel C06CVUAEL82
--14:05:32 info: Aula.Bots.SlackInteractiveBot[0]
--      Sent response to Slack channel C06CVUAEL82
--14:05:32 info: Aula.Bots.SlackInteractiveBot[0]
--      Updated last timestamp to 1751285127.604869
--14:05:35 info: Aula.Bots.SlackInteractiveBot[0]
--      Found 1 new user messages
--14:05:35 info: Aula.Bots.SlackInteractiveBot[0]
--      Processing Slack message in channel C06CVUAEL82: hvad skal Soren i dag?
--14:05:35 info: Aula.Bots.SlackInteractiveBot[0]
--      Found first name in text: soren johannes
--14:05:35 info: AgentService[0]
--      Processing query with tools: hvad skal Soren i dag?
--14:05:35 info: OpenAiService[0]
--      Processing query with intelligent tool selection: hvad skal Soren i dag?
--14:05:35 info: OpenAiService[0]
--      Starting intent analysis for query: hvad skal Soren i dag?
--14:05:35 info: OpenAiService[0]
--      Sending intent analysis request to OpenAI
--14:05:36 info: OpenAiService[0]
--      Intent analysis completed successfully: INFORMATION_QUERY
--14:05:36 info: OpenAiService[0]
--      Intent analysis result: INFORMATION_QUERY
--14:05:36 info: OpenAiService[0]
--      Handling general Aula query: hvad skal Soren i dag?
--14:05:36 info: Aula.Bots.SlackInteractiveBot[0]
--      Updated conversation context: Child: soren johannes, Today: True, Tomorrow: False, Homework: False, Age: 0.0 minutes
--14:05:37 info: Aula.Bots.SlackInteractiveBot[0]
--      Message sent successfully to Slack channel C06CVUAEL82
--14:05:37 info: Aula.Bots.SlackInteractiveBot[0]
--      Sent response to Slack channel C06CVUAEL82
--14:05:37 info: Aula.Bots.SlackInteractiveBot[0]
--      Updated last timestamp to 1751285134.012459
--14:05:40 info: Aula.Scheduling.SchedulingService[0]
--      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 06/30/2025 14:05:40
--14:05:40 info: Aula.Scheduling.SchedulingService[0]
--      ?? Timer fired: Checking scheduled tasks and reminders at 06/30/2025 14:05:40 (UTC: 06/30/2025 12:05:40)
--14:05:40 info: Aula.Scheduling.SchedulingService[0]
--      ?? ExecutePendingReminders called at 06/30/2025 14:05:40 (UTC: 06/30/2025 12:05:40)
--14:05:40 info: Aula.Services.SupabaseService[0]
--      Checking for pending reminders. Current UTC: 06/30/2025 12:05:40, Local: 06/30/2025 14:05:40
--14:05:40 info: Aula.Services.SupabaseService[0]
--      Found 0 pending reminders
--14:05:40 info: Aula.Scheduling.SchedulingService[0]
--      No pending reminders found
-+14:05:19 info: AgentService[0]
-+      Getting week letter for Soren Johannes (date: 06/30/2025, useCache: False)
-🧰 Tools 🪛 LanguageTool
-[style] ~30-~30: The word ‘til’ with one ‘l’ is informal. Consider replacing it.
-Context: ...ith: Der er ikke skrevet nogen ugenoter til denne uge 14:05:20 info: AgentService[0...
-
-(TIL)
-
-[style] ~50-~50: The word ‘til’ with one ‘l’ is informal. Consider replacing it.
-Context: ...ith: Der er ikke skrevet nogen ugenoter til denne uge 14:05:20 info: AgentService[0...
-
-(TIL)
-
-[grammar] ~78-~78: Please verify that the plural noun “hours” is in agreement with the quantifier “1”. Did you mean to use the singular form?
-Context: ...k cleanup timer started - running every 1 hours 14:05:20 info: Aula.Scheduling.Scheduli...
-
-(ONE_PLURAL)
-
-🤖 Prompt for AI Agents
-In log.txt lines around 20 to 60, the log contains many debug messages prefixed
-with "??" that clutter production logs. Review these debug logs and either
-remove them if they are temporary, change their log level to a dedicated debug
-level, or reformat them as clear informational messages. This will improve log
-clarity and production readiness by separating verbose debug output from
-standard info logs.
-In src/Aula.Tests/Services/OpenAiServiceIntegrationTests.cs:
-
-> +    [Theory]
-+    [InlineData(ChatInterface.Slack)]
-+    [InlineData(ChatInterface.Telegram)]
-+    public async Task SummarizeWeekLetterAsync_WithNullWeekLetter_ThrowsArgumentNullException(ChatInterface chatInterface)
++            Assert.NotNull(telegramBot);
++        }
++    }
++    catch (Exception)
 +    {
-+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
-+
-+        await Assert.ThrowsAsync<NullReferenceException>(() =>
-+            service.SummarizeWeekLetterAsync(null!, chatInterface));
++        // Expected when Telegram is not configured - this is acceptable
 +    }
-+
-+    [Theory]
-+    [InlineData(ChatInterface.Slack)]
-+    [InlineData(ChatInterface.Telegram)]
-+    public async Task AskQuestionAboutWeekLetterAsync_WithNullWeekLetter_ThrowsArgumentNullException(ChatInterface chatInterface)
-+    {
-+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
-+
-+        await Assert.ThrowsAsync<NullReferenceException>(() =>
-+            service.AskQuestionAboutWeekLetterAsync(null!, "What is happening today?", chatInterface));
-+    }
-+
-+    [Theory]
-+    [InlineData(ChatInterface.Slack)]
-+    [InlineData(ChatInterface.Telegram)]
-+    public async Task AskQuestionAboutWeekLetterAsync_WithContextKey_WithNullWeekLetter_ThrowsArgumentNullException(ChatInterface chatInterface)
-+    {
-+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
-+
-+        await Assert.ThrowsAsync<NullReferenceException>(() =>
-+            service.AskQuestionAboutWeekLetterAsync(null!, "What is happening today?", "context-key", chatInterface));
-+    }
-+
-+    [Theory]
-+    [InlineData(ChatInterface.Slack)]
-+    [InlineData(ChatInterface.Telegram)]
-+    public async Task ExtractKeyInformationAsync_WithNullWeekLetter_ThrowsArgumentNullException(ChatInterface chatInterface)
-+    {
-+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
-+
-+        await Assert.ThrowsAsync<NullReferenceException>(() =>
-+            service.ExtractKeyInformationAsync(null!, chatInterface));
-+    }
-+
-+    [Theory]
-+    [InlineData(ChatInterface.Slack)]
-+    [InlineData(ChatInterface.Telegram)]
-+    public async Task AskQuestionAboutChildrenAsync_WithNullChildrenWeekLetters_ThrowsArgumentNullException(ChatInterface chatInterface)
-+    {
-+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
-+
-+        await Assert.ThrowsAsync<NullReferenceException>(() =>
-+            service.AskQuestionAboutChildrenAsync(null!, "What are the children doing?", "context-key", chatInterface));
-+    }
-🛠️ Refactor suggestion
-
-Inconsistent exception type expectations.
-
-The tests expect NullReferenceException but use ThrowsAsync<NullReferenceException>. Consider whether ArgumentNullException would be more appropriate for null parameter validation, as it's more semantically correct.
-
--await Assert.ThrowsAsync<NullReferenceException>(() =>
-+await Assert.ThrowsAsync<ArgumentNullException>(() =>
-     service.SummarizeWeekLetterAsync(null!, chatInterface));
-If the service implementation intentionally throws NullReferenceException, consider refactoring it to throw ArgumentNullException with proper parameter names for better error handling.
-
-Committable suggestion skipped: line range outside the PR's diff.
-
-🤖 Prompt for AI Agents
-In src/Aula.Tests/Services/OpenAiServiceIntegrationTests.cs between lines 108
-and 161, the tests currently expect NullReferenceException when passing null
-parameters, but ArgumentNullException is more appropriate for null argument
-validation. Update the tests to expect ArgumentNullException instead of
-NullReferenceException by changing ThrowsAsync<NullReferenceException> to
-ThrowsAsync<ArgumentNullException>. Additionally, verify and if needed, refactor
-the OpenAiService methods to throw ArgumentNullException with the correct
-parameter name when null arguments are passed.
-In src/Aula.Tests/Channels/TelegramClientTests.cs:
-
-> +    public void PostWeekLetter_WithValidInputs_DoesNotThrow()
-+    {
-+        // Arrange
-+        var client = new TelegramClient("123456789:AABBCCDDEEFFGG");
-+        var weekLetter = CreateSampleWeekLetter();
-+        var child = new Child
-+        {
-+            FirstName = "Alice",
-+            LastName = "Johnson",
-+            Colour = "#FF0000"
-+        };
-+
-+        // Act & Assert - Should not throw when constructing message
-+        var task = client.PostWeekLetter("@testchannel", weekLetter, child);
-+        Assert.NotNull(task);
-+    }
-🛠️ Refactor suggestion
-
-Tests only verify task creation, not actual behavior.
-
-The PostWeekLetter_WithValidInputs_DoesNotThrow test only verifies that a task is returned, but doesn't test the actual functionality. Consider adding integration tests or mocking the HTTP client to verify the message content and formatting.
-
- [Fact]
--public void PostWeekLetter_WithValidInputs_DoesNotThrow()
-+public async Task PostWeekLetter_WithValidInputs_FormatsMessageCorrectly()
- {
-     // Arrange
-+    var mockHttpClient = new Mock<HttpClient>(); // Or use HttpClientFactory mock
-     var client = new TelegramClient("123456789:AABBCCDDEEFFGG");
-     var weekLetter = CreateSampleWeekLetter();
-     var child = new Child
-     {
-         FirstName = "Alice",
-         LastName = "Johnson",
-         Colour = "#FF0000"
-     };
-
--    // Act & Assert - Should not throw when constructing message
--    var task = client.PostWeekLetter("@testchannel", weekLetter, child);
--    Assert.NotNull(task);
-+    // Act
-+    var result = await client.PostWeekLetter("@testchannel", weekLetter, child);
-+    
-+    // Assert
-+    // Verify the message was formatted correctly with HTML sanitization
-+    // Verify the API call was made with correct parameters
- }
-Committable suggestion skipped: line range outside the PR's diff.
-
-🤖 Prompt for AI Agents
-In src/Aula.Tests/Channels/TelegramClientTests.cs around lines 105 to 120, the
-test PostWeekLetter_WithValidInputs_DoesNotThrow only checks that a task is
-created but does not verify the actual behavior or output of the PostWeekLetter
-method. To fix this, enhance the test by mocking the HTTP client used by
-TelegramClient to intercept and verify the outgoing message content and
-formatting, or add integration tests that confirm the message is sent correctly
-and contains the expected data.
-In src/Aula.Tests/Integration/AgentServiceTests.cs:
-
-> +        _openAiServiceMock.Setup(m => m.SummarizeWeekLetterAsync(weekLetter, It.IsAny<ChatInterface>()))
-+            .ReturnsAsync("Test summary");
-+
-+        // Act
-+        var result = await _agentService.SummarizeWeekLetterAsync(_testChild, _testDate);
-+
-+        // Assert
-+        Assert.Equal("Test summary", result);
-+        _openAiServiceMock.Verify(m => m.SummarizeWeekLetterAsync(weekLetter, ChatInterface.Slack), Times.Once);
-+    }
-🛠️ Refactor suggestion
-
-Hardcoded ChatInterface assumption should be explicit.
-
-The test assumes ChatInterface.Slack will be used but doesn't explicitly test this parameter. Consider making this assumption explicit or parameterizing the interface.
-
- _openAiServiceMock.Setup(m => m.SummarizeWeekLetterAsync(weekLetter, It.IsAny<ChatInterface>()))
-     .ReturnsAsync("Test summary");
-
- // Act
--var result = await _agentService.SummarizeWeekLetterAsync(_testChild, _testDate);
-+var result = await _agentService.SummarizeWeekLetterAsync(_testChild, _testDate, ChatInterface.Slack);
-
- // Assert
- Assert.Equal("Test summary", result);
--_openAiServiceMock.Verify(m => m.SummarizeWeekLetterAsync(weekLetter, ChatInterface.Slack), Times.Once);
-+_openAiServiceMock.Verify(m => m.SummarizeWeekLetterAsync(weekLetter, ChatInterface.Slack), Times.Once);
-📝 Committable suggestion
-‼️ IMPORTANT
-Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
-
-⬇️ Suggested change
--        _openAiServiceMock.Setup(m => m.SummarizeWeekLetterAsync(weekLetter, It.IsAny<ChatInterface>()))
--            .ReturnsAsync("Test summary");
--
--        // Act
--        var result = await _agentService.SummarizeWeekLetterAsync(_testChild, _testDate);
--
--        // Assert
--        Assert.Equal("Test summary", result);
--        _openAiServiceMock.Verify(m => m.SummarizeWeekLetterAsync(weekLetter, ChatInterface.Slack), Times.Once);
--    }
-+        _openAiServiceMock.Setup(m => m.SummarizeWeekLetterAsync(weekLetter, It.IsAny<ChatInterface>()))
-+            .ReturnsAsync("Test summary");
-+
-+        // Act
-+        var result = await _agentService.SummarizeWeekLetterAsync(_testChild, _testDate, ChatInterface.Slack);
-+
-+        // Assert
-+        Assert.Equal("Test summary", result);
-+        _openAiServiceMock.Verify(m => m.SummarizeWeekLetterAsync(weekLetter, ChatInterface.Slack), Times.Once);
-+    }
-🤖 Prompt for AI Agents
-In src/Aula.Tests/Integration/AgentServiceTests.cs around lines 178 to 187, the
-test implicitly assumes that ChatInterface.Slack is used when verifying the call
-to SummarizeWeekLetterAsync, but this is not explicitly tested or parameterized.
-To fix this, explicitly assert that the method is called with
-ChatInterface.Slack by either passing it as a parameter in the test setup or by
-verifying the exact parameter value in the mock verification step to make the
-assumption clear and testable.
-In src/Aula.Tests/Tools/AiToolsManagerTests.cs:
-
-> +    public async Task CreateReminderAsync_WithValidDateTime_CreatesReminder()
-+    {
-+        // Arrange
-+        var description = "Pick up Alice from school";
-+        var dateTime = DateTime.Now.AddDays(1).ToString("yyyy-MM-dd HH:mm");
-+        var childName = "Alice";
-+
-+        _mockSupabaseService.Setup(s => s.AddReminderAsync(
-+            It.IsAny<string>(),
-+            It.IsAny<DateOnly>(),
-+            It.IsAny<TimeOnly>(),
-+            It.IsAny<string>()))
-+            .ReturnsAsync(123);
-+
-+        // Act
-+        var result = await _aiToolsManager.CreateReminderAsync(description, dateTime, childName);
-+
-+        // Assert
-+        Assert.Contains("✅", result);
-+        Assert.Contains("Pick up Alice from school", result);
-+        _mockSupabaseService.Verify(s => s.AddReminderAsync(
-+            description,
-+            It.IsAny<DateOnly>(),
-+            It.IsAny<TimeOnly>(),
-+            childName), Times.Once);
-+    }
-🛠️ Refactor suggestion
-
-Consider testing specific date format expectations.
-
-The test uses DateTime.Now.AddDays(1).ToString("yyyy-MM-dd HH:mm") but doesn't verify that this specific format is required. Consider testing various valid date formats and invalid formats separately.
-
- [Fact]
- public async Task CreateReminderAsync_WithValidDateTime_CreatesReminder()
- {
-     // Arrange
-     var description = "Pick up Alice from school";
--    var dateTime = DateTime.Now.AddDays(1).ToString("yyyy-MM-dd HH:mm");
-+    var dateTime = "2024-12-25 14:30"; // Use fixed date for deterministic testing
-     var childName = "Alice";
-+    
-+    var expectedDate = new DateOnly(2024, 12, 25);
-+    var expectedTime = new TimeOnly(14, 30);
-
-     _mockSupabaseService.Setup(s => s.AddReminderAsync(
--        It.IsAny<string>(),
--        It.IsAny<DateOnly>(),
--        It.IsAny<TimeOnly>(),
--        It.IsAny<string>()))
-+        description,
-+        expectedDate,
-+        expectedTime,
-+        childName))
-         .ReturnsAsync(123);
-
-     // Act
-     var result = await _aiToolsManager.CreateReminderAsync(description, dateTime, childName);
-
-     // Assert
-     Assert.Contains("✅", result);
-     Assert.Contains("Pick up Alice from school", result);
-     _mockSupabaseService.Verify(s => s.AddReminderAsync(
-         description,
--        It.IsAny<DateOnly>(),
--        It.IsAny<TimeOnly>(),
-+        expectedDate,
-+        expectedTime,
-         childName), Times.Once);
- }
-🤖 Prompt for AI Agents
-In src/Aula.Tests/Tools/AiToolsManagerTests.cs around lines 36 to 61, the test
-uses a fixed date format string but does not verify that this format is required
-or handle other formats. To fix this, add additional test cases that pass
-different valid date formats and invalid formats to CreateReminderAsync,
-asserting correct behavior or error handling for each. This ensures the method
-properly validates and parses the date string format.
-In src/Aula.Tests/Scheduling/SchedulingServiceIntegrationTests.cs:
-
-> +    [Fact]
-+    public async Task StartAsync_CanBeCalledMultipleTimes_DoesNotThrow()
-+    {
-+        await _schedulingService.StartAsync();
-+        await _schedulingService.StartAsync();
-+        await _schedulingService.StartAsync();
-+
-+        // Should not throw
-+        Assert.True(true);
-+    }
-🛠️ Refactor suggestion
-
-Replace placeholder assertion with meaningful verification.
-
-The test uses Assert.True(true) as a placeholder. Consider verifying specific behavior or state after multiple start calls.
-
- [Fact]
- public async Task StartAsync_CanBeCalledMultipleTimes_DoesNotThrow()
- {
-     await _schedulingService.StartAsync();
-     await _schedulingService.StartAsync();
-     await _schedulingService.StartAsync();
-
--    // Should not throw
--    Assert.True(true);
-+    // Verify that the service logged the start message multiple times
-+    _mockLogger.Verify(
-+        logger => logger.Log(
-+            LogLevel.Information,
-+            It.IsAny<EventId>(),
-+            It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Starting scheduling service")),
-+            null,
-+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-+        Times.Exactly(3));
  }
 📝 Committable suggestion
 ‼️ IMPORTANT
@@ -2238,124 +458,155 @@ Carefully review the code before committing. Ensure that it accurately replaces 
 
 ⬇️ Suggested change
 -    [Fact]
--    public async Task StartAsync_CanBeCalledMultipleTimes_DoesNotThrow()
+-    public void ConfigureServices_WithTelegramDisabled_ShouldNotRegisterTelegramBot()
 -    {
--        await _schedulingService.StartAsync();
--        await _schedulingService.StartAsync();
--        await _schedulingService.StartAsync();
+-        // This test verifies the conditional registration logic
+-        // The actual implementation depends on appsettings.json configuration
+-        var serviceProvider = Program.ConfigureServices();
 -
--        // Should not throw
--        Assert.True(true);
+-        // TelegramInteractiveBot registration depends on config, so we test the service provider works
+-        Assert.NotNull(serviceProvider);
 -    }
 +    [Fact]
-+    public async Task StartAsync_CanBeCalledMultipleTimes_DoesNotThrow()
++    public void ConfigureServices_ShouldHandleConditionalTelegramRegistration()
 +    {
-+        await _schedulingService.StartAsync();
-+        await _schedulingService.StartAsync();
-+        await _schedulingService.StartAsync();
++        var serviceProvider = Program.ConfigureServices();
++        
++        // Verify service provider is created successfully regardless of Telegram config
++        Assert.NotNull(serviceProvider);
 +
-+        // Verify that the service logged the start message multiple times
-+        _mockLogger.Verify(
-+            logger => logger.Log(
-+                LogLevel.Information,
-+                It.IsAny<EventId>(),
-+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Starting scheduling service")),
-+                null,
-+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-+            Times.Exactly(3));
++        // Try to resolve TelegramInteractiveBot - should either succeed or fail gracefully
++        try
++        {
++            var telegramBot = serviceProvider.GetService<TelegramInteractiveBot>();
++            // If resolved, verify it's properly configured
++            if (telegramBot != null)
++            {
++                Assert.NotNull(telegramBot);
++            }
++        }
++        catch (Exception)
++        {
++            // Expected when Telegram is not configured - this is acceptable
++        }
 +    }
 🤖 Prompt for AI Agents
-In src/Aula.Tests/Scheduling/SchedulingServiceIntegrationTests.cs around lines
-186 to 195, the test uses a placeholder assertion Assert.True(true) which does
-not verify any actual behavior. Replace this with meaningful assertions that
-confirm the scheduling service remains in a valid started state after multiple
-StartAsync calls, such as checking a status property or ensuring no exceptions
-were thrown during the calls.
-In src/Aula.Tests/Scheduling/SchedulingServiceIntegrationTests.cs:
+In src/Aula.Tests/ProgramTests.cs around lines 39 to 48, the test
+ConfigureServices_WithTelegramDisabled_ShouldNotRegisterTelegramBot does not
+verify the actual conditional registration of the Telegram bot. Modify the test
+to explicitly set the configuration for Telegram enabled and disabled scenarios,
+then assert that the TelegramInteractiveBot service is registered only when
+enabled and not registered when disabled. This will ensure the conditional
+registration logic is properly tested.
+In src/Aula/Services/OpenAiService.cs:
 
-> +        _slackBot = new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object);
-+        _telegramBot = null; // Keep null for simpler testing
-+
-+        _schedulingService = new SchedulingService(
-+            _mockLoggerFactory.Object,
-+            _mockSupabaseService.Object,
-+            _mockAgentService.Object,
-+            _slackBot,
-+            _telegramBot,
-+            _testConfig);
+> +    internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, string? model = null)
++    {
++        _openAiClient = openAiClient;
++        _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
++        _aiToolsManager = aiToolsManager;
++        _aiModel = model ?? Models.Gpt_4;
 +    }
 🛠️ Refactor suggestion
 
-Consider testing with actual TelegramBot instance.
+Add parameter validation to internal constructor
 
-The test setup always uses null for TelegramBot, which limits test coverage. Consider creating a test that includes both bots to ensure full integration testing.
+The internal constructor lacks the same parameter validation as the public constructor, which could lead to issues if null values are passed.
 
- _slackBot = new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object);
--_telegramBot = null; // Keep null for simpler testing
-+_telegramBot = new TelegramInteractiveBot(_mockAgentService.Object, _testConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object);
-
- _schedulingService = new SchedulingService(
-     _mockLoggerFactory.Object,
-     _mockSupabaseService.Object,
-     _mockAgentService.Object,
-     _slackBot,
-     _telegramBot,
-     _testConfig);
+ internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, string? model = null)
+ {
++    if (openAiClient == null)
++        throw new ArgumentNullException(nameof(openAiClient));
++    if (loggerFactory == null)
++        throw new ArgumentNullException(nameof(loggerFactory));
++    if (aiToolsManager == null)
++        throw new ArgumentNullException(nameof(aiToolsManager));
++
+     _openAiClient = openAiClient;
+     _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
+     _aiToolsManager = aiToolsManager;
+     _aiModel = model ?? Models.Gpt_4;
+ }
 📝 Committable suggestion
 ‼️ IMPORTANT
 Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
 
 ⬇️ Suggested change
--        _slackBot = new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object);
--        _telegramBot = null; // Keep null for simpler testing
--
--        _schedulingService = new SchedulingService(
--            _mockLoggerFactory.Object,
--            _mockSupabaseService.Object,
--            _mockAgentService.Object,
--            _slackBot,
--            _telegramBot,
--            _testConfig);
+-    internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, string? model = null)
+-    {
+-        _openAiClient = openAiClient;
+-        _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
+-        _aiToolsManager = aiToolsManager;
+-        _aiModel = model ?? Models.Gpt_4;
 -    }
-+        _slackBot = new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object);
-+        _telegramBot = new TelegramInteractiveBot(_mockAgentService.Object, _testConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object);
++    internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, string? model = null)
++    {
++        if (openAiClient == null)
++            throw new ArgumentNullException(nameof(openAiClient));
++        if (loggerFactory == null)
++            throw new ArgumentNullException(nameof(loggerFactory));
++        if (aiToolsManager == null)
++            throw new ArgumentNullException(nameof(aiToolsManager));
 +
-+        _schedulingService = new SchedulingService(
-+            _mockLoggerFactory.Object,
-+            _mockSupabaseService.Object,
-+            _mockAgentService.Object,
-+            _slackBot,
-+            _telegramBot,
-+            _testConfig);
++        _openAiClient = openAiClient;
++        _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
++        _aiToolsManager = aiToolsManager;
++        _aiModel = model ?? Models.Gpt_4;
 +    }
 🤖 Prompt for AI Agents
-In src/Aula.Tests/Scheduling/SchedulingServiceIntegrationTests.cs around lines
-54 to 64, the test setup assigns null to the TelegramBot instance, limiting test
-coverage. To fix this, create an additional test setup or test case that
-initializes a real TelegramBot instance alongside the SlackInteractiveBot, then
-pass both to the SchedulingService constructor to ensure full integration
-testing of both bots.
-In src/Aula.Tests/Utilities/Html2SlackMarkdownConverterTests.cs:
+In src/Aula/Services/OpenAiService.cs around lines 55 to 61, the internal
+constructor is missing parameter validation for its arguments, unlike the public
+constructor. Add null checks for openAiClient, loggerFactory, and aiToolsManager
+parameters at the start of the constructor, throwing appropriate exceptions if
+any are null, to ensure robustness and prevent potential null reference errors.
+In src/Aula/Services/OpenAiService.cs:
 
-> +using Xunit;
-+using Aula.Utilities;
-+
-⚠️ Potential issue
+> +        // Try to get metadata from the ugebreve array
++        if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
++        {
++            className = ugebreve[0]?["klasseNavn"]?.ToString() ?? "unknown";
++            weekNumber = ugebreve[0]?["uge"]?.ToString() ?? "unknown";
++        }
+🛠️ Refactor suggestion
 
-Add missing using statement for System.Linq.
+Extract childName from ugebreve array
 
-The test file uses Enumerable.Repeat on line 187 but doesn't import System.Linq.
+The method extracts className and weekNumber from the ugebreve array but doesn't extract childName. This could result in incomplete metadata when using the new format.
 
-Add the missing import:
+ // Try to get metadata from the ugebreve array
+ if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
+ {
++    childName = ugebreve[0]?["childName"]?.ToString() ?? childName;
+     className = ugebreve[0]?["klasseNavn"]?.ToString() ?? "unknown";
+     weekNumber = ugebreve[0]?["uge"]?.ToString() ?? "unknown";
+ }
+Note: Verify the correct property name for childName in the ugebreve structure.
 
- using Xunit;
- using Aula.Utilities;
-+using System.Linq;
+📝 Committable suggestion
+‼️ IMPORTANT
+Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
+
+⬇️ Suggested change
+-        // Try to get metadata from the ugebreve array
+-        if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
+-        {
+-            className = ugebreve[0]?["klasseNavn"]?.ToString() ?? "unknown";
+-            weekNumber = ugebreve[0]?["uge"]?.ToString() ?? "unknown";
+-        }
++        // Try to get metadata from the ugebreve array
++        if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
++        {
++            childName = ugebreve[0]?["childName"]?.ToString() ?? childName;
++            className = ugebreve[0]?["klasseNavn"]?.ToString() ?? "unknown";
++            weekNumber = ugebreve[0]?["uge"]?.ToString() ?? "unknown";
++        }
 🤖 Prompt for AI Agents
-In src/Aula.Tests/Utilities/Html2SlackMarkdownConverterTests.cs at the top of
-the file (lines 1 to 3), add the missing using statement for System.Linq to
-enable usage of Enumerable.Repeat on line 187. Insert "using System.Linq;"
-alongside the existing using directives to fix the missing import issue.
+In src/Aula/Services/OpenAiService.cs around lines 69 to 74, the code extracts
+className and weekNumber from the ugebreve array but does not extract childName,
+which may cause incomplete metadata. Identify the correct property name for
+childName within the ugebreve array elements, then add code to extract this
+property similarly to className and weekNumber, ensuring childName is assigned
+appropriately from the first element of the ugebreve array.
 —
 Reply to this email directly, view it on GitHub, or unsubscribe.
 You are receiving this because you authored the thread.
