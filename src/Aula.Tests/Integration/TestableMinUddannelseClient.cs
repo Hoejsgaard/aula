@@ -4,6 +4,7 @@ using System.Net.Http;
 using Newtonsoft.Json.Linq;
 using Aula.Integration;
 using Aula.Configuration;
+using HtmlAgilityPack;
 
 namespace Aula.Tests.Integration;
 
@@ -26,26 +27,59 @@ public class TestableMinUddannelseClient : IMinUddannelseClient, IDisposable
         _password = password;
     }
 
-    public Task<bool> LoginAsync()
+    public async Task<bool> LoginAsync()
     {
-        // In tests, we'll just simulate a successful login
+        // In tests, we'll simulate a successful login and profile extraction
         _loggedIn = true;
 
-        // Set up a mock user profile for testing
-        _userProfile = new JObject
-        {
-            ["boern"] = new JArray
-            {
-                new JObject
-                {
-                    ["id"] = "123",
-                    ["fornavn"] = "Test",
-                    ["efternavn"] = "Child"
-                }
-            }
-        };
+        // Try to extract user profile from the HTTP response
+        _userProfile = await ExtractUserProfile();
 
-        return Task.FromResult(true);
+        return true;
+    }
+
+    private async Task<JObject> ExtractUserProfile()
+    {
+        var response = await _httpClient.GetAsync("https://www.minuddannelse.net/Node/");
+        var content = await response.Content.ReadAsStringAsync();
+        
+        // Mimic the real MinUddannelseClient logic exactly
+        var doc = new HtmlAgilityPack.HtmlDocument();
+        doc.LoadHtml(content);
+
+        // Find the script node that contains __tempcontext__
+        var script = doc.DocumentNode.Descendants("script")
+            .FirstOrDefault(n => n.InnerText.Contains("__tempcontext__"));
+
+        if (script == null)
+            throw new Exception("No UserProfile found");
+
+        var scriptText = script.InnerText;
+        if (string.IsNullOrWhiteSpace(scriptText))
+            throw new Exception("Script content is empty");
+
+        var contextStart = "window.__tempcontext__['currentUser'] = ";
+        var startIndex = scriptText.IndexOf(contextStart);
+        if (startIndex == -1)
+            throw new Exception("UserProfile context not found in script");
+
+        startIndex += contextStart.Length;
+        var endIndex = scriptText.IndexOf(";", startIndex);
+        if (endIndex == -1 || endIndex <= startIndex)
+            throw new Exception("Invalid UserProfile context format");
+
+        var jsonText = scriptText.Substring(startIndex, endIndex - startIndex).Trim();
+        if (string.IsNullOrWhiteSpace(jsonText))
+            throw new Exception("Extracted JSON text is empty");
+
+        try
+        {
+            return JObject.Parse(jsonText);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to parse UserProfile JSON: {ex.Message}");
+        }
     }
 
     public async Task<JObject> GetWeekLetter(Child child, DateOnly date)
@@ -91,20 +125,22 @@ public class TestableMinUddannelseClient : IMinUddannelseClient, IDisposable
 
     private string GetChildId(Child child)
     {
-        // In tests, we'll use the first name as a simple ID mapping
-        // This matches the mock user profile we set up in LoginAsync
-        if (_userProfile["boern"] is JArray children)
-        {
-            foreach (var kid in children)
-            {
-                if (kid["fornavn"]?.ToString() == child.FirstName)
-                {
-                    return kid["id"]?.ToString() ?? "123";
-                }
-            }
-        }
-        return "123"; // Default fallback for tests
+        if (_userProfile == null || !_userProfile.HasValues) throw new Exception("User profile not loaded");
+        var kids = _userProfile["boern"];
+        if (kids == null) throw new Exception("No children found in user profile");
+        var id = "";
+        foreach (var kid in kids)
+            if (kid["fornavn"]?.ToString() == child.FirstName)
+                id = kid["id"]?.ToString() ?? "";
+
+        if (id == "") throw new Exception("Child not found");
+
+        return id;
     }
+
+    // Test helper methods to expose private functionality
+    public string TestGetChildId(Child child) => GetChildId(child);
+    public int TestGetIsoWeekNumber(DateOnly date) => GetIsoWeekNumber(date);
 
     private int GetIsoWeekNumber(DateOnly date)
     {
