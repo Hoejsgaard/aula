@@ -954,4 +954,116 @@ public class SlackInteractiveBotTests : IDisposable
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
+    
+    [Fact]
+    public async Task Start_WithChildren_BuildsChildrenDictionaryCorrectly()
+    {
+        // Verify children dictionary is built from config
+        SetupSuccessfulHttpResponse();
+        
+        await _slackBot.Start();
+        
+        // The children dictionary is built during construction,
+        // verified by the welcome message containing children names
+        _mockHttpMessageHandler.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(req =>
+                req.Method == HttpMethod.Post &&
+                req.RequestUri!.ToString() == "https://slack.com/api/chat.postMessage" &&
+                req.Content!.ReadAsStringAsync().Result.Contains("Emma og TestChild1")),
+            ItExpr.IsAny<CancellationToken>());
+    }
+    
+    [Fact]
+    public async Task PollMessages_WithMalformedJson_LogsError()
+    {
+        // Setup malformed JSON response
+        var mockResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("malformed json{")
+        };
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Get &&
+                    req.RequestUri!.ToString().Contains("conversations.history")),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(mockResponse);
+
+        SetupSlackPostMessageResponse(new { ok = true, ts = "1234567890.123456" });
+
+        await TriggerPollMessagesByStarting();
+        await Task.Delay(200);
+
+        // Should log JSON parsing error
+        _mockLogger.Verify(
+            logger => logger.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error polling Slack messages")),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task CleanupTimer_IsInitialized_DuringStart()
+    {
+        SetupSuccessfulHttpResponse();
+        
+        await _slackBot.Start();
+        
+        // Verify cleanup timer logging
+        _mockLogger.Verify(
+            logger => logger.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Slack cleanup timer started - running every 24 hours")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task SendMessageInternal_WithValidSlackResponse_StoresMessageId()
+    {
+        var mockResponse = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(JsonConvert.SerializeObject(new { ok = true, ts = "1234567890.123456" }))
+        };
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(mockResponse);
+
+        await _slackBot.SendMessage("Test message");
+
+        // Verify message was sent successfully
+        _mockLogger.Verify(
+            logger => logger.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Message sent successfully")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+        
+        // Verify message ID was stored
+        _mockLogger.Verify(
+            logger => logger.Log(
+                LogLevel.Information,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Stored sent message ID: 1234567890.123456")),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
 }
