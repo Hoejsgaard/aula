@@ -37,3 +37,9 @@ msbuild.wrn
 
 # Visual Studio 2015
 .vs/
+
+# Test results and coverage files
+TestResults/
+coverage/
+*.trx
+log.txt
