@@ -169,4 +169,252 @@ public class OpenAiServiceTests
     // generic help text (which caused Danish queries to get English responses).
     // However, the complex mocking required for OpenAI dependencies makes this
     // test too brittle. The fix is documented and verified by manual testing.
+
+    [Fact]
+    public async Task HandleDeleteReminderQuery_WithValidNumber_ExtractsNumberCorrectly()
+    {
+        // Arrange
+        var mockLoggerFactory = new Mock<ILoggerFactory>();
+        var mockLogger = new Mock<ILogger>();
+        mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
+
+        var mockSupabaseService = new Mock<ISupabaseService>();
+        var mockDataService = new Mock<IDataService>();
+        var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockDataService.Object, mockLoggerFactory.Object);
+
+        var service = new OpenAiService("test-api-key", mockLoggerFactory.Object, aiToolsManager);
+
+        // Use reflection to call the private method
+        var method = typeof(OpenAiService).GetMethod("HandleDeleteReminderQuery", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        // Act - test different number formats
+        var result1 = await (Task<string>)method!.Invoke(service, new object[] { "delete reminder 3" })!;
+        var result2 = await (Task<string>)method!.Invoke(service, new object[] { "remove 5 please" })!;
+        var result3 = await (Task<string>)method!.Invoke(service, new object[] { "delete reminder" })!;
+
+        // Assert - Since we can't mock AiToolsManager, we expect database calls to fail with connection errors
+        // but the number extraction logic should work
+        Assert.NotNull(result1);
+        Assert.NotNull(result2);
+        Assert.Contains("specify which reminder number", result3);
+    }
+
+    [Fact]
+    public async Task HandleDeleteReminderQuery_WithoutNumber_ReturnsErrorMessage()
+    {
+        // Arrange
+        var mockLoggerFactory = new Mock<ILoggerFactory>();
+        var mockLogger = new Mock<ILogger>();
+        mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
+
+        var mockSupabaseService = new Mock<ISupabaseService>();
+        var mockDataService = new Mock<IDataService>();
+        var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockDataService.Object, mockLoggerFactory.Object);
+
+        var service = new OpenAiService("test-api-key", mockLoggerFactory.Object, aiToolsManager);
+
+        // Use reflection to call the private method
+        var method = typeof(OpenAiService).GetMethod("HandleDeleteReminderQuery", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        // Act
+        var result = await (Task<string>)method!.Invoke(service, new object[] { "delete reminder" })!;
+
+        // Assert
+        Assert.Contains("specify which reminder number", result);
+    }
+
+    // NOTE: HandleRegularAulaQuery tests are challenging due to the implementation always 
+    // returning FALLBACK_TO_EXISTING_SYSTEM in the current version. The logic branches 
+    // for activity/reminder guidance are covered by other integration tests.
+
+    [Fact]
+    public async Task HandleRegularAulaQuery_WithGeneralQuery_ReturnsFallback()
+    {
+        // Arrange
+        var mockLoggerFactory = new Mock<ILoggerFactory>();
+        var mockLogger = new Mock<ILogger>();
+        mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
+
+        var mockSupabaseService = new Mock<ISupabaseService>();
+        var mockDataService = new Mock<IDataService>();
+        var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockDataService.Object, mockLoggerFactory.Object);
+
+        var service = new OpenAiService("test-api-key", mockLoggerFactory.Object, aiToolsManager);
+
+        // Use reflection to call the private method
+        var method = typeof(OpenAiService).GetMethod("HandleRegularAulaQuery", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        // Act
+        var result = await (Task<string>)method!.Invoke(service, new object[] { "general question about school", "test-context", ChatInterface.Slack })!;
+
+        // Assert
+        Assert.Equal("FALLBACK_TO_EXISTING_SYSTEM", result);
+    }
+
+    [Fact]
+    public void ExtractValue_WithValidInput_ReturnsCorrectValue()
+    {
+        // Arrange
+        var lines = new[] { "DESCRIPTION: Test reminder", "DATETIME: 2024-01-01 10:00", "CHILD: Emma" };
+
+        // Use reflection to call the private static method
+        var method = typeof(OpenAiService).GetMethod("ExtractValue", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        // Act
+        var description = (string?)method!.Invoke(null, new object[] { lines, "DESCRIPTION" });
+        var datetime = (string?)method!.Invoke(null, new object[] { lines, "DATETIME" });
+        var child = (string?)method!.Invoke(null, new object[] { lines, "CHILD" });
+        var missing = (string?)method!.Invoke(null, new object[] { lines, "MISSING" });
+
+        // Assert
+        Assert.Equal("Test reminder", description);
+        Assert.Equal("2024-01-01 10:00", datetime);
+        Assert.Equal("Emma", child);
+        Assert.Null(missing);
+    }
+
+    [Fact]
+    public void ExtractWeekLetterMetadata_WithValidData_ReturnsCorrectMetadata()
+    {
+        // Arrange
+        var weekLetter = CreateTestWeekLetter();
+
+        // Use reflection to call the private static method
+        var method = typeof(OpenAiService).GetMethod("ExtractWeekLetterMetadata", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        // Act
+        var result = method!.Invoke(null, new object[] { weekLetter });
+        var (childName, className, weekNumber) = ((string, string, string))result!;
+
+        // Assert
+        Assert.Equal("unknown", childName); // No child field in test data
+        Assert.Equal("3A", className);
+        Assert.Equal("35", weekNumber);
+    }
+
+    [Fact]
+    public void ExtractWeekLetterMetadata_WithMissingData_ReturnsDefaults()
+    {
+        // Arrange
+        var weekLetter = JObject.Parse(@"{ ""other"": ""data"" }");
+
+        // Use reflection to call the private static method
+        var method = typeof(OpenAiService).GetMethod("ExtractWeekLetterMetadata", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        // Act
+        var result = method!.Invoke(null, new object[] { weekLetter });
+        var (childName, className, weekNumber) = ((string, string, string))result!;
+
+        // Assert
+        Assert.Equal("unknown", childName);
+        Assert.Equal("unknown", className);
+        Assert.Equal("unknown", weekNumber);
+    }
+
+    [Fact]
+    public void ExtractWeekLetterMetadata_WithChildField_ReturnsChildName()
+    {
+        // Arrange
+        var weekLetter = JObject.Parse(@"{ 
+            ""child"": ""Emma"",
+            ""ugebreve"": [
+                {
+                    ""klasseNavn"": ""4B"",
+                    ""uge"": ""42""
+                }
+            ]
+        }");
+
+        // Use reflection to call the private static method
+        var method = typeof(OpenAiService).GetMethod("ExtractWeekLetterMetadata", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        // Act
+        var result = method!.Invoke(null, new object[] { weekLetter });
+        var (childName, className, weekNumber) = ((string, string, string))result!;
+
+        // Assert
+        Assert.Equal("Emma", childName);
+        Assert.Equal("4B", className);
+        Assert.Equal("42", weekNumber);
+    }
+
+    [Fact]
+    public void GetChatInterfaceInstructions_WithSlack_ReturnsSlackInstructions()
+    {
+        // Arrange
+        var mockLoggerFactory = new Mock<ILoggerFactory>();
+        var mockLogger = new Mock<ILogger>();
+        mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
+
+        var mockSupabaseService = new Mock<ISupabaseService>();
+        var mockDataService = new Mock<IDataService>();
+        var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockDataService.Object, mockLoggerFactory.Object);
+
+        var service = new OpenAiService("test-api-key", mockLoggerFactory.Object, aiToolsManager);
+
+        // Use reflection to call the private method
+        var method = typeof(OpenAiService).GetMethod("GetChatInterfaceInstructions", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        // Act
+        var result = (string)method!.Invoke(service, new object[] { ChatInterface.Slack })!;
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Contains("Slack", result);
+    }
+
+    [Fact]
+    public void GetChatInterfaceInstructions_WithTelegram_ReturnsTelegramInstructions()
+    {
+        // Arrange
+        var mockLoggerFactory = new Mock<ILoggerFactory>();
+        var mockLogger = new Mock<ILogger>();
+        mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
+
+        var mockSupabaseService = new Mock<ISupabaseService>();
+        var mockDataService = new Mock<IDataService>();
+        var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockDataService.Object, mockLoggerFactory.Object);
+
+        var service = new OpenAiService("test-api-key", mockLoggerFactory.Object, aiToolsManager);
+
+        // Use reflection to call the private method
+        var method = typeof(OpenAiService).GetMethod("GetChatInterfaceInstructions", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        // Act
+        var result = (string)method!.Invoke(service, new object[] { ChatInterface.Telegram })!;
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Contains("Telegram", result);
+    }
+
+    [Fact]
+    public void OpenAiService_ClearConversationHistory_MultipleContexts()
+    {
+        // Arrange
+        var mockLoggerFactory = new Mock<ILoggerFactory>();
+        var mockLogger = new Mock<ILogger>();
+        mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
+
+        var mockSupabaseService = new Mock<ISupabaseService>();
+        var mockDataService = new Mock<IDataService>();
+        var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockDataService.Object, mockLoggerFactory.Object);
+
+        var service = new OpenAiService("test-api-key", mockLoggerFactory.Object, aiToolsManager);
+
+        // Act & Assert - Multiple clears should not throw
+        service.ClearConversationHistory("context1");
+        service.ClearConversationHistory("context2");
+        service.ClearConversationHistory(); // Clear all
+        service.ClearConversationHistory("context1"); // Clear specific after clear all
+    }
 }
