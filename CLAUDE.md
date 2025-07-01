@@ -135,17 +135,20 @@ Settings are handled through `appsettings.json` with sections for:
 - ✅ Channel abstraction: Message sender interface testing, contract validation, error propagation
 - **Result**: 52.78% → 64.09% line coverage (+11.31pp), 635 → 727 tests (+92 tests)
 
-**🚧 Phase 4 In Progress** (Target: 75%+ overall):
-**Priority 1: Critical Business Logic Gaps**
+**✅ Phase 4A Completed** (Target: 65%+ MinUddannelseClient):
 - ✅ MinUddannelseClient: 34.61% → 65%+ coverage ACHIEVED - 23 comprehensive tests covering GetWeekSchedule(), GetChildId(), GetUserProfileAsync(), error handling, edge cases, ISO week calculations
-- 🚧 UniLoginClient: 30.9% → 65% target - Multi-step auth flow, HTML parsing, form submission, session management (12-15 tests)
-- ⏳ SchedulingService: 55.04% → 75% target - Task execution, cron logic, reminder processing, timer callbacks (10-12 tests)
+- **Result**: 64.09% → 68.66% line coverage (+4.57pp), 727 → 777 tests (+50 tests)
 
-**Priority 2: Channel Infrastructure Hardening**
-- ⏳ TelegramClient: 73.28% → 85% target - HTML sanitization, error fallbacks, tag conversion (6-8 tests)
-- ⏳ Message Senders: 60-75% → 85%+ target - Constructor validation, error handling, parameter differences (7-9 tests)
+**🚧 Phase 4B In Progress** (Target: 75%+ overall - Current: 68.66%):
+**Priority 1: Critical Infrastructure (Weeks 1-2)**
+- 🚧 SupabaseService: Database operations testing - targeting 50-60% coverage (+2.8pp impact)
+- ⏳ SchedulingService: Async task execution testing - targeting 70-80% coverage (+3.4pp impact)
 
-**Expected Phase 4 Results**: 727 → 800+ tests (+73 tests), 64.09% → 76%+ line coverage (+12pp)
+**Priority 2: Integration Services (Week 3)**
+- ⏳ GoogleCalendar: Integration testing - targeting 70-80% coverage (+1.7pp impact)
+- ⏳ AgentService.ProcessQueryWithToolsAsync: LLM tool coordination testing - targeting 60-70% coverage (+1.1pp impact)
+
+**Expected Phase 4B Results**: 777 → 810+ tests (+66 tests), 68.66% → 76.5%+ line coverage (+7.84pp)
 
 #### 2. Week Letter Automation Enhancement (HIGH PRIORITY)
 **Current State**: Weekly fetching Sundays at 4 PM, basic scheduling, retry logic

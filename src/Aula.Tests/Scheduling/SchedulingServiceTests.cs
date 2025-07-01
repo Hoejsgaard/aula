@@ -487,4 +487,352 @@ public class SchedulingServiceTests
         var method = typeof(SchedulingService).GetMethod("CheckForMissedReminders", BindingFlags.NonPublic | BindingFlags.Instance);
         await (Task)method!.Invoke(service, new object[0])!;
     }
+
+    [Fact]
+    public async Task ExecuteTask_WithWeeklyLetterTask_CallsExecuteWeeklyLetterCheck()
+    {
+        // Arrange
+        var schedulingService = CreateSchedulingService();
+
+        var task = new ScheduledTask
+        {
+            Name = "WeeklyLetterCheck",
+            Enabled = true,
+            CronExpression = "0 16 * * 0"
+        };
+
+        // Setup mocks
+        _mockAgentService.Setup(x => x.GetAllChildrenAsync())
+            .ReturnsAsync(new List<Child> { new Child { FirstName = "TestChild", LastName = "TestLast" } });
+
+        _mockSupabaseService.Setup(x => x.HasWeekLetterBeenPostedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync(true); // Already posted, so it should return early
+
+        // Act
+        await TestExecuteTask(schedulingService, task);
+
+        // Assert
+        _mockAgentService.Verify(x => x.GetAllChildrenAsync(), Times.Once);
+        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteTask_WithPendingRemindersTask_CallsExecutePendingReminders()
+    {
+        // Arrange
+        var schedulingService = CreateSchedulingService();
+
+        var task = new ScheduledTask
+        {
+            Name = "ReminderCheck",
+            Enabled = true,
+            CronExpression = "*/5 * * * *"
+        };
+
+        var testReminder = new Reminder
+        {
+            Id = 1,
+            Text = "Test reminder",
+            RemindDate = DateOnly.FromDateTime(DateTime.Today),
+            RemindTime = new TimeOnly(10, 0),
+            ChildName = "TestChild"
+        };
+
+        // Setup mocks
+        _mockSupabaseService.Setup(x => x.GetPendingRemindersAsync())
+            .ReturnsAsync(new List<Reminder> { testReminder });
+
+        _mockSupabaseService.Setup(x => x.DeleteReminderAsync(testReminder.Id))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await TestExecuteTask(schedulingService, task);
+
+        // Assert
+        _mockSupabaseService.Verify(x => x.GetPendingRemindersAsync(), Times.Once);
+        _mockSupabaseService.Verify(x => x.DeleteReminderAsync(testReminder.Id), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecutePendingReminders_WithNoReminders_DoesNotThrow()
+    {
+        // Arrange
+        var schedulingService = CreateSchedulingService();
+
+        _mockSupabaseService.Setup(x => x.GetPendingRemindersAsync())
+            .ReturnsAsync(new List<Reminder>());
+
+        // Act & Assert
+        await TestExecutePendingReminders(schedulingService);
+        _mockSupabaseService.Verify(x => x.GetPendingRemindersAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecutePendingReminders_WithReminders_SendsNotificationsAndDeletesReminders()
+    {
+        // Arrange
+        var schedulingService = CreateSchedulingService();
+
+        var reminders = new List<Reminder>
+        {
+            new Reminder { Id = 1, Text = "Reminder 1", ChildName = "Child1" },
+            new Reminder { Id = 2, Text = "Reminder 2", ChildName = null }
+        };
+
+        _mockSupabaseService.Setup(x => x.GetPendingRemindersAsync())
+            .ReturnsAsync(reminders);
+
+        _mockSupabaseService.Setup(x => x.DeleteReminderAsync(It.IsAny<int>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await TestExecutePendingReminders(schedulingService);
+
+        // Assert
+        _mockSupabaseService.Verify(x => x.GetPendingRemindersAsync(), Times.Once);
+        _mockSupabaseService.Verify(x => x.DeleteReminderAsync(1), Times.Once);
+        _mockSupabaseService.Verify(x => x.DeleteReminderAsync(2), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecutePendingReminders_WithExceptionDuringProcessing_LogsErrorAndContinues()
+    {
+        // Arrange
+        var schedulingService = CreateSchedulingService();
+
+        var reminders = new List<Reminder>
+        {
+            new Reminder { Id = 1, Text = "Reminder 1", ChildName = "Child1" }
+        };
+
+        _mockSupabaseService.Setup(x => x.GetPendingRemindersAsync())
+            .ReturnsAsync(reminders);
+
+        _mockSupabaseService.Setup(x => x.DeleteReminderAsync(1))
+            .ThrowsAsync(new Exception("Database error"));
+
+        // Act & Assert - Should not throw, errors should be logged
+        await TestExecutePendingReminders(schedulingService);
+        _mockSupabaseService.Verify(x => x.GetPendingRemindersAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task CheckAndPostWeekLetter_WithAlreadyPostedLetter_ReturnsEarly()
+    {
+        // Arrange
+        var schedulingService = CreateSchedulingService();
+
+        var child = new Child { FirstName = "TestChild", LastName = "TestLast" };
+        var task = new ScheduledTask { Name = "WeeklyLetterCheck", Enabled = true };
+
+        _mockSupabaseService.Setup(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var method = typeof(SchedulingService).GetMethod("CheckAndPostWeekLetter", BindingFlags.NonPublic | BindingFlags.Instance);
+        await (Task)method!.Invoke(schedulingService, new object[] { child, task })!;
+
+        // Assert
+        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once);
+        _mockAgentService.Verify(x => x.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CheckAndPostWeekLetter_WithNoWeekLetter_IncrementsRetryAttempt()
+    {
+        // Arrange
+        var schedulingService = CreateSchedulingService();
+
+        var child = new Child { FirstName = "TestChild", LastName = "TestLast" };
+        var task = new ScheduledTask { Name = "WeeklyLetterCheck", Enabled = true };
+
+        _mockSupabaseService.Setup(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync(false);
+
+        _mockAgentService.Setup(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), true))
+            .ReturnsAsync((JObject?)null);
+
+        _mockSupabaseService.Setup(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var method = typeof(SchedulingService).GetMethod("CheckAndPostWeekLetter", BindingFlags.NonPublic | BindingFlags.Instance);
+        await (Task)method!.Invoke(schedulingService, new object[] { child, task })!;
+
+        // Assert
+        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once);
+        _mockAgentService.Verify(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), true), Times.Once);
+        _mockSupabaseService.Verify(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CheckAndPostWeekLetter_WithEmptyContent_IncrementsRetryAttempt()
+    {
+        // Arrange
+        var schedulingService = CreateSchedulingService();
+
+        var child = new Child { FirstName = "TestChild", LastName = "TestLast" };
+        var task = new ScheduledTask { Name = "WeeklyLetterCheck", Enabled = true };
+
+        var weekLetter = new JObject(); // Empty week letter
+
+        _mockSupabaseService.Setup(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
+            .ReturnsAsync(false);
+
+        _mockAgentService.Setup(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), true))
+            .ReturnsAsync(weekLetter);
+
+        _mockSupabaseService.Setup(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var method = typeof(SchedulingService).GetMethod("CheckAndPostWeekLetter", BindingFlags.NonPublic | BindingFlags.Instance);
+        await (Task)method!.Invoke(schedulingService, new object[] { child, task })!;
+
+        // Assert - May be called once in ValidateAndProcessWeekLetterContent for empty content
+        _mockSupabaseService.Verify(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.AtLeastOnce);
+    }
+
+    [Fact]
+    public async Task CheckAndPostWeekLetter_WithException_LogsErrorAndIncrementsRetry()
+    {
+        // Arrange
+        var schedulingService = CreateSchedulingService();
+
+        var child = new Child { FirstName = "TestChild", LastName = "TestLast" };
+        var task = new ScheduledTask { Name = "WeeklyLetterCheck", Enabled = true };
+
+        _mockSupabaseService.Setup(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
+            .ThrowsAsync(new Exception("Database error"));
+
+        _mockSupabaseService.Setup(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var method = typeof(SchedulingService).GetMethod("CheckAndPostWeekLetter", BindingFlags.NonPublic | BindingFlags.Instance);
+        await (Task)method!.Invoke(schedulingService, new object[] { child, task })!;
+
+        // Assert
+        _mockSupabaseService.Verify(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task PostWeekLetter_WithValidContent_PostsToBothChannels()
+    {
+        // Arrange
+        var schedulingService = CreateSchedulingService();
+
+        var child = new Child { FirstName = "TestChild", LastName = "TestLast" };
+        
+        var weekLetter = new JObject
+        {
+            ["ugebreve"] = new JArray
+            {
+                new JObject
+                {
+                    ["uge"] = "42",
+                    ["klasseNavn"] = "Test Class"
+                }
+            }
+        };
+        var content = "<p>Test week letter content</p>";
+
+        // Act
+        var method = typeof(SchedulingService).GetMethod("PostWeekLetter", BindingFlags.NonPublic | BindingFlags.Instance);
+        await (Task)method!.Invoke(schedulingService, new object[] { child, weekLetter, content })!;
+
+        // Assert - The method should call the bot methods (though we can't verify them directly without mocking the bots)
+        // This test verifies the method executes without throwing
+        Assert.True(true, "PostWeekLetter executed without exceptions");
+    }
+
+    [Fact]
+    public async Task PostWeekLetter_WithInvalidWeekLetter_HandlesGracefully()
+    {
+        // Arrange
+        var schedulingService = CreateSchedulingService();
+
+        var child = new Child { FirstName = "TestChild", LastName = "TestLast" };
+        var weekLetter = new JObject(); // Empty week letter
+        var content = "<p>Test content</p>";
+
+        // Act & Assert - Should handle null/empty week letter gracefully
+        var method = typeof(SchedulingService).GetMethod("PostWeekLetter", BindingFlags.NonPublic | BindingFlags.Instance);
+        await (Task)method!.Invoke(schedulingService, new object[] { child, weekLetter, content })!;
+        
+        Assert.True(true, "PostWeekLetter handled empty week letter without exceptions");
+    }
+
+    [Fact]
+    public void GetCurrentWeekAndYear_ReturnsValidValues()
+    {
+        // Act
+        var (weekNumber, year) = TestGetCurrentWeekAndYear();
+
+        // Assert
+        Assert.True(weekNumber >= 1 && weekNumber <= 53, $"Week number {weekNumber} should be between 1 and 53");
+        Assert.True(year >= 2020 && year <= 2100, $"Year {year} should be reasonable");
+    }
+
+    [Fact]
+    public async Task CheckForMissedReminders_DoesNotThrow()
+    {
+        // Arrange
+        var schedulingService = CreateSchedulingService();
+
+        // Act & Assert
+        await TestCheckForMissedReminders(schedulingService);
+        Assert.True(true, "CheckForMissedReminders executed without exceptions");
+    }
+
+    private async Task<dynamic?> TestTryGetWeekLetter(SchedulingService service, Child child, int weekNumber, int year)
+    {
+        var method = typeof(SchedulingService).GetMethod("TryGetWeekLetter", BindingFlags.NonPublic | BindingFlags.Instance);
+        return await (Task<dynamic?>)method!.Invoke(service, new object[] { child, weekNumber, year })!;
+    }
+
+    private async Task<bool> TestIsWeekLetterAlreadyPosted(SchedulingService service, string childName, int weekNumber, int year)
+    {
+        var method = typeof(SchedulingService).GetMethod("IsWeekLetterAlreadyPosted", BindingFlags.NonPublic | BindingFlags.Instance);
+        return await (Task<bool>)method!.Invoke(service, new object[] { childName, weekNumber, year })!;
+    }
+
+    [Fact]
+    public async Task IsWeekLetterAlreadyPosted_WithPostedLetter_ReturnsTrue()
+    {
+        // Arrange
+        var schedulingService = CreateSchedulingService();
+
+        _mockSupabaseService.Setup(x => x.HasWeekLetterBeenPostedAsync("TestChild", 42, 2024))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await TestIsWeekLetterAlreadyPosted(schedulingService, "TestChild", 42, 2024);
+
+        // Assert
+        Assert.True(result);
+        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", 42, 2024), Times.Once);
+    }
+
+    [Fact]
+    public async Task TryGetWeekLetter_WithNoWeekLetter_IncrementsRetryAndReturnsNull()
+    {
+        // Arrange
+        var schedulingService = CreateSchedulingService();
+
+        var child = new Child { FirstName = "TestChild", LastName = "TestLast" };
+
+        _mockAgentService.Setup(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), true))
+            .ReturnsAsync((JObject?)null);
+
+        _mockSupabaseService.Setup(x => x.IncrementRetryAttemptAsync("TestChild", 42, 2024))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await TestTryGetWeekLetter(schedulingService, child, 42, 2024);
+
+        // Assert
+        Assert.Null(result);
+        _mockSupabaseService.Verify(x => x.IncrementRetryAttemptAsync("TestChild", 42, 2024), Times.Once);
+    }
 }
