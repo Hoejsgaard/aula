@@ -656,7 +656,7 @@ public class SlackInteractiveBotTests : IDisposable
     {
         // Setup HTTP error for conversations.history
         var mockResponse = new HttpResponseMessage(HttpStatusCode.InternalServerError);
-        
+
         _mockHttpMessageHandler
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
@@ -954,15 +954,15 @@ public class SlackInteractiveBotTests : IDisposable
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-    
+
     [Fact]
     public async Task Start_WithChildren_BuildsChildrenDictionaryCorrectly()
     {
         // Verify children dictionary is built from config
         SetupSuccessfulHttpResponse();
-        
+
         await _slackBot.Start();
-        
+
         // The children dictionary is built during construction,
         // verified by the welcome message containing children names
         _mockHttpMessageHandler.Protected().Verify(
@@ -974,7 +974,7 @@ public class SlackInteractiveBotTests : IDisposable
                 req.Content!.ReadAsStringAsync().Result.Contains("Emma og Hans")),
             ItExpr.IsAny<CancellationToken>());
     }
-    
+
     [Fact]
     public async Task PollMessages_WithMalformedJson_LogsError()
     {
@@ -1014,9 +1014,9 @@ public class SlackInteractiveBotTests : IDisposable
     public async Task CleanupTimer_IsInitialized_DuringStart()
     {
         SetupSuccessfulHttpResponse();
-        
+
         await _slackBot.Start();
-        
+
         // Verify cleanup timer logging
         _mockLogger.Verify(
             logger => logger.Log(
@@ -1055,7 +1055,7 @@ public class SlackInteractiveBotTests : IDisposable
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
-        
+
         // Verify message ID was stored
         _mockLogger.Verify(
             logger => logger.Log(

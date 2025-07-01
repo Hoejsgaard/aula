@@ -65,7 +65,7 @@ public class MessageSenderTests
     }
 
     // Constructor Validation Tests for Actual Classes
-    
+
     [Fact]
     public void SlackMessageSender_Constructor_WithNullBot_ThrowsArgumentNullException()
     {
@@ -159,7 +159,7 @@ public class MessageSenderTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => sender.SendMessageAsync("Test message"));
-        
+
         Assert.Equal("Slack API error", exception.Message);
     }
 
@@ -242,7 +242,7 @@ public class MessageSenderTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
             () => sender.SendMessageAsync("Test message"));
-        
+
         Assert.Equal("Telegram API error", exception.Message);
     }
 
@@ -316,7 +316,7 @@ public class MessageSenderTests
     {
         // This test ensures the IMessageSender interface has the expected contract
         var methods = typeof(IMessageSender).GetMethods();
-        
+
         Assert.Equal(2, methods.Length);
         Assert.Contains(methods, m => m.Name == "SendMessageAsync" && m.GetParameters().Length == 1);
         Assert.Contains(methods, m => m.Name == "SendMessageAsync" && m.GetParameters().Length == 2);

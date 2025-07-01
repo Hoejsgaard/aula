@@ -19,9 +19,9 @@ public class UniLoginClientTests
     {
         // Act & Assert - should not throw
         var client = new TestableUniLoginClient(
-            "testuser", 
-            "testpass", 
-            "https://login.example.com", 
+            "testuser",
+            "testpass",
+            "https://login.example.com",
             "https://success.example.com");
 
         Assert.NotNull(client);
@@ -34,7 +34,7 @@ public class UniLoginClientTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new TestableUniLoginClient(null!, "pass", "https://login.com", "https://success.com"));
-        
+
         Assert.Equal("username", exception.ParamName);
     }
 
@@ -44,7 +44,7 @@ public class UniLoginClientTests
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new TestableUniLoginClient("user", null!, "https://login.com", "https://success.com"));
-        
+
         Assert.Equal("password", exception.ParamName);
     }
 
@@ -53,7 +53,7 @@ public class UniLoginClientTests
     {
         // Act & Assert - should not throw since only null is checked
         var client = new TestableUniLoginClient("", "pass", "https://login.com", "https://success.com");
-        
+
         Assert.NotNull(client);
     }
 
@@ -62,7 +62,7 @@ public class UniLoginClientTests
     {
         // Act & Assert - should not throw since only null is checked  
         var client = new TestableUniLoginClient("user", "", "https://login.com", "https://success.com");
-        
+
         Assert.NotNull(client);
     }
 
@@ -71,10 +71,10 @@ public class UniLoginClientTests
     {
         // Arrange
         var successUrl = "https://myapp.example.com/dashboard";
-        
+
         // Act
         var client = new TestableUniLoginClient("user", "pass", "https://login.com", successUrl);
-        
+
         // Assert
         Assert.Equal(successUrl, client.GetSuccessUrl());
     }
@@ -84,10 +84,10 @@ public class UniLoginClientTests
     {
         // Act
         var client = new TestableUniLoginClient("user", "pass", "https://login.com", "https://success.com");
-        
+
         // Assert
         Assert.NotNull(client.GetHttpClient());
-        
+
         // Verify HttpClient is configured with cookies and redirects
         var handler = client.GetHttpClientHandler();
         Assert.True(handler.UseCookies);
@@ -100,7 +100,7 @@ public class UniLoginClientTests
     {
         // Arrange - Use an invalid URL that will cause network failure
         var client = new TestableUniLoginClient("user", "pass", "https://invalid-url-that-does-not-exist-12345.com", "https://success.com");
-        
+
         // Act & Assert - Should handle network errors gracefully
         try
         {
@@ -126,7 +126,7 @@ public class UniLoginClientTests
     {
         // Arrange
         var client = new TestableUniLoginClient("user", "pass", "https://login.example.com", "https://success.com");
-        
+
         // Act & Assert - This will fail with actual HTTP call, but tests the method exists and is callable
         // In a real scenario, this would be mocked properly
         try
@@ -189,11 +189,11 @@ public class UniLoginClientTests
     {
         // Arrange & Act
         var client = new TestableUniLoginClient("user", "pass", "https://login.com", "https://success.com");
-        
+
         // Assert - HttpClient should be configured (we can't check specific timeout without reflection)
         var httpClient = client.GetHttpClient();
         Assert.NotNull(httpClient);
-        
+
         // Verify that timeout is set to something reasonable (default or custom)
         Assert.True(httpClient.Timeout > TimeSpan.Zero);
         Assert.True(httpClient.Timeout <= TimeSpan.FromMinutes(5)); // Reasonable upper bound
@@ -204,11 +204,11 @@ public class UniLoginClientTests
     {
         // Arrange & Act
         var client = new TestableUniLoginClient("user", "pass", "https://login.com", "https://success.com");
-        
+
         // Assert
         var httpClient = client.GetHttpClient();
         Assert.NotNull(httpClient);
-        
+
         // Should have user agent or other default headers
         Assert.NotNull(httpClient.DefaultRequestHeaders);
     }
@@ -218,10 +218,10 @@ public class UniLoginClientTests
     {
         // Arrange - Create client with very short timeout
         var client = new TestableUniLoginClient("user", "pass", "https://httpbin.org/delay/10", "https://success.com");
-        
+
         // Set a very short timeout to force timeout
         client.GetHttpClient().Timeout = TimeSpan.FromMilliseconds(100);
-        
+
         // Act & Assert
         try
         {
@@ -245,9 +245,9 @@ public class UniLoginClientTests
     {
         // This tests the internal form parsing logic indirectly
         // We can't test private methods directly, but we can test scenarios that exercise them
-        
+
         var client = new TestableUniLoginClient("testuser", "testpass", "https://login.com", "https://success.com");
-        
+
         // The form parsing is exercised when LoginAsync is called with various HTML structures
         // This test ensures the client can be constructed and basic validation works
         Assert.NotNull(client);
@@ -261,9 +261,9 @@ public class UniLoginClientTests
         // Test that success URL matching logic works correctly through client configuration
         var successUrl = "https://very-specific-success-url.com/authenticated";
         var client = new TestableUniLoginClient("user", "pass", "https://login.com", successUrl);
-        
+
         Assert.Equal(successUrl, client.GetSuccessUrl());
-        
+
         // The success check logic is tested indirectly through the login flow
         // This ensures proper configuration for success detection
     }
@@ -274,9 +274,9 @@ public class UniLoginClientTests
         // Test URLs with query parameters
         var loginUrl = "https://login.example.com?returnUrl=test&lang=en";
         var successUrl = "https://app.example.com/dashboard?welcome=true&user=test";
-        
+
         var client = new TestableUniLoginClient("user", "pass", loginUrl, successUrl);
-        
+
         Assert.NotNull(client);
         Assert.Equal(successUrl, client.GetSuccessUrl());
     }
@@ -287,9 +287,9 @@ public class UniLoginClientTests
         // Test URLs with fragments
         var loginUrl = "https://login.example.com#section1";
         var successUrl = "https://app.example.com/dashboard#welcome";
-        
+
         var client = new TestableUniLoginClient("user", "pass", loginUrl, successUrl);
-        
+
         Assert.NotNull(client);
         Assert.Equal(successUrl, client.GetSuccessUrl());
     }
@@ -300,12 +300,12 @@ public class UniLoginClientTests
         // Arrange & Act
         var client = new TestableUniLoginClient("user", "pass", "https://login.com", "https://success.com");
         var handler = client.GetHttpClientHandler();
-        
+
         // Assert - Verify critical configuration for authentication flows
         Assert.True(handler.UseCookies, "UseCookies should be true for session management");
         Assert.True(handler.AllowAutoRedirect, "AllowAutoRedirect should be true for handling redirects");
         Assert.NotNull(handler.CookieContainer);
-        
+
         // Verify cookie container is properly initialized
         Assert.Equal(0, handler.CookieContainer.Count); // Should start empty
     }
@@ -315,10 +315,10 @@ public class UniLoginClientTests
     {
         // Arrange
         var client = new TestableUniLoginClient("user", "pass", "https://invalid-test-url.com", "https://success.com");
-        
+
         // Act - Make multiple calls (both should behave consistently)
         bool result1Exception = false, result2Exception = false;
-        
+
         try
         {
             await client.LoginAsync();
@@ -331,7 +331,7 @@ public class UniLoginClientTests
         {
             result1Exception = true;
         }
-        
+
         try
         {
             await client.LoginAsync();
@@ -344,11 +344,11 @@ public class UniLoginClientTests
         {
             result2Exception = true;
         }
-        
+
         // Assert - Both should fail consistently (network error expected)
         Assert.True(result1Exception);
         Assert.True(result2Exception);
-        
+
         // Client should remain in consistent state
         Assert.Equal("https://success.com", client.GetSuccessUrl());
     }
@@ -368,13 +368,13 @@ public class TestableUniLoginClient : UniLoginClient
     }
 
     public string GetSuccessUrl() => SuccessUrl;
-    
+
     public HttpClient GetHttpClient() => HttpClient;
-    
+
     public string GetTestUsername() => _testUsername;
-    
+
     public string GetTestPassword() => _testPassword;
-    
+
     public HttpClientHandler GetHttpClientHandler()
     {
         // Access the handler through reflection since it's private
