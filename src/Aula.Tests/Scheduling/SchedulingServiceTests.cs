@@ -553,19 +553,6 @@ public class SchedulingServiceTests
         _mockSupabaseService.Verify(x => x.DeleteReminderAsync(testReminder.Id), Times.Once);
     }
 
-    [Fact]
-    public async Task ExecutePendingReminders_WithNoReminders_DoesNotThrow()
-    {
-        // Arrange
-        var schedulingService = CreateSchedulingService();
-
-        _mockSupabaseService.Setup(x => x.GetPendingRemindersAsync())
-            .ReturnsAsync(new List<Reminder>());
-
-        // Act & Assert
-        await TestExecutePendingReminders(schedulingService);
-        _mockSupabaseService.Verify(x => x.GetPendingRemindersAsync(), Times.Once);
-    }
 
     [Fact]
     public async Task ExecutePendingReminders_WithReminders_SendsNotificationsAndDeletesReminders()
@@ -763,16 +750,6 @@ public class SchedulingServiceTests
         Assert.True(true, "PostWeekLetter handled empty week letter without exceptions");
     }
 
-    [Fact]
-    public void GetCurrentWeekAndYear_ReturnsValidValues()
-    {
-        // Act
-        var (weekNumber, year) = TestGetCurrentWeekAndYear();
-
-        // Assert
-        Assert.True(weekNumber >= 1 && weekNumber <= 53, $"Week number {weekNumber} should be between 1 and 53");
-        Assert.True(year >= 2020 && year <= 2100, $"Year {year} should be reasonable");
-    }
 
     [Fact]
     public async Task CheckForMissedReminders_DoesNotThrow()

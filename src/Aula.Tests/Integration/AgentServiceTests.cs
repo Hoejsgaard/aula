@@ -195,7 +195,7 @@ public class AgentServiceTests
 
         // Assert
         Assert.Equal("Test summary", result);
-        _openAiServiceMock.Verify(m => m.SummarizeWeekLetterAsync(weekLetter, ChatInterface.Slack), Times.Once);
+        _openAiServiceMock.Verify(m => m.SummarizeWeekLetterAsync(weekLetter, It.Is<ChatInterface>(ci => ci == ChatInterface.Slack)), Times.Once);
     }
 
     [Fact]

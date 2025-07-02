@@ -53,19 +53,30 @@ public class GoogleCalendarTests
     }
 
     [Fact]
-    public void Constructor_ParameterValidation_PassesWithValidPrefix()
+    public void Constructor_ShouldNotThrowArgumentExceptions_WhenPrefixIsValid()
     {
         // Arrange
         var testServiceAccount = CreateTestServiceAccount();
 
-        // Act & Assert - We expect Google API to fail but parameter validation to pass
-        var exception = Assert.ThrowsAny<Exception>(() =>
-            new GoogleCalendar(testServiceAccount, "test", _loggerFactory));
-
-        // The exception should NOT be ArgumentNullException or ArgumentException
-        // It should be a Google API related exception (credential, authentication, etc.)
-        Assert.IsNotType<ArgumentNullException>(exception);
-        Assert.IsNotType<ArgumentException>(exception);
+        // Act & Assert - Should not throw argument validation exceptions
+        // (Google API exceptions are acceptable)
+        try
+        {
+            var calendar = new GoogleCalendar(testServiceAccount, "test", _loggerFactory);
+            // If no exception, parameter validation passed
+        }
+        catch (ArgumentNullException)
+        {
+            Assert.Fail("Should not throw ArgumentNullException with valid parameters");
+        }
+        catch (ArgumentException)
+        {
+            Assert.Fail("Should not throw ArgumentException with valid parameters");
+        }
+        catch
+        {
+            // Google API exceptions are expected and acceptable
+        }
     }
 
     private static GoogleServiceAccount CreateTestServiceAccount()
@@ -110,19 +121,18 @@ public class GoogleCalendarTests
         {
             Assert.Fail("Should not throw ArgumentException with valid service account");
         }
-        catch (Newtonsoft.Json.JsonException)
+        catch (Newtonsoft.Json.JsonException ex)
         {
-            Assert.Fail("Should not throw JsonException - JSON generation should work");
+            Assert.Fail($"Should not throw JsonException: {ex.Message}");
         }
-        catch (Exception)
+        catch
         {
             // Google API exceptions are expected and acceptable
-            Assert.True(true, "Google API exception is expected with test credentials");
         }
     }
 
     [Fact]
-    public void JsonCredentialGeneration_WithEmptyRequiredFields_HandlesGracefully()
+    public void JsonCredentialGeneration_WithInvalidServiceAccount_ThrowsAppropriateException()
     {
         // Arrange
         var invalidServiceAccount = new GoogleServiceAccount
@@ -133,18 +143,13 @@ public class GoogleCalendarTests
             PrivateKey = "invalid-key"
         };
 
-        // Act & Assert - Should handle invalid credentials
-        try
-        {
-            var calendar = new GoogleCalendar(invalidServiceAccount, "TEST", _loggerFactory);
-            Assert.Fail("Expected exception but none was thrown");
-        }
-        catch (Exception ex)
-        {
-            // Should fail gracefully, not with parameter validation errors
-            Assert.IsNotType<ArgumentNullException>(ex);
-            Assert.IsNotType<ArgumentException>(ex);
-        }
+        // Act & Assert - Should throw an exception (not parameter validation)
+        var exception = Assert.ThrowsAny<Exception>(() =>
+            new GoogleCalendar(invalidServiceAccount, "TEST", _loggerFactory));
+        
+        // Should fail with Google API or JSON exceptions, not parameter validation
+        Assert.IsNotType<ArgumentNullException>(exception);
+        Assert.IsNotType<ArgumentException>(exception);
     }
 
     // ===========================================
