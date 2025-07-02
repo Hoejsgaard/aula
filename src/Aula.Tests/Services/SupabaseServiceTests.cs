@@ -67,7 +67,7 @@ public class SupabaseServiceTests
     }
 
     [Fact]
-    public async Task SaveReminderAsync_WithValidParameters_DoesNotThrow()
+    public async Task AddReminderAsync_WithValidParameters_DoesNotThrow()
     {
         // Arrange
         var text = "Test reminder";
@@ -77,8 +77,8 @@ public class SupabaseServiceTests
 
         // Act & Assert - Should not throw with valid parameters
         var exception = await Record.ExceptionAsync(async () =>
-            await _supabaseService.SaveReminderAsync(text, date, time, childName));
-        
+            await _supabaseService.AddReminderAsync(text, date, time, childName));
+
         Assert.Null(exception);
     }
 
@@ -91,7 +91,7 @@ public class SupabaseServiceTests
         // Act & Assert - Should not throw with valid parameters
         var exception = await Record.ExceptionAsync(async () =>
             await _supabaseService.HasWeekLetterBeenPostedAsync(childName, weekNumber, year));
-        
+
         // Expect InvalidOperationException since service is not initialized
         Assert.NotNull(exception);
         Assert.IsType<InvalidOperationException>(exception);
@@ -402,7 +402,7 @@ public class SupabaseServiceTests
     [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public async Task SaveReminderAsync_WithInvalidText_ThrowsException(string text)
+    public async Task AddReminderAsync_WithoutInitialization_ThrowsInvalidOperationException(string text)
     {
         // Arrange
         var date = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
@@ -411,7 +411,7 @@ public class SupabaseServiceTests
         // Act & Assert
         // First check that service throws InvalidOperationException when not initialized
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _supabaseService.SaveReminderAsync(text, date, time, "TestChild"));
+            () => _supabaseService.AddReminderAsync(text, date, time, "TestChild"));
     }
 
     [Theory]
@@ -425,7 +425,7 @@ public class SupabaseServiceTests
         var isValidWeek = weekNumber > 0 && weekNumber <= 53;
         var isValidYear = year >= 2000 && year <= 2100;
         var isValidChildName = !string.IsNullOrEmpty(childName);
-        
+
         // At least one should be invalid
         Assert.False(isValidWeek && isValidYear && isValidChildName);
     }
@@ -444,7 +444,7 @@ public class SupabaseServiceTests
         // Assert
         Assert.NotEqual(DateTime.MinValue, utcDateTime);
         // The exact time will depend on the local timezone, but it should be converted
-        Assert.True(utcDateTime.Kind == DateTimeKind.Utc || utcDateTime.Kind == DateTimeKind.Unspecified);
+        Assert.Equal(DateTimeKind.Utc, utcDateTime.Kind);
     }
 
     [Fact]
@@ -488,7 +488,7 @@ public class SupabaseServiceTests
         var utcNow = DateTime.UtcNow;
         var localTime = utcNow.ToLocalTime();
         var pendingLocalTime = localTime.AddMinutes(-30);
-        
+
         var pendingReminder = new Reminder
         {
             Id = 1,
@@ -664,7 +664,7 @@ public class SupabaseServiceTests
     {
         // Arrange
         var childName = "TestChild";
-        
+
         // Act
         var isValidWeek = weekNumber > 0 && weekNumber <= 53;
         var isValidYear = year >= 2000 && year <= 2100;
@@ -699,8 +699,8 @@ public class SupabaseServiceTests
             var reminderUtcDateTime = TimeZoneInfo.ConvertTimeToUtc(reminderLocalDateTime, TimeZoneInfo.Local);
             var isPending = reminderUtcDateTime <= currentUtc;
 
-            // Assert - Don't assert exact values due to timing, but verify conversion works
-            Assert.IsType<bool>(isPending);
+            // Assert - Don't assert exact values due to timing
+            // isPending value depends on current time and test execution timing
             Assert.True(reminderUtcDateTime.Kind == DateTimeKind.Utc || reminderUtcDateTime.Kind == DateTimeKind.Unspecified);
         }
     }

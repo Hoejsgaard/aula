@@ -461,7 +461,7 @@ public class UniLoginClientTests
         // Arrange
         var successUrl = "https://app.example.com/dashboard";
         var client = new TestableUniLoginClient("user", "pass", "https://login.com", successUrl);
-        
+
         var response = new HttpResponseMessage
         {
             RequestMessage = new HttpRequestMessage
@@ -483,7 +483,7 @@ public class UniLoginClientTests
         // Arrange
         var successUrl = "https://app.example.com/dashboard";
         var client = new TestableUniLoginClient("user", "pass", "https://login.com", successUrl);
-        
+
         var response = new HttpResponseMessage
         {
             RequestMessage = new HttpRequestMessage
@@ -599,7 +599,7 @@ public class UniLoginClientTests
         // Assert
         Assert.Contains("valid", formData.Keys);
         Assert.Equal("valid_value", formData["valid"]);
-        
+
         // Should not contain inputs without proper names
         Assert.False(formData.ContainsKey(""));
         Assert.False(formData.ContainsKey("   "));
