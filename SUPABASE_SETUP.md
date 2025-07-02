@@ -20,8 +20,9 @@ After creating your project, you'll need the following values for `appsettings.j
 
 ### Service Role Key (Optional but Recommended)
 - Copy the "service_role" key (also starts with `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.`)
-- Replace `YOUR_SUPABASE_SERVICE_ROLE_KEY` in `appsettings.json`
-- This key has admin privileges - keep it secure!
+- **SECURITY WARNING**: Do NOT store this key in `appsettings.json` as it has admin privileges
+- Store it in a secure environment variable `SUPABASE_SERVICE_ROLE_KEY` instead
+- The application will read it from the environment variable at runtime
 
 ## 3. Create Database Tables
 In the Supabase SQL Editor, run this SQL to create the required tables:
@@ -33,7 +34,7 @@ CREATE TABLE reminders (
   text TEXT NOT NULL,
   remind_date DATE NOT NULL,
   remind_time TIME NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
   is_sent BOOLEAN DEFAULT FALSE,
   child_name TEXT,
   created_by TEXT DEFAULT 'bot'
@@ -46,7 +47,7 @@ CREATE TABLE posted_letters (
   week_number INTEGER NOT NULL,
   year INTEGER NOT NULL,
   content_hash TEXT NOT NULL,
-  posted_at TIMESTAMP DEFAULT NOW(),
+  posted_at TIMESTAMPTZ DEFAULT NOW(),
   posted_to_slack BOOLEAN DEFAULT FALSE,
   posted_to_telegram BOOLEAN DEFAULT FALSE,
   UNIQUE(child_name, week_number, year)
@@ -56,7 +57,7 @@ CREATE TABLE posted_letters (
 CREATE TABLE app_state (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
-  updated_at TIMESTAMP DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Retry attempts for failed week letter fetching
@@ -65,10 +66,10 @@ CREATE TABLE retry_attempts (
   child_name TEXT NOT NULL,
   week_number INTEGER NOT NULL,
   year INTEGER NOT NULL,
-  attempt_count INTEGER DEFAULT 1,
-  last_attempt TIMESTAMP DEFAULT NOW(),
-  next_attempt TIMESTAMP,
-  max_attempts INTEGER DEFAULT 48,
+  attempt_count INTEGER DEFAULT 1 CHECK (attempt_count >= 0),
+  last_attempt TIMESTAMPTZ DEFAULT NOW(),
+  next_attempt TIMESTAMPTZ,
+  max_attempts INTEGER DEFAULT 48 CHECK (max_attempts >= 0),
   is_successful BOOLEAN DEFAULT FALSE
 );
 
@@ -81,10 +82,10 @@ CREATE TABLE scheduled_tasks (
   enabled BOOLEAN DEFAULT TRUE,
   retry_interval_hours INTEGER DEFAULT 1,
   max_retry_hours INTEGER DEFAULT 48,
-  last_run TIMESTAMP,
-  next_run TIMESTAMP,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
+  last_run TIMESTAMPTZ,
+  next_run TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Insert default scheduled tasks
@@ -115,7 +116,8 @@ DROP POLICY IF EXISTS "service_role_full_access" ON app_state;
 DROP POLICY IF EXISTS "service_role_full_access" ON retry_attempts;
 DROP POLICY IF EXISTS "service_role_full_access" ON scheduled_tasks;
 
--- Create policies for service role access
+-- Note: service_role bypasses RLS automatically, so explicit policies are optional
+-- These policies are included for completeness but service_role already has full access
 CREATE POLICY "service_role_full_access" ON reminders 
     FOR ALL 
     USING (auth.role() = 'service_role');
@@ -162,8 +164,8 @@ After setup, your `appsettings.json` should have:
 ```json
 "Supabase": {
   "Url": "https://your-project-id.supabase.co",
-  "Key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your-anon-key...",
-  "ServiceRoleKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your-service-role-key..."
+  "Key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your-anon-key..."
+  // ServiceRoleKey is read from SUPABASE_SERVICE_ROLE_KEY environment variable
 }
 ```
 
@@ -180,8 +182,8 @@ Once configured, the bot will:
 4. Add/edit/delete reminders manually
 5. Set `is_sent` to `false` to re-send a reminder
 
-### Example Reminder Entry:
-- **text**: "TestChild1 has Haver til maver today - no books needed!"
+### Example Reminder Entry
+- **text**: "TestChild1 has Haver to maver today - no books needed!"
 - **remind_date**: 2024-01-15
 - **remind_time**: 07:30:00
 - **child_name**: TestChild1

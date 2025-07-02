@@ -604,9 +604,9 @@ public class AgentServiceTests
             .Returns((JObject?)null);
 
         _openAiServiceMock.Setup(m => m.AskQuestionAboutChildrenAsync(
-                It.IsAny<Dictionary<string, JObject>>(), 
-                It.IsAny<string>(), 
-                contextKey, 
+                It.IsAny<Dictionary<string, JObject>>(),
+                It.IsAny<string>(),
+                contextKey,
                 ChatInterface.Slack))
             .ReturnsAsync(fallbackResponse);
 
@@ -854,8 +854,8 @@ public class AgentServiceTests
         Assert.Equal("Børnene har matematik i dag", result);
         _openAiServiceMock.Verify(m => m.AskQuestionAboutChildrenAsync(
             It.IsAny<Dictionary<string, JObject>>(),
-            It.Is<string>(q => 
-                q.Contains($"(Today is {currentDayOfWeek})") && 
+            It.Is<string>(q =>
+                q.Contains($"(Today is {currentDayOfWeek})") &&
                 q.Contains("(CRITICAL: Respond in Danish - the user asked in Danish)")),
             contextKey,
             ChatInterface.Telegram), Times.Once);

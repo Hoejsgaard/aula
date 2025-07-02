@@ -133,7 +133,7 @@ public class MinUddannelseClientTests
         // Set up a user profile with no children using reflection
         var userProfileField = typeof(MinUddannelseClient).GetField("_userProfile", BindingFlags.NonPublic | BindingFlags.Instance);
         Assert.NotNull(userProfileField);
-        
+
         var emptyProfile = new JObject();
         userProfileField.SetValue(client, emptyProfile);
 
@@ -157,7 +157,7 @@ public class MinUddannelseClientTests
         // Set up a user profile with children using reflection
         var userProfileField = typeof(MinUddannelseClient).GetField("_userProfile", BindingFlags.NonPublic | BindingFlags.Instance);
         Assert.NotNull(userProfileField);
-        
+
         var profileWithChildren = JObject.Parse(@"{
             ""id"": ""12345"",
             ""navn"": ""Test User"",
@@ -189,7 +189,7 @@ public class MinUddannelseClientTests
         // Set up a user profile with different children using reflection
         var userProfileField = typeof(MinUddannelseClient).GetField("_userProfile", BindingFlags.NonPublic | BindingFlags.Instance);
         Assert.NotNull(userProfileField);
-        
+
         var profileWithDifferentChildren = JObject.Parse(@"{
             ""id"": ""12345"",
             ""navn"": ""Test User"",
@@ -218,7 +218,7 @@ public class MinUddannelseClientTests
 
         // Use reflection to verify the private ExtractUserProfile method exists
         var method = typeof(MinUddannelseClient).GetMethod("ExtractUserProfile", BindingFlags.NonPublic | BindingFlags.Instance);
-        
+
         // Assert
         Assert.NotNull(method);
         Assert.Equal(typeof(Task<JObject>), method.ReturnType);
@@ -229,7 +229,7 @@ public class MinUddannelseClientTests
     {
         // Arrange
         var client = new MinUddannelseClient(_testConfig);
-        
+
         // Use reflection to access the private GetIsoWeekNumber method
         var method = typeof(MinUddannelseClient).GetMethod("GetIsoWeekNumber", BindingFlags.NonPublic | BindingFlags.Instance);
         Assert.NotNull(method);
@@ -280,7 +280,7 @@ public class MinUddannelseClientTests
 
         // Use reflection to verify the LoginAsync method exists and overrides base
         var method = typeof(MinUddannelseClient).GetMethod("LoginAsync");
-        
+
         // Assert
         Assert.NotNull(method);
         Assert.Equal(typeof(Task<bool>), method.ReturnType);
@@ -300,7 +300,7 @@ public class MinUddannelseClientTests
         // Set up a user profile with the specific child
         var userProfileField = typeof(MinUddannelseClient).GetField("_userProfile", BindingFlags.NonPublic | BindingFlags.Instance);
         Assert.NotNull(userProfileField);
-        
+
         var profileWithChild = JObject.Parse($@"{{
             ""id"": ""12345"",
             ""navn"": ""Test User"",

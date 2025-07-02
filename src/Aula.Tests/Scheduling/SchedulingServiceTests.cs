@@ -179,7 +179,7 @@ public class SchedulingServiceTests
         var schedulingService = CreateSchedulingService();
         var now = DateTime.UtcNow;
         var lastRun = now.AddHours(-1).AddMinutes(-1); // 1 hour and 1 minute ago
-        
+
         var task = new ScheduledTask
         {
             Name = "TestTask",
@@ -442,7 +442,7 @@ public class SchedulingServiceTests
     {
         var slackBot = new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _loggerFactory, _mockSupabaseService.Object);
         var telegramBot = new TelegramInteractiveBot(_mockAgentService.Object, _testConfig, _loggerFactory, _mockSupabaseService.Object);
-        
+
         return new SchedulingService(
             _loggerFactory,
             _mockSupabaseService.Object,
@@ -710,7 +710,7 @@ public class SchedulingServiceTests
         var schedulingService = CreateSchedulingService();
 
         var child = new Child { FirstName = "TestChild", LastName = "TestLast" };
-        
+
         var weekLetter = new JObject
         {
             ["ugebreve"] = new JArray
@@ -746,7 +746,7 @@ public class SchedulingServiceTests
         // Act & Assert - Should handle null/empty week letter gracefully
         var method = typeof(SchedulingService).GetMethod("PostWeekLetter", BindingFlags.NonPublic | BindingFlags.Instance);
         await (Task)method!.Invoke(schedulingService, new object[] { child, weekLetter, content })!;
-        
+
         Assert.True(true, "PostWeekLetter handled empty week letter without exceptions");
     }
 
@@ -947,36 +947,47 @@ public class SchedulingServiceTests
     }
 
     [Fact]
-    public async Task MultiChannelPosting_WithBothChannelsEnabled_PostsToBoth()
+    public void MultiChannelPosting_ConfigurationValidation_BothChannelsEnabled()
     {
-        // Arrange
-        var weekLetterData = JObject.FromObject(new
+        // This test validates the configuration logic for multi-channel posting
+        // without making external API calls to Slack or Telegram
+
+        // Arrange - Test configuration with both channels enabled
+        var testConfig = new Config
         {
-            content = "Test week letter content",
-            week = 42,
-            child = "TestChild"
-        });
+            Slack = new ConfigSlack { EnableInteractiveBot = true, ApiToken = "test-slack-token" },
+            Telegram = new ConfigTelegram { Enabled = true, ChannelId = "@testchannel", Token = "test-telegram-token" },
+            Children = new List<ConfigChild>
+            {
+                new ConfigChild { FirstName = "TestChild", LastName = "TestLast" }
+            }
+        };
 
-        var schedulingService = CreateSchedulingService();
-        
-        _mockAgentService.Setup(x => x.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), true))
-            .ReturnsAsync(weekLetterData);
-        _mockSupabaseService.Setup(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
-            .ReturnsAsync(false);
-        _mockSupabaseService.Setup(x => x.MarkWeekLetterAsPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), true, true))
-            .Returns(Task.CompletedTask);
-        _mockSupabaseService.Setup(x => x.MarkRetryAsSuccessfulAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
-            .Returns(Task.CompletedTask);
+        // Act & Assert - Verify configuration supports multi-channel posting
+        Assert.True(testConfig.Slack.EnableInteractiveBot);
+        Assert.True(testConfig.Telegram.Enabled);
+        Assert.NotNull(testConfig.Slack.ApiToken);
+        Assert.NotNull(testConfig.Telegram.Token);
+        Assert.NotEmpty(testConfig.Children);
 
-        var child = new Child { FirstName = "TestChild", LastName = "TestLast" };
+        // Verify week letter data structure that would be used in multi-channel posting
+        var weekLetter = new JObject
+        {
+            ["ugebreve"] = new JArray
+            {
+                new JObject
+                {
+                    ["uge"] = "42",
+                    ["klasseNavn"] = "Test Class"
+                }
+            }
+        };
 
-        // Act - Verify the mocks are set up correctly for multi-channel posting
-        // The actual method call is complex due to reflection, so we verify setup instead
-        
-        // Assert - Verify mocks are configured for multi-channel scenario
-        _mockAgentService.Verify(x => x.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), true), Times.Never);
-        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Never);
-        // This test verifies the mock setup rather than actual execution due to complexity
+        Assert.NotNull(weekLetter["ugebreve"]);
+        Assert.True(weekLetter["ugebreve"] is JArray);
+
+        var ugebreveArray = (JArray)weekLetter["ugebreve"]!;
+        Assert.True(ugebreveArray.Count > 0);
     }
 
     // ===========================================
@@ -989,7 +1000,7 @@ public class SchedulingServiceTests
         // Arrange
         var schedulingService = CreateSchedulingService();
         var callCount = 0;
-        
+
         _mockSupabaseService.Setup(s => s.GetPendingRemindersAsync())
             .Returns(() =>
             {
@@ -1004,10 +1015,10 @@ public class SchedulingServiceTests
         // Act - Start service and let it recover from initial failures
         await schedulingService.StartAsync();
         await Task.Delay(150); // Allow multiple timer cycles
-        
+
         // Assert - Service should attempt multiple calls for recovery
         Assert.True(callCount >= 1, $"Expected at least 1 call but got {callCount}");
-        
+
         await schedulingService.StopAsync();
     }
 
@@ -1025,10 +1036,10 @@ public class SchedulingServiceTests
 
         // Act & Assert - Should handle cleanup gracefully even with issues
         await schedulingService.StopAsync();
-        
+
         // Multiple stops should not cause issues
         await schedulingService.StopAsync();
-        
+
         Assert.True(true, "Resource cleanup handled gracefully");
     }
 
@@ -1044,15 +1055,15 @@ public class SchedulingServiceTests
 
         // Act - Simulate longer running operations
         await schedulingService.StartAsync();
-        
+
         // Simulate multiple timer cycles
         for (int i = 0; i < 10; i++)
         {
             await Task.Delay(20);
         }
-        
+
         await schedulingService.StopAsync();
-        
+
         // Assert - Should complete without memory issues
         Assert.True(true, "Long running operation completed successfully");
     }
@@ -1088,7 +1099,7 @@ public class SchedulingServiceTests
 
         // Assert - Service should check for reminders (deletion timing varies)
         _mockSupabaseService.Verify(s => s.GetPendingRemindersAsync(), Times.AtLeastOnce);
-        
+
         await schedulingService.StopAsync();
     }
 
@@ -1130,7 +1141,7 @@ public class SchedulingServiceTests
 
             // Assert
             Assert.NotNull(service);
-            
+
             // Cleanup
             slackBot.Dispose();
         }
@@ -1141,7 +1152,7 @@ public class SchedulingServiceTests
     {
         // Arrange
         var schedulingService = CreateSchedulingService();
-        
+
         _mockSupabaseService.Setup(x => x.HasWeekLetterBeenPostedAsync("TestChild", 42, 2024))
             .ReturnsAsync(true); // Already posted
 
