@@ -1,612 +1,978 @@
 @coderabbitai[bot] commented on this pull request.
 
-Actionable comments posted: 3
+Actionable comments posted: 8
 
-♻️ Duplicate comments (3)
-src/Aula.Tests/Integration/TestableMinUddannelseClient.cs (1)
-93-99: Fix ISO week number calculation for proper ISO 8601 compliance.
+♻️ Duplicate comments (5)
+src/Aula.Tests/Integration/MinUddannelseClientTests.cs (1)
+61-71: Add specific error handling tests based on past feedback.
 
-The current implementation uses CultureInfo.CurrentCulture which may not return true ISO 8601 week numbers, especially for edge cases around year boundaries.
+The current test only checks that "any exception" is thrown, but doesn't verify specific error conditions like HTTP errors, authentication failures, or timeouts that were suggested in previous reviews.
 
-Apply this fix for proper ISO 8601 week number calculation:
+Consider adding tests for specific failure scenarios:
 
- private int GetIsoWeekNumber(DateOnly date)
- {
--    var cultureInfo = System.Globalization.CultureInfo.CurrentCulture;
--    var calendarWeekRule = cultureInfo.DateTimeFormat.CalendarWeekRule;
--    var firstDayOfWeek = cultureInfo.DateTimeFormat.FirstDayOfWeek;
--    return cultureInfo.Calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue), calendarWeekRule, firstDayOfWeek);
-+    // ISO 8601 week calculation
-+    var dt = date.ToDateTime(TimeOnly.MinValue);
-+    var day = (int)CultureInfo.InvariantCulture.Calendar.GetDayOfWeek(dt);
-+    return CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(dt.AddDays(4 - (day == 0 ? 7 : day)), CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
- }
-src/Aula/Program.cs (2)
-84-92: Use consistent service resolution pattern for interactive bots.
+[Fact]
+public async Task GetWeekLetter_WithHttpError_ThrowsHttpRequestException()
+{
+    // Arrange - Mock HTTP error response
+    var client = new MinUddannelseClient(_testConfig);
+    // Setup mock to return HTTP 500 error
+    
+    // Act & Assert
+    await Assert.ThrowsAsync<HttpRequestException>(() => client.GetWeekLetter(child, date));
+}
 
-The Telegram bot uses GetService while the Slack bot uses GetRequiredService, creating inconsistency in error handling patterns.
+[Fact]
+public async Task GetWeekLetter_WithInvalidJson_ThrowsJsonException()
+{
+    // Test malformed JSON response handling
+}
+src/Aula.Tests/Integration/AgentServiceTests.cs (1)
+190-199: Address hardcoded ChatInterface assumption from previous review.
 
-Apply this diff to use consistent service resolution:
+The past review comment correctly identified that this test assumes ChatInterface.Slack without explicitly testing this parameter. The suggestion to make this explicit should be implemented.
 
--            TelegramInteractiveBot? telegramInteractiveBot = null;
--            if (config.Telegram.Enabled && !string.IsNullOrEmpty(config.Telegram.Token))
--            {
--                telegramInteractiveBot = serviceProvider.GetService<TelegramInteractiveBot>();
--                if (telegramInteractiveBot != null)
--                {
--                    await telegramInteractiveBot.Start();
--                }
--            }
-+            TelegramInteractiveBot? telegramInteractiveBot = null;
-+            if (config.Telegram.Enabled && !string.IsNullOrEmpty(config.Telegram.Token))
-+            {
-+                telegramInteractiveBot = serviceProvider.GetRequiredService<TelegramInteractiveBot>();
-+                await telegramInteractiveBot.Start();
-+            }
-197-202: Optimize configuration check for Telegram bot registration.
+ _openAiServiceMock.Setup(m => m.SummarizeWeekLetterAsync(weekLetter, It.IsAny<ChatInterface>()))
+     .ReturnsAsync("Test summary");
 
-Creating a temporary Config object just to check if Telegram is enabled is inefficient since the configuration will already be loaded and registered as a service.
+ // Act
+-var result = await _agentService.SummarizeWeekLetterAsync(_testChild, _testDate);
++var result = await _agentService.SummarizeWeekLetterAsync(_testChild, _testDate);
 
-Consider restructuring the service registration to avoid duplicate configuration binding:
+ // Assert
+ Assert.Equal("Test summary", result);
+-_openAiServiceMock.Verify(m => m.SummarizeWeekLetterAsync(weekLetter, ChatInterface.Slack), Times.Once);
++_openAiServiceMock.Verify(m => m.SummarizeWeekLetterAsync(weekLetter, It.Is<ChatInterface>(ci => ci == ChatInterface.Slack)), Times.Once);
+src/Aula.Tests/Services/SupabaseServiceTests.cs (3)
+69-82: Enhance parameter validation tests to include actual service calls.
 
--        // Only register TelegramInteractiveBot if enabled
--        var tempConfig = new Config();
--        configuration.Bind(tempConfig);
--        if (tempConfig.Telegram.Enabled && !string.IsNullOrEmpty(tempConfig.Telegram.Token))
--        {
--            services.AddSingleton<TelegramInteractiveBot>();
--        }
-+        // Register TelegramInteractiveBot conditionally
-+        services.AddSingleton<TelegramInteractiveBot>(provider =>
-+        {
-+            var config = provider.GetRequiredService<Config>();
-+            if (!config.Telegram.Enabled || string.IsNullOrEmpty(config.Telegram.Token))
-+            {
-+                throw new InvalidOperationException("TelegramInteractiveBot cannot be instantiated when Telegram is disabled");
-+            }
-+            return ActivatorUtilities.CreateInstance<TelegramInteractiveBot>(provider);
-+        });
-Alternatively, always register the service and handle the enabled check within the bot's Start method.
+These tests only validate parameters in isolation without testing how the service handles them. Consider testing actual service method calls with these parameters.
 
-🧹 Nitpick comments (6)
-src/Aula.Tests/Integration/AulaClientTests.cs (1)
-43-50: Consider testing empty string behavior more explicitly.
+    [Fact]
+-   public void ReminderData_WithValidParameters_AreValid()
++   public async Task SaveReminderAsync_WithValidParameters_DoesNotThrow()
+    {
+        // Arrange
+        var text = "Test reminder";
+        var date = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
+        var time = new TimeOnly(10, 0);
+        var childName = "TestChild";
 
-While the test verifies that empty strings don't throw exceptions, it might be worth verifying the actual behavior when empty credentials are provided. Consider adding assertions to verify that the client handles empty credentials gracefully in actual usage scenarios.
+-       // Act & Assert - Verify reminder data parameters are valid
+-       Assert.NotNull(_supabaseService);
+-       Assert.NotEmpty(text);
+-       Assert.False(string.IsNullOrEmpty(childName));
++       // Act & Assert - Should not throw with valid parameters
++       var exception = await Record.ExceptionAsync(async () =>
++           await _supabaseService.SaveReminderAsync(text, date, time, childName));
++       
++       Assert.Null(exception);
+    }
+86-95: Test should call actual service methods instead of just validating parameters.
+
+This test only validates parameter ranges without testing the service's handling of these parameters.
+
+-   public void WeekLetterParameters_WithValidValues_AreInValidRange(string childName, int weekNumber, int year)
++   public async Task HasWeekLetterBeenPostedAsync_WithValidParameters_DoesNotThrow(string childName, int weekNumber, int year)
+    {
+-       // Act & Assert - Verify week letter parameters are within expected ranges
+-       Assert.NotNull(_supabaseService);
+-       Assert.True(weekNumber > 0 && weekNumber <= 53);
+-       Assert.True(year > 2000 && year < 3000);
+-       Assert.False(string.IsNullOrEmpty(childName));
++       // Act & Assert - Should not throw with valid parameters
++       var exception = await Record.ExceptionAsync(async () =>
++           await _supabaseService.HasWeekLetterBeenPostedAsync(childName, weekNumber, year));
++       
++       // Expect InvalidOperationException since service is not initialized
++       Assert.NotNull(exception);
++       Assert.IsType<InvalidOperationException>(exception);
+    }
+400-414: Incomplete test - doesn't validate actual service behavior.
+
+This test accepts an expectedMessage parameter but never uses it. The test body only checks if the text is null/empty without testing any actual service validation logic.
+
+Either implement proper validation testing or remove this test:
+
+-   [InlineData("", "Parameter cannot be empty")]
+-   [InlineData(null, "Parameter cannot be null")]
+-   public void ValidateReminderText_WithInvalidInput_ThrowsArgumentException(string text, string expectedMessage)
++   [InlineData("")]
++   [InlineData(null)]
++   public async Task SaveReminderAsync_WithInvalidText_ThrowsException(string text)
+    {
+        // Arrange
+        var date = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
+        var time = new TimeOnly(10, 0);
+
+        // Act & Assert
+-       if (string.IsNullOrEmpty(text))
+-       {
+-           // Test that the service would need validation - this is a design consideration
+-           Assert.True(string.IsNullOrEmpty(text));
+-       }
++       // First check that service throws InvalidOperationException when not initialized
++       await Assert.ThrowsAsync<InvalidOperationException>(
++           () => _supabaseService.SaveReminderAsync(text, date, time, "TestChild"));
+    }
+🧹 Nitpick comments (8)
+src/Aula.Tests/Integration/UniLoginClientTests.cs (1)
+101-124: Improve test reliability by using mocked HTTP responses.
+
+The test currently relies on making actual HTTP calls to invalid URLs and catching network exceptions. This approach can be brittle and slow. Consider using HttpMessageHandler mocking to simulate network failures more reliably.
 
  [Fact]
- public void Constructor_ShouldInitializeWithValidEmptyStrings()
+ public async Task LoginAsync_WithInvalidUrl_ReturnsFalse()
  {
-     // Arrange & Act
-     var client = new AulaClient("", "");
+-    // Arrange - Use an invalid URL that will cause network failure
+-    var client = new TestableUniLoginClient("user", "pass", "https://invalid-url-that-does-not-exist-12345.com", "https://success.com");
++    // Arrange - Mock HTTP failure
++    var mockHandler = new Mock<HttpMessageHandler>();
++    mockHandler.Protected()
++        .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
++        .ThrowsAsync(new HttpRequestException("Network error"));
++    
++    var httpClient = new HttpClient(mockHandler.Object);
++    var client = new TestableUniLoginClient("user", "pass", "https://login.com", "https://success.com");
 
-     // Assert
-     Assert.NotNull(client);
-+    // Note: Consider testing login behavior with empty credentials in integration tests
+-    // Act & Assert - Should handle network errors gracefully
+-    try
+-    {
+-        var result = await client.LoginAsync();
+-        Assert.False(result);
+-    }
+-    catch (HttpRequestException)
+-    {
+-        // Expected - network error for invalid URL
+-        Assert.True(true);
+-    }
+-    catch (TaskCanceledException)
+-    {
+-        // Expected - timeout for invalid URL
+-        Assert.True(true);
+-    }
++    // Act & Assert
++    await Assert.ThrowsAsync<HttpRequestException>(() => client.LoginAsync());
  }
-CLAUDE.md (2)
-57-58: Fix word duplication in Configuration section header.
+src/Aula.Tests/Integration/MinUddannelseClientTests.cs (1)
+161-168: Extract hardcoded JSON to improve maintainability.
 
-The static analysis tool correctly identified a duplicated word in the section heading.
+The JSON profile data is hardcoded in multiple tests. Consider extracting to a shared test data factory or constants to improve maintainability and reduce duplication.
 
-Apply this fix:
-
--- Supabase: PostgreSQL database for reminders, posted letters, scheduling, and app state
--
--### Configuration
--Configuration is handled through `appsettings.json` with sections for:
-+- Supabase: PostgreSQL database for reminders, posted letters, scheduling, and app state
-+
-+### Configuration
-+Configuration is handled through `appsettings.json` with sections for:
-166-166: Consider using compound word "multichannel" for consistency.
-
-The term "multi-channel" could be written as the compound word "multichannel" for better readability.
-
--- Implement ChannelManager for multi-channel coordination
-+- Implement ChannelManager for multichannel coordination
-src/Aula/Services/OpenAiService.cs (3)
-605-610: Improve datetime parsing flexibility and user feedback
-
-The current datetime validation only accepts one specific format, which may be too restrictive for natural language processing. Consider supporting multiple common formats and providing better user feedback.
-
- // Validate datetime format
--if (!DateTime.TryParseExact(dateTimeStr, "yyyy-MM-dd HH:mm", null, System.Globalization.DateTimeStyles.None, out _))
-+var supportedFormats = new[] { "yyyy-MM-dd HH:mm", "yyyy-MM-dd", "MM-dd HH:mm", "dd-MM-yyyy HH:mm" };
-+if (!supportedFormats.Any(format => DateTime.TryParseExact(dateTimeStr, format, null, System.Globalization.DateTimeStyles.None, out _)))
- {
-     _logger.LogWarning("Invalid datetime format from AI: {DateTime}", dateTimeStr);
-     dateTimeStr = DateTime.Now.AddHours(1).ToString("yyyy-MM-dd HH:mm");
-+    // Consider returning an error message to user about the fallback
- }
-632-639: Improve reminder number extraction robustness
-
-The current logic only finds the first integer in the query, which could match unintended numbers. Consider more sophisticated parsing to identify the reminder number more accurately.
-
- // Extract reminder number from query
- var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
--foreach (var word in words)
-+
-+// Look for patterns like "reminder 2", "number 3", etc.
-+for (int i = 0; i < words.Length - 1; i++)
- {
--    if (int.TryParse(word, out var reminderNumber))
-+    if ((words[i].Equals("reminder", StringComparison.OrdinalIgnoreCase) || 
-+         words[i].Equals("number", StringComparison.OrdinalIgnoreCase)) &&
-+        int.TryParse(words[i + 1], out var reminderNumber))
-     {
-         return await _aiToolsManager.DeleteReminderAsync(reminderNumber);
-     }
- }
-+
-+// Fallback to first integer found
-+foreach (var word in words)
-+{
-+    if (int.TryParse(word, out var reminderNumber))
-+    {
-+        return await _aiToolsManager.DeleteReminderAsync(reminderNumber);
-+    }
-+}
-188-188: Consider conditional trace logging for production
-
-The extensive trace logging with emoji prefixes is helpful for debugging but may be too verbose for production environments. Consider using conditional compilation or log level checks to reduce overhead.
-
--_logger.LogInformation("🔎 TRACE: Updating existing conversation context for {ContextKey}", contextKey);
-+if (_logger.IsEnabled(LogLevel.Debug))
-+    _logger.LogDebug("TRACE: Updating existing conversation context for {ContextKey}", contextKey);
-Or consider creating a dedicated trace method:
-
-private void LogTrace(string message, params object[] args)
+private static class TestUserProfiles
 {
-    if (_logger.IsEnabled(LogLevel.Debug))
-        _logger.LogDebug($"🔎 TRACE: {message}", args);
+    public static readonly JObject WithMultipleChildren = JObject.Parse(@"{
+        ""id"": ""12345"",
+        ""navn"": ""Test User"",
+        ""boern"": [
+            {""id"": ""child1"", ""fornavn"": ""Alice"", ""efternavn"": ""Test""},
+            {""id"": ""child2"", ""fornavn"": ""Bob"", ""efternavn"": ""Test""}
+        ]
+    }");
+    
+    public static readonly JObject Empty = new JObject();
 }
-Also applies to: 218-218, 231-231, 261-261, 273-273, 279-291
+CLAUDE.md (2)
+6-8: Fix markdown heading style per static analysis.
 
+The static analysis tool flagged an inconsistent heading style. Consider standardizing to ATX-style headings throughout the document.
+
+----
+-## 🤖 AI ASSISTANCE NOTICE
+-**Significant portions of this codebase have been developed, improved, and maintained with assistance from Claude AI (claude.ai/code). This includes test coverage improvements, code quality enhancements, architectural decisions, and comprehensive CodeRabbit feedback resolution. Claude has been instrumental in achieving the current state of 581 tests, 52.78% line coverage, and maintaining code quality standards.**
+----
++## 🤖 AI ASSISTANCE NOTICE
++
++**Significant portions of this codebase have been developed, improved, and maintained with assistance from Claude AI (claude.ai/code). This includes test coverage improvements, code quality enhancements, architectural decisions, and comprehensive CodeRabbit feedback resolution. Claude has been instrumental in achieving the current state of 581 tests, 52.78% line coverage, and maintaining code quality standards.**
+147-147: Convert emphasis to proper heading.
+
+The static analysis tool flagged this line as using emphasis instead of a proper heading structure.
+
+-**Priority 2: Integration Services**
++#### Priority 2: Integration Services
+src/Aula.Tests/Integration/AgentServiceTests.cs (2)
+563-582: Extract complex test setup to helper methods.
+
+This test and several others have extensive setup code that could be extracted to helper methods to improve readability and reduce duplication.
+
+private void SetupOpenAiDirectResponse(string query, string contextKey, string response, ChatInterface chatInterface = ChatInterface.Slack)
+{
+    _openAiServiceMock.Setup(m => m.ProcessQueryWithToolsAsync(query, contextKey, chatInterface))
+        .ReturnsAsync(response);
+}
+
+private void SetupOpenAiFallbackResponse(string contextKey, ChatInterface chatInterface = ChatInterface.Slack)
+{
+    _openAiServiceMock.Setup(m => m.ProcessQueryWithToolsAsync(It.IsAny<string>(), contextKey, chatInterface))
+        .ReturnsAsync("FALLBACK_TO_EXISTING_SYSTEM");
+}
+
+[Fact]
+public async Task ProcessQueryWithToolsAsync_WithDirectOpenAiResponse_ReturnsResponse()
+{
+    // Arrange
+    var query = "What's the weather like?";
+    var contextKey = "test-context";
+    var expectedResponse = "I can help you with school-related questions about your children.";
+
+    SetupOpenAiDirectResponse(query, contextKey, expectedResponse);
+    
+    // Act & Assert...
+}
+695-743: Simplify parametrized test implementation.
+
+The Theory test has complex inline verification logic that could be simplified by using a more structured approach.
+
+[Theory]
+[MemberData(nameof(GetLanguageTestCases))]
+public async Task ProcessQueryWithToolsAsync_WithDanishQueries_EnhancesWithLanguageInstruction(
+    string query, bool isDanish, string expectedLanguageInstruction)
+{
+    // Arrange
+    var contextKey = "test-context";
+    
+    SetupOpenAiFallbackResponse(contextKey);
+    SetupWeekLetterMocks();
+    
+    _openAiServiceMock.Setup(m => m.AskQuestionAboutChildrenAsync(
+            It.IsAny<Dictionary<string, JObject>>(),
+            It.IsAny<string>(),
+            contextKey,
+            ChatInterface.Slack))
+        .ReturnsAsync("Language-appropriate response");
+
+    // Act
+    var result = await _agentService.ProcessQueryWithToolsAsync(query, contextKey);
+
+    // Assert
+    VerifyLanguageInstructions(isDanish, contextKey);
+}
+
+public static IEnumerable<object[]> GetLanguageTestCases()
+{
+    yield return new object[] { "Hvad skal børnene lave i dag?", true, "(CRITICAL: Respond in Danish - the user asked in Danish)" };
+    yield return new object[] { "What do the children have today?", false, "" };
+    // ... more test cases
+}
+src/Aula.Tests/Scheduling/SchedulingServiceTests.cs (2)
+1143-1159: Consider resource management for multiple bot instances.
+
+This test creates multiple SlackBot and TelegramBot instances in a loop but only disposes the SlackBot. While TelegramBot may not implement IDisposable, creating multiple instances without proper cleanup could lead to resource issues.
+
+Consider refactoring to create a single service per configuration or ensure all resources are properly tracked:
+
+@@ -1143,6 +1143,8 @@
+             var slackBot = new SlackInteractiveBot(_mockAgentService.Object, testConfig, _loggerFactory, _mockSupabaseService.Object);
+             var telegramBot = new TelegramInteractiveBot(_mockAgentService.Object, testConfig, _loggerFactory, _mockSupabaseService.Object);
++            
++            try
++            {
++                var service = new SchedulingService(
++                    _loggerFactory,
++                    _mockSupabaseService.Object,
++                    _mockAgentService.Object,
++                    slackBot,
++                    telegramBot,
++                    testConfig);
+ 
+-            var service = new SchedulingService(
+-                _loggerFactory,
+-                _mockSupabaseService.Object,
+-                _mockAgentService.Object,
+-                slackBot,
+-                telegramBot,
+-                testConfig);
+-
+-            // Assert
+-            Assert.NotNull(service);
+-            
+-            // Cleanup
+-            slackBot.Dispose();
++                // Assert
++                Assert.NotNull(service);
++            }
++            finally
++            {
++                // Cleanup
++                slackBot.Dispose();
++            }
+142-143: Consider a more deterministic approach instead of fixed delay.
+
+Using Task.Delay(100) can lead to flaky tests on slower systems. Consider using a more deterministic approach or increasing the timeout with a retry mechanism.
+
+-        // Wait a moment for async operations to complete
+-        await Task.Delay(100);
++        // Wait for the service to process with a timeout
++        var maxWaitTime = TimeSpan.FromSeconds(1);
++        var checkInterval = TimeSpan.FromMilliseconds(50);
++        var elapsed = TimeSpan.Zero;
++        
++        while (elapsed < maxWaitTime)
++        {
++            if (_mockSupabaseService.Invocations.Any(i => i.Method.Name == "GetPendingRemindersAsync"))
++                break;
++            await Task.Delay(checkInterval);
++            elapsed += checkInterval;
++        }
 📜 Review details
 Configuration used: CodeRabbit UI
 Review profile: CHILL
 Plan: Pro
 
 📥 Commits
-Reviewing files that changed from the base of the PR and between 8e8998d and a1f308c.
+Reviewing files that changed from the base of the PR and between 9ce6adb and 72d7384.
 
-📒 Files selected for processing (24)
+📒 Files selected for processing (8)
+.claude/settings.local.json (1 hunks)
 CLAUDE.md (1 hunks)
-src/Aula.Tests/Bots/SlackInteractiveBotTests.cs (1 hunks)
-src/Aula.Tests/Bots/SlackMessageHandlerTests.cs (1 hunks)
-src/Aula.Tests/Bots/TelegramInteractiveBotTests.cs (1 hunks)
-src/Aula.Tests/Bots/TelegramTestMessageFactory.cs (1 hunks)
-src/Aula.Tests/Configuration/ConfigurationTests.cs (1 hunks)
-src/Aula.Tests/Integration/AulaClientTests.cs (1 hunks)
-src/Aula.Tests/Integration/TestableMinUddannelseClient.cs (1 hunks)
-src/Aula.Tests/ProgramTests.cs (1 hunks)
-src/Aula.Tests/Scheduling/SchedulingServiceIntegrationTests.cs (1 hunks)
-src/Aula.Tests/Services/DataModelTests.cs (1 hunks)
+src/Aula.Tests/Integration/AgentServiceTests.cs (1 hunks)
+src/Aula.Tests/Integration/MinUddannelseClientTests.cs (1 hunks)
+src/Aula.Tests/Integration/UniLoginClientTests.cs (1 hunks)
+src/Aula.Tests/Scheduling/SchedulingServiceTests.cs (1 hunks)
 src/Aula.Tests/Services/GoogleCalendarTests.cs (1 hunks)
-src/Aula.Tests/Services/OpenAiServiceIntegrationTests.cs (1 hunks)
 src/Aula.Tests/Services/SupabaseServiceTests.cs (1 hunks)
-src/Aula.Tests/Utilities/ConversationContextTests.cs (1 hunks)
-src/Aula.Tests/Utilities/DateTimeUtilitiesTests.cs (1 hunks)
-src/Aula.Tests/Utilities/IntentAnalysisPromptsTests.cs (1 hunks)
-src/Aula.Tests/Utilities/JsonFormatterTests.cs (1 hunks)
-src/Aula.Tests/Utilities/ReminderExtractionPromptsTests.cs (1 hunks)
-src/Aula.Tests/Utilities/WeekLetterContentExtractorTests.cs (1 hunks)
-src/Aula/Bots/SlackInteractiveBot.cs (1 hunks)
-src/Aula/Program.cs (1 hunks)
-src/Aula/Services/OpenAiService.cs (1 hunks)
-src/Aula/Utilities/FollowUpQuestionDetector.cs (1 hunks)
-🚧 Files skipped from review as they are similar to previous changes (14)
-src/Aula.Tests/Bots/TelegramInteractiveBotTests.cs
-src/Aula.Tests/Utilities/ConversationContextTests.cs
-src/Aula.Tests/Services/DataModelTests.cs
-src/Aula.Tests/Services/SupabaseServiceTests.cs
-src/Aula.Tests/Utilities/IntentAnalysisPromptsTests.cs
-src/Aula/Utilities/FollowUpQuestionDetector.cs
-src/Aula.Tests/Configuration/ConfigurationTests.cs
-src/Aula.Tests/Utilities/DateTimeUtilitiesTests.cs
-src/Aula.Tests/Bots/TelegramTestMessageFactory.cs
-src/Aula.Tests/Services/OpenAiServiceIntegrationTests.cs
-src/Aula.Tests/Scheduling/SchedulingServiceIntegrationTests.cs
-src/Aula.Tests/Utilities/JsonFormatterTests.cs
-src/Aula.Tests/Bots/SlackInteractiveBotTests.cs
-src/Aula.Tests/Utilities/ReminderExtractionPromptsTests.cs
-🧰 Additional context used 🧬 Code Graph Analysis (1) src/Aula/Program.cs (13)
-src/Aula/Bots/SlackInteractiveBot.cs (7)
-Task (73-126)
-Task (288-291)
-Task (293-349)
-Task (351-395)
-Task (397-469)
-SlackInteractiveBot (23-533)
-SlackInteractiveBot (48-71)
-src/Aula/Bots/TelegramInteractiveBot.cs (11)
-Task (70-126)
-Task (139-160)
-Task (162-173)
-Task (178-181)
-Task (183-186)
-Task (188-206)
-Task (208-211)
-Task (213-236)
-Task (238-287)
-TelegramInteractiveBot (25-297)
-TelegramInteractiveBot (40-68)
-src/Aula/Channels/SlackBot.cs (5)
-Task (22-38)
-Task (40-65)
-SlackBot (8-83)
-SlackBot (13-14)
-SlackBot (16-20)
-src/Aula/Configuration/Config.cs (1)
-Config (3-14)
-src/Aula/Channels/TelegramClient.cs (3)
-TelegramClient (15-272)
-TelegramClient (21-29)
-TelegramClient (31-36)
-src/Aula/Scheduling/SchedulingService.cs (2)
-SchedulingService (20-537)
-SchedulingService (32-46)
+🚧 Files skipped from review as they are similar to previous changes (1)
+.claude/settings.local.json
+🧰 Additional context used 🧬 Code Graph Analysis (1) src/Aula.Tests/Scheduling/SchedulingServiceTests.cs (6)
 src/Aula/Configuration/Slack.cs (1)
 Slack (3-11)
 src/Aula/Configuration/Telegram.cs (1)
 Telegram (3-11)
-src/Aula/Services/DataService.cs (2)
-DataService (8-76)
-DataService (15-20)
-src/Aula/Services/OpenAiService.cs (3)
-OpenAiService (20-672)
-OpenAiService (37-53)
-OpenAiService (55-61)
-src/Aula/Configuration/OpenAi.cs (1)
-OpenAi (3-10)
-src/Aula/Integration/AgentService.cs (2)
-AgentService (8-283)
-AgentService (16-26)
-src/Aula/Services/SupabaseService.cs (2)
-SupabaseService (40-386)
-SupabaseService (46-50)
-🪛 LanguageTool CLAUDE.md
-[duplication] ~57-~57: Possible typo: you repeated a word.
-Context: ...tters, scheduling, and app state
+src/Aula/Configuration/Child.cs (1)
+Child (3-9)
+src/Aula/Configuration/Config.cs (1)
+Config (3-14)
+src/Aula/Services/OpenAiService.cs (1)
+childName (70-87)
+src/Aula/Configuration/Timers.cs (1)
+Timers (3-11)
+🪛 markdownlint-cli2 (0.17.2) CLAUDE.md
+7-7: Heading style
+Expected: atx; Actual: setext
 
-Configuration
-Configuration is handled through appsettings.json w...
+(MD003, heading-style)
 
-(ENGLISH_WORD_REPEAT_RULE)
+147-147: Emphasis used instead of a heading
 
-[misspelling] ~166-~166: This word is normally spelled as one.
-Context: ...methods
+(MD036, no-emphasis-as-heading)
 
-Implement ChannelManager for multi-channel coordination
-Refactor configuration ...
-(EN_COMPOUNDS_MULTI_CHANNEL)
+⏰ Context from checks skipped due to timeout of 90000ms (1)
+GitHub Check: Cursor BugBot
+🔇 Additional comments (7)
+src/Aula.Tests/Services/GoogleCalendarTests.cs (7)
+154-198: Excellent date and week calculation test coverage.
 
-🔇 Additional comments (26)
-src/Aula.Tests/Integration/AulaClientTests.cs (1)
-1-51: Excellent comprehensive constructor validation tests.
+The tests comprehensively cover week boundary calculations with various edge cases and ensure consistency with the synchronization logic. The culture-specific date handling and boundary assertions are well-designed.
 
-The test suite provides thorough coverage of the AulaClient constructor validation, including null parameter checks, inheritance verification, and edge cases. The tests follow proper AAA pattern and have clear, descriptive names.
+204-322: Comprehensive JSON event processing test coverage.
 
-src/Aula.Tests/Utilities/WeekLetterContentExtractorTests.cs (2)
-1-299: Outstanding comprehensive test coverage for WeekLetterContentExtractor.
+The tests thoroughly cover JSON event parsing scenarios including valid events, missing fields, and empty/null cases. The event structure validation and error handling assertions are well-designed.
 
-This test suite exemplifies excellent unit testing practices:
+324-361: Well-structured DateTime validation tests.
 
-Comprehensive edge case coverage: Tests handle null, empty, and missing data scenarios
-Proper logging verification: Uses Moq to verify warning and error logging behavior
-Clean test data: Excellent use of raw string literals for JSON test data
-Dynamic and strongly-typed testing: Covers both JObject and dynamic input scenarios
-Exception handling validation: Ensures graceful error handling with proper logging
-The test structure follows AAA pattern consistently and includes meaningful assertions for all scenarios.
+The parameterized tests effectively cover various datetime formats and edge cases. The ThrowsOnParse helper method is a clean approach for exception testing.
 
-145-152: Verify logger mock setup for extension method calls.
+367-423: Thorough prefix and naming validation tests.
 
-The logger verification correctly uses It.IsAnyType for structured logging, which is the proper approach for testing ILogger extension methods that use structured logging.
+The tests effectively validate event summary generation and prefix validation logic. The parameterized approach covers various edge cases and the assertions properly verify expected behavior.
 
-src/Aula.Tests/Services/GoogleCalendarTests.cs (3)
-14-18: Good practice using real LoggerFactory for testing.
+429-519: Comprehensive integration scenario testing.
 
-Using a real ILoggerFactory instead of mocking avoids issues with extension method calls and provides more realistic test behavior. Setting the minimum level to Critical keeps test output clean.
+The tests effectively validate multiple service account configurations and complete event data processing. The scenario-based approach provides good coverage of real-world usage patterns.
 
-69-84: Excellent realistic test data for GoogleServiceAccount.
+71-86: Well-designed test data helper methods.
 
-The CreateTestServiceAccount method provides comprehensive test data that closely resembles real Google service account JSON structure, including proper URL formats and realistic field values. The dummy private key is appropriate for testing.
+The helper methods provide appropriate test service account configurations with realistic but fake data. The multiple scenarios (production-like, development, minimal) effectively support comprehensive testing.
 
-43-51: Prefix minimum length requirement confirmed.
+Also applies to: 521-553
 
-The GoogleCalendar constructor enforces prefix.Length < 3 and throws ArgumentException("Prefix must be at least 3 chars"). Your test correctly matches this rule, so no changes are needed.
+34-42: Empty-string prefix behavior is intentional and tests are correct.
 
-src/Aula.Tests/ProgramTests.cs (2)
-19-37: Comprehensive service registration validation.
+The GoogleCalendar constructor explicitly uses
 
-Excellent test coverage of all core services in the DI container. The test verifies that ConfigureServices() properly registers all essential components including clients, services, scheduling, and bot implementations.
+if (string.IsNullOrEmpty(prefix)) 
+    throw new ArgumentNullException(nameof(prefix));
+to treat empty strings the same as null. Your test expecting ArgumentNullException for "" matches this implementation. No changes needed here.
 
-63-76: Thorough configuration binding validation.
-
-The test properly verifies that all configuration sections (UniLogin, Slack, Telegram, OpenAi) are bound and not null, ensuring the configuration system is working correctly.
-
-src/Aula.Tests/Integration/TestableMinUddannelseClient.cs (3)
-76-91: Child ID extraction properly implemented.
-
-The GetChildId method now correctly extracts the child ID from the provided Child parameter by matching the first name against the mock user profile. This addresses the previous hardcoded value issue and provides more realistic test behavior.
-
-12-26: Well-designed test double with proper dependency injection.
-
-The testable client design allows for HTTP client injection, making it suitable for integration testing scenarios. The constructor properly stores dependencies and the class implements the required interface.
-
-101-108: Proper disposal pattern implementation.
-
-The disposal implementation correctly handles the injected HttpClient and includes disposal guard pattern to prevent multiple disposals.
-
-src/Aula/Program.cs (2)
-49-66: LGTM! Excellent error handling and data preloading strategy.
-
-The per-child error handling during preloading ensures that one failing child doesn't prevent others from loading, and the comprehensive error logging provides good visibility into issues.
-
-122-141: LGTM! Robust application lifecycle management.
-
-The cancellation token implementation with graceful shutdown handling is well-implemented and follows .NET best practices for long-running applications.
-
-src/Aula.Tests/Bots/SlackMessageHandlerTests.cs (4)
-30-68: LGTM! Comprehensive test setup with proper dependency injection.
-
-The constructor properly initializes all dependencies with appropriate test data and mock objects. The use of actual HttpClient instead of mocking it is a good choice for integration-style testing.
-
-70-179: LGTM! Thorough constructor validation testing.
-
-All constructor parameters are validated with appropriate ArgumentNullException tests, ensuring proper defensive programming practices.
-
-259-287: LGTM! Good use of parameterized tests for help commands.
-
-The Theory with InlineData approach effectively tests multiple help command variations (Danish/English, case variations) in a concise manner.
-
-310-336: LGTM! Proper exception testing with verification.
-
-The test correctly verifies both the return value and the logging behavior when exceptions occur, ensuring proper error handling is in place.
-
-src/Aula/Bots/SlackInteractiveBot.cs (5)
-48-71: LGTM! Excellent dependency injection and initialization.
-
-The constructor properly validates all dependencies and provides a good default for HttpClient with appropriate timeout configuration. The delegation to SlackMessageHandler shows good separation of concerns.
-
-73-126: LGTM! Robust startup sequence with comprehensive validation.
-
-The start method properly validates configuration, sets up HTTP client authentication, initializes timestamps, and sends a helpful welcome message. The logging provides good visibility into the startup process.
-
-135-282: LGTM! Well-implemented concurrent polling with proper error handling.
-
-The polling implementation correctly uses Interlocked.Exchange to prevent concurrent executions, handles Slack API responses robustly, and includes proper message filtering to avoid processing bot messages.
-
-397-469: LGTM! Efficient duplicate detection and robust posting.
-
-The SHA256 hash-based duplicate detection prevents redundant posts, and the error handling ensures graceful failure without affecting other operations.
-
-481-522: LGTM! Thoughtful cleanup strategy with appropriate retention.
-
-The 24-hour message ID retention and automatic hash cache clearing when it grows too large shows good memory management practices.
-
-CLAUDE.md (1)
-1-259: LGTM! Comprehensive and well-structured documentation.
-
-This documentation provides excellent guidance for Claude Code with detailed commands, architecture overview, development roadmap, and clear vision. The coverage of testing strategy, architecture principles, and feature status is particularly valuable for understanding the codebase.
-
-src/Aula/Services/OpenAiService.cs (3)
-265-275: Excellent conversation management implementation
-
-The conversation trimming logic now uses well-named constants instead of magic numbers, making the code much more maintainable and self-documenting. The logic correctly preserves system messages while limiting conversation history to prevent token overflow.
-
-501-505: Excellent error handling implementation
-
-The service demonstrates robust error handling with comprehensive try-catch blocks, user-friendly error messages, and detailed logging for debugging. The consistent pattern of logging technical details while returning helpful messages to users is well-implemented.
-
-Also applies to: 541-545, 567-571, 622-626
-
-644-665: Well-implemented fallback system
-
-The HandleRegularAulaQuery method now correctly implements the fallback mechanism with the constant FallbackToExistingSystem. The detailed comments explain the critical nature of this return value and why generic help text should be avoided. This properly addresses the previous incomplete implementation issue.
-
-In src/Aula.Tests/ProgramTests.cs:
+In src/Aula.Tests/Services/GoogleCalendarTests.cs:
 
 > +    [Fact]
-+    public void ConfigureServices_WithTelegramDisabled_ShouldNotRegisterTelegramBot()
++    public void JsonCredentialGeneration_WithEmptyRequiredFields_HandlesGracefully()
 +    {
-+        // This test verifies the conditional registration logic
-+        // The actual implementation depends on appsettings.json configuration
-+        var serviceProvider = Program.ConfigureServices();
++        // Arrange
++        var invalidServiceAccount = new GoogleServiceAccount
++        {
++            Type = "",
++            ProjectId = "",
++            ClientEmail = "",
++            PrivateKey = "invalid-key"
++        };
 +
-+        // TelegramInteractiveBot registration depends on config, so we test the service provider works
-+        Assert.NotNull(serviceProvider);
++        // Act & Assert - Should handle invalid credentials
++        try
++        {
++            var calendar = new GoogleCalendar(invalidServiceAccount, "TEST", _loggerFactory);
++            Assert.Fail("Expected exception but none was thrown");
++        }
++        catch (Exception ex)
++        {
++            // Should fail gracefully, not with parameter validation errors
++            Assert.IsNotType<ArgumentNullException>(ex);
++            Assert.IsNotType<ArgumentException>(ex);
++        }
 +    }
 🛠️ Refactor suggestion
 
-Improve conditional Telegram bot registration test.
+Improve test clarity and assertion logic.
 
-The current test for conditional Telegram bot registration doesn't actually verify the conditional logic. Consider enhancing this test to verify both scenarios (enabled/disabled).
+The test has unclear expectations - it asserts failure if no exception is thrown, but then expects specific exception types. Consider clarifying the test's intent and simplifying the logic.
 
  [Fact]
--public void ConfigureServices_WithTelegramDisabled_ShouldNotRegisterTelegramBot()
-+public void ConfigureServices_ShouldHandleConditionalTelegramRegistration()
+-public void JsonCredentialGeneration_WithEmptyRequiredFields_HandlesGracefully()
++public void JsonCredentialGeneration_WithInvalidServiceAccount_ThrowsAppropriateException()
  {
--    // This test verifies the conditional registration logic
--    // The actual implementation depends on appsettings.json configuration
-     var serviceProvider = Program.ConfigureServices();
+     // Arrange
+     var invalidServiceAccount = new GoogleServiceAccount
+     {
+         Type = "",
+         ProjectId = "",
+         ClientEmail = "",
+         PrivateKey = "invalid-key"
+     };
+
+-    // Act & Assert - Should handle invalid credentials
+-    try
+-    {
+-        var calendar = new GoogleCalendar(invalidServiceAccount, "TEST", _loggerFactory);
+-        Assert.Fail("Expected exception but none was thrown");
+-    }
+-    catch (Exception ex)
+-    {
+-        // Should fail gracefully, not with parameter validation errors
+-        Assert.IsNotType<ArgumentNullException>(ex);
+-        Assert.IsNotType<ArgumentException>(ex);
+-    }
++    // Act & Assert - Should throw an exception (not parameter validation)
++    var exception = Assert.ThrowsAny<Exception>(() =>
++        new GoogleCalendar(invalidServiceAccount, "TEST", _loggerFactory));
 +    
-+    // Verify service provider is created successfully regardless of Telegram config
-+    Assert.NotNull(serviceProvider);
-     
--    // TelegramInteractiveBot registration depends on config, so we test the service provider works
--    Assert.NotNull(serviceProvider);
-+    // Try to resolve TelegramInteractiveBot - should either succeed or fail gracefully
++    // Should fail with Google API or JSON exceptions, not parameter validation
++    Assert.IsNotType<ArgumentNullException>(exception);
++    Assert.IsNotType<ArgumentException>(exception);
+ }
+🤖 Prompt for AI Agents
+In src/Aula.Tests/Services/GoogleCalendarTests.cs around lines 124 to 148, the
+test logic is confusing because it asserts failure if no exception is thrown but
+then expects exceptions that are not ArgumentNullException or ArgumentException.
+Simplify by using Assert.Throws to expect any exception except those two types
+or refactor the test to clearly specify which exceptions are acceptable. Remove
+the try-catch block and use more explicit assertions to clarify the test's
+intent and improve readability.
+In src/Aula.Tests/Services/GoogleCalendarTests.cs:
+
+> +    public void Constructor_ParameterValidation_PassesWithValidPrefix()
++    {
++        // Arrange
++        var testServiceAccount = CreateTestServiceAccount();
++
++        // Act & Assert - We expect Google API to fail but parameter validation to pass
++        var exception = Assert.ThrowsAny<Exception>(() =>
++            new GoogleCalendar(testServiceAccount, "test", _loggerFactory));
++
++        // The exception should NOT be ArgumentNullException or ArgumentException
++        // It should be a Google API related exception (credential, authentication, etc.)
++        Assert.IsNotType<ArgumentNullException>(exception);
++        Assert.IsNotType<ArgumentException>(exception);
++    }
+🛠️ Refactor suggestion
+
+Improve test robustness by removing Google API dependency.
+
+This test assumes Google API will always throw an exception with test credentials, making it fragile. Consider mocking the Google API dependencies or testing only the parameter validation logic without relying on external API behavior.
+
+ [Fact]
+-public void Constructor_ParameterValidation_PassesWithValidPrefix()
++public void Constructor_ShouldNotThrowArgumentExceptions_WhenPrefixIsValid()
+ {
+     // Arrange
+     var testServiceAccount = CreateTestServiceAccount();
+
+-    // Act & Assert - We expect Google API to fail but parameter validation to pass
+-    var exception = Assert.ThrowsAny<Exception>(() =>
+-        new GoogleCalendar(testServiceAccount, "test", _loggerFactory));
+-
+-    // The exception should NOT be ArgumentNullException or ArgumentException
+-    // It should be a Google API related exception (credential, authentication, etc.)
+-    Assert.IsNotType<ArgumentNullException>(exception);
+-    Assert.IsNotType<ArgumentException>(exception);
++    // Act & Assert - Should not throw argument validation exceptions
++    // (Google API exceptions are acceptable)
 +    try
 +    {
-+        var telegramBot = serviceProvider.GetService<TelegramInteractiveBot>();
-+        // If resolved, verify it's properly configured
-+        if (telegramBot != null)
-+        {
-+            Assert.NotNull(telegramBot);
-+        }
++        var calendar = new GoogleCalendar(testServiceAccount, "test", _loggerFactory);
++        // If no exception, parameter validation passed
 +    }
-+    catch (Exception)
++    catch (ArgumentNullException)
 +    {
-+        // Expected when Telegram is not configured - this is acceptable
++        Assert.Fail("Should not throw ArgumentNullException with valid parameters");
++    }
++    catch (ArgumentException)
++    {
++        Assert.Fail("Should not throw ArgumentException with valid parameters");
++    }
++    catch
++    {
++        // Google API exceptions are expected and acceptable
 +    }
  }
+📝 Committable suggestion
+‼️ IMPORTANT
+Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
+
+⬇️ Suggested change
+-    public void Constructor_ParameterValidation_PassesWithValidPrefix()
+-    {
+-        // Arrange
+-        var testServiceAccount = CreateTestServiceAccount();
+-
+-        // Act & Assert - We expect Google API to fail but parameter validation to pass
+-        var exception = Assert.ThrowsAny<Exception>(() =>
+-            new GoogleCalendar(testServiceAccount, "test", _loggerFactory));
+-
+-        // The exception should NOT be ArgumentNullException or ArgumentException
+-        // It should be a Google API related exception (credential, authentication, etc.)
+-        Assert.IsNotType<ArgumentNullException>(exception);
+-        Assert.IsNotType<ArgumentException>(exception);
+-    }
++[Fact]
++public void Constructor_ShouldNotThrowArgumentExceptions_WhenPrefixIsValid()
++{
++    // Arrange
++    var testServiceAccount = CreateTestServiceAccount();
++
++    // Act & Assert - Should not throw argument validation exceptions
++    // (Google API exceptions are acceptable)
++    try
++    {
++        var calendar = new GoogleCalendar(testServiceAccount, "test", _loggerFactory);
++        // If no exception, parameter validation passed
++    }
++    catch (ArgumentNullException)
++    {
++        Assert.Fail("Should not throw ArgumentNullException with valid parameters");
++    }
++    catch (ArgumentException)
++    {
++        Assert.Fail("Should not throw ArgumentException with valid parameters");
++    }
++    catch
++    {
++        // Google API exceptions are expected and acceptable
++    }
++}
+🤖 Prompt for AI Agents
+In src/Aula.Tests/Services/GoogleCalendarTests.cs around lines 56 to 69, the
+test depends on the Google API throwing an exception with test credentials,
+which makes it fragile. Refactor the test to mock the Google API dependencies so
+that it only verifies the parameter validation logic without calling the
+external API. Use mocking frameworks to simulate the API behavior and ensure the
+test focuses solely on constructor parameter validation.
+In src/Aula.Tests/Services/GoogleCalendarTests.cs:
+
+> +    [Fact]
++    public void JsonCredentialGeneration_WithValidServiceAccount_ProducesValidJson()
++    {
++        // Arrange
++        var serviceAccount = CreateTestServiceAccount();
++
++        // Act - We expect Google API to fail but we can verify the JSON generation works
++        try
++        {
++            var calendar = new GoogleCalendar(serviceAccount, "TEST", _loggerFactory);
++            // If no exception is thrown, that's also acceptable (credentials might be valid)
++            Assert.True(true, "Service account configuration processed successfully");
++        }
++        catch (ArgumentNullException)
++        {
++            Assert.Fail("Should not throw ArgumentNullException with valid service account");
++        }
++        catch (ArgumentException)
++        {
++            Assert.Fail("Should not throw ArgumentException with valid service account");
++        }
++        catch (Newtonsoft.Json.JsonException)
++        {
++            Assert.Fail("Should not throw JsonException - JSON generation should work");
++        }
++        catch (Exception)
++        {
++            // Google API exceptions are expected and acceptable
++            Assert.True(true, "Google API exception is expected with test credentials");
++        }
++    }
+🛠️ Refactor suggestion
+
+Simplify exception handling logic.
+
+The nested try-catch structure makes this test hard to read and maintain. Consider simplifying the exception handling to focus on the core validation logic.
+
+ [Fact]
+ public void JsonCredentialGeneration_WithValidServiceAccount_ProducesValidJson()
+ {
+     // Arrange
+     var serviceAccount = CreateTestServiceAccount();
+
+-    // Act - We expect Google API to fail but we can verify the JSON generation works
+-    try
+-    {
+-        var calendar = new GoogleCalendar(serviceAccount, "TEST", _loggerFactory);
+-        // If no exception is thrown, that's also acceptable (credentials might be valid)
+-        Assert.True(true, "Service account configuration processed successfully");
+-    }
+-    catch (ArgumentNullException)
+-    {
+-        Assert.Fail("Should not throw ArgumentNullException with valid service account");
+-    }
+-    catch (ArgumentException)
+-    {
+-        Assert.Fail("Should not throw ArgumentException with valid service account");
+-    }
+-    catch (Newtonsoft.Json.JsonException)
+-    {
+-        Assert.Fail("Should not throw JsonException - JSON generation should work");
+-    }
+-    catch (Exception)
+-    {
+-        // Google API exceptions are expected and acceptable
+-        Assert.True(true, "Google API exception is expected with test credentials");
+-    }
++    // Act & Assert - Should not throw parameter validation or JSON exceptions
++    try
++    {
++        var calendar = new GoogleCalendar(serviceAccount, "TEST", _loggerFactory);
++    }
++    catch (ArgumentNullException ex)
++    {
++        Assert.Fail($"Should not throw ArgumentNullException: {ex.Message}");
++    }
++    catch (ArgumentException ex)
++    {
++        Assert.Fail($"Should not throw ArgumentException: {ex.Message}");
++    }
++    catch (Newtonsoft.Json.JsonException ex)
++    {
++        Assert.Fail($"Should not throw JsonException: {ex.Message}");
++    }
++    catch
++    {
++        // Google API exceptions are expected and acceptable
++    }
+ }
+🤖 Prompt for AI Agents
+In src/Aula.Tests/Services/GoogleCalendarTests.cs between lines 92 and 122, the
+test method uses multiple catch blocks to handle different exceptions, making
+the code verbose and harder to read. Simplify by catching only the expected
+exceptions that should cause test failure (like ArgumentNullException,
+ArgumentException, JsonException) and let other exceptions pass or be handled in
+a single catch block if needed. Use Assert.Throws or Assert.DoesNotThrow
+patterns where applicable to make the test clearer and more concise.
+In src/Aula.Tests/Integration/UniLoginClientTests.cs:
+
+> +        // Access the handler through reflection since it's private
++        var handlerField = typeof(HttpClient).GetField("_handler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
++        return handlerField?.GetValue(HttpClient) as HttpClientHandler ?? new HttpClientHandler();
++    }
+🛠️ Refactor suggestion
+
+Use proper reflection safety checks.
+
+The reflection code assumes the field exists and is of the expected type. Add null checks and type validation to prevent runtime errors.
+
+ public HttpClientHandler GetHttpClientHandler()
+ {
+     // Access the handler through reflection since it's private
+     var handlerField = typeof(HttpClient).GetField("_handler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+-    return handlerField?.GetValue(HttpClient) as HttpClientHandler ?? new HttpClientHandler();
++    if (handlerField == null)
++        throw new InvalidOperationException("Unable to access HttpClient._handler field via reflection");
++        
++    var handler = handlerField.GetValue(HttpClient) as HttpClientHandler;
++    if (handler == null)
++        throw new InvalidOperationException("HttpClient._handler is not of type HttpClientHandler");
++        
++    return handler;
+ }
+📝 Committable suggestion
+‼️ IMPORTANT
+Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
+
+⬇️ Suggested change
+-        // Access the handler through reflection since it's private
+-        var handlerField = typeof(HttpClient).GetField("_handler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+-        return handlerField?.GetValue(HttpClient) as HttpClientHandler ?? new HttpClientHandler();
+-    }
++    public HttpClientHandler GetHttpClientHandler()
++    {
++        // Access the handler through reflection since it's private
++        var handlerField = typeof(HttpClient)
++            .GetField("_handler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
++
++        if (handlerField == null)
++            throw new InvalidOperationException("Unable to access HttpClient._handler field via reflection");
++
++        var handler = handlerField.GetValue(HttpClient) as HttpClientHandler;
++        if (handler == null)
++            throw new InvalidOperationException("HttpClient._handler is not of type HttpClientHandler");
++
++        return handler;
++    }
+🤖 Prompt for AI Agents
+In src/Aula.Tests/Integration/UniLoginClientTests.cs around lines 632 to 635,
+the reflection code accessing the private "_handler" field of HttpClient lacks
+null checks and type validation. Update the code to verify that the field is not
+null before calling GetValue, and confirm that the retrieved value is of type
+HttpClientHandler before casting. If these checks fail, return a new
+HttpClientHandler instance to avoid runtime exceptions.
+In src/Aula.Tests/Integration/UniLoginClientTests.cs:
+
+> +    public async Task LoginAsync_WithTimeout_HandlesGracefully()
++    {
++        // Arrange - Create client with very short timeout
++        var client = new TestableUniLoginClient("user", "pass", "https://httpbin.org/delay/10", "https://success.com");
++
++        // Set a very short timeout to force timeout
++        client.GetHttpClient().Timeout = TimeSpan.FromMilliseconds(100);
++
++        // Act & Assert
++        try
++        {
++            var result = await client.LoginAsync();
++            Assert.False(result);
++        }
++        catch (TaskCanceledException)
++        {
++            // Expected - timeout exception
++            Assert.True(true);
++        }
++        catch (HttpRequestException)
++        {
++            // Also acceptable - network error
++            Assert.True(true);
++        }
++    }
+🛠️ Refactor suggestion
+
+Replace external dependency with local timeout test.
+
+Using httpbin.org creates an external dependency that could cause test failures if the service is unavailable. Consider using a local mock or a more controlled timeout scenario.
+
+ [Fact]
+ public async Task LoginAsync_WithTimeout_HandlesGracefully()
+ {
+-    // Arrange - Create client with very short timeout
+-    var client = new TestableUniLoginClient("user", "pass", "https://httpbin.org/delay/10", "https://success.com");
++    // Arrange - Mock delayed response
++    var mockHandler = new Mock<HttpMessageHandler>();
++    mockHandler.Protected()
++        .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
++        .Returns(async () => {
++            await Task.Delay(5000); // Simulate long delay
++            return new HttpResponseMessage(HttpStatusCode.OK);
++        });
++    
++    var httpClient = new HttpClient(mockHandler.Object);
++    var client = new TestableUniLoginClient("user", "pass", "https://login.com", "https://success.com");
+
+     // Set a very short timeout to force timeout
+     client.GetHttpClient().Timeout = TimeSpan.FromMilliseconds(100);
+Committable suggestion skipped: line range outside the PR's diff.
+
+🤖 Prompt for AI Agents
+In src/Aula.Tests/Integration/UniLoginClientTests.cs around lines 219 to 243,
+the test uses an external service (httpbin.org) to simulate a delayed response,
+which introduces an unreliable external dependency. Replace this by creating a
+local mock HTTP handler or server that simulates a delayed response to trigger
+the timeout, ensuring the test is self-contained and does not rely on external
+services.
+In src/Aula.Tests/Scheduling/SchedulingServiceTests.cs:
+
+> +    [Fact]
++    public void GetCurrentWeekAndYear_ReturnsValidValues()
++    {
++        // Act
++        var (weekNumber, year) = TestGetCurrentWeekAndYear();
++
++        // Assert
++        Assert.True(weekNumber >= 1 && weekNumber <= 53, $"Week number {weekNumber} should be between 1 and 53");
++        Assert.True(year >= 2020 && year <= 2100, $"Year {year} should be reasonable");
++    }
+🛠️ Refactor suggestion
+
+Remove duplicate test method.
+
+This test is a duplicate of GetCurrentWeekAndYear_ReturnsValidWeekAndYear (lines 383-392). Both tests verify the same behavior of the GetCurrentWeekAndYear method.
+
+-[Fact]
+-public void GetCurrentWeekAndYear_ReturnsValidValues()
+-{
+-    // Act
+-    var (weekNumber, year) = TestGetCurrentWeekAndYear();
+-
+-    // Assert
+-    Assert.True(weekNumber >= 1 && weekNumber <= 53, $"Week number {weekNumber} should be between 1 and 53");
+-    Assert.True(year >= 2020 && year <= 2100, $"Year {year} should be reasonable");
+-}
 📝 Committable suggestion
 ‼️ IMPORTANT
 Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
 
 ⬇️ Suggested change
 -    [Fact]
--    public void ConfigureServices_WithTelegramDisabled_ShouldNotRegisterTelegramBot()
+-    public void GetCurrentWeekAndYear_ReturnsValidValues()
 -    {
--        // This test verifies the conditional registration logic
--        // The actual implementation depends on appsettings.json configuration
--        var serviceProvider = Program.ConfigureServices();
+-        // Act
+-        var (weekNumber, year) = TestGetCurrentWeekAndYear();
 -
--        // TelegramInteractiveBot registration depends on config, so we test the service provider works
--        Assert.NotNull(serviceProvider);
+-        // Assert
+-        Assert.True(weekNumber >= 1 && weekNumber <= 53, $"Week number {weekNumber} should be between 1 and 53");
+-        Assert.True(year >= 2020 && year <= 2100, $"Year {year} should be reasonable");
 -    }
-+    [Fact]
-+    public void ConfigureServices_ShouldHandleConditionalTelegramRegistration()
-+    {
-+        var serviceProvider = Program.ConfigureServices();
-+        
-+        // Verify service provider is created successfully regardless of Telegram config
-+        Assert.NotNull(serviceProvider);
-+
-+        // Try to resolve TelegramInteractiveBot - should either succeed or fail gracefully
-+        try
-+        {
-+            var telegramBot = serviceProvider.GetService<TelegramInteractiveBot>();
-+            // If resolved, verify it's properly configured
-+            if (telegramBot != null)
-+            {
-+                Assert.NotNull(telegramBot);
-+            }
-+        }
-+        catch (Exception)
-+        {
-+            // Expected when Telegram is not configured - this is acceptable
-+        }
-+    }
++// (entire duplicate test method removed)
 🤖 Prompt for AI Agents
-In src/Aula.Tests/ProgramTests.cs around lines 39 to 48, the test
-ConfigureServices_WithTelegramDisabled_ShouldNotRegisterTelegramBot does not
-verify the actual conditional registration of the Telegram bot. Modify the test
-to explicitly set the configuration for Telegram enabled and disabled scenarios,
-then assert that the TelegramInteractiveBot service is registered only when
-enabled and not registered when disabled. This will ensure the conditional
-registration logic is properly tested.
-In src/Aula/Services/OpenAiService.cs:
+In src/Aula.Tests/Scheduling/SchedulingServiceTests.cs around lines 766 to 775,
+there is a duplicate test method GetCurrentWeekAndYear_ReturnsValidValues that
+tests the same behavior as GetCurrentWeekAndYear_ReturnsValidWeekAndYear on
+lines 383-392. Remove the duplicate test method at lines 766-775 to avoid
+redundancy and keep only one test verifying the GetCurrentWeekAndYear method.
+In src/Aula.Tests/Scheduling/SchedulingServiceTests.cs:
 
-> +    internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, string? model = null)
+> +    [Fact]
++    public async Task ExecutePendingReminders_WithNoReminders_DoesNotThrow()
 +    {
-+        _openAiClient = openAiClient;
-+        _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
-+        _aiToolsManager = aiToolsManager;
-+        _aiModel = model ?? Models.Gpt_4;
++        // Arrange
++        var schedulingService = CreateSchedulingService();
++
++        _mockSupabaseService.Setup(x => x.GetPendingRemindersAsync())
++            .ReturnsAsync(new List<Reminder>());
++
++        // Act & Assert
++        await TestExecutePendingReminders(schedulingService);
++        _mockSupabaseService.Verify(x => x.GetPendingRemindersAsync(), Times.Once);
 +    }
 🛠️ Refactor suggestion
 
-Add parameter validation to internal constructor
+Remove duplicate test method.
 
-The internal constructor lacks the same parameter validation as the public constructor, which could lead to issues if null values are passed.
+This test is a duplicate of ExecutePendingReminders_WithNoReminders_LogsInformation (lines 336-350). Both tests verify the same behavior - that ExecutePendingReminders handles empty reminder lists without throwing.
 
- internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, string? model = null)
- {
-+    if (openAiClient == null)
-+        throw new ArgumentNullException(nameof(openAiClient));
-+    if (loggerFactory == null)
-+        throw new ArgumentNullException(nameof(loggerFactory));
-+    if (aiToolsManager == null)
-+        throw new ArgumentNullException(nameof(aiToolsManager));
-+
-     _openAiClient = openAiClient;
-     _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
-     _aiToolsManager = aiToolsManager;
-     _aiModel = model ?? Models.Gpt_4;
- }
+-[Fact]
+-public async Task ExecutePendingReminders_WithNoReminders_DoesNotThrow()
+-{
+-    // Arrange
+-    var schedulingService = CreateSchedulingService();
+-
+-    _mockSupabaseService.Setup(x => x.GetPendingRemindersAsync())
+-        .ReturnsAsync(new List<Reminder>());
+-
+-    // Act & Assert
+-    await TestExecutePendingReminders(schedulingService);
+-    _mockSupabaseService.Verify(x => x.GetPendingRemindersAsync(), Times.Once);
+-}
 📝 Committable suggestion
 ‼️ IMPORTANT
 Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
 
 ⬇️ Suggested change
--    internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, string? model = null)
+-    [Fact]
+-    public async Task ExecutePendingReminders_WithNoReminders_DoesNotThrow()
 -    {
--        _openAiClient = openAiClient;
--        _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
--        _aiToolsManager = aiToolsManager;
--        _aiModel = model ?? Models.Gpt_4;
+-        // Arrange
+-        var schedulingService = CreateSchedulingService();
+-
+-        _mockSupabaseService.Setup(x => x.GetPendingRemindersAsync())
+-            .ReturnsAsync(new List<Reminder>());
+-
+-        // Act & Assert
+-        await TestExecutePendingReminders(schedulingService);
+-        _mockSupabaseService.Verify(x => x.GetPendingRemindersAsync(), Times.Once);
 -    }
-+    internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, string? model = null)
+🤖 Prompt for AI Agents
+In src/Aula.Tests/Scheduling/SchedulingServiceTests.cs around lines 556 to 568,
+there is a duplicate test method
+ExecutePendingReminders_WithNoReminders_DoesNotThrow that tests the same
+behavior as ExecutePendingReminders_WithNoReminders_LogsInformation on lines
+336-350. Remove the duplicate test method at lines 556-568 to avoid redundancy
+and keep only one test verifying that ExecutePendingReminders handles empty
+reminder lists without throwing.
+In src/Aula.Tests/Scheduling/SchedulingServiceTests.cs:
+
+> +    [Fact]
++    public async Task MultiChannelPosting_WithBothChannelsEnabled_PostsToBoth()
 +    {
-+        if (openAiClient == null)
-+            throw new ArgumentNullException(nameof(openAiClient));
-+        if (loggerFactory == null)
-+            throw new ArgumentNullException(nameof(loggerFactory));
-+        if (aiToolsManager == null)
-+            throw new ArgumentNullException(nameof(aiToolsManager));
++        // Arrange
++        var weekLetterData = JObject.FromObject(new
++        {
++            content = "Test week letter content",
++            week = 42,
++            child = "TestChild"
++        });
 +
-+        _openAiClient = openAiClient;
-+        _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
-+        _aiToolsManager = aiToolsManager;
-+        _aiModel = model ?? Models.Gpt_4;
++        var schedulingService = CreateSchedulingService();
++        
++        _mockAgentService.Setup(x => x.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), true))
++            .ReturnsAsync(weekLetterData);
++        _mockSupabaseService.Setup(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
++            .ReturnsAsync(false);
++        _mockSupabaseService.Setup(x => x.MarkWeekLetterAsPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), true, true))
++            .Returns(Task.CompletedTask);
++        _mockSupabaseService.Setup(x => x.MarkRetryAsSuccessfulAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
++            .Returns(Task.CompletedTask);
++
++        var child = new Child { FirstName = "TestChild", LastName = "TestLast" };
++
++        // Act - Verify the mocks are set up correctly for multi-channel posting
++        // The actual method call is complex due to reflection, so we verify setup instead
++        
++        // Assert - Verify mocks are configured for multi-channel scenario
++        _mockAgentService.Verify(x => x.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), true), Times.Never);
++        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Never);
++        // This test verifies the mock setup rather than actual execution due to complexity
 +    }
+⚠️ Potential issue
+
+Incomplete test implementation - doesn't test actual functionality.
+
+This test sets up mocks for multi-channel posting but never executes any actual posting logic. It only verifies that mocks were never called, which doesn't validate the multi-channel posting feature.
+
+The test should invoke the actual posting logic through CheckAndPostWeekLetter or similar methods to verify that content is posted to both channels when enabled.
+
+@@ -994,10 +994,17 @@
+         var child = new Child { FirstName = "TestChild", LastName = "TestLast" };
+ 
+-        // Act - Verify the mocks are set up correctly for multi-channel posting
+-        // The actual method call is complex due to reflection, so we verify setup instead
++        // Act - Execute the actual posting logic
++        var schedulingService = CreateSchedulingService();
++        var task = new ScheduledTask { Name = "WeeklyLetterCheck", Enabled = true };
++        
++        var method = typeof(SchedulingService).GetMethod("CheckAndPostWeekLetter", BindingFlags.NonPublic | BindingFlags.Instance);
++        await (Task)method!.Invoke(schedulingService, new object[] { child, task })!;
+         
+-        // Assert - Verify mocks are configured for multi-channel scenario
+-        _mockAgentService.Verify(x => x.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), true), Times.Never);
+-        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+-        // This test verifies the mock setup rather than actual execution due to complexity
++        // Assert - Verify both channels were used
++        _mockAgentService.Verify(x => x.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), true), Times.Once);
++        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once);
++        _mockSupabaseService.Verify(x => x.MarkWeekLetterAsPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), true, true), Times.Once);
 🤖 Prompt for AI Agents
-In src/Aula/Services/OpenAiService.cs around lines 55 to 61, the internal
-constructor is missing parameter validation for its arguments, unlike the public
-constructor. Add null checks for openAiClient, loggerFactory, and aiToolsManager
-parameters at the start of the constructor, throwing appropriate exceptions if
-any are null, to ensure robustness and prevent potential null reference errors.
-In src/Aula/Services/OpenAiService.cs:
-
-> +        // Try to get metadata from the ugebreve array
-+        if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
-+        {
-+            className = ugebreve[0]?["klasseNavn"]?.ToString() ?? "unknown";
-+            weekNumber = ugebreve[0]?["uge"]?.ToString() ?? "unknown";
-+        }
-🛠️ Refactor suggestion
-
-Extract childName from ugebreve array
-
-The method extracts className and weekNumber from the ugebreve array but doesn't extract childName. This could result in incomplete metadata when using the new format.
-
- // Try to get metadata from the ugebreve array
- if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
- {
-+    childName = ugebreve[0]?["childName"]?.ToString() ?? childName;
-     className = ugebreve[0]?["klasseNavn"]?.ToString() ?? "unknown";
-     weekNumber = ugebreve[0]?["uge"]?.ToString() ?? "unknown";
- }
-Note: Verify the correct property name for childName in the ugebreve structure.
-
-📝 Committable suggestion
-‼️ IMPORTANT
-Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
-
-⬇️ Suggested change
--        // Try to get metadata from the ugebreve array
--        if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
--        {
--            className = ugebreve[0]?["klasseNavn"]?.ToString() ?? "unknown";
--            weekNumber = ugebreve[0]?["uge"]?.ToString() ?? "unknown";
--        }
-+        // Try to get metadata from the ugebreve array
-+        if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
-+        {
-+            childName = ugebreve[0]?["childName"]?.ToString() ?? childName;
-+            className = ugebreve[0]?["klasseNavn"]?.ToString() ?? "unknown";
-+            weekNumber = ugebreve[0]?["uge"]?.ToString() ?? "unknown";
-+        }
-🤖 Prompt for AI Agents
-In src/Aula/Services/OpenAiService.cs around lines 69 to 74, the code extracts
-className and weekNumber from the ugebreve array but does not extract childName,
-which may cause incomplete metadata. Identify the correct property name for
-childName within the ugebreve array elements, then add code to extract this
-property similarly to className and weekNumber, ensuring childName is assigned
-appropriately from the first element of the ugebreve array.
+In src/Aula.Tests/Scheduling/SchedulingServiceTests.cs around lines 972 to 1003,
+the test MultiChannelPosting_WithBothChannelsEnabled_PostsToBoth sets up mocks
+but never calls the actual posting method, so it does not verify the
+multi-channel posting functionality. To fix this, invoke the schedulingService's
+CheckAndPostWeekLetter or the relevant method that triggers posting after
+setting up the mocks, then verify that the posting methods on the mocks were
+called as expected for both channels.
 —
 Reply to this email directly, view it on GitHub, or unsubscribe.
 You are receiving this because you authored the thread.
