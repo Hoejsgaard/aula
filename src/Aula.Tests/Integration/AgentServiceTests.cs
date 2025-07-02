@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using Aula.Integration;
 using Aula.Configuration;
 using Aula.Services;
+using Aula.Bots;
 
 namespace Aula.Tests.Integration;
 
@@ -553,6 +554,332 @@ public class AgentServiceTests
         Assert.Contains(children, c => c.FirstName == "Emma");
         Assert.Contains(children, c => c.FirstName == "Hans");
         Assert.Contains(children, c => c.FirstName == "TestChild");
+    }
+
+    // ===========================================
+    // PROCESSQUERYWITHTOOLS COMPREHENSIVE TESTS
+    // ===========================================
+
+    [Fact]
+    public async Task ProcessQueryWithToolsAsync_WithDirectOpenAiResponse_ReturnsResponse()
+    {
+        // Arrange
+        var query = "What's the weather like?";
+        var contextKey = "test-context";
+        var expectedResponse = "I can help you with school-related questions about your children.";
+
+        _openAiServiceMock.Setup(m => m.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Slack))
+            .ReturnsAsync(expectedResponse);
+
+        // Act
+        var result = await _agentService.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Slack);
+
+        // Assert
+        Assert.Equal(expectedResponse, result);
+        _openAiServiceMock.Verify(m => m.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Slack), Times.Once);
+        // Should not call fallback methods
+        _openAiServiceMock.Verify(m => m.AskQuestionAboutChildrenAsync(It.IsAny<Dictionary<string, JObject>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ChatInterface>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessQueryWithToolsAsync_WithFallbackResponse_ProcessesFallbackWorkflow()
+    {
+        // Arrange
+        var query = "What do the children have today?";
+        var contextKey = "test-context";
+        var fallbackResponse = "Based on the week letters, Emma has math at 9 AM.";
+
+        _openAiServiceMock.Setup(m => m.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Slack))
+            .ReturnsAsync("FALLBACK_TO_EXISTING_SYSTEM");
+
+        // Setup week letters for children
+        var emmaWeekLetter = new JObject { ["content"] = "Emma has math today" };
+        var hansWeekLetter = new JObject { ["content"] = "Hans has science today" };
+
+        _dataManagerMock.Setup(m => m.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Emma")))
+            .Returns(emmaWeekLetter);
+        _dataManagerMock.Setup(m => m.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Hans")))
+            .Returns(hansWeekLetter);
+        _dataManagerMock.Setup(m => m.GetWeekLetter(It.Is<Child>(c => c.FirstName == "TestChild")))
+            .Returns((JObject?)null);
+
+        _openAiServiceMock.Setup(m => m.AskQuestionAboutChildrenAsync(
+                It.IsAny<Dictionary<string, JObject>>(), 
+                It.IsAny<string>(), 
+                contextKey, 
+                ChatInterface.Slack))
+            .ReturnsAsync(fallbackResponse);
+
+        // Act
+        var result = await _agentService.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Slack);
+
+        // Assert
+        Assert.Equal(fallbackResponse, result);
+        _openAiServiceMock.Verify(m => m.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Slack), Times.Once);
+        _openAiServiceMock.Verify(m => m.AskQuestionAboutChildrenAsync(
+            It.Is<Dictionary<string, JObject>>(d => d.Count == 2 && d.ContainsKey("Emma") && d.ContainsKey("Hans")),
+            It.IsAny<string>(),
+            contextKey,
+            ChatInterface.Slack), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessQueryWithToolsAsync_WithTodayQuery_EnhancesWithDayContext()
+    {
+        // Arrange
+        var query = "What do they have today?";
+        var contextKey = "test-context";
+        var currentDayOfWeek = DateTime.Now.DayOfWeek.ToString();
+        var expectedEnhancedQuery = $"{query} (Today is {currentDayOfWeek})";
+
+        _openAiServiceMock.Setup(m => m.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Telegram))
+            .ReturnsAsync("FALLBACK_TO_EXISTING_SYSTEM");
+
+        var weekLetter = new JObject { ["content"] = "Test content" };
+        _dataManagerMock.Setup(m => m.GetWeekLetter(It.IsAny<Child>()))
+            .Returns(weekLetter);
+
+        _openAiServiceMock.Setup(m => m.AskQuestionAboutChildrenAsync(
+                It.IsAny<Dictionary<string, JObject>>(),
+                It.Is<string>(q => q.Contains($"(Today is {currentDayOfWeek})")),
+                contextKey,
+                ChatInterface.Telegram))
+            .ReturnsAsync("Enhanced response with day context");
+
+        // Act
+        var result = await _agentService.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Telegram);
+
+        // Assert
+        Assert.Equal("Enhanced response with day context", result);
+        _openAiServiceMock.Verify(m => m.AskQuestionAboutChildrenAsync(
+            It.IsAny<Dictionary<string, JObject>>(),
+            It.Is<string>(q => q.Contains($"(Today is {currentDayOfWeek})")),
+            contextKey,
+            ChatInterface.Telegram), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessQueryWithToolsAsync_WithTomorrowQuery_EnhancesWithTomorrowContext()
+    {
+        // Arrange
+        var query = "What happens tomorrow?";
+        var contextKey = "test-context";
+        var tomorrowDayOfWeek = DateTime.Now.AddDays(1).DayOfWeek.ToString();
+
+        _openAiServiceMock.Setup(m => m.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Slack))
+            .ReturnsAsync("FALLBACK_TO_EXISTING_SYSTEM");
+
+        var weekLetter = new JObject { ["content"] = "Test content" };
+        _dataManagerMock.Setup(m => m.GetWeekLetter(It.IsAny<Child>()))
+            .Returns(weekLetter);
+
+        _openAiServiceMock.Setup(m => m.AskQuestionAboutChildrenAsync(
+                It.IsAny<Dictionary<string, JObject>>(),
+                It.Is<string>(q => q.Contains($"(Tomorrow is {tomorrowDayOfWeek})")),
+                contextKey,
+                ChatInterface.Slack))
+            .ReturnsAsync("Enhanced response with tomorrow context");
+
+        // Act
+        var result = await _agentService.ProcessQueryWithToolsAsync(query, contextKey);
+
+        // Assert
+        Assert.Equal("Enhanced response with tomorrow context", result);
+        _openAiServiceMock.Verify(m => m.AskQuestionAboutChildrenAsync(
+            It.IsAny<Dictionary<string, JObject>>(),
+            It.Is<string>(q => q.Contains($"(Tomorrow is {tomorrowDayOfWeek})")),
+            contextKey,
+            ChatInterface.Slack), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("Hvad skal børnene lave i dag?", true)]
+    [InlineData("Hvad har Emma i morgen?", true)]
+    [InlineData("Skal Hans i skole?", true)]
+    [InlineData("What do the children have today?", false)]
+    [InlineData("What is Emma doing tomorrow?", false)]
+    [InlineData("Does Hans have school?", false)]
+    public async Task ProcessQueryWithToolsAsync_WithDanishQueries_EnhancesWithLanguageInstruction(string query, bool isDanish)
+    {
+        // Arrange
+        var contextKey = "test-context";
+        var expectedLanguageInstruction = isDanish ? "(CRITICAL: Respond in Danish - the user asked in Danish)" : "";
+
+        _openAiServiceMock.Setup(m => m.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Slack))
+            .ReturnsAsync("FALLBACK_TO_EXISTING_SYSTEM");
+
+        var weekLetter = new JObject { ["content"] = "Test content" };
+        _dataManagerMock.Setup(m => m.GetWeekLetter(It.IsAny<Child>()))
+            .Returns(weekLetter);
+
+        _openAiServiceMock.Setup(m => m.AskQuestionAboutChildrenAsync(
+                It.IsAny<Dictionary<string, JObject>>(),
+                It.IsAny<string>(),
+                contextKey,
+                ChatInterface.Slack))
+            .ReturnsAsync("Language-appropriate response");
+
+        // Act
+        var result = await _agentService.ProcessQueryWithToolsAsync(query, contextKey);
+
+        // Assert
+        Assert.Equal("Language-appropriate response", result);
+        if (isDanish)
+        {
+            _openAiServiceMock.Verify(m => m.AskQuestionAboutChildrenAsync(
+                It.IsAny<Dictionary<string, JObject>>(),
+                It.Is<string>(q => q.Contains("(CRITICAL: Respond in Danish - the user asked in Danish)")),
+                contextKey,
+                ChatInterface.Slack), Times.Once);
+        }
+        else
+        {
+            _openAiServiceMock.Verify(m => m.AskQuestionAboutChildrenAsync(
+                It.IsAny<Dictionary<string, JObject>>(),
+                It.Is<string>(q => !q.Contains("(CRITICAL: Respond in Danish")),
+                contextKey,
+                ChatInterface.Slack), Times.Once);
+        }
+    }
+
+    [Fact]
+    public async Task ProcessQueryWithToolsAsync_WithNoChildren_ReturnsNoChildrenMessage()
+    {
+        // Arrange
+        var query = "What do the children have today?";
+        var contextKey = "test-context";
+
+        _openAiServiceMock.Setup(m => m.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Slack))
+            .ReturnsAsync("FALLBACK_TO_EXISTING_SYSTEM");
+
+        // Override setup to return empty children list
+        _dataManagerMock.Setup(m => m.GetChildren()).Returns(new List<Child>());
+
+        // Act
+        var result = await _agentService.ProcessQueryWithToolsAsync(query, contextKey);
+
+        // Assert
+        Assert.Equal("I don't have any children configured.", result);
+        _openAiServiceMock.Verify(m => m.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Slack), Times.Once);
+        _openAiServiceMock.Verify(m => m.AskQuestionAboutChildrenAsync(It.IsAny<Dictionary<string, JObject>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ChatInterface>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessQueryWithToolsAsync_WithNoWeekLetters_ReturnsNoDataMessage()
+    {
+        // Arrange
+        var query = "What do the children have today?";
+        var contextKey = "test-context";
+
+        _openAiServiceMock.Setup(m => m.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Slack))
+            .ReturnsAsync("FALLBACK_TO_EXISTING_SYSTEM");
+
+        // Setup all children to have no week letters
+        _dataManagerMock.Setup(m => m.GetWeekLetter(It.IsAny<Child>()))
+            .Returns((JObject?)null);
+
+        // Act
+        var result = await _agentService.ProcessQueryWithToolsAsync(query, contextKey);
+
+        // Assert
+        Assert.Equal("I don't have any week letters available at the moment.", result);
+        _openAiServiceMock.Verify(m => m.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Slack), Times.Once);
+        _openAiServiceMock.Verify(m => m.AskQuestionAboutChildrenAsync(It.IsAny<Dictionary<string, JObject>>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ChatInterface>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessQueryWithToolsAsync_WithMixedAvailability_ProcessesAvailableChildren()
+    {
+        // Arrange
+        var query = "What do the children have today?";
+        var contextKey = "test-context";
+
+        _openAiServiceMock.Setup(m => m.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Slack))
+            .ReturnsAsync("FALLBACK_TO_EXISTING_SYSTEM");
+
+        // Setup mixed availability - Emma has data, Hans and TestChild don't
+        var emmaWeekLetter = new JObject { ["content"] = "Emma has math today" };
+        _dataManagerMock.Setup(m => m.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Emma")))
+            .Returns(emmaWeekLetter);
+        _dataManagerMock.Setup(m => m.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Hans")))
+            .Returns((JObject?)null);
+        _dataManagerMock.Setup(m => m.GetWeekLetter(It.Is<Child>(c => c.FirstName == "TestChild")))
+            .Returns((JObject?)null);
+
+        _openAiServiceMock.Setup(m => m.AskQuestionAboutChildrenAsync(
+                It.IsAny<Dictionary<string, JObject>>(),
+                It.IsAny<string>(),
+                contextKey,
+                ChatInterface.Slack))
+            .ReturnsAsync("Information available for Emma only");
+
+        // Act
+        var result = await _agentService.ProcessQueryWithToolsAsync(query, contextKey);
+
+        // Assert
+        Assert.Equal("Information available for Emma only", result);
+        _openAiServiceMock.Verify(m => m.AskQuestionAboutChildrenAsync(
+            It.Is<Dictionary<string, JObject>>(d => d.Count == 1 && d.ContainsKey("Emma")),
+            It.IsAny<string>(),
+            contextKey,
+            ChatInterface.Slack), Times.Once);
+    }
+
+    [Fact]
+    public async Task ProcessQueryWithToolsAsync_WithComplexDanishQuery_EnhancesWithAllContexts()
+    {
+        // Arrange
+        var query = "Hvad skal børnene lave i dag?"; // Danish: "What should the children do today?"
+        var contextKey = "test-context";
+        var currentDayOfWeek = DateTime.Now.DayOfWeek.ToString();
+
+        _openAiServiceMock.Setup(m => m.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Telegram))
+            .ReturnsAsync("FALLBACK_TO_EXISTING_SYSTEM");
+
+        var weekLetter = new JObject { ["content"] = "Test content" };
+        _dataManagerMock.Setup(m => m.GetWeekLetter(It.IsAny<Child>()))
+            .Returns(weekLetter);
+
+        _openAiServiceMock.Setup(m => m.AskQuestionAboutChildrenAsync(
+                It.IsAny<Dictionary<string, JObject>>(),
+                It.IsAny<string>(),
+                contextKey,
+                ChatInterface.Telegram))
+            .ReturnsAsync("Børnene har matematik i dag"); // Danish response
+
+        // Act
+        var result = await _agentService.ProcessQueryWithToolsAsync(query, contextKey, ChatInterface.Telegram);
+
+        // Assert
+        Assert.Equal("Børnene har matematik i dag", result);
+        _openAiServiceMock.Verify(m => m.AskQuestionAboutChildrenAsync(
+            It.IsAny<Dictionary<string, JObject>>(),
+            It.Is<string>(q => 
+                q.Contains($"(Today is {currentDayOfWeek})") && 
+                q.Contains("(CRITICAL: Respond in Danish - the user asked in Danish)")),
+            contextKey,
+            ChatInterface.Telegram), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(ChatInterface.Slack)]
+    [InlineData(ChatInterface.Telegram)]
+    public async Task ProcessQueryWithToolsAsync_WithDifferentChatInterfaces_PassesCorrectInterface(ChatInterface chatInterface)
+    {
+        // Arrange
+        var query = "Test query";
+        var contextKey = "test-context";
+        var expectedResponse = "Interface-specific response";
+
+        _openAiServiceMock.Setup(m => m.ProcessQueryWithToolsAsync(query, contextKey, chatInterface))
+            .ReturnsAsync(expectedResponse);
+
+        // Act
+        var result = await _agentService.ProcessQueryWithToolsAsync(query, contextKey, chatInterface);
+
+        // Assert
+        Assert.Equal(expectedResponse, result);
+        _openAiServiceMock.Verify(m => m.ProcessQueryWithToolsAsync(query, contextKey, chatInterface), Times.Once);
     }
 
 }
