@@ -630,8 +630,17 @@ public class TestableUniLoginClient : UniLoginClient
     public HttpClientHandler GetHttpClientHandler()
     {
         // Access the handler through reflection since it's private
-        var handlerField = typeof(HttpClient).GetField("_handler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        return handlerField?.GetValue(HttpClient) as HttpClientHandler ?? new HttpClientHandler();
+        var handlerField = typeof(HttpClient)
+            .GetField("_handler", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        if (handlerField == null)
+            throw new InvalidOperationException("Unable to access HttpClient._handler field via reflection");
+
+        var handler = handlerField.GetValue(HttpClient) as HttpClientHandler;
+        if (handler == null)
+            throw new InvalidOperationException("HttpClient._handler is not of type HttpClientHandler");
+
+        return handler;
     }
 
     public (string, Dictionary<string, string>) TestExtractFormData(string htmlContent)

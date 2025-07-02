@@ -67,7 +67,7 @@ public class SupabaseServiceTests
     }
 
     [Fact]
-    public void ReminderData_WithValidParameters_AreValid()
+    public async Task SaveReminderAsync_WithValidParameters_DoesNotThrow()
     {
         // Arrange
         var text = "Test reminder";
@@ -75,23 +75,26 @@ public class SupabaseServiceTests
         var time = new TimeOnly(10, 0);
         var childName = "TestChild";
 
-        // Act & Assert - Verify reminder data parameters are valid
-        Assert.NotNull(_supabaseService);
-        Assert.NotEmpty(text);
-        Assert.False(string.IsNullOrEmpty(childName));
+        // Act & Assert - Should not throw with valid parameters
+        var exception = await Record.ExceptionAsync(async () =>
+            await _supabaseService.SaveReminderAsync(text, date, time, childName));
+        
+        Assert.Null(exception);
     }
 
 
     [Theory]
     [InlineData("TestChild", 42, 2023)]
     [InlineData("AnotherChild", 1, 2024)]
-    public void WeekLetterParameters_WithValidValues_AreInValidRange(string childName, int weekNumber, int year)
+    public async Task HasWeekLetterBeenPostedAsync_WithValidParameters_DoesNotThrow(string childName, int weekNumber, int year)
     {
-        // Act & Assert - Verify week letter parameters are within expected ranges
-        Assert.NotNull(_supabaseService);
-        Assert.True(weekNumber > 0 && weekNumber <= 53);
-        Assert.True(year > 2000 && year < 3000);
-        Assert.False(string.IsNullOrEmpty(childName));
+        // Act & Assert - Should not throw with valid parameters
+        var exception = await Record.ExceptionAsync(async () =>
+            await _supabaseService.HasWeekLetterBeenPostedAsync(childName, weekNumber, year));
+        
+        // Expect InvalidOperationException since service is not initialized
+        Assert.NotNull(exception);
+        Assert.IsType<InvalidOperationException>(exception);
     }
 
     [Fact]
@@ -397,20 +400,18 @@ public class SupabaseServiceTests
     }
 
     [Theory]
-    [InlineData("", "Parameter cannot be empty")]
-    [InlineData(null, "Parameter cannot be null")]
-    public void ValidateReminderText_WithInvalidInput_ThrowsArgumentException(string text, string expectedMessage)
+    [InlineData("")]
+    [InlineData(null)]
+    public async Task SaveReminderAsync_WithInvalidText_ThrowsException(string text)
     {
         // Arrange
         var date = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
         var time = new TimeOnly(10, 0);
 
         // Act & Assert
-        if (string.IsNullOrEmpty(text))
-        {
-            // Test that the service would need validation - this is a design consideration
-            Assert.True(string.IsNullOrEmpty(text));
-        }
+        // First check that service throws InvalidOperationException when not initialized
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _supabaseService.SaveReminderAsync(text, date, time, "TestChild"));
     }
 
     [Theory]

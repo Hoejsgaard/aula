@@ -4,7 +4,9 @@ This file provides guidance for Claude Code (claude.ai/code) when working with c
 
 ---
 ## 🤖 AI ASSISTANCE NOTICE
+
 **Significant portions of this codebase have been developed, improved, and maintained with assistance from Claude AI (claude.ai/code). This includes test coverage improvements, code quality enhancements, architectural decisions, and comprehensive CodeRabbit feedback resolution. Claude has been instrumental in achieving the current state of 581 tests, 52.78% line coverage, and maintaining code quality standards.**
+
 ---
 
 ## Commands
@@ -144,7 +146,7 @@ Settings are handled through `appsettings.json` with sections for:
 - ✅ SupabaseService: Database operations testing - 17 comprehensive tests covering business logic, data validation, timezone handling, reminder/task lifecycle management
 - ✅ SchedulingService: Async task execution testing - 12 robust tests for timer behavior, concurrency, service lifecycle, integration workflows, degradation recovery
 
-**Priority 2: Integration Services**
+#### Priority 2: Integration Services
 - ✅ GoogleCalendar: Integration testing - 18 comprehensive tests for JSON credential generation, week boundary calculations, event structure processing, integration scenarios
 - ✅ AgentService.ProcessQueryWithToolsAsync: LLM tool coordination testing - 11 comprehensive tests covering direct OpenAI responses, fallback workflows, context enhancement (today/tomorrow, Danish language detection), edge cases, multi-interface support
 
