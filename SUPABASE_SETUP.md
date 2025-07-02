@@ -93,8 +93,8 @@ INSERT INTO scheduled_tasks (name, description, cron_expression, retry_interval_
 ('MorningReminders', 'Send pending reminders every morning at 7 AM', '0 7 * * *', NULL, NULL);
 ```
 
-## 4. Set Row Level Security (Optional)
-If you want extra security, you can enable Row Level Security:
+## 4. Enable Row Level Security (REQUIRED)
+**⚠️ SECURITY REQUIREMENT**: Enable Row Level Security (RLS) on all tables to prevent unauthorized access:
 
 ```sql
 -- Enable RLS on all tables
@@ -102,13 +102,59 @@ ALTER TABLE reminders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE posted_letters ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_state ENABLE ROW LEVEL SECURITY;
 ALTER TABLE retry_attempts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE scheduled_tasks ENABLE ROW LEVEL SECURITY;
 
--- Create policies to allow service role access
-CREATE POLICY "Service role can do everything" ON reminders FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role can do everything" ON posted_letters FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role can do everything" ON app_state FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "Service role can do everything" ON retry_attempts FOR ALL USING (auth.role() = 'service_role');
+-- Drop any existing policies (in case of re-setup)
+DROP POLICY IF EXISTS "Service role can do everything" ON reminders;
+DROP POLICY IF EXISTS "Service role can do everything" ON posted_letters;
+DROP POLICY IF EXISTS "Service role can do everything" ON app_state;
+DROP POLICY IF EXISTS "Service role can do everything" ON retry_attempts;
+DROP POLICY IF EXISTS "service_role_full_access" ON reminders;
+DROP POLICY IF EXISTS "service_role_full_access" ON posted_letters;
+DROP POLICY IF EXISTS "service_role_full_access" ON app_state;
+DROP POLICY IF EXISTS "service_role_full_access" ON retry_attempts;
+DROP POLICY IF EXISTS "service_role_full_access" ON scheduled_tasks;
+
+-- Create policies for service role access
+CREATE POLICY "service_role_full_access" ON reminders 
+    FOR ALL 
+    USING (auth.role() = 'service_role');
+
+CREATE POLICY "service_role_full_access" ON posted_letters 
+    FOR ALL 
+    USING (auth.role() = 'service_role');
+
+CREATE POLICY "service_role_full_access" ON app_state 
+    FOR ALL 
+    USING (auth.role() = 'service_role');
+
+CREATE POLICY "service_role_full_access" ON retry_attempts 
+    FOR ALL 
+    USING (auth.role() = 'service_role');
+
+CREATE POLICY "service_role_full_access" ON scheduled_tasks 
+    FOR ALL 
+    USING (auth.role() = 'service_role');
 ```
+
+### Verify RLS Configuration
+After enabling RLS, verify it's working correctly:
+
+```sql
+-- Check RLS status on all tables
+SELECT schemaname, tablename, rowsecurity 
+FROM pg_tables 
+WHERE schemaname = 'public' 
+AND tablename IN ('reminders', 'posted_letters', 'app_state', 'retry_attempts', 'scheduled_tasks');
+
+-- List all policies (should show 5 policies)
+SELECT schemaname, tablename, policyname, roles, cmd 
+FROM pg_policies 
+WHERE schemaname = 'public'
+ORDER BY tablename;
+```
+
+Expected result: All tables should show `rowsecurity = true` and you should see 5 `service_role_full_access` policies.
 
 ## 5. Configuration Summary
 After setup, your `appsettings.json` should have:
