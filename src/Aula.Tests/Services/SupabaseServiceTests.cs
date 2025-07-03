@@ -704,4 +704,140 @@ public class SupabaseServiceTests
             Assert.True(reminderUtcDateTime.Kind == DateTimeKind.Utc || reminderUtcDateTime.Kind == DateTimeKind.Unspecified);
         }
     }
+
+    // ===========================================
+    // WEEK LETTER STORAGE TESTS
+    // ===========================================
+
+    [Fact]
+    public async Task StoreWeekLetterAsync_WithoutInitialization_ThrowsInvalidOperationException()
+    {
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _supabaseService.StoreWeekLetterAsync("TestChild", 1, 2024, "hash", "content"));
+        Assert.Equal("Supabase client not initialized", exception.Message);
+    }
+
+    [Fact]
+    public async Task GetStoredWeekLetterAsync_WithoutInitialization_ThrowsInvalidOperationException()
+    {
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _supabaseService.GetStoredWeekLetterAsync("TestChild", 1, 2024));
+        Assert.Equal("Supabase client not initialized", exception.Message);
+    }
+
+    [Fact]
+    public async Task GetStoredWeekLettersAsync_WithoutInitialization_ThrowsInvalidOperationException()
+    {
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _supabaseService.GetStoredWeekLettersAsync());
+        Assert.Equal("Supabase client not initialized", exception.Message);
+    }
+
+    [Fact]
+    public async Task GetLatestStoredWeekLetterAsync_WithoutInitialization_ThrowsInvalidOperationException()
+    {
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _supabaseService.GetLatestStoredWeekLetterAsync("TestChild"));
+        Assert.Equal("Supabase client not initialized", exception.Message);
+    }
+
+    [Fact]
+    public void PostedLetterModel_WithRawContent_HasCorrectProperties()
+    {
+        // Arrange
+        var rawContent = "{\"ugebreve\":[{\"indhold\":\"Test content\"}]}";
+        var postedLetter = new PostedLetter
+        {
+            Id = 1,
+            ChildName = "TestChild",
+            WeekNumber = 42,
+            Year = 2024,
+            ContentHash = "test-hash",
+            PostedAt = DateTime.UtcNow,
+            PostedToSlack = true,
+            PostedToTelegram = false,
+            RawContent = rawContent
+        };
+
+        // Act & Assert
+        Assert.Equal(1, postedLetter.Id);
+        Assert.Equal("TestChild", postedLetter.ChildName);
+        Assert.Equal(42, postedLetter.WeekNumber);
+        Assert.Equal(2024, postedLetter.Year);
+        Assert.Equal("test-hash", postedLetter.ContentHash);
+        Assert.True(postedLetter.PostedToSlack);
+        Assert.False(postedLetter.PostedToTelegram);
+        Assert.Equal(rawContent, postedLetter.RawContent);
+    }
+
+    [Fact]
+    public void StoredWeekLetterModel_HasCorrectProperties()
+    {
+        // Arrange
+        var rawContent = "{\"ugebreve\":[{\"indhold\":\"Test content\"}]}";
+        var storedWeekLetter = new StoredWeekLetter
+        {
+            ChildName = "TestChild",
+            WeekNumber = 42,
+            Year = 2024,
+            RawContent = rawContent,
+            PostedAt = DateTime.UtcNow
+        };
+
+        // Act & Assert
+        Assert.Equal("TestChild", storedWeekLetter.ChildName);
+        Assert.Equal(42, storedWeekLetter.WeekNumber);
+        Assert.Equal(2024, storedWeekLetter.Year);
+        Assert.Equal(rawContent, storedWeekLetter.RawContent);
+        Assert.True(storedWeekLetter.PostedAt > DateTime.MinValue);
+    }
+
+    [Theory]
+    [InlineData("TestChild", 1, 2024, "hash123", "{\"test\":\"content\"}", true)]
+    [InlineData("AnotherChild", 25, 2023, "hash456", "{\"ugebreve\":[]}", false)]
+    public void WeekLetterStorageParameters_WithVariousInputs_AreValidated(string childName, int weekNumber, int year, string contentHash, string rawContent, bool expectedValid)
+    {
+        // Act
+        var isValidChildName = !string.IsNullOrEmpty(childName);
+        var isValidWeek = weekNumber > 0 && weekNumber <= 53;
+        var isValidYear = year >= 2000 && year <= 2100;
+        var isValidHash = !string.IsNullOrEmpty(contentHash);
+        var isValidContent = !string.IsNullOrEmpty(rawContent);
+        var isValid = isValidChildName && isValidWeek && isValidYear && isValidHash && isValidContent;
+
+        // Assert
+        Assert.Equal(expectedValid, isValid);
+    }
+
+    [Fact]
+    public void WeekLetterJsonValidation_WithValidJson_ParsesCorrectly()
+    {
+        // Arrange
+        var validJson = "{\"ugebreve\":[{\"klasseNavn\":\"1.A\",\"uge\":\"42\",\"indhold\":\"Test content\"}],\"child\":\"TestChild\"}";
+
+        // Act & Assert - Should not throw
+        var exception = Record.Exception(() => Newtonsoft.Json.Linq.JObject.Parse(validJson));
+        Assert.Null(exception);
+    }
+
+    [Theory]
+    [InlineData("{invalid json}")]
+    [InlineData("")]
+    [InlineData("null")]
+    public void WeekLetterJsonValidation_WithInvalidJson_HandlesGracefully(string invalidJson)
+    {
+        // Act & Assert - Should throw for invalid JSON
+        if (string.IsNullOrEmpty(invalidJson))
+        {
+            Assert.Throws<ArgumentException>(() => Newtonsoft.Json.Linq.JObject.Parse(invalidJson));
+        }
+        else
+        {
+            Assert.Throws<Newtonsoft.Json.JsonReaderException>(() => Newtonsoft.Json.Linq.JObject.Parse(invalidJson));
+        }
+    }
 }

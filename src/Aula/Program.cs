@@ -176,7 +176,13 @@ public class Program
 
         // Services
         services.AddSingleton<IDataService, DataService>();
-        services.AddSingleton<IMinUddannelseClient, MinUddannelseClient>();
+        services.AddSingleton<IMinUddannelseClient>(provider =>
+        {
+            var config = provider.GetRequiredService<Config>();
+            var supabaseService = provider.GetRequiredService<ISupabaseService>();
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            return new MinUddannelseClient(config, supabaseService, loggerFactory);
+        });
         services.AddSingleton<SlackBot>();
         services.AddSingleton<TelegramClient>();
         services.AddSingleton<GoogleCalendar>();
@@ -200,6 +206,7 @@ public class Program
 
         services.AddSingleton<ISupabaseService, SupabaseService>();
         services.AddSingleton<AiToolsManager>();
+        services.AddSingleton<IWeekLetterSeeder, WeekLetterSeeder>();
         services.AddSingleton<ISchedulingService>(provider =>
         {
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();

@@ -22,6 +22,12 @@ public interface ISupabaseService
     Task<bool> HasWeekLetterBeenPostedAsync(string childName, int weekNumber, int year);
     Task MarkWeekLetterAsPostedAsync(string childName, int weekNumber, int year, string contentHash, bool postedToSlack = false, bool postedToTelegram = false);
 
+    // Week letter storage and retrieval
+    Task StoreWeekLetterAsync(string childName, int weekNumber, int year, string contentHash, string rawContent, bool postedToSlack = false, bool postedToTelegram = false);
+    Task<string?> GetStoredWeekLetterAsync(string childName, int weekNumber, int year);
+    Task<List<StoredWeekLetter>> GetStoredWeekLettersAsync(string? childName = null, int? year = null);
+    Task<StoredWeekLetter?> GetLatestStoredWeekLetterAsync(string childName);
+
     // App state
     Task<string?> GetAppStateAsync(string key);
     Task SetAppStateAsync(string key, string value);
@@ -239,6 +245,93 @@ public class SupabaseService : ISupabaseService
             childName, weekNumber, year);
     }
 
+    public async Task StoreWeekLetterAsync(string childName, int weekNumber, int year, string contentHash, string rawContent, bool postedToSlack = false, bool postedToTelegram = false)
+    {
+        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
+
+        var postedLetter = new PostedLetter
+        {
+            ChildName = childName,
+            WeekNumber = weekNumber,
+            Year = year,
+            ContentHash = contentHash,
+            RawContent = rawContent,
+            PostedToSlack = postedToSlack,
+            PostedToTelegram = postedToTelegram
+        };
+
+        await _supabase
+            .From<PostedLetter>()
+            .Upsert(postedLetter);
+
+        _logger.LogInformation("Stored week letter for {ChildName}, week {WeekNumber}/{Year} with content",
+            childName, weekNumber, year);
+    }
+
+    public async Task<string?> GetStoredWeekLetterAsync(string childName, int weekNumber, int year)
+    {
+        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
+
+        var result = await _supabase
+            .From<PostedLetter>()
+            .Where(p => p.ChildName == childName && p.WeekNumber == weekNumber && p.Year == year)
+            .Single();
+
+        return result?.RawContent;
+    }
+
+    public async Task<List<StoredWeekLetter>> GetStoredWeekLettersAsync(string? childName = null, int? year = null)
+    {
+        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
+
+        var query = _supabase.From<PostedLetter>().Select("*");
+
+        if (!string.IsNullOrEmpty(childName))
+        {
+            query = query.Where(p => p.ChildName == childName);
+        }
+
+        if (year.HasValue)
+        {
+            query = query.Where(p => p.Year == year.Value);
+        }
+
+        var result = await query.Get();
+
+        return result.Models.Select(p => new StoredWeekLetter
+        {
+            ChildName = p.ChildName,
+            WeekNumber = p.WeekNumber,
+            Year = p.Year,
+            RawContent = p.RawContent,
+            PostedAt = p.PostedAt
+        }).ToList();
+    }
+
+    public async Task<StoredWeekLetter?> GetLatestStoredWeekLetterAsync(string childName)
+    {
+        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
+
+        var result = await _supabase
+            .From<PostedLetter>()
+            .Where(p => p.ChildName == childName && p.RawContent != null)
+            .Order("year", Supabase.Postgrest.Constants.Ordering.Descending)
+            .Order("week_number", Supabase.Postgrest.Constants.Ordering.Descending)
+            .Limit(1)
+            .Single();
+
+        if (result == null) return null;
+
+        return new StoredWeekLetter
+        {
+            ChildName = result.ChildName,
+            WeekNumber = result.WeekNumber,
+            Year = result.Year,
+            RawContent = result.RawContent,
+            PostedAt = result.PostedAt
+        };
+    }
+
     public async Task<string?> GetAppStateAsync(string key)
     {
         if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
@@ -440,6 +533,9 @@ public class PostedLetter : BaseModel
 
     [Column("posted_to_telegram")]
     public bool PostedToTelegram { get; set; }
+
+    [Column("raw_content")]
+    public string? RawContent { get; set; }
 }
 
 [Table("app_state")]
@@ -521,4 +617,14 @@ public class ScheduledTask : BaseModel
 
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
+}
+
+// DTO for week letter retrieval
+public class StoredWeekLetter
+{
+    public string ChildName { get; set; } = string.Empty;
+    public int WeekNumber { get; set; }
+    public int Year { get; set; }
+    public string? RawContent { get; set; }
+    public DateTime PostedAt { get; set; }
 }
