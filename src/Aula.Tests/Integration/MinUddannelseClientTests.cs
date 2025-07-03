@@ -1,7 +1,10 @@
 using System.Reflection;
 using Xunit;
+using Moq;
+using Microsoft.Extensions.Logging;
 using Aula.Integration;
 using Aula.Configuration;
+using Aula.Services;
 using Newtonsoft.Json.Linq;
 using System.Globalization;
 
@@ -319,5 +322,198 @@ public class MinUddannelseClientTests
 
         // Assert
         Assert.Equal("child1", childId);
+    }
+
+    // ===========================================
+    // WEEK LETTER STORAGE TESTS
+    // ===========================================
+
+    [Fact]
+    public async Task GetStoredWeekLetter_WithoutSupabaseService_ReturnsNull()
+    {
+        // Arrange - Use constructor without SupabaseService
+        var client = new MinUddannelseClient(_testConfig);
+        var child = new Child { FirstName = "TestChild" };
+
+        // Act
+        var result = await client.GetStoredWeekLetter(child, 42, 2024);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetStoredWeekLetter_WithMockSupabaseService_ReturnsStoredContent()
+    {
+        // Arrange
+        var mockSupabaseService = new Mock<ISupabaseService>();
+        var loggerFactory = new LoggerFactory();
+        var client = new MinUddannelseClient(_testConfig, mockSupabaseService.Object, loggerFactory);
+        var child = new Child { FirstName = "TestChild" };
+
+        var expectedJson = "{\"ugebreve\":[{\"indhold\":\"Test content\"}]}";
+        mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync("TestChild", 42, 2024))
+            .ReturnsAsync(expectedJson);
+
+        // Act
+        var result = await client.GetStoredWeekLetter(child, 42, 2024);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Test content", result["ugebreve"]?[0]?["indhold"]?.ToString());
+        mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync("TestChild", 42, 2024), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetStoredWeekLetter_WithEmptyStoredContent_ReturnsNull()
+    {
+        // Arrange
+        var mockSupabaseService = new Mock<ISupabaseService>();
+        var loggerFactory = new LoggerFactory();
+        var client = new MinUddannelseClient(_testConfig, mockSupabaseService.Object, loggerFactory);
+        var child = new Child { FirstName = "TestChild" };
+
+        mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync("TestChild", 42, 2024))
+            .ReturnsAsync(string.Empty);
+
+        // Act
+        var result = await client.GetStoredWeekLetter(child, 42, 2024);
+
+        // Assert
+        Assert.Null(result);
+        mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync("TestChild", 42, 2024), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetStoredWeekLetter_WithSupabaseException_ReturnsNull()
+    {
+        // Arrange
+        var mockSupabaseService = new Mock<ISupabaseService>();
+        var loggerFactory = new LoggerFactory();
+        var client = new MinUddannelseClient(_testConfig, mockSupabaseService.Object, loggerFactory);
+        var child = new Child { FirstName = "TestChild" };
+
+        mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync("TestChild", 42, 2024))
+            .ThrowsAsync(new Exception("Database error"));
+
+        // Act
+        var result = await client.GetStoredWeekLetter(child, 42, 2024);
+
+        // Assert
+        Assert.Null(result);
+        mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync("TestChild", 42, 2024), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetStoredWeekLetters_WithoutSupabaseService_ReturnsEmptyList()
+    {
+        // Arrange - Use constructor without SupabaseService
+        var client = new MinUddannelseClient(_testConfig);
+        var child = new Child { FirstName = "TestChild" };
+
+        // Act
+        var result = await client.GetStoredWeekLetters(child, 2024);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetStoredWeekLetters_WithMockSupabaseService_ReturnsStoredLetters()
+    {
+        // Arrange
+        var mockSupabaseService = new Mock<ISupabaseService>();
+        var loggerFactory = new LoggerFactory();
+        var client = new MinUddannelseClient(_testConfig, mockSupabaseService.Object, loggerFactory);
+        var child = new Child { FirstName = "TestChild" };
+
+        var expectedLetters = new List<StoredWeekLetter>
+        {
+            new StoredWeekLetter { ChildName = "TestChild", WeekNumber = 42, Year = 2024, RawContent = "{\"test\":\"content\"}" }
+        };
+        mockSupabaseService.Setup(s => s.GetStoredWeekLettersAsync("TestChild", 2024))
+            .ReturnsAsync(expectedLetters);
+
+        // Act
+        var result = await client.GetStoredWeekLetters(child, 2024);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Single(result);
+        Assert.Equal("TestChild", result[0].ChildName);
+        Assert.Equal(42, result[0].WeekNumber);
+        mockSupabaseService.Verify(s => s.GetStoredWeekLettersAsync("TestChild", 2024), Times.Once);
+    }
+
+    [Fact]
+    public void ComputeContentHash_WithSameContent_ReturnsSameHash()
+    {
+        // Arrange
+        var client = new MinUddannelseClient(_testConfig);
+        var content1 = "Test content for hashing";
+        var content2 = "Test content for hashing";
+        var content3 = "Different content";
+
+        // Use reflection to access the private ComputeContentHash method
+        var method = typeof(MinUddannelseClient).GetMethod("ComputeContentHash", BindingFlags.NonPublic | BindingFlags.Instance);
+        Assert.NotNull(method);
+
+        // Act
+        var hash1 = (string)method.Invoke(client, new object[] { content1 })!;
+        var hash2 = (string)method.Invoke(client, new object[] { content2 })!;
+        var hash3 = (string)method.Invoke(client, new object[] { content3 })!;
+
+        // Assert
+        Assert.Equal(hash1, hash2);
+        Assert.NotEqual(hash1, hash3);
+        Assert.NotEmpty(hash1);
+    }
+
+    [Fact]
+    public async Task GetWeekLetterWithFallback_WithSuccessfulLiveFetch_StoresAndReturnsLiveData()
+    {
+        // Arrange
+        var mockSupabaseService = new Mock<ISupabaseService>();
+        var loggerFactory = new LoggerFactory();
+
+        // Create a partial mock that calls the real constructor but allows us to mock GetWeekLetter
+        var mockClient = new Mock<MinUddannelseClient>(_testConfig, mockSupabaseService.Object, loggerFactory) { CallBase = true };
+        var child = new Child { FirstName = "TestChild" };
+        var date = DateOnly.FromDateTime(DateTime.Today);
+
+        var expectedWeekLetter = JObject.Parse("{\"ugebreve\":[{\"indhold\":\"Live content\"}]}");
+        mockClient.Setup(c => c.GetWeekLetter(child, date))
+            .ReturnsAsync(expectedWeekLetter);
+
+        // Act
+        var result = await mockClient.Object.GetWeekLetterWithFallback(child, date);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Live content", result["ugebreve"]?[0]?["indhold"]?.ToString());
+        mockClient.Verify(c => c.GetWeekLetter(child, date), Times.Once);
+        mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Once);
+    }
+
+    [Fact]
+    public void Interface_HasNewWeekLetterStorageMethods()
+    {
+        // Arrange
+        var interfaceType = typeof(IMinUddannelseClient);
+
+        // Act & Assert - Verify new methods are in interface
+        var getStoredMethod = interfaceType.GetMethod("GetStoredWeekLetter");
+        var getWithFallbackMethod = interfaceType.GetMethod("GetWeekLetterWithFallback");
+        var getStoredListMethod = interfaceType.GetMethod("GetStoredWeekLetters");
+
+        Assert.NotNull(getStoredMethod);
+        Assert.NotNull(getWithFallbackMethod);
+        Assert.NotNull(getStoredListMethod);
+
+        // Verify return types
+        Assert.Equal(typeof(Task<JObject?>), getStoredMethod.ReturnType);
+        Assert.Equal(typeof(Task<JObject>), getWithFallbackMethod.ReturnType);
+        Assert.Equal(typeof(Task<List<StoredWeekLetter>>), getStoredListMethod.ReturnType);
     }
 }

@@ -431,7 +431,8 @@ public class SchedulingService : ISchedulingService
     {
         await PostWeekLetter(child, weekLetter, content);
 
-        await _supabaseService.MarkWeekLetterAsPostedAsync(child.FirstName, weekNumber, year, contentHash, true, _config.Telegram.Enabled);
+        // Store the complete week letter with raw content for future retrieval
+        await _supabaseService.StoreWeekLetterAsync(child.FirstName, weekNumber, year, contentHash, weekLetter.ToString(), true, _config.Telegram.Enabled);
         await _supabaseService.SetAppStateAsync($"last_posted_hash_{child.FirstName}", contentHash);
         await _supabaseService.MarkRetryAsSuccessfulAsync(child.FirstName, weekNumber, year);
     }

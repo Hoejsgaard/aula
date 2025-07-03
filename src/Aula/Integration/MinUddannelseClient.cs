@@ -3,16 +3,28 @@ using System.Net.Http.Headers;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
+using Aula.Services;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Aula.Integration;
 
 public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
 {
     private JObject _userProfile = new();
+    private readonly ISupabaseService? _supabaseService;
+    private readonly ILogger? _logger;
 
     public MinUddannelseClient(Config config) : this(config.UniLogin.Username, config.UniLogin.Password)
     {
 
+    }
+
+    public MinUddannelseClient(Config config, ISupabaseService supabaseService, ILoggerFactory loggerFactory)
+        : this(config.UniLogin.Username, config.UniLogin.Password)
+    {
+        _supabaseService = supabaseService;
+        _logger = loggerFactory.CreateLogger<MinUddannelseClient>();
     }
 
     public MinUddannelseClient(string username, string password) : base(username, password,
@@ -136,5 +148,109 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
         {
             throw new Exception($"Failed to parse UserProfile JSON: {ex.Message}");
         }
+    }
+
+    public async Task<JObject?> GetStoredWeekLetter(Child child, int weekNumber, int year)
+    {
+        if (_supabaseService == null)
+        {
+            _logger?.LogWarning("Supabase service not available - cannot retrieve stored week letter");
+            return null;
+        }
+
+        try
+        {
+            var storedContent = await _supabaseService.GetStoredWeekLetterAsync(child.FirstName, weekNumber, year);
+            if (string.IsNullOrEmpty(storedContent))
+            {
+                _logger?.LogInformation("No stored week letter found for {ChildName}, week {WeekNumber}/{Year}",
+                    child.FirstName, weekNumber, year);
+                return null;
+            }
+
+            return JObject.Parse(storedContent);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error retrieving stored week letter for {ChildName}, week {WeekNumber}/{Year}",
+                child.FirstName, weekNumber, year);
+            return null;
+        }
+    }
+
+    public async Task<JObject> GetWeekLetterWithFallback(Child child, DateOnly date)
+    {
+        var weekNumber = GetIsoWeekNumber(date);
+        var year = date.Year;
+
+        // Try to get live week letter first
+        try
+        {
+            var liveWeekLetter = await GetWeekLetter(child, date);
+
+            // Store it if we have Supabase service available
+            if (_supabaseService != null)
+            {
+                try
+                {
+                    var contentHash = ComputeContentHash(liveWeekLetter.ToString());
+                    await _supabaseService.StoreWeekLetterAsync(child.FirstName, weekNumber, year, contentHash, liveWeekLetter.ToString());
+                    _logger?.LogInformation("Stored fresh week letter for {ChildName}, week {WeekNumber}/{Year}",
+                        child.FirstName, weekNumber, year);
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex, "Failed to store week letter for {ChildName}, week {WeekNumber}/{Year}",
+                        child.FirstName, weekNumber, year);
+                }
+            }
+
+            return liveWeekLetter;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to fetch live week letter for {ChildName}, week {WeekNumber}/{Year}, trying stored version",
+                child.FirstName, weekNumber, year);
+
+            // Fallback to stored version
+            var storedWeekLetter = await GetStoredWeekLetter(child, weekNumber, year);
+            if (storedWeekLetter != null)
+            {
+                _logger?.LogInformation("Retrieved stored week letter for {ChildName}, week {WeekNumber}/{Year}",
+                    child.FirstName, weekNumber, year);
+                return storedWeekLetter;
+            }
+
+            // If no stored version, re-throw original exception
+            throw;
+        }
+    }
+
+    public async Task<List<StoredWeekLetter>> GetStoredWeekLetters(Child? child = null, int? year = null)
+    {
+        if (_supabaseService == null)
+        {
+            _logger?.LogWarning("Supabase service not available - cannot retrieve stored week letters");
+            return new List<StoredWeekLetter>();
+        }
+
+        try
+        {
+            var childName = child?.FirstName;
+            return await _supabaseService.GetStoredWeekLettersAsync(childName, year);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Error retrieving stored week letters for child {ChildName}, year {Year}",
+                child?.FirstName, year);
+            return new List<StoredWeekLetter>();
+        }
+    }
+
+    private string ComputeContentHash(string content)
+    {
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(content));
+        return Convert.ToHexString(hash);
     }
 }
