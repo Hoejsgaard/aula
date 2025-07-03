@@ -41,30 +41,30 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
         if (_config?.Features.UseMockData == true && _supabaseService != null)
         {
             _logger?.LogInformation("🎭 Mock mode enabled - returning stored week letter for {ChildName}", child.FirstName);
-            
+
             // Use configured mock week/year instead of the requested date
             var mockWeek = _config.Features.MockCurrentWeek;
             var mockYear = _config.Features.MockCurrentYear;
-            
-            _logger?.LogInformation("🎭 Simulating week {MockWeek}/{MockYear} as current week for {ChildName}", 
+
+            _logger?.LogInformation("🎭 Simulating week {MockWeek}/{MockYear} as current week for {ChildName}",
                 mockWeek, mockYear, child.FirstName);
-            
+
             // Try to get stored week letter for the mock week
             var storedContent = await _supabaseService.GetStoredWeekLetterAsync(child.FirstName, mockWeek, mockYear);
             if (!string.IsNullOrEmpty(storedContent))
             {
-                _logger?.LogInformation("✅ Found stored week letter for {ChildName} week {MockWeek}/{MockYear}", 
+                _logger?.LogInformation("✅ Found stored week letter for {ChildName} week {MockWeek}/{MockYear}",
                     child.FirstName, mockWeek, mockYear);
                 return JObject.Parse(storedContent);
             }
-            
-            _logger?.LogWarning("⚠️ No stored week letter found for {ChildName} week {MockWeek}/{MockYear} - returning empty", 
+
+            _logger?.LogWarning("⚠️ No stored week letter found for {ChildName} week {MockWeek}/{MockYear} - returning empty",
                 child.FirstName, mockWeek, mockYear);
-            
+
             // Return empty week letter if no stored data found
             return CreateEmptyWeekLetter(mockWeek);
         }
-        
+
         // Normal mode - hit the real API
         var url = string.Format(
             "https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt={0}-W{1}&elevId={2}&_={3}"

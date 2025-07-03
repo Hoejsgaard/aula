@@ -266,11 +266,11 @@ public class SupabaseService : ISupabaseService
             existingRecord.RawContent = rawContent;
             existingRecord.PostedToSlack = postedToSlack;
             existingRecord.PostedToTelegram = postedToTelegram;
-            
+
             await _supabase
                 .From<PostedLetter>()
                 .Update(existingRecord);
-            
+
             _logger.LogInformation("Updated existing week letter for {ChildName}, week {WeekNumber}/{Year}",
                 childName, weekNumber, year);
         }
