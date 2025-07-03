@@ -10,11 +10,18 @@ public class SupabaseService : ISupabaseService
 {
     private readonly ILogger _logger;
     private readonly Config _config;
+    private readonly ILoggerFactory _loggerFactory;
     private Client? _supabase;
+    private IReminderRepository? _reminderRepository;
+    private IWeekLetterRepository? _weekLetterRepository;
+    private IAppStateRepository? _appStateRepository;
+    private IRetryTrackingRepository? _retryTrackingRepository;
+    private IScheduledTaskRepository? _scheduledTaskRepository;
 
     public SupabaseService(Config config, ILoggerFactory loggerFactory)
     {
         _config = config;
+        _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<SupabaseService>();
     }
 
@@ -32,6 +39,13 @@ public class SupabaseService : ISupabaseService
 
             _supabase = new Client(_config.Supabase.Url, _config.Supabase.ServiceRoleKey, options);
             await _supabase.InitializeAsync();
+
+            // Initialize repositories
+            _reminderRepository = new ReminderRepository(_supabase, _loggerFactory);
+            _weekLetterRepository = new WeekLetterRepository(_supabase, _loggerFactory);
+            _appStateRepository = new AppStateRepository(_supabase, _loggerFactory);
+            _retryTrackingRepository = new RetryTrackingRepository(_supabase, _loggerFactory);
+            _scheduledTaskRepository = new ScheduledTaskRepository(_supabase, _loggerFactory);
 
             _logger.LogInformation("Supabase client initialized successfully");
         }
@@ -71,411 +85,116 @@ public class SupabaseService : ISupabaseService
 
     public async Task<int> AddReminderAsync(string text, DateOnly date, TimeOnly time, string? childName = null)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        var reminder = new Reminder
-        {
-            Text = text,
-            RemindDate = date,
-            RemindTime = time,
-            ChildName = childName,
-            CreatedBy = "bot"
-        };
-
-        var insertResponse = await _supabase
-            .From<Reminder>()
-            .Insert(reminder);
-
-        var insertedReminder = insertResponse.Models.FirstOrDefault();
-        if (insertedReminder == null)
-        {
-            throw new InvalidOperationException("Failed to insert reminder");
-        }
-
-        _logger.LogInformation("Added reminder with ID {ReminderId}: {Text}", insertedReminder.Id, text);
-        return insertedReminder.Id;
+        if (_reminderRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        return await _reminderRepository.AddReminderAsync(text, date, time, childName);
     }
 
     public async Task<List<Reminder>> GetPendingRemindersAsync()
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        // Use UTC for all internal calculations
-        var nowUtc = DateTime.UtcNow;
-        var nowLocal = DateTime.Now; // For display only
-
-        _logger.LogInformation("Checking for pending reminders. Current UTC: {UtcNow}, Local: {LocalNow}",
-            nowUtc, nowLocal);
-
-        // Get all reminders and filter in memory (since we delete fired reminders, all existing ones are pending)
-        var allReminders = await _supabase
-            .From<Reminder>()
-            .Get();
-
-        var pendingReminders = allReminders.Models.Where(r =>
-        {
-            // Convert reminder date/time to UTC for comparison
-            var reminderLocalDateTime = r.RemindDate.ToDateTime(r.RemindTime);
-            var reminderUtcDateTime = TimeZoneInfo.ConvertTimeToUtc(reminderLocalDateTime, TimeZoneInfo.Local);
-
-            bool isPending = reminderUtcDateTime <= nowUtc;
-
-            _logger.LogInformation("Reminder '{Text}': Local={LocalTime}, UTC={UtcTime}, Due={IsDue}",
-                r.Text, reminderLocalDateTime, reminderUtcDateTime, isPending);
-
-            return isPending;
-        }).ToList();
-
-        _logger.LogInformation("Found {Count} pending reminders", pendingReminders.Count);
-
-        foreach (var reminder in pendingReminders)
-        {
-            var reminderLocalDateTime = reminder.RemindDate.ToDateTime(reminder.RemindTime);
-            _logger.LogInformation("Pending reminder: '{Text}' scheduled for {DateTime} (local time)",
-                reminder.Text, reminderLocalDateTime);
-        }
-
-        return pendingReminders;
+        if (_reminderRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        return await _reminderRepository.GetPendingRemindersAsync();
     }
 
     public async Task MarkReminderAsSentAsync(int reminderId)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        await _supabase
-            .From<Reminder>()
-            .Where(r => r.Id == reminderId)
-            .Set(r => r.IsSent, true)
-            .Update();
-
-        _logger.LogInformation("Marked reminder {ReminderId} as sent", reminderId);
+        if (_reminderRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        await _reminderRepository.MarkReminderAsSentAsync(reminderId);
     }
 
     public async Task<List<Reminder>> GetAllRemindersAsync()
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        var reminderResponse = await _supabase
-            .From<Reminder>()
-            .Get();
-
-        return reminderResponse.Models;
+        if (_reminderRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        return await _reminderRepository.GetAllRemindersAsync();
     }
 
     public async Task DeleteReminderAsync(int reminderId)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        await _supabase
-            .From<Reminder>()
-            .Where(r => r.Id == reminderId)
-            .Delete();
-
-        _logger.LogInformation("Deleted reminder {ReminderId}", reminderId);
+        if (_reminderRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        await _reminderRepository.DeleteReminderAsync(reminderId);
     }
 
     public async Task<bool> HasWeekLetterBeenPostedAsync(string childName, int weekNumber, int year)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        var result = await _supabase
-            .From<PostedLetter>()
-            .Where(p => p.ChildName == childName)
-            .Where(p => p.WeekNumber == weekNumber)
-            .Where(p => p.Year == year)
-            .Get();
-
-        return result.Models.Any();
+        if (_weekLetterRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        return await _weekLetterRepository.HasWeekLetterBeenPostedAsync(childName, weekNumber, year);
     }
 
     public async Task MarkWeekLetterAsPostedAsync(string childName, int weekNumber, int year, string contentHash, bool postedToSlack = false, bool postedToTelegram = false)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        var postedLetter = new PostedLetter
-        {
-            ChildName = childName,
-            WeekNumber = weekNumber,
-            Year = year,
-            ContentHash = contentHash,
-            PostedToSlack = postedToSlack,
-            PostedToTelegram = postedToTelegram
-        };
-
-        await _supabase
-            .From<PostedLetter>()
-            .Upsert(postedLetter);
-
-        _logger.LogInformation("Marked week letter as posted for {ChildName}, week {WeekNumber}/{Year}",
-            childName, weekNumber, year);
+        if (_weekLetterRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        await _weekLetterRepository.MarkWeekLetterAsPostedAsync(childName, weekNumber, year, contentHash, postedToSlack, postedToTelegram);
     }
 
     public async Task StoreWeekLetterAsync(string childName, int weekNumber, int year, string contentHash, string rawContent, bool postedToSlack = false, bool postedToTelegram = false)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        // Check if record already exists
-        var existingRecord = await _supabase
-            .From<PostedLetter>()
-            .Where(p => p.ChildName == childName)
-            .Where(p => p.WeekNumber == weekNumber)
-            .Where(p => p.Year == year)
-            .Single();
-
-        if (existingRecord != null)
-        {
-            // Update existing record
-            existingRecord.ContentHash = contentHash;
-            existingRecord.RawContent = rawContent;
-            existingRecord.PostedToSlack = postedToSlack;
-            existingRecord.PostedToTelegram = postedToTelegram;
-
-            await _supabase
-                .From<PostedLetter>()
-                .Update(existingRecord);
-
-            _logger.LogInformation("Updated existing week letter for {ChildName}, week {WeekNumber}/{Year}",
-                childName, weekNumber, year);
-        }
-        else
-        {
-            // Insert new record
-            var postedLetter = new PostedLetter
-            {
-                ChildName = childName,
-                WeekNumber = weekNumber,
-                Year = year,
-                ContentHash = contentHash,
-                RawContent = rawContent,
-                PostedToSlack = postedToSlack,
-                PostedToTelegram = postedToTelegram
-            };
-
-            await _supabase
-                .From<PostedLetter>()
-                .Insert(postedLetter);
-
-            _logger.LogInformation("Inserted new week letter for {ChildName}, week {WeekNumber}/{Year}",
-                childName, weekNumber, year);
-        }
+        if (_weekLetterRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        await _weekLetterRepository.StoreWeekLetterAsync(childName, weekNumber, year, contentHash, rawContent, postedToSlack, postedToTelegram);
     }
 
     public async Task<string?> GetStoredWeekLetterAsync(string childName, int weekNumber, int year)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        var result = await _supabase
-            .From<PostedLetter>()
-            .Where(p => p.ChildName == childName)
-            .Where(p => p.WeekNumber == weekNumber)
-            .Where(p => p.Year == year)
-            .Single();
-
-        return result?.RawContent;
+        if (_weekLetterRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        return await _weekLetterRepository.GetStoredWeekLetterAsync(childName, weekNumber, year);
     }
 
     public async Task<List<StoredWeekLetter>> GetStoredWeekLettersAsync(string? childName = null, int? year = null)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        var query = _supabase.From<PostedLetter>().Select("*");
-
-        if (!string.IsNullOrEmpty(childName))
-        {
-            query = query.Where(p => p.ChildName == childName);
-        }
-
-        if (year.HasValue)
-        {
-            query = query.Where(p => p.Year == year.Value);
-        }
-
-        var result = await query.Get();
-
-        return result.Models.Select(p => new StoredWeekLetter
-        {
-            ChildName = p.ChildName,
-            WeekNumber = p.WeekNumber,
-            Year = p.Year,
-            RawContent = p.RawContent,
-            PostedAt = p.PostedAt
-        }).ToList();
+        if (_weekLetterRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        return await _weekLetterRepository.GetStoredWeekLettersAsync(childName, year);
     }
 
     public async Task<StoredWeekLetter?> GetLatestStoredWeekLetterAsync(string childName)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        var result = await _supabase
-            .From<PostedLetter>()
-            .Where(p => p.ChildName == childName)
-            .Where(p => p.RawContent != null)
-            .Order("year", Supabase.Postgrest.Constants.Ordering.Descending)
-            .Order("week_number", Supabase.Postgrest.Constants.Ordering.Descending)
-            .Limit(1)
-            .Single();
-
-        if (result == null) return null;
-
-        return new StoredWeekLetter
-        {
-            ChildName = result.ChildName,
-            WeekNumber = result.WeekNumber,
-            Year = result.Year,
-            RawContent = result.RawContent,
-            PostedAt = result.PostedAt
-        };
+        if (_weekLetterRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        return await _weekLetterRepository.GetLatestStoredWeekLetterAsync(childName);
     }
 
     public async Task<string?> GetAppStateAsync(string key)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        var result = await _supabase
-            .From<AppState>()
-            .Where(a => a.Key == key)
-            .Single();
-
-        return result?.Value ?? null;
+        if (_appStateRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        return await _appStateRepository.GetAppStateAsync(key);
     }
 
     public async Task SetAppStateAsync(string key, string value)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        var appState = new AppState
-        {
-            Key = key,
-            Value = value
-        };
-
-        await _supabase
-            .From<AppState>()
-            .Upsert(appState);
-
-        _logger.LogInformation("Set app state: {Key} = {Value}", key, value);
+        if (_appStateRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        await _appStateRepository.SetAppStateAsync(key, value);
     }
 
     public async Task<int> GetRetryAttemptsAsync(string childName, int weekNumber, int year)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        var result = await _supabase
-            .From<RetryAttempt>()
-            .Where(r => r.ChildName == childName)
-            .Where(r => r.WeekNumber == weekNumber)
-            .Where(r => r.Year == year)
-            .Single();
-
-        return result?.AttemptCount ?? 0;
+        if (_retryTrackingRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        return await _retryTrackingRepository.GetRetryAttemptsAsync(childName, weekNumber, year);
     }
 
     public async Task IncrementRetryAttemptAsync(string childName, int weekNumber, int year)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        // Try to get existing retry attempt
-        var existing = await _supabase
-            .From<RetryAttempt>()
-            .Where(r => r.ChildName == childName)
-            .Where(r => r.WeekNumber == weekNumber)
-            .Where(r => r.Year == year)
-            .Single();
-
-        if (existing != null)
-        {
-            // Update existing
-            existing.AttemptCount += 1;
-            existing.LastAttempt = DateTime.UtcNow;
-            // Get retry settings from database
-            var task = await GetScheduledTaskAsync("WeeklyLetterCheck");
-            var retryHours = task?.RetryIntervalHours ?? 1;
-            existing.NextAttempt = DateTime.UtcNow.AddHours(retryHours);
-
-            await _supabase
-                .From<RetryAttempt>()
-                .Update(existing);
-        }
-        else
-        {
-            // Get retry settings from database
-            var task = await GetScheduledTaskAsync("WeeklyLetterCheck");
-            var retryHours = task?.RetryIntervalHours ?? 1;
-            var maxRetryHours = task?.MaxRetryHours ?? 48;
-            var maxAttempts = maxRetryHours / retryHours; // Calculate max attempts based on retry duration
-
-            // Create new
-            var retryAttempt = new RetryAttempt
-            {
-                ChildName = childName,
-                WeekNumber = weekNumber,
-                Year = year,
-                AttemptCount = 1,
-                LastAttempt = DateTime.UtcNow,
-                NextAttempt = DateTime.UtcNow.AddHours(retryHours),
-                MaxAttempts = maxAttempts
-            };
-
-            await _supabase
-                .From<RetryAttempt>()
-                .Insert(retryAttempt);
-        }
-
-        _logger.LogInformation("Incremented retry attempt for {ChildName}, week {WeekNumber}/{Year}",
-            childName, weekNumber, year);
+        if (_retryTrackingRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        await _retryTrackingRepository.IncrementRetryAttemptAsync(childName, weekNumber, year);
     }
 
     public async Task MarkRetryAsSuccessfulAsync(string childName, int weekNumber, int year)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        await _supabase
-            .From<RetryAttempt>()
-            .Where(r => r.ChildName == childName)
-            .Where(r => r.WeekNumber == weekNumber)
-            .Where(r => r.Year == year)
-            .Set(r => r.IsSuccessful, true)
-            .Update();
-
-        _logger.LogInformation("Marked retry as successful for {ChildName}, week {WeekNumber}/{Year}",
-            childName, weekNumber, year);
+        if (_retryTrackingRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        await _retryTrackingRepository.MarkRetryAsSuccessfulAsync(childName, weekNumber, year);
     }
 
     public async Task<List<ScheduledTask>> GetScheduledTasksAsync()
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        var tasksResponse = await _supabase
-            .From<ScheduledTask>()
-            .Where(t => t.Enabled == true)
-            .Get();
-
-        return tasksResponse.Models;
+        if (_scheduledTaskRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        return await _scheduledTaskRepository.GetScheduledTasksAsync();
     }
 
     public async Task<ScheduledTask?> GetScheduledTaskAsync(string name)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        var result = await _supabase
-            .From<ScheduledTask>()
-            .Where(t => t.Name == name)
-            .Single();
-
-        return result;
+        if (_scheduledTaskRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        return await _scheduledTaskRepository.GetScheduledTaskAsync(name);
     }
 
     public async Task UpdateScheduledTaskAsync(ScheduledTask task)
     {
-        if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
-
-        task.UpdatedAt = DateTime.UtcNow;
-
-        await _supabase
-            .From<ScheduledTask>()
-            .Update(task);
-
-        _logger.LogInformation("Updated scheduled task: {TaskName}", task.Name);
+        if (_scheduledTaskRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        await _scheduledTaskRepository.UpdateScheduledTaskAsync(task);
     }
 }
 

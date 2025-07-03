@@ -34,7 +34,7 @@ public class OpenAiServiceIntegrationTests
     [Fact]
     public void Constructor_WithValidParameters_InitializesCorrectly()
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
         Assert.NotNull(service);
     }
 
@@ -42,7 +42,7 @@ public class OpenAiServiceIntegrationTests
     public void Constructor_WithNullApiKey_ThrowsArgumentException()
     {
         var exception = Assert.Throws<ArgumentException>(() =>
-            new OpenAiService(null!, _mockLoggerFactory.Object, _aiToolsManager));
+            new OpenAiService(null!, _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object));
         Assert.Equal("apiKey", exception.ParamName);
     }
 
@@ -50,7 +50,7 @@ public class OpenAiServiceIntegrationTests
     public void Constructor_WithEmptyApiKey_ThrowsArgumentException()
     {
         var exception = Assert.Throws<ArgumentException>(() =>
-            new OpenAiService("", _mockLoggerFactory.Object, _aiToolsManager));
+            new OpenAiService("", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object));
         Assert.Equal("apiKey", exception.ParamName);
     }
 
@@ -58,7 +58,7 @@ public class OpenAiServiceIntegrationTests
     public void Constructor_WithWhitespaceApiKey_ThrowsArgumentException()
     {
         var exception = Assert.Throws<ArgumentException>(() =>
-            new OpenAiService("   ", _mockLoggerFactory.Object, _aiToolsManager));
+            new OpenAiService("   ", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object));
         Assert.Equal("apiKey", exception.ParamName);
     }
 
@@ -66,7 +66,7 @@ public class OpenAiServiceIntegrationTests
     public void Constructor_WithNullLoggerFactory_ThrowsArgumentNullException()
     {
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new OpenAiService("test-api-key", null!, _aiToolsManager));
+            new OpenAiService("test-api-key", null!, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object));
         Assert.Equal("loggerFactory", exception.ParamName);
     }
 
@@ -74,21 +74,21 @@ public class OpenAiServiceIntegrationTests
     public void Constructor_WithNullAiToolsManager_ThrowsArgumentNullException()
     {
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new OpenAiService("test-api-key", _mockLoggerFactory.Object, null!));
+            new OpenAiService("test-api-key", _mockLoggerFactory.Object, null!, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object));
         Assert.Equal("aiToolsManager", exception.ParamName);
     }
 
     [Fact]
     public void Constructor_WithCustomModel_UsesSpecifiedModel()
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, "gpt-3.5-turbo");
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object, "gpt-3.5-turbo");
         Assert.NotNull(service);
     }
 
     [Fact]
     public void ClearConversationHistory_WithoutContextKey_DoesNotThrow()
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
 
         // Should not throw an exception
         service.ClearConversationHistory();
@@ -98,7 +98,7 @@ public class OpenAiServiceIntegrationTests
     [Fact]
     public void ClearConversationHistory_WithContextKey_DoesNotThrow()
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
 
         // Should not throw an exception
         service.ClearConversationHistory("test-context");
@@ -110,7 +110,7 @@ public class OpenAiServiceIntegrationTests
     [InlineData(ChatInterface.Telegram)]
     public async Task SummarizeWeekLetterAsync_WithNullWeekLetter_ThrowsArgumentNullException(ChatInterface chatInterface)
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
 
         await Assert.ThrowsAsync<NullReferenceException>(() =>
             service.SummarizeWeekLetterAsync(null!, chatInterface));
@@ -121,7 +121,7 @@ public class OpenAiServiceIntegrationTests
     [InlineData(ChatInterface.Telegram)]
     public async Task AskQuestionAboutWeekLetterAsync_WithNullWeekLetter_ThrowsArgumentNullException(ChatInterface chatInterface)
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
 
         await Assert.ThrowsAsync<NullReferenceException>(() =>
             service.AskQuestionAboutWeekLetterAsync(null!, "What is happening today?", chatInterface));
@@ -132,7 +132,7 @@ public class OpenAiServiceIntegrationTests
     [InlineData(ChatInterface.Telegram)]
     public async Task AskQuestionAboutWeekLetterAsync_WithContextKey_WithNullWeekLetter_ThrowsArgumentNullException(ChatInterface chatInterface)
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
 
         await Assert.ThrowsAsync<NullReferenceException>(() =>
             service.AskQuestionAboutWeekLetterAsync(null!, "What is happening today?", "context-key", chatInterface));
@@ -143,7 +143,7 @@ public class OpenAiServiceIntegrationTests
     [InlineData(ChatInterface.Telegram)]
     public async Task ExtractKeyInformationAsync_WithNullWeekLetter_ThrowsArgumentNullException(ChatInterface chatInterface)
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
 
         await Assert.ThrowsAsync<NullReferenceException>(() =>
             service.ExtractKeyInformationAsync(null!, chatInterface));
@@ -154,7 +154,7 @@ public class OpenAiServiceIntegrationTests
     [InlineData(ChatInterface.Telegram)]
     public async Task AskQuestionAboutChildrenAsync_WithNullChildrenWeekLetters_ThrowsArgumentNullException(ChatInterface chatInterface)
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
 
         await Assert.ThrowsAsync<NullReferenceException>(() =>
             service.AskQuestionAboutChildrenAsync(null!, "What are the children doing?", "context-key", chatInterface));
@@ -166,7 +166,7 @@ public class OpenAiServiceIntegrationTests
     [InlineData(null)]
     public async Task ProcessQueryWithToolsAsync_WithInvalidQuery_HandlesGracefully(string query)
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
 
         // Should not throw exception, may return empty or error response
         var result = await service.ProcessQueryWithToolsAsync(query, "context-key", ChatInterface.Slack);
@@ -181,7 +181,7 @@ public class OpenAiServiceIntegrationTests
     [InlineData(null)]
     public async Task ProcessQueryWithToolsAsync_WithInvalidContextKey_HandlesGracefully(string contextKey)
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
 
         // Should not throw exception, may return error response
         var result = await service.ProcessQueryWithToolsAsync("What is happening?", contextKey, ChatInterface.Slack);
@@ -193,7 +193,7 @@ public class OpenAiServiceIntegrationTests
     [Fact]
     public async Task SummarizeWeekLetterAsync_WithValidWeekLetter_CallsApiWithCorrectParameters()
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
         var weekLetter = new JObject
         {
             ["ugebreve"] = new JArray
@@ -223,7 +223,7 @@ public class OpenAiServiceIntegrationTests
     [Fact]
     public async Task AskQuestionAboutWeekLetterAsync_WithValidParameters_CallsApiWithCorrectParameters()
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
         var weekLetter = new JObject
         {
             ["ugebreve"] = new JArray
@@ -250,7 +250,7 @@ public class OpenAiServiceIntegrationTests
     [Fact]
     public async Task ExtractKeyInformationAsync_WithValidWeekLetter_CallsApiWithCorrectParameters()
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
         var weekLetter = new JObject
         {
             ["ugebreve"] = new JArray
@@ -277,7 +277,7 @@ public class OpenAiServiceIntegrationTests
     [Fact]
     public async Task AskQuestionAboutChildrenAsync_WithValidParameters_CallsApiWithCorrectParameters()
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
         var childrenWeekLetters = new Dictionary<string, JObject>
         {
             ["Emma"] = new JObject
@@ -315,7 +315,7 @@ public class OpenAiServiceIntegrationTests
     [Fact]
     public async Task ProcessQueryWithToolsAsync_WithValidParameters_CallsApiWithCorrectParameters()
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
 
         try
         {
@@ -347,7 +347,7 @@ public class OpenAiServiceIntegrationTests
     [Fact]
     public void MultipleConversations_WithDifferentContextKeys_AreHandledSeparately()
     {
-        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager);
+        var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
 
         // Clear different context keys should not interfere with each other
         service.ClearConversationHistory("context1");
