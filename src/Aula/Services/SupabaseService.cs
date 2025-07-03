@@ -251,23 +251,50 @@ public class SupabaseService : ISupabaseService
     {
         if (_supabase == null) throw new InvalidOperationException("Supabase client not initialized");
 
-        var postedLetter = new PostedLetter
-        {
-            ChildName = childName,
-            WeekNumber = weekNumber,
-            Year = year,
-            ContentHash = contentHash,
-            RawContent = rawContent,
-            PostedToSlack = postedToSlack,
-            PostedToTelegram = postedToTelegram
-        };
-
-        await _supabase
+        // Check if record already exists
+        var existingRecord = await _supabase
             .From<PostedLetter>()
-            .Upsert(postedLetter);
+            .Where(p => p.ChildName == childName)
+            .Where(p => p.WeekNumber == weekNumber)
+            .Where(p => p.Year == year)
+            .Single();
 
-        _logger.LogInformation("Stored week letter for {ChildName}, week {WeekNumber}/{Year} with content",
-            childName, weekNumber, year);
+        if (existingRecord != null)
+        {
+            // Update existing record
+            existingRecord.ContentHash = contentHash;
+            existingRecord.RawContent = rawContent;
+            existingRecord.PostedToSlack = postedToSlack;
+            existingRecord.PostedToTelegram = postedToTelegram;
+            
+            await _supabase
+                .From<PostedLetter>()
+                .Update(existingRecord);
+            
+            _logger.LogInformation("Updated existing week letter for {ChildName}, week {WeekNumber}/{Year}",
+                childName, weekNumber, year);
+        }
+        else
+        {
+            // Insert new record
+            var postedLetter = new PostedLetter
+            {
+                ChildName = childName,
+                WeekNumber = weekNumber,
+                Year = year,
+                ContentHash = contentHash,
+                RawContent = rawContent,
+                PostedToSlack = postedToSlack,
+                PostedToTelegram = postedToTelegram
+            };
+
+            await _supabase
+                .From<PostedLetter>()
+                .Insert(postedLetter);
+
+            _logger.LogInformation("Inserted new week letter for {ChildName}, week {WeekNumber}/{Year}",
+                childName, weekNumber, year);
+        }
     }
 
     public async Task<string?> GetStoredWeekLetterAsync(string childName, int weekNumber, int year)
