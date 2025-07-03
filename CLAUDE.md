@@ -16,7 +16,7 @@ This file provides guidance for Claude Code (claude.ai/code) when working with c
 # Build the solution
 dotnet build src/Aula.sln
 
-# Run tests (582 tests, 53% line coverage, 43% branch coverage)
+# Run tests (811 tests after integration test cleanup)
 dotnet test src/Aula.Tests
 
 # Format code
@@ -41,7 +41,7 @@ Do not commit changes unless all commands pass.
 
 ### Project Structure
 - **src/Aula/**: Main console application - fetches data from Aula (Danish school platform) and posts to Slack/Telegram
-- **src/Aula.Tests/**: Unit tests using xUnit and Moq (582 tests, 53% line coverage)
+- **src/Aula.Tests/**: Unit tests using xUnit and Moq (811 tests after cleanup)
 - **src/Aula.Api/**: Azure Functions API project (separate deployment)
 
 ### Core Components
