@@ -138,6 +138,38 @@ var configField = typeof(TelegramInteractiveBot).GetField("_config", BindingFlag
 **Problem**: Misnamed "integration" tests that were actually unit tests with mocks.
 **Solution**: Deleted entire `src/Aula.Tests/Integration/` folder (4 files, 2000+ lines).
 
+## Mock Data Feature (2025-07-03)
+
+### ✅ SUMMER TESTING SOLUTION: Mock MinUddannelse Data
+**Problem**: No fresh week letters available during summer holidays, making development/testing difficult.
+
+**Solution**: Configuration-driven mock mode that simulates historical week letters as "current" data.
+
+**Configuration**:
+```json
+{
+  "Features": {
+    "UseMockData": true,           // Enable mock mode
+    "MockCurrentWeek": 19,         // Simulate week 19 as "current"
+    "MockCurrentYear": 2025        // Simulate year 2025 as "current"
+  }
+}
+```
+
+**How it works**:
+1. When `UseMockData: true`, MinUddannelseClient skips API calls
+2. Instead returns stored week letters from database for configured week/year
+3. App thinks it's getting "live" data but it's actually historical
+4. Enables year-round development without requiring fresh MinUddannelse data
+
+**Benefits**:
+- ✅ **No code changes needed** - Just flip config flags
+- ✅ **Uses existing storage** - Leverages week letter storage system
+- ✅ **Natural behavior** - App operates normally, doesn't know it's using mock data
+- ✅ **Easy testing** - Switch between real and mock data instantly
+
+**Usage**: Set `UseMockData: true` and configure desired week/year. App will simulate that week as current.
+
 ## Current Development Roadmap (2025-06-30)
 
 ### Recently Completed (2025-07-01)
