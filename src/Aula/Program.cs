@@ -28,11 +28,11 @@ public class Program
             logger.LogInformation("Starting aula");
 
             var config = serviceProvider.GetRequiredService<Config>();
-            
+
             // Validate configuration at startup
             var configValidator = serviceProvider.GetRequiredService<IConfigurationValidator>();
             configValidator.ValidateConfiguration(config);
-            
+
             var slackBot = serviceProvider.GetRequiredService<SlackBot>();
             var telegramClient = serviceProvider.GetRequiredService<TelegramClient>();
 
@@ -56,7 +56,8 @@ public class Program
             // if (connectionTest && config.Features?.UseStoredWeekLetters == true)
             // {
             //     logger.LogInformation("🗂️ Starting one-off historical week letter population");
-            //     await PopulateHistoricalWeekLetters(serviceProvider, logger);
+            //     var historicalDataSeeder = serviceProvider.GetRequiredService<IHistoricalDataSeeder>();
+            //     await historicalDataSeeder.SeedHistoricalWeekLettersAsync();
             // }
 
             // Preload week letters for all children to ensure data is available for interactive bots
@@ -221,6 +222,7 @@ public class Program
         services.AddSingleton<AiToolsManager>();
         services.AddSingleton<IWeekLetterSeeder, WeekLetterSeeder>();
         services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
+        services.AddSingleton<IHistoricalDataSeeder, HistoricalDataSeeder>();
         services.AddSingleton<ISchedulingService>(provider =>
         {
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
@@ -236,140 +238,4 @@ public class Program
         return services.BuildServiceProvider();
     }
 
-    /// <summary>
-    /// ONE-OFF METHOD: Populates database with week letters from the past 8 weeks
-    /// This helps with testing during summer holidays when no fresh week letters are available
-    /// Remove this method once historical data has been seeded
-    /// </summary>
-    private static async Task PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger)
-    {
-        try
-        {
-            var agentService = serviceProvider.GetRequiredService<IAgentService>();
-            var supabaseService = serviceProvider.GetRequiredService<ISupabaseService>();
-            var config = serviceProvider.GetRequiredService<Config>();
-
-            logger.LogInformation("📅 Fetching historical week letters from the past 8 weeks (weeks 19-26)");
-
-            // Login to MinUddannelse
-            var loginSuccess = await agentService.LoginAsync();
-            if (!loginSuccess)
-            {
-                logger.LogWarning("Failed to login to MinUddannelse - skipping historical data population");
-                return;
-            }
-
-            var allChildren = await agentService.GetAllChildrenAsync();
-            if (!allChildren.Any())
-            {
-                logger.LogWarning("No children configured - skipping historical data population");
-                return;
-            }
-
-            var today = DateOnly.FromDateTime(DateTime.Today);
-            logger.LogInformation("📅 Today is: {Today} (calculated from DateTime.Today: {DateTimeToday})", today, DateTime.Today);
-            var successCount = 0;
-            var totalAttempts = 0;
-
-            // Go back 1-8 weeks from today to find recent school weeks
-            for (int weeksBack = 1; weeksBack <= 8; weeksBack++)
-            {
-                var targetDate = today.AddDays(-7 * weeksBack);
-                var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(targetDate.ToDateTime(TimeOnly.MinValue));
-                var year = targetDate.Year;
-
-                logger.LogInformation("📆 Processing week {WeekNumber}/{Year} (date: {Date})", weekNumber, year, targetDate);
-
-                foreach (var child in allChildren)
-                {
-                    totalAttempts++;
-                    logger.LogInformation("🔍 Processing child: '{ChildFirstName}' (Length: {Length} chars)", child.FirstName, child.FirstName.Length);
-
-                    try
-                    {
-                        // Check if we already have this week letter stored
-                        var childNameForStorage = child.FirstName;
-                        logger.LogInformation("💾 Checking storage for child: '{ChildName}'", childNameForStorage);
-                        var existingContent = await supabaseService.GetStoredWeekLetterAsync(childNameForStorage, weekNumber, year);
-                        if (!string.IsNullOrEmpty(existingContent))
-                        {
-                            logger.LogInformation("✅ Week letter for {ChildName} week {WeekNumber}/{Year} already exists - skipping",
-                                child.FirstName, weekNumber, year);
-                            successCount++;
-                            continue;
-                        }
-
-                        // Try to fetch week letter for this historical date - DISABLE MOCK MODE temporarily
-                        var originalUseMockData = config.Features.UseMockData;
-                        config.Features.UseMockData = false; // Force real API call
-
-                        var weekLetter = await agentService.GetWeekLetterAsync(child, targetDate, false);
-
-                        config.Features.UseMockData = originalUseMockData; // Restore original setting
-
-                        if (weekLetter != null)
-                        {
-                            // Check if it has actual content (not just the "no week letter" placeholder)
-                            var content = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
-                            if (!string.IsNullOrEmpty(content) && !content.Contains("Der er ikke skrevet nogen ugenoter"))
-                            {
-                                // Store the week letter
-                                var contentHash = ComputeContentHash(weekLetter.ToString());
-                                await supabaseService.StoreWeekLetterAsync(
-                                    childNameForStorage,
-                                    weekNumber,
-                                    year,
-                                    contentHash,
-                                    weekLetter.ToString(),
-                                    false,
-                                    false);
-
-                                successCount++;
-                                logger.LogInformation("✅ Stored week letter for {ChildName} week {WeekNumber}/{Year} ({ContentLength} chars)",
-                                    child.FirstName, weekNumber, year, content.Length);
-                            }
-                            else
-                            {
-                                logger.LogInformation("⚠️ Week letter for {ChildName} week {WeekNumber}/{Year} has no content - skipping",
-                                    child.FirstName, weekNumber, year);
-                            }
-                        }
-                        else
-                        {
-                            logger.LogInformation("⚠️ No week letter available for {ChildName} week {WeekNumber}/{Year}",
-                                child.FirstName, weekNumber, year);
-                        }
-
-                        // Small delay to be respectful to the API
-                        await Task.Delay(500);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogWarning(ex, "❌ Error fetching week letter for {ChildName} week {WeekNumber}/{Year}",
-                            child.FirstName, weekNumber, year);
-                    }
-                }
-            }
-
-            logger.LogInformation("🎉 Historical week letter population complete: {SuccessCount}/{TotalAttempts} successful",
-                successCount, totalAttempts);
-
-            if (successCount > 0)
-            {
-                logger.LogInformation("📊 You can now test with stored week letters by setting Features.UseStoredWeekLetters = true");
-                logger.LogInformation("🔧 Remember to remove this PopulateHistoricalWeekLetters method once you're done seeding data");
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "❌ Error during historical week letter population");
-        }
-    }
-
-    private static string ComputeContentHash(string content)
-    {
-        using var sha256 = System.Security.Cryptography.SHA256.Create();
-        var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(content));
-        return Convert.ToHexString(hash);
-    }
 }
