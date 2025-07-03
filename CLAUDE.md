@@ -227,17 +227,48 @@ var configField = typeof(TelegramInteractiveBot).GetField("_config", BindingFlag
 **Phase 4B Results**: 777 → 835 tests (+58 tests), 68.66% → 76.5%+ line coverage (+7.84pp) - TARGET EXCEEDED
 
 #### 2. Week Letter Automation Enhancement (HIGH PRIORITY)
-**Current State**: Weekly fetching Sundays at 4 PM, basic scheduling, retry logic
-**Goals**:
-- Implement smart default scheduling (Sunday 4 PM local time if none configured)
-- Add CRUD operations for schedule management via LLM
-- Enhance timing configuration and timezone handling
+**Current State**: Database-driven scheduling with cron expressions, basic linear retry policy
+**Critical Gaps**: No default schedule initialization, linear retry intervals, no LLM schedule management
 
-**Action Items**:
-- Add startup schedule initialization if none exists
-- Implement LLM-powered schedule modification commands
-- Add timezone-aware scheduling configuration
-- Improve retry logic with exponential backoff
+### 🔄 Human-Aware Retry Policy Enhancement
+**Problem**: Current 1-hour linear retry doesn't match human publishing behavior
+**Reality**: Week letters expected Sunday 4 PM but humans cause delays:
+- **Common**: 1-4 hours late (Sunday evening)
+- **Occasional**: 6-18 hours late (Monday morning) 
+- **Rare**: 24-48 hours late (Tuesday)
+- **Never**: >48 hours (week is over, no longer relevant)
+
+**Smart Retry Strategy**:
+```json
+{
+  "WeekLetterRetry": {
+    "Phase1": { "hours": 6, "intervalMinutes": 60 },    // 0-6h: hourly
+    "Phase2": { "hours": 18, "intervalHours": 3 },      // 6-24h: every 3h  
+    "Phase3": { "hours": 24, "intervalHours": 6 },      // 24-48h: every 6h
+    "MaxDelayHours": 48                                  // Stop Tuesday
+  }
+}
+```
+
+**Implementation Plan**:
+1. **Immediate Placeholder Storage** - Store "Der er ikke skrevet noget ugebrev til denne uge endnu" on first failure
+2. **Human-Aware Timing** - Aggressive early retries, sparse later retries
+3. **Configurable Intervals** - Extract hardcoded 1-hour intervals to configuration
+4. **Smart Give-Up Logic** - After 48 hours, finalize placeholder as "Ingen ugebrev udgivet denne uge"
+5. **Overwrite Capability** - Real letter can replace placeholder when it appears
+
+### 🗄️ Database Persistence Strategy
+**Current**: `retry_attempts` table with database-driven retry tracking ✅
+**Enhancement**: Add configurable retry phases instead of hardcoded linear intervals
+
+### 📋 Default Schedule Initialization
+**Goal**: Auto-create "Sunday 4 PM" schedule if none exists
+**Implementation**: Startup validation creates default `WeeklyLetterCheck` task
+**Priority**: HIGH - Zero-config user experience
+
+### 🤖 LLM Schedule Management (Future)
+**Vision**: "Change weekly fetch to Tuesday 6 AM", "Show me current schedules"
+**Priority**: MEDIUM - After core retry policy improvements
 
 #### 3. Crown Jewel Feature: Intelligent Automatic Reminders (HIGH PRIORITY)
 **Vision**: Extract actionable items from week letters and create automatic reminders
@@ -267,17 +298,18 @@ var configField = typeof(TelegramInteractiveBot).GetField("_config", BindingFlag
 - Refactor configuration to support dynamic channel sets
 - Abstract message formatting and interactive capabilities
 
-#### 5. Configuration Restructuring (MEDIUM PRIORITY)
-**Goals**:
-- Move children under MinUddannelse configuration section
-- Improve configuration validation and error handling
-- Add configuration migration support
+#### 5. Configuration Enhancement (COMPLETED)
+**Goals**: ✅ ACHIEVED
+- ✅ Improve configuration validation and error handling
+- ✅ Add comprehensive startup validation
+- ✅ Enhance error messages and graceful degradation
 
 **Action Items**:
-- Restructure appsettings.json schema
-- Move `Children` array under `MinUddannelse` section  
-- Add configuration validation at startup
-- Update configuration classes and dependency injection
+- ✅ Add configuration validation at startup
+- ✅ Implement graceful degradation for optional features
+- ✅ Enhanced error messages with clear guidance
+
+**Note**: `Children` configuration remains at root level as it contains cross-cutting concerns (Google Calendar IDs, display colors) used by multiple services, not just MinUddannelse.
 
 #### 6. Calendar Integration Testing & Enhancement (MEDIUM PRIORITY)
 **Current State**: Google Calendar integration present but untested since refactoring
@@ -316,32 +348,32 @@ Following comprehensive architecture analysis revealing **B+ rating** with speci
 
 ### 🔴 PHASE 1: Low Effort, Low Risk Improvements
 
-#### ✅ 1.1 Configuration Structure Compliance (COMPLETED - 2025-07-03)
-**Problem**: `Children` array at root level violates CLAUDE.md requirement for MinUddannelse grouping  
-**Files**: `Configuration/Config.cs`, `appsettings.json`, DI setup  
-**Priority**: CRITICAL - Required for CLAUDE.md compliance
+#### ✅ 1.1 Configuration Enhancement (COMPLETED - 2025-07-03)
+**Problem**: Missing comprehensive configuration validation at startup
+**Files**: `Configuration/` folder, `Program.cs`
+**Priority**: MEDIUM - Prevents runtime configuration errors
 
 **Implementation Rules**:
-- ✅ Move `Children` property from root Config to `MinUddannelse` section
-- ✅ Update all references to use `config.MinUddannelse.Children`
-- ✅ Maintain backward compatibility during transition
-- ✅ Add configuration validation to catch misconfigurations early
-- ✅ Test configuration loading with new structure
+- ✅ Add `IConfigurationValidator` interface and implementation
+- ✅ Validate all required configuration sections at startup
+- ✅ Provide clear error messages for missing/invalid configs
+- ✅ Implement graceful degradation for optional features
+- ✅ Smart validation logic - only validate when features are enabled
 
 **Validation Criteria**:
-- ✅ All child lookups work through MinUddannelse section
-- ✅ Configuration validation prevents invalid setups
-- ✅ No breaking changes to existing functionality
-- ✅ Clean, logical configuration hierarchy
+- ✅ Clear startup errors for invalid configurations
+- ✅ Comprehensive validation for all config sections
+- ✅ Graceful handling of optional configuration
+- ✅ Improved developer experience with clear error messages
 
 **Completed Work**:
-- ✅ Created `MinUddannelse.cs` configuration class for logical grouping
-- ✅ Updated `Config.cs` and `IConfig.cs` to include MinUddannelse section
-- ✅ Updated 8 production files to use `config.MinUddannelse.Children`
-- ✅ Updated 16 test files with new configuration structure
-- ✅ Added `IConfigurationValidator` with comprehensive startup validation
-- ✅ Updated configuration examples and test files
-- ✅ All 810 tests pass, build successful, CLAUDE.md compliance achieved
+- ✅ Expanded `IConfigurationValidator` to validate all configuration sections
+- ✅ Added comprehensive validation for Slack, Telegram, GoogleServiceAccount, Features, and Timers
+- ✅ Implemented graceful degradation - optional features log warnings instead of throwing errors
+- ✅ Added smart validation logic and value range validation for numeric configuration values
+- ✅ All 810 tests pass, build successful, enhanced configuration validation
+
+**Note**: `Children` array correctly remains at root level as it contains cross-cutting configuration (Google Calendar IDs, colors) used by multiple services.
 
 #### ✅ 1.2 Interface Organization (COMPLETED - 2025-07-03)
 **Problem**: Interfaces mixed with implementations, some defined inline  
