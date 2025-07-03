@@ -58,7 +58,7 @@ public class TelegramInteractiveBot
             throw new InvalidOperationException("Telegram bot is not enabled or token is missing");
         }
 
-        _childrenByName = _config.Children.ToDictionary(
+        _childrenByName = _config.MinUddannelse.Children.ToDictionary(
             c => c.FirstName.ToLowerInvariant(),
             c => c);
 

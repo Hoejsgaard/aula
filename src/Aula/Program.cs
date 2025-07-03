@@ -28,6 +28,11 @@ public class Program
             logger.LogInformation("Starting aula");
 
             var config = serviceProvider.GetRequiredService<Config>();
+            
+            // Validate configuration at startup
+            var configValidator = serviceProvider.GetRequiredService<IConfigurationValidator>();
+            configValidator.ValidateConfiguration(config);
+            
             var slackBot = serviceProvider.GetRequiredService<SlackBot>();
             var telegramClient = serviceProvider.GetRequiredService<TelegramClient>();
 
@@ -215,6 +220,7 @@ public class Program
         services.AddSingleton<ISupabaseService, SupabaseService>();
         services.AddSingleton<AiToolsManager>();
         services.AddSingleton<IWeekLetterSeeder, WeekLetterSeeder>();
+        services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
         services.AddSingleton<ISchedulingService>(provider =>
         {
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
@@ -296,11 +302,11 @@ public class Program
                         // Try to fetch week letter for this historical date - DISABLE MOCK MODE temporarily
                         var originalUseMockData = config.Features.UseMockData;
                         config.Features.UseMockData = false; // Force real API call
-                        
+
                         var weekLetter = await agentService.GetWeekLetterAsync(child, targetDate, false);
-                        
+
                         config.Features.UseMockData = originalUseMockData; // Restore original setting
-                        
+
                         if (weekLetter != null)
                         {
                             // Check if it has actual content (not just the "no week letter" placeholder)

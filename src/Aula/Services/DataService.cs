@@ -71,6 +71,6 @@ public class DataService : IDataService
 
     public IEnumerable<Child> GetChildren()
     {
-        return _config.Children;
+        return _config.MinUddannelse.Children;
     }
 }
