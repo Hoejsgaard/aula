@@ -200,12 +200,16 @@ public class Program
         services.AddSingleton<SlackBot>();
         services.AddSingleton<TelegramClient>();
         services.AddSingleton<GoogleCalendar>();
+        services.AddSingleton<IConversationManager, ConversationManager>();
+        services.AddSingleton<IPromptBuilder, PromptBuilder>();
         services.AddSingleton<IOpenAiService>(provider =>
         {
             var config = provider.GetRequiredService<Config>();
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
             var aiToolsManager = provider.GetRequiredService<AiToolsManager>();
-            return new OpenAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager);
+            var conversationManager = provider.GetRequiredService<IConversationManager>();
+            var promptBuilder = provider.GetRequiredService<IPromptBuilder>();
+            return new OpenAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager, conversationManager, promptBuilder);
         });
         services.AddSingleton<IAgentService, AgentService>();
         services.AddSingleton<SlackInteractiveBot>();

@@ -6,9 +6,7 @@ using OpenAI.ObjectModels.ResponseModels;
 using OpenAI.Managers;
 using OpenAI;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using System.Linq;
 using Aula.Tools;
@@ -22,19 +20,16 @@ public class OpenAiService : IOpenAiService
     private readonly OpenAIService _openAiClient;
     private readonly ILogger _logger;
     private readonly AiToolsManager _aiToolsManager;
-    private readonly ConcurrentDictionary<string, List<ChatMessage>> _conversationHistory = new();
-    private readonly ConcurrentDictionary<string, string> _currentChildContext = new();
+    private readonly IConversationManager _conversationManager;
+    private readonly IPromptBuilder _promptBuilder;
     private readonly string _aiModel;
 
-    // Constants for conversation history management
-    private const int MaxConversationHistoryRegular = 12;
+    // Constants
     private const int MaxConversationHistoryWeekLetter = 20;
     private const int ConversationTrimAmount = 4;
-    private const int ConversationContextLimit = 10;
-    private const int ConversationStartMessages = 2;
     private const string FallbackToExistingSystem = "FALLBACK_TO_EXISTING_SYSTEM";
 
-    public OpenAiService(string apiKey, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, string? model = null)
+    public OpenAiService(string apiKey, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, IConversationManager conversationManager, IPromptBuilder promptBuilder, string? model = null)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new ArgumentException("API key cannot be null or empty", nameof(apiKey));
@@ -42,6 +37,10 @@ public class OpenAiService : IOpenAiService
             throw new ArgumentNullException(nameof(loggerFactory));
         if (aiToolsManager == null)
             throw new ArgumentNullException(nameof(aiToolsManager));
+        if (conversationManager == null)
+            throw new ArgumentNullException(nameof(conversationManager));
+        if (promptBuilder == null)
+            throw new ArgumentNullException(nameof(promptBuilder));
 
         _aiModel = model ?? Models.Gpt_4;
         _openAiClient = new OpenAIService(new OpenAiOptions()
@@ -50,9 +49,11 @@ public class OpenAiService : IOpenAiService
         });
         _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
         _aiToolsManager = aiToolsManager;
+        _conversationManager = conversationManager;
+        _promptBuilder = promptBuilder;
     }
 
-    internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, string? model = null)
+    internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, IConversationManager conversationManager, IPromptBuilder promptBuilder, string? model = null)
     {
         if (openAiClient == null)
             throw new ArgumentNullException(nameof(openAiClient));
@@ -60,10 +61,16 @@ public class OpenAiService : IOpenAiService
             throw new ArgumentNullException(nameof(loggerFactory));
         if (aiToolsManager == null)
             throw new ArgumentNullException(nameof(aiToolsManager));
+        if (conversationManager == null)
+            throw new ArgumentNullException(nameof(conversationManager));
+        if (promptBuilder == null)
+            throw new ArgumentNullException(nameof(promptBuilder));
 
         _openAiClient = openAiClient;
         _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
         _aiToolsManager = aiToolsManager;
+        _conversationManager = conversationManager;
+        _promptBuilder = promptBuilder;
         _aiModel = model ?? Models.Gpt_4;
     }
 
@@ -93,14 +100,7 @@ public class OpenAiService : IOpenAiService
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
         var (childName, className, weekNumber) = ExtractWeekLetterMetadata(weekLetter);
 
-        var messages = new List<ChatMessage>
-        {
-            ChatMessage.FromSystem($"You are a helpful assistant that summarizes weekly school letters for parents. " +
-                                  "Provide a brief summary of the key information in the letter, focusing on activities, " +
-                                  "important dates, and things parents need to know. Be concise but thorough. " +
-                                  $"You are responding via {GetChatInterfaceInstructions(chatInterface)}"),
-            ChatMessage.FromUser($"Here's the week letter for {className} for week {weekNumber}:\n\n{weekLetterContent}\n\nPlease summarize this week letter.")
-        };
+        var messages = _promptBuilder.CreateSummarizationMessages(childName, className, weekNumber, weekLetterContent, chatInterface);
 
         var chatRequest = new ChatCompletionCreateRequest
         {
@@ -131,162 +131,24 @@ public class OpenAiService : IOpenAiService
     {
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
         string childName = weekLetter["child"]?.ToString() ?? "unknown";
-        contextKey = EnsureContextKey(contextKey, childName);
+        contextKey = _conversationManager.EnsureContextKey(contextKey, childName);
 
-        EnsureConversationHistory(contextKey, childName, weekLetterContent, chatInterface);
-        AddUserQuestionToHistory(contextKey, question);
-        TrimConversationHistoryIfNeeded(contextKey);
+        _conversationManager.EnsureConversationHistory(contextKey, childName, weekLetterContent, chatInterface);
+        _conversationManager.AddUserQuestionToHistory(contextKey, question);
+        _conversationManager.TrimConversationHistoryIfNeeded(contextKey);
         LogConversationHistoryStructure(contextKey);
 
         return await SendChatRequestAndGetResponse(contextKey);
     }
 
-    private string EnsureContextKey(string? contextKey, string childName)
-    {
-        if (string.IsNullOrEmpty(contextKey))
-        {
-            contextKey = childName.ToLowerInvariant();
-        }
-        _currentChildContext[contextKey] = childName;
-        return contextKey;
-    }
-
-    private void EnsureConversationHistory(string contextKey, string childName, string weekLetterContent, ChatInterface chatInterface)
-    {
-        if (!_conversationHistory.ContainsKey(contextKey))
-        {
-            InitializeNewConversationHistory(contextKey, childName, weekLetterContent, chatInterface);
-        }
-        else
-        {
-            UpdateExistingConversationHistory(contextKey, childName, weekLetterContent, chatInterface);
-        }
-    }
-
-    private void InitializeNewConversationHistory(string contextKey, string childName, string weekLetterContent, ChatInterface chatInterface)
-    {
-        _conversationHistory[contextKey] = new List<ChatMessage>
-        {
-            CreateSystemInstructionsMessage(childName, chatInterface),
-            CreateWeekLetterContentMessage(childName, weekLetterContent)
-        };
-    }
-
-    private void UpdateExistingConversationHistory(string contextKey, string childName, string weekLetterContent, ChatInterface chatInterface)
-    {
-        if (ShouldResetHistoryForNewChild(contextKey, childName))
-        {
-            InitializeNewConversationHistory(contextKey, childName, weekLetterContent, chatInterface);
-        }
-        else
-        {
-            RefreshWeekLetterContentInHistory(contextKey, childName, weekLetterContent, chatInterface);
-        }
-    }
-
-    private bool ShouldResetHistoryForNewChild(string contextKey, string childName)
-    {
-        return _currentChildContext.TryGetValue(contextKey, out var previousChildName) &&
-               !string.Equals(previousChildName, childName, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private void RefreshWeekLetterContentInHistory(string contextKey, string childName, string weekLetterContent, ChatInterface chatInterface)
-    {
-        _logger.LogInformation("🔎 TRACE: Updating existing conversation context for {ContextKey}", contextKey);
-
-        int contentIndex = FindWeekLetterContentIndex(contextKey);
-
-        if (contentIndex >= 0)
-        {
-            UpdateExistingWeekLetterContent(contextKey, childName, weekLetterContent, contentIndex, chatInterface);
-        }
-        else
-        {
-            InsertWeekLetterContent(contextKey, childName, weekLetterContent);
-        }
-    }
-
-    private int FindWeekLetterContentIndex(string contextKey)
-    {
-        for (int i = 0; i < _conversationHistory[contextKey].Count; i++)
-        {
-            var message = _conversationHistory[contextKey][i];
-            if (message?.Role == "system" &&
-                message.Content?.StartsWith("Here's the weekly letter content") == true)
-            {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    private void UpdateExistingWeekLetterContent(string contextKey, string childName, string weekLetterContent, int contentIndex, ChatInterface chatInterface)
-    {
-        _logger.LogInformation("🔎 TRACE: Found existing week letter content at index {Index}, updating", contentIndex);
-        _conversationHistory[contextKey][contentIndex] = CreateWeekLetterContentMessage(childName, weekLetterContent);
-        _logger.LogInformation("🔎 TRACE: Updated existing week letter content in context: {Length} characters", weekLetterContent.Length);
-
-        if (contentIndex > 0)
-        {
-            _conversationHistory[contextKey][0] = CreateSystemInstructionsMessage(childName, chatInterface);
-            _logger.LogInformation("🔎 TRACE: Updated system instructions in context");
-        }
-    }
-
-    private void InsertWeekLetterContent(string contextKey, string childName, string weekLetterContent)
-    {
-        _logger.LogInformation("🔎 TRACE: No existing week letter content found, inserting after first system message");
-        _conversationHistory[contextKey].Insert(1, CreateWeekLetterContentMessage(childName, weekLetterContent));
-        _logger.LogInformation("🔎 TRACE: Added week letter content to existing context: {Length} characters", weekLetterContent.Length);
-    }
-
-    private ChatMessage CreateSystemInstructionsMessage(string childName, ChatInterface chatInterface)
-    {
-        return ChatMessage.FromSystem($"You are a helpful assistant that answers questions about {childName}'s weekly school letter. " +
-                                    $"This letter is specifically about {childName}'s class and activities. " +
-                                    $"Today is {DateTime.Now.DayOfWeek}, {DateTime.Now.ToString("MMMM d, yyyy")}. " +
-                                    "Answer based on the content of the letter. If the specific information isn't in the letter, " +
-                                    "say 'I don't have that specific information in the weekly letter' and then provide any related " +
-                                    "information that might be helpful. For example, if asked about Tuesday's activities but only " +
-                                    "Monday's activities are mentioned, acknowledge that Tuesday isn't mentioned but share what's " +
-                                    "happening on Monday. Be concise and direct in your answers. " +
-                                    "CRITICAL: You can ONLY answer questions about the weekly letter content. You CANNOT create reminders, " +
-                                    "set alarms, or take any actions. Never promise to remind users of anything. If asked to create " +
-                                    "a reminder, explain they need to use specific reminder commands instead. " +
-                                    "IMPORTANT: Always respond in the same language as the user's question. " +
-                                    "If the question is in Danish, respond in Danish. If the question is in English, respond in English. " +
-                                    $"You are responding via {GetChatInterfaceInstructions(chatInterface)}");
-    }
-
-    private ChatMessage CreateWeekLetterContentMessage(string childName, string weekLetterContent)
-    {
-        return ChatMessage.FromSystem($"Here's the weekly letter content for {childName}'s class:\n\n{weekLetterContent}");
-    }
-
-    private void AddUserQuestionToHistory(string contextKey, string question)
-    {
-        _logger.LogInformation("🔎 TRACE: Adding user question to conversation history: {Question}", question);
-        _conversationHistory[contextKey].Add(ChatMessage.FromUser(question));
-    }
-
-    private void TrimConversationHistoryIfNeeded(string contextKey)
-    {
-        if (_conversationHistory[contextKey].Count > MaxConversationHistoryRegular)
-        {
-            _conversationHistory[contextKey] = _conversationHistory[contextKey].Take(ConversationStartMessages)
-                .Concat(_conversationHistory[contextKey].Skip(_conversationHistory[contextKey].Count - ConversationContextLimit))
-                .ToList();
-
-            _logger.LogInformation("🔎 TRACE: Trimmed conversation history to prevent token overflow");
-        }
-    }
 
     private void LogConversationHistoryStructure(string contextKey)
     {
+        var messages = _conversationManager.GetConversationHistory(contextKey);
         _logger.LogInformation("🔎 TRACE: Conversation history structure:");
-        for (int i = 0; i < _conversationHistory[contextKey].Count; i++)
+        for (int i = 0; i < messages.Count; i++)
         {
-            var message = _conversationHistory[contextKey][i];
+            var message = messages[i];
             _logger.LogInformation("🔎 TRACE: Message {Index}: Role={Role}, Content Length={Length}",
                 i, message.Role, message.Content?.Length ?? 0);
 
@@ -300,9 +162,10 @@ public class OpenAiService : IOpenAiService
 
     private async Task<string> SendChatRequestAndGetResponse(string contextKey)
     {
+        var messages = _conversationManager.GetConversationHistory(contextKey);
         var chatRequest = new ChatCompletionCreateRequest
         {
-            Messages = _conversationHistory[contextKey],
+            Messages = messages,
             Model = _aiModel,
             Temperature = 0.7f
         };
@@ -312,7 +175,7 @@ public class OpenAiService : IOpenAiService
         if (response.Successful)
         {
             var reply = response.Choices.First().Message.Content ?? "No response content received.";
-            _conversationHistory[contextKey].Add(ChatMessage.FromAssistant(reply));
+            _conversationManager.AddAssistantResponseToHistory(contextKey, reply);
             return reply;
         }
         else
@@ -329,16 +192,7 @@ public class OpenAiService : IOpenAiService
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
         var (childName, className, weekNumber) = ExtractWeekLetterMetadata(weekLetter);
 
-        var messages = new List<ChatMessage>
-        {
-            ChatMessage.FromSystem("You are a helpful assistant that extracts structured information from weekly school letters. " +
-                                  "Extract information about activities for each day of the week, homework, and important dates. " +
-                                  "Respond in valid JSON format with the following structure: " +
-                                  "{ \"monday\": \"activities\", \"tuesday\": \"activities\", \"wednesday\": \"activities\", " +
-                                  "\"thursday\": \"activities\", \"friday\": \"activities\", \"homework\": \"homework details\", " +
-                                  "\"important_dates\": [\"date1\", \"date2\"] }"),
-            ChatMessage.FromUser($"Here's the week letter for {childName} in class {className} for week {weekNumber}:\n\n{weekLetterContent}\n\nPlease extract the key information in JSON format.")
-        };
+        var messages = _promptBuilder.CreateKeyInformationExtractionMessages(childName, className, weekNumber, weekLetterContent);
 
         var chatRequest = new ChatCompletionCreateRequest
         {
@@ -382,48 +236,20 @@ public class OpenAiService : IOpenAiService
     {
         _logger.LogInformation("Asking question about multiple children: {Question} for {ChatInterface}", question, chatInterface);
 
-        var combinedContent = new StringBuilder();
-        combinedContent.AppendLine("Week letters for children:");
-        combinedContent.AppendLine();
-
+        // Extract content for each child
+        var childrenContent = new Dictionary<string, string>();
         foreach (var (childName, weekLetter) in childrenWeekLetters)
         {
-            var weekLetterContent = ExtractWeekLetterContent(weekLetter);
-            combinedContent.AppendLine($"=== {childName} ===");
-            combinedContent.AppendLine(weekLetterContent);
-            combinedContent.AppendLine();
+            childrenContent[childName] = ExtractWeekLetterContent(weekLetter);
         }
 
         var contextKeyToUse = contextKey ?? "combined-children";
 
-        if (!_conversationHistory.ContainsKey(contextKeyToUse))
-        {
-            _conversationHistory[contextKeyToUse] = new List<ChatMessage>();
-        }
-
-        var systemPrompt = $@"You are an AI assistant helping parents understand their children's school activities. 
-You have been provided with week letters from school for multiple children. 
-Answer questions about the children's activities clearly and helpfully.
-
-CRITICAL: You can ONLY answer questions about the weekly letter content. You CANNOT create reminders, 
-set alarms, or take any actions. Never promise to remind users of anything. If asked to create 
-a reminder, explain they need to use specific reminder commands instead.
-
-{GetChatInterfaceInstructions(chatInterface)}
-
-When answering about multiple children, clearly indicate which child each piece of information relates to.
-If a question is about a specific child, focus on that child but you can mention relevant information about other children if helpful.
-If a question could apply to multiple children, provide information for all relevant children.
-
-Current day context: Today is {DateTime.Now.ToString("dddd, MMMM dd, yyyy")}";
-
-        var messages = new List<ChatMessage>
-        {
-            ChatMessage.FromSystem(systemPrompt),
-            ChatMessage.FromUser($"Here are the week letters:\n\n{combinedContent}")
-        };
-
-        messages.AddRange(_conversationHistory[contextKeyToUse]);
+        var baseMessages = _promptBuilder.CreateMultiChildMessages(childrenContent, chatInterface);
+        var existingHistory = _conversationManager.GetConversationHistory(contextKeyToUse);
+        
+        var messages = new List<ChatMessage>(baseMessages);
+        messages.AddRange(existingHistory);
         messages.Add(ChatMessage.FromUser(question));
 
         var chatRequest = new ChatCompletionCreateRequest
@@ -439,13 +265,9 @@ Current day context: Today is {DateTime.Now.ToString("dddd, MMMM dd, yyyy")}";
         {
             var answer = response.Choices.First().Message.Content ?? "I couldn't generate a response.";
 
-            _conversationHistory[contextKeyToUse].Add(ChatMessage.FromUser(question));
-            _conversationHistory[contextKeyToUse].Add(ChatMessage.FromAssistant(answer));
-
-            if (_conversationHistory[contextKeyToUse].Count > MaxConversationHistoryWeekLetter)
-            {
-                _conversationHistory[contextKeyToUse] = _conversationHistory[contextKeyToUse].Skip(ConversationTrimAmount).ToList();
-            }
+            _conversationManager.AddUserQuestionToHistory(contextKeyToUse, question);
+            _conversationManager.AddAssistantResponseToHistory(contextKeyToUse, answer);
+            _conversationManager.TrimMultiChildConversationIfNeeded(contextKeyToUse);
 
             return answer;
         }
@@ -458,29 +280,7 @@ Current day context: Today is {DateTime.Now.ToString("dddd, MMMM dd, yyyy")}";
 
     public void ClearConversationHistory(string? contextKey = null)
     {
-        if (string.IsNullOrEmpty(contextKey))
-        {
-            _conversationHistory.Clear();
-            _currentChildContext.Clear();
-            _logger.LogInformation("Cleared all conversation history and child contexts");
-        }
-        else if (_conversationHistory.ContainsKey(contextKey))
-        {
-            _conversationHistory.TryRemove(contextKey, out _);
-            _currentChildContext.TryRemove(contextKey, out _);
-            _logger.LogInformation("Cleared conversation history and child context for {ContextKey}", contextKey);
-        }
-    }
-
-    // Helper method to get chat interface-specific instructions
-    private string GetChatInterfaceInstructions(ChatInterface chatInterface)
-    {
-        return chatInterface switch
-        {
-            ChatInterface.Slack => "Slack. Format your responses using Slack markdown (e.g., *bold*, _italic_, `code`). Don't use HTML tags.",
-            ChatInterface.Telegram => "Telegram. Format your responses using HTML tags (e.g., <b>bold</b>, <i>italic</i>, <code>code</code>). Telegram supports these HTML tags: <b>, <i>, <u>, <s>, <a>, <code>, <pre>. Use <br/> for line breaks.",
-            _ => "a chat interface. Use plain text formatting."
-        };
+        _conversationManager.ClearConversationHistory(contextKey);
     }
 
     public async Task<string> ProcessQueryWithToolsAsync(string query, string contextKey, ChatInterface chatInterface = ChatInterface.Slack)
