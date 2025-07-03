@@ -32,7 +32,8 @@ public class ConfigurationTests
         Assert.NotNull(_config.Slack);
         Assert.NotNull(_config.Telegram);
         Assert.NotNull(_config.OpenAi);
-        Assert.NotNull(_config.Children);
+        Assert.NotNull(_config.MinUddannelse);
+        Assert.NotNull(_config.MinUddannelse.Children);
         Assert.NotNull(_config.GoogleServiceAccount);
         Assert.NotNull(_config.Supabase);
         Assert.NotNull(_config.Features);
@@ -81,15 +82,15 @@ public class ConfigurationTests
     public void Children_ConfigurationIsCorrect()
     {
         // Assert
-        Assert.Equal(2, _config.Children.Count);
+        Assert.Equal(2, _config.MinUddannelse.Children.Count);
 
-        var alice = _config.Children.First(c => c.FirstName == "Alice");
+        var alice = _config.MinUddannelse.Children.First(c => c.FirstName == "Alice");
         Assert.Equal("Alice", alice.FirstName);
         Assert.Equal("Johnson", alice.LastName);
         Assert.Equal("blue", alice.Colour);
         Assert.Equal("alice@example.com", alice.GoogleCalendarId);
 
-        var bob = _config.Children.First(c => c.FirstName == "Bob");
+        var bob = _config.MinUddannelse.Children.First(c => c.FirstName == "Bob");
         Assert.Equal("Bob", bob.FirstName);
         Assert.Equal("Smith", bob.LastName);
         Assert.Equal("red", bob.Colour);
@@ -134,7 +135,7 @@ public class ConfigurationTests
         Assert.False(defaultConfig.Telegram.Enabled);
         Assert.False(defaultConfig.Telegram.PostWeekLettersOnStartup); // Default to false
         Assert.Equal("gpt-4", defaultConfig.OpenAi.Model); // Default to GPT-4
-        Assert.Empty(defaultConfig.Children);
+        Assert.Empty(defaultConfig.MinUddannelse.Children);
     }
 
     [Fact]
@@ -150,7 +151,7 @@ public class ConfigurationTests
         Assert.Empty(emptyConfig.Slack.WebhookUrl);
         Assert.False(emptyConfig.Telegram.Enabled);
         Assert.Equal("gpt-4", emptyConfig.OpenAi.Model);
-        Assert.Empty(emptyConfig.Children);
+        Assert.Empty(emptyConfig.MinUddannelse.Children);
     }
 
     [Theory]
@@ -235,8 +236,8 @@ public class ConfigurationTests
     public void Children_WithMultipleChildren_MaintainsOrder()
     {
         // Assert - Children should maintain the order from configuration
-        Assert.Equal("Alice", _config.Children[0].FirstName);
-        Assert.Equal("Bob", _config.Children[1].FirstName);
+        Assert.Equal("Alice", _config.MinUddannelse.Children[0].FirstName);
+        Assert.Equal("Bob", _config.MinUddannelse.Children[1].FirstName);
     }
 
     [Fact]
@@ -270,7 +271,7 @@ public class ConfigurationTests
         Assert.NotNull(iConfig.Slack);
         Assert.NotNull(iConfig.Telegram);
         Assert.NotNull(iConfig.OpenAi);
-        Assert.NotNull(iConfig.Children);
+        Assert.NotNull(iConfig.MinUddannelse.Children);
         Assert.NotNull(iConfig.GoogleServiceAccount);
         Assert.NotNull(iConfig.Supabase);
         Assert.NotNull(iConfig.Features);

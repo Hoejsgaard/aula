@@ -44,10 +44,13 @@ public class SchedulingServiceIntegrationTests
                 Enabled = true,
                 Token = "test-token"
             },
-            Children = new List<Child>
+            MinUddannelse = new MinUddannelse
             {
-                new Child { FirstName = "Emma", LastName = "Test" },
-                new Child { FirstName = "Hans", LastName = "Test" }
+                Children = new List<Child>
+                {
+                    new Child { FirstName = "Emma", LastName = "Test" },
+                    new Child { FirstName = "Hans", LastName = "Test" }
+                }
             }
         };
 
@@ -274,7 +277,10 @@ public class SchedulingServiceIntegrationTests
         {
             Slack = new Aula.Configuration.Slack { Enabled = slackEnabled },
             Telegram = new Aula.Configuration.Telegram { Enabled = telegramEnabled },
-            Children = new List<Child>()
+            MinUddannelse = new MinUddannelse
+            {
+                Children = new List<Child>()
+            }
         };
 
         var slackBot = new SlackInteractiveBot(_mockAgentService.Object, config, _mockLoggerFactory.Object, _mockSupabaseService.Object);

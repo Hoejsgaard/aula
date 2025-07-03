@@ -46,17 +46,20 @@ public class TelegramMessageHandlerTests
                 Token = "test-token",
                 ChannelId = "test-channel"
             },
-            Children = new List<Child>
+            MinUddannelse = new MinUddannelse
             {
-                new Child { FirstName = "Emma", LastName = "Test" },
-                new Child { FirstName = "Hans", LastName = "Test" }
+                Children = new List<Child>
+                {
+                    new Child { FirstName = "Emma", LastName = "Test" },
+                    new Child { FirstName = "Hans", LastName = "Test" }
+                }
             }
         };
 
         _childrenByName = new Dictionary<string, Child>
         {
-            { "emma", _testConfig.Children[0] },
-            { "hans", _testConfig.Children[1] }
+            { "emma", _testConfig.MinUddannelse.Children[0] },
+            { "hans", _testConfig.MinUddannelse.Children[1] }
         };
 
         _reminderHandler = new ReminderCommandHandler(_mockLogger.Object, _mockSupabaseService.Object, _childrenByName);

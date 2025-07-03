@@ -1,5 +1,3 @@
-using Aula.Bots;
-
 namespace Aula.Channels;
 
 public interface IMessageSender
@@ -10,42 +8,50 @@ public interface IMessageSender
 
 public class SlackMessageSender : IMessageSender
 {
-    private readonly SlackInteractiveBot _slackBot;
+    private readonly IChannelMessenger _messenger;
 
-    public SlackMessageSender(SlackInteractiveBot slackBot)
+    public SlackMessageSender(IChannelMessenger messenger)
     {
-        _slackBot = slackBot ?? throw new ArgumentNullException(nameof(slackBot));
+        _messenger = messenger ?? throw new ArgumentNullException(nameof(messenger));
+
+        if (messenger.PlatformType != "Slack")
+        {
+            throw new ArgumentException("Expected Slack messenger", nameof(messenger));
+        }
     }
 
     public async Task SendMessageAsync(string message)
     {
-        await _slackBot.SendMessage(message);
+        await _messenger.SendMessageAsync(message);
     }
 
     public async Task SendMessageAsync(string chatId, string message)
     {
-        await _slackBot.SendMessage(message); // Slack bot doesn't use chatId in the same way
+        await _messenger.SendMessageAsync(chatId, message);
     }
 }
 
 public class TelegramMessageSender : IMessageSender
 {
-    private readonly TelegramInteractiveBot _telegramBot;
-    private readonly string _defaultChatId;
+    private readonly IChannelMessenger _messenger;
 
-    public TelegramMessageSender(TelegramInteractiveBot telegramBot, string defaultChatId)
+    public TelegramMessageSender(IChannelMessenger messenger)
     {
-        _telegramBot = telegramBot ?? throw new ArgumentNullException(nameof(telegramBot));
-        _defaultChatId = defaultChatId ?? throw new ArgumentNullException(nameof(defaultChatId));
+        _messenger = messenger ?? throw new ArgumentNullException(nameof(messenger));
+
+        if (messenger.PlatformType != "Telegram")
+        {
+            throw new ArgumentException("Expected Telegram messenger", nameof(messenger));
+        }
     }
 
     public async Task SendMessageAsync(string message)
     {
-        await _telegramBot.SendMessage(_defaultChatId, message);
+        await _messenger.SendMessageAsync(message);
     }
 
     public async Task SendMessageAsync(string chatId, string message)
     {
-        await _telegramBot.SendMessage(chatId, message);
+        await _messenger.SendMessageAsync(chatId, message);
     }
 }
