@@ -51,10 +51,13 @@ public class SlackInteractiveBotTests : IDisposable
                 ApiToken = "test-token",
                 ChannelId = "test-channel"
             },
-            Children = new List<Child>
+            MinUddannelse = new MinUddannelse
             {
-                new Child { FirstName = "Emma", LastName = "Test" },
-                new Child { FirstName = TestChild1, LastName = "Test" }
+                Children = new List<Child>
+                {
+                    new Child { FirstName = "Emma", LastName = "Test" },
+                    new Child { FirstName = TestChild1, LastName = "Test" }
+                }
             },
             Timers = new Aula.Configuration.Timers
             {
@@ -110,7 +113,10 @@ public class SlackInteractiveBotTests : IDisposable
         var configWithoutToken = new Config
         {
             Slack = new Aula.Configuration.Slack { ApiToken = "", ChannelId = "test-channel" },
-            Children = new List<Child>(),
+            MinUddannelse = new MinUddannelse
+            {
+                Children = new List<Child>()
+            },
             Timers = new Aula.Configuration.Timers { SlackPollingIntervalSeconds = 5, CleanupIntervalHours = 24 }
         };
 
@@ -136,7 +142,10 @@ public class SlackInteractiveBotTests : IDisposable
         var configWithoutChannel = new Config
         {
             Slack = new Aula.Configuration.Slack { ApiToken = "test-token", ChannelId = "" },
-            Children = new List<Child>(),
+            MinUddannelse = new MinUddannelse
+            {
+                Children = new List<Child>()
+            },
             Timers = new Aula.Configuration.Timers { SlackPollingIntervalSeconds = 5, CleanupIntervalHours = 24 }
         };
 

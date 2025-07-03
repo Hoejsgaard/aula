@@ -42,10 +42,13 @@ public class TelegramInteractiveBotTests
                 Token = "test-token",
                 ChannelId = "test-channel"
             },
-            Children = new List<Child>
+            MinUddannelse = new MinUddannelse
             {
-                new Child { FirstName = "Emma", LastName = "Test" },
-                new Child { FirstName = TestChild1, LastName = "Test" }
+                Children = new List<Child>
+                {
+                    new Child { FirstName = "Emma", LastName = "Test" },
+                    new Child { FirstName = TestChild1, LastName = "Test" }
+                }
             }
         };
     }
@@ -95,7 +98,10 @@ public class TelegramInteractiveBotTests
         var disabledConfig = new Config
         {
             Telegram = new Aula.Configuration.Telegram { Enabled = false, Token = "test-token" },
-            Children = new List<Child>()
+            MinUddannelse = new MinUddannelse
+            {
+                Children = new List<Child>()
+            }
         };
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
@@ -110,7 +116,10 @@ public class TelegramInteractiveBotTests
         var configWithoutToken = new Config
         {
             Telegram = new Aula.Configuration.Telegram { Enabled = true, Token = "" },
-            Children = new List<Child>()
+            MinUddannelse = new MinUddannelse
+            {
+                Children = new List<Child>()
+            }
         };
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
@@ -125,14 +134,20 @@ public class TelegramInteractiveBotTests
         var disabledConfig = new Config
         {
             Telegram = new Aula.Configuration.Telegram { Enabled = false, Token = "test-token" },
-            Children = new List<Child>()
+            MinUddannelse = new MinUddannelse
+            {
+                Children = new List<Child>()
+            }
         };
 
         // We need to create a bot with enabled=true first, then change the config
         var enabledConfig = new Config
         {
             Telegram = new Aula.Configuration.Telegram { Enabled = true, Token = "test-token" },
-            Children = new List<Child>()
+            MinUddannelse = new MinUddannelse
+            {
+                Children = new List<Child>()
+            }
         };
 
         var bot = new TelegramInteractiveBot(_mockAgentService.Object, enabledConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object);
@@ -185,13 +200,19 @@ public class TelegramInteractiveBotTests
         var disabledConfig = new Config
         {
             Telegram = new Aula.Configuration.Telegram { Enabled = false, Token = "test-token" },
-            Children = new List<Child>()
+            MinUddannelse = new MinUddannelse
+            {
+                Children = new List<Child>()
+            }
         };
 
         var enabledConfig = new Config
         {
             Telegram = new Aula.Configuration.Telegram { Enabled = true, Token = "test-token" },
-            Children = new List<Child>()
+            MinUddannelse = new MinUddannelse
+            {
+                Children = new List<Child>()
+            }
         };
 
         var bot = new TelegramInteractiveBot(_mockAgentService.Object, enabledConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object);
@@ -219,7 +240,10 @@ public class TelegramInteractiveBotTests
         var configWithoutChannel = new Config
         {
             Telegram = new Aula.Configuration.Telegram { Enabled = true, Token = "test-token", ChannelId = "" },
-            Children = new List<Child>()
+            MinUddannelse = new MinUddannelse
+            {
+                Children = new List<Child>()
+            }
         };
 
         var bot = new TelegramInteractiveBot(_mockAgentService.Object, _testConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object);

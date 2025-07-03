@@ -67,17 +67,17 @@ public class MessageSenderTests
     // Constructor Validation Tests for Actual Classes
 
     [Fact]
-    public void SlackMessageSender_Constructor_WithNullBot_ThrowsArgumentNullException()
+    public void SlackMessageSender_Constructor_WithNullMessenger_ThrowsArgumentNullException()
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => new SlackMessageSender(null!));
     }
 
     [Fact]
-    public void TelegramMessageSender_Constructor_WithNullBot_ThrowsArgumentNullException()
+    public void TelegramMessageSender_Constructor_WithNullMessenger_ThrowsArgumentNullException()
     {
         // Act & Assert 
-        Assert.Throws<ArgumentNullException>(() => new TelegramMessageSender(null!, "chat"));
+        Assert.Throws<ArgumentNullException>(() => new TelegramMessageSender(null!));
     }
 
     [Fact]

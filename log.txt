@@ -1,264 +1,206 @@
-11:17:56 info: Program[0]
+12:55:22 info: Program[0]
       Starting aula
-11:17:57 info: Aula.Services.SupabaseService[0]
+12:55:23 info: Aula.Services.SupabaseService[0]
       Initializing Supabase connection
-11:17:57 info: Aula.Services.SupabaseService[0]
+12:55:23 info: Aula.Services.SupabaseService[0]
       Supabase client initialized successfully
-11:17:59 info: Aula.Services.SupabaseService[0]
+12:55:24 info: Aula.Services.SupabaseService[0]
       Supabase connection test successful
-11:17:59 info: Program[0]
+12:55:24 info: Program[0]
       Supabase connection test successful
-11:17:59 info: Program[0]
-      ??? Starting one-off historical week letter population
-11:17:59 info: Program[0]
-      ?? Fetching historical week letters for past 8 weeks
-11:17:59 info: AgentService[0]
-      Logging in to MinUddannelse
-11:18:02 info: AgentService[0]
-      Getting all children
-11:18:02 info: AgentService[0]
-      Found 2 children
-11:18:02 info: Program[0]
-      ?? Processing week 26/2025 (date: 06/26/2025)
-11:18:03 warn: Program[0]
-      ? Error fetching week letter for Soren Johannes week 26/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.Soren Johannes,week_number.eq.26),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:03 warn: Program[0]
-      ? Error fetching week letter for TestChild1 week 26/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.TestChild1,week_number.eq.26),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:03 info: Program[0]
-      ?? Processing week 25/2025 (date: 06/19/2025)
-11:18:03 warn: Program[0]
-      ? Error fetching week letter for Soren Johannes week 25/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.Soren Johannes,week_number.eq.25),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:03 warn: Program[0]
-      ? Error fetching week letter for TestChild1 week 25/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.TestChild1,week_number.eq.25),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:03 info: Program[0]
-      ?? Processing week 24/2025 (date: 06/12/2025)
-11:18:04 warn: Program[0]
-      ? Error fetching week letter for Soren Johannes week 24/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.Soren Johannes,week_number.eq.24),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:04 warn: Program[0]
-      ? Error fetching week letter for TestChild1 week 24/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.TestChild1,week_number.eq.24),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:04 info: Program[0]
-      ?? Processing week 23/2025 (date: 06/05/2025)
-11:18:04 warn: Program[0]
-      ? Error fetching week letter for Soren Johannes week 23/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.Soren Johannes,week_number.eq.23),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:04 warn: Program[0]
-      ? Error fetching week letter for TestChild1 week 23/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.TestChild1,week_number.eq.23),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:04 info: Program[0]
-      ?? Processing week 22/2025 (date: 05/29/2025)
-11:18:04 warn: Program[0]
-      ? Error fetching week letter for Soren Johannes week 22/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.Soren Johannes,week_number.eq.22),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:05 warn: Program[0]
-      ? Error fetching week letter for TestChild1 week 22/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.TestChild1,week_number.eq.22),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:05 info: Program[0]
-      ?? Processing week 21/2025 (date: 05/22/2025)
-11:18:05 warn: Program[0]
-      ? Error fetching week letter for Soren Johannes week 21/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.Soren Johannes,week_number.eq.21),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:05 warn: Program[0]
-      ? Error fetching week letter for TestChild1 week 21/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.TestChild1,week_number.eq.21),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:05 info: Program[0]
-      ?? Processing week 20/2025 (date: 05/15/2025)
-11:18:05 warn: Program[0]
-      ? Error fetching week letter for Soren Johannes week 20/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.Soren Johannes,week_number.eq.20),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:05 warn: Program[0]
-      ? Error fetching week letter for TestChild1 week 20/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.TestChild1,week_number.eq.20),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:05 info: Program[0]
-      ?? Processing week 19/2025 (date: 05/08/2025)
-11:18:05 warn: Program[0]
-      ? Error fetching week letter for Soren Johannes week 19/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.Soren Johannes,week_number.eq.19),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:06 warn: Program[0]
-      ? Error fetching week letter for TestChild1 week 19/2025
-      Supabase.Postgrest.Exceptions.PostgrestException: {"code":"PGRST100","details":"unexpected \".\" expecting \"(\"","hint":null,"message":"\"failed to parse logic tree ((and.(child_name.eq.TestChild1,week_number.eq.19),year.eq.2025))\" (line 1, column 8)"}
-         at Supabase.Postgrest.Helpers.MakeRequest(ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Helpers.MakeRequest[T](ClientOptions clientOptions, HttpMethod method, String url, JsonSerializerSettings serializerSettings, Object data, Dictionary`2 headers, Func`1 getHeaders, CancellationToken cancellationToken)
-         at Supabase.Postgrest.Table`1.Single(CancellationToken cancellationToken)
-         at Aula.Services.SupabaseService.GetStoredWeekLetterAsync(String childName, Int32 weekNumber, Int32 year) in D:\git\aula\src\Aula\Services\SupabaseService.cs:line 275
-         at Aula.Program.PopulateHistoricalWeekLetters(IServiceProvider serviceProvider, ILogger logger) in D:\git\aula\src\Aula\Program.cs:line 283
-11:18:06 info: Program[0]
-      ?? Historical week letter population complete: 0/16 successful
-11:18:06 info: Program[0]
+12:55:24 info: Program[0]
       Preloading week letters for all children
-11:18:06 info: AgentService[0]
+12:55:24 info: AgentService[0]
       Logging in to MinUddannelse
-11:18:08 info: AgentService[0]
+12:55:27 info: AgentService[0]
       Getting all children
-11:18:08 info: AgentService[0]
+12:55:27 info: AgentService[0]
       Found 2 children
-11:18:08 info: AgentService[0]
+12:55:27 info: AgentService[0]
       ?? MONITOR: GetWeekLetterAsync for Soren Johannes for date 07/03/2025, useCache: False
-11:18:08 info: AgentService[0]
+12:55:27 info: AgentService[0]
       ?? MONITOR: Fetching fresh week letter for Soren Johannes for date 07/03/2025
-11:18:08 info: AgentService[0]
+12:55:27 info: Aula.Integration.MinUddannelseClient[0]
+      ?? Mock mode enabled - returning stored week letter for Soren Johannes
+12:55:27 info: Aula.Integration.MinUddannelseClient[0]
+      ?? Simulating week 24/2025 as current week for Soren Johannes
+12:55:27 warn: Aula.Integration.MinUddannelseClient[0]
+      ?? No stored week letter found for Soren Johannes week 24/2025 - returning empty
+12:55:27 info: AgentService[0]
       ?? MONITOR: Raw week letter structure for Soren Johannes: errorMessage, ugebreve, klasser
-11:18:08 info: AgentService[0]
+12:55:27 info: AgentService[0]
       ?? MONITOR: Week letter for Soren Johannes contains 1 ugebreve items, first item has keys: klasseNavn, uge, indhold
-11:18:08 info: AgentService[0]
-      ?? MONITOR: Week letter content length for Soren Johannes: 48 characters
-11:18:08 info: AgentService[0]
-      ?? MONITOR: Week letter content starts with: Der er ikke skrevet nogen ugenoter til denne uge
-11:18:08 info: AgentService[0]
+12:55:27 info: AgentService[0]
+      ?? MONITOR: Week letter content length for Soren Johannes: 60 characters
+12:55:27 info: AgentService[0]
+      ?? MONITOR: Week letter content starts with: Der er ikke skrevet nogen ugenoter til denne uge (mock mode)
+12:55:27 info: AgentService[0]
       ?? MONITOR: Added child name to week letter: Soren Johannes
-11:18:08 info: DataService[0]
+12:55:27 info: DataService[0]
       Cached week letter for Soren Johannes
-11:18:08 info: AgentService[0]
+12:55:27 info: AgentService[0]
       ?? MONITOR: Cached week letter for Soren Johannes
-11:18:08 info: Program[0]
+12:55:27 info: Program[0]
       Preloaded week letter for Soren Johannes
-11:18:08 info: AgentService[0]
+12:55:27 info: AgentService[0]
       ?? MONITOR: GetWeekLetterAsync for TestChild1 for date 07/03/2025, useCache: False
-11:18:08 info: AgentService[0]
+12:55:27 info: AgentService[0]
       ?? MONITOR: Fetching fresh week letter for TestChild1 for date 07/03/2025
-11:18:08 info: AgentService[0]
+12:55:27 info: Aula.Integration.MinUddannelseClient[0]
+      ?? Mock mode enabled - returning stored week letter for TestChild1
+12:55:27 info: Aula.Integration.MinUddannelseClient[0]
+      ?? Simulating week 24/2025 as current week for TestChild1
+12:55:27 warn: Aula.Integration.MinUddannelseClient[0]
+      ?? No stored week letter found for TestChild1 week 24/2025 - returning empty
+12:55:27 info: AgentService[0]
       ?? MONITOR: Raw week letter structure for TestChild1: errorMessage, ugebreve, klasser
-11:18:08 info: AgentService[0]
+12:55:27 info: AgentService[0]
       ?? MONITOR: Week letter for TestChild1 contains 1 ugebreve items, first item has keys: klasseNavn, uge, indhold
-11:18:08 info: AgentService[0]
-      ?? MONITOR: Week letter content length for TestChild1: 48 characters
-11:18:08 info: AgentService[0]
-      ?? MONITOR: Week letter content starts with: Der er ikke skrevet nogen ugenoter til denne uge
-11:18:08 info: AgentService[0]
+12:55:27 info: AgentService[0]
+      ?? MONITOR: Week letter content length for TestChild1: 60 characters
+12:55:27 info: AgentService[0]
+      ?? MONITOR: Week letter content starts with: Der er ikke skrevet nogen ugenoter til denne uge (mock mode)
+12:55:27 info: AgentService[0]
       ?? MONITOR: Added child name to week letter: TestChild1
-11:18:08 info: DataService[0]
+12:55:27 info: DataService[0]
       Cached week letter for TestChild1
-11:18:08 info: AgentService[0]
+12:55:27 info: AgentService[0]
       ?? MONITOR: Cached week letter for TestChild1
-11:18:08 info: Program[0]
+12:55:27 info: Program[0]
       Preloaded week letter for TestChild1
-11:18:08 info: Program[0]
+12:55:27 info: Program[0]
       ?? About to start SchedulingService
-11:18:08 info: Program[0]
+12:55:27 info: Program[0]
       ?? Got SchedulingService instance, calling StartAsync
-11:18:08 info: Aula.Scheduling.SchedulingService[0]
+12:55:27 info: Aula.Scheduling.SchedulingService[0]
       Starting scheduling service
-11:18:08 info: Aula.Scheduling.SchedulingService[0]
+12:55:27 info: Aula.Scheduling.SchedulingService[0]
       Scheduling service timer started - checking every 10 seconds
-11:18:08 info: Program[0]
+12:55:27 info: Program[0]
       ?? SchedulingService.StartAsync completed
-11:18:08 info: Aula.Scheduling.SchedulingService[0]
-      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 07/03/2025 11:18:08
-11:18:08 info: Aula.Scheduling.SchedulingService[0]
-      Checking for missed reminders on startup
-11:18:08 info: Aula.Bots.SlackInteractiveBot[0]
+12:55:27 info: Aula.Scheduling.SchedulingService[0]
+      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 07/03/2025 12:55:27
+12:55:27 info: Aula.Bots.SlackInteractiveBot[0]
       Starting Slack polling bot
-11:18:08 info: Aula.Bots.SlackInteractiveBot[0]
-      Initial timestamp set to: 1751534288.000000
-11:18:08 info: Aula.Bots.SlackInteractiveBot[0]
+12:55:27 info: Aula.Bots.SlackInteractiveBot[0]
+      Initial timestamp set to: 1751540127.000000
+12:55:27 info: Aula.Bots.SlackInteractiveBot[0]
       Slack polling started - checking every 5 seconds
-11:18:08 info: Aula.Bots.SlackInteractiveBot[0]
+12:55:27 info: Aula.Bots.SlackInteractiveBot[0]
       Slack cleanup timer started - running every 1 hour
-11:18:08 info: Aula.Services.SupabaseService[0]
-      Checking for pending reminders. Current UTC: 07/03/2025 09:18:08, Local: 07/03/2025 11:18:08
-11:18:08 info: Aula.Scheduling.SchedulingService[0]
-      ?? Timer fired: Checking scheduled tasks and reminders at 07/03/2025 11:18:08 (UTC: 07/03/2025 09:18:08)
-11:18:08 info: Aula.Bots.SlackInteractiveBot[0]
+12:55:27 info: Aula.Scheduling.SchedulingService[0]
+      Checking for missed reminders on startup
+12:55:27 info: Aula.Scheduling.SchedulingService[0]
+      ?? Timer fired: Checking scheduled tasks and reminders at 07/03/2025 12:55:27 (UTC: 07/03/2025 10:55:27)
+12:55:27 info: Aula.Services.SupabaseService[0]
+      Checking for pending reminders. Current UTC: 07/03/2025 10:55:27, Local: 07/03/2025 12:55:27
+12:55:27 info: Aula.Bots.SlackInteractiveBot[0]
       Sending message to Slack
-11:18:08 info: Aula.Scheduling.SchedulingService[0]
-      ?? ExecutePendingReminders called at 07/03/2025 11:18:08 (UTC: 07/03/2025 09:18:08)
-11:18:08 info: Aula.Services.SupabaseService[0]
-      Checking for pending reminders. Current UTC: 07/03/2025 09:18:08, Local: 07/03/2025 11:18:08
-11:18:08 info: Aula.Services.SupabaseService[0]
+12:55:27 info: Aula.Scheduling.SchedulingService[0]
+      ?? ExecutePendingReminders called at 07/03/2025 12:55:27 (UTC: 07/03/2025 10:55:27)
+12:55:27 info: Aula.Services.SupabaseService[0]
+      Checking for pending reminders. Current UTC: 07/03/2025 10:55:27, Local: 07/03/2025 12:55:27
+12:55:27 info: Aula.Services.SupabaseService[0]
       Found 0 pending reminders
-11:18:08 info: Aula.Scheduling.SchedulingService[0]
-      No missed reminders found on startup
-11:18:08 info: Aula.Services.SupabaseService[0]
+12:55:27 info: Aula.Services.SupabaseService[0]
       Found 0 pending reminders
-11:18:08 info: Aula.Scheduling.SchedulingService[0]
+12:55:27 info: Aula.Scheduling.SchedulingService[0]
       No pending reminders found
-11:18:08 info: Aula.Scheduling.SchedulingService[0]
-      ? Running scheduled tasks check at 07/03/2025 11:18:08
-11:18:08 info: Aula.Bots.SlackInteractiveBot[0]
-      Stored sent message ID: 1751534287.795469
-11:18:08 info: Aula.Bots.SlackInteractiveBot[0]
+12:55:27 info: Aula.Scheduling.SchedulingService[0]
+      No missed reminders found on startup
+12:55:28 info: Aula.Bots.SlackInteractiveBot[0]
+      Stored sent message ID: 1751540127.395529
+12:55:28 info: Aula.Bots.SlackInteractiveBot[0]
       Message sent successfully
-11:18:08 info: Aula.Bots.SlackInteractiveBot[0]
+12:55:28 info: Aula.Bots.SlackInteractiveBot[0]
       Slack polling bot started
-11:18:08 info: Program[0]
+12:55:28 info: Program[0]
       Aula started
+12:55:37 info: Aula.Scheduling.SchedulingService[0]
+      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 07/03/2025 12:55:37
+12:55:37 info: Aula.Scheduling.SchedulingService[0]
+      ?? Timer fired: Checking scheduled tasks and reminders at 07/03/2025 12:55:37 (UTC: 07/03/2025 10:55:37)
+12:55:37 info: Aula.Scheduling.SchedulingService[0]
+      ?? ExecutePendingReminders called at 07/03/2025 12:55:37 (UTC: 07/03/2025 10:55:37)
+12:55:37 info: Aula.Services.SupabaseService[0]
+      Checking for pending reminders. Current UTC: 07/03/2025 10:55:37, Local: 07/03/2025 12:55:37
+12:55:37 info: Aula.Services.SupabaseService[0]
+      Found 0 pending reminders
+12:55:37 info: Aula.Scheduling.SchedulingService[0]
+      No pending reminders found
+12:55:42 info: Aula.Bots.SlackInteractiveBot[0]
+      Found 1 new user messages
+12:55:42 info: Aula.Bots.SlackInteractiveBot[0]
+      Processing Slack message in channel C06CVUAEL82: hvad skal soren i dag?
+12:55:42 info: Aula.Bots.SlackInteractiveBot[0]
+      Found first name in text: soren johannes
+12:55:42 info: AgentService[0]
+      Processing query with tools: hvad skal soren i dag?
+12:55:42 info: OpenAiService[0]
+      Processing query with intelligent tool selection: hvad skal soren i dag?
+12:55:42 info: OpenAiService[0]
+      Starting intent analysis for query: hvad skal soren i dag?
+12:55:42 info: OpenAiService[0]
+      Sending intent analysis request to OpenAI
+12:55:44 info: OpenAiService[0]
+      Intent analysis completed successfully: INFORMATION_QUERY
+12:55:44 info: OpenAiService[0]
+      Intent analysis result: INFORMATION_QUERY
+12:55:44 info: OpenAiService[0]
+      Delegating Aula query to existing system: hvad skal soren i dag?
+12:55:44 info: AgentService[0]
+      Falling back to existing week letter system for query: hvad skal soren i dag?
+12:55:44 info: AgentService[0]
+      Getting all children
+12:55:44 info: AgentService[0]
+      Found 2 children
+12:55:44 info: AgentService[0]
+      ?? MONITOR: GetWeekLetterAsync for Soren Johannes for date 07/03/2025, useCache: True
+12:55:44 info: DataService[0]
+      Retrieved week letter from cache for Soren Johannes
+12:55:44 info: AgentService[0]
+      ?? MONITOR: Returning cached week letter for Soren Johannes
+12:55:44 info: AgentService[0]
+      ?? MONITOR: Cached week letter content length for Soren Johannes: 60 characters
+12:55:44 info: AgentService[0]
+      ?? MONITOR: GetWeekLetterAsync for TestChild1 for date 07/03/2025, useCache: True
+12:55:44 info: DataService[0]
+      Retrieved week letter from cache for TestChild1
+12:55:44 info: AgentService[0]
+      ?? MONITOR: Returning cached week letter for TestChild1
+12:55:44 info: AgentService[0]
+      ?? MONITOR: Cached week letter content length for TestChild1: 60 characters
+12:55:44 info: OpenAiService[0]
+      Asking question about multiple children: hvad skal soren i dag? (Today is Thursday) (CRITICAL: Respond in Danish - the user asked in Danish) for Slack
+12:55:47 info: Aula.Scheduling.SchedulingService[0]
+      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 07/03/2025 12:55:47
+12:55:47 info: Aula.Scheduling.SchedulingService[0]
+      ?? Timer fired: Checking scheduled tasks and reminders at 07/03/2025 12:55:47 (UTC: 07/03/2025 10:55:47)
+12:55:47 info: Aula.Scheduling.SchedulingService[0]
+      ?? ExecutePendingReminders called at 07/03/2025 12:55:47 (UTC: 07/03/2025 10:55:47)
+12:55:47 info: Aula.Services.SupabaseService[0]
+      Checking for pending reminders. Current UTC: 07/03/2025 10:55:47, Local: 07/03/2025 12:55:47
+12:55:47 info: Aula.Services.SupabaseService[0]
+      Found 0 pending reminders
+12:55:47 info: Aula.Scheduling.SchedulingService[0]
+      No pending reminders found
+12:55:47 info: Aula.Bots.SlackInteractiveBot[0]
+      Updated conversation context: Child: soren johannes, Today: True, Tomorrow: False, Homework: False, Age: 0.0 minutes
+12:55:47 info: Aula.Bots.SlackInteractiveBot[0]
+      Message sent successfully to Slack channel C06CVUAEL82
+12:55:47 info: Aula.Bots.SlackInteractiveBot[0]
+      Sent response to Slack channel C06CVUAEL82
+12:55:47 info: Aula.Bots.SlackInteractiveBot[0]
+      Updated last timestamp to 1751540138.571789
+12:55:57 info: Aula.Scheduling.SchedulingService[0]
+      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 07/03/2025 12:55:57
+12:55:57 info: Aula.Scheduling.SchedulingService[0]
+      ?? Timer fired: Checking scheduled tasks and reminders at 07/03/2025 12:55:57 (UTC: 07/03/2025 10:55:57)
+12:55:57 info: Aula.Scheduling.SchedulingService[0]
+      ?? ExecutePendingReminders called at 07/03/2025 12:55:57 (UTC: 07/03/2025 10:55:57)
+12:55:57 info: Aula.Services.SupabaseService[0]
+      Checking for pending reminders. Current UTC: 07/03/2025 10:55:57, Local: 07/03/2025 12:55:57
+12:55:57 info: Aula.Services.SupabaseService[0]
+      Found 0 pending reminders
+12:55:57 info: Aula.Scheduling.SchedulingService[0]
+      No pending reminders found

@@ -34,7 +34,7 @@ public class Functions
 			var slackBot = new SlackBot(_config.Slack.WebhookUrl);
 			var telegram = new TelegramClient(_config);
 
-			foreach (var child in _config.Children)
+			foreach (var child in _config.MinUddannelse.Children)
 			{
 				var weekLetter =
 					await minUddannelseClient.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today.AddDays(2)));

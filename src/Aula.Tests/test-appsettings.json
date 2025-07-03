@@ -21,20 +21,22 @@
     "ApiKey": "sk-test-key",
     "Model": "gpt-4"
   },
-  "Children": [
-    {
-      "FirstName": "Alice",
-      "LastName": "Johnson",
-      "Colour": "blue",
-      "GoogleCalendarId": "alice@example.com"
-    },
-    {
-      "FirstName": "Bob",
-      "LastName": "Smith",
-      "Colour": "red",
-      "GoogleCalendarId": "bob@example.com"
-    }
-  ],
+  "MinUddannelse": {
+    "Children": [
+      {
+        "FirstName": "Alice",
+        "LastName": "Johnson",
+        "Colour": "blue",
+        "GoogleCalendarId": "alice@example.com"
+      },
+      {
+        "FirstName": "Bob",
+        "LastName": "Smith",
+        "Colour": "red",
+        "GoogleCalendarId": "bob@example.com"
+      }
+    ]
+  },
   "GoogleServiceAccount": {
     "Type": "service_account",
     "ProjectId": "test-project",

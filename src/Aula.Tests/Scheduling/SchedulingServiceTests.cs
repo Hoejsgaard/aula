@@ -30,9 +30,12 @@ public class SchedulingServiceTests
         {
             Slack = new ConfigSlack { EnableInteractiveBot = true, ApiToken = "test-slack-token" },
             Telegram = new ConfigTelegram { Enabled = true, ChannelId = "@testchannel", Token = "test-telegram-token" },
-            Children = new List<ConfigChild>
+            MinUddannelse = new MinUddannelse
             {
-                new ConfigChild { FirstName = "TestChild", LastName = "TestLast" }
+                Children = new List<ConfigChild>
+                {
+                    new ConfigChild { FirstName = "TestChild", LastName = "TestLast" }
+                }
             }
         };
     }
@@ -957,9 +960,12 @@ public class SchedulingServiceTests
         {
             Slack = new ConfigSlack { EnableInteractiveBot = true, ApiToken = "test-slack-token" },
             Telegram = new ConfigTelegram { Enabled = true, ChannelId = "@testchannel", Token = "test-telegram-token" },
-            Children = new List<ConfigChild>
+            MinUddannelse = new MinUddannelse
             {
-                new ConfigChild { FirstName = "TestChild", LastName = "TestLast" }
+                Children = new List<ConfigChild>
+                {
+                    new ConfigChild { FirstName = "TestChild", LastName = "TestLast" }
+                }
             }
         };
 
@@ -968,7 +974,7 @@ public class SchedulingServiceTests
         Assert.True(testConfig.Telegram.Enabled);
         Assert.NotNull(testConfig.Slack.ApiToken);
         Assert.NotNull(testConfig.Telegram.Token);
-        Assert.NotEmpty(testConfig.Children);
+        Assert.NotEmpty(testConfig.MinUddannelse.Children);
 
         // Verify week letter data structure that would be used in multi-channel posting
         var weekLetter = new JObject
@@ -1125,7 +1131,10 @@ public class SchedulingServiceTests
                 },
                 Slack = new ConfigSlack { EnableInteractiveBot = true, ApiToken = "test-token" },
                 Telegram = new ConfigTelegram { Enabled = true, ChannelId = "@test", Token = "test-token" },
-                Children = new List<ConfigChild> { new ConfigChild { FirstName = "Test", LastName = "Child" } }
+                MinUddannelse = new MinUddannelse
+                {
+                    Children = new List<ConfigChild> { new ConfigChild { FirstName = "Test", LastName = "Child" } }
+                }
             };
 
             var slackBot = new SlackInteractiveBot(_mockAgentService.Object, testConfig, _loggerFactory, _mockSupabaseService.Object);

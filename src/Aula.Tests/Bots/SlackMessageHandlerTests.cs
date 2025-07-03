@@ -41,17 +41,20 @@ public class SlackMessageHandlerTests
                 ApiToken = "test-token",
                 ChannelId = "test-channel"
             },
-            Children = new List<Child>
+            MinUddannelse = new MinUddannelse
             {
-                new Child { FirstName = "Emma", LastName = "Test" },
-                new Child { FirstName = TestChild1, LastName = "Test" }
+                Children = new List<Child>
+                {
+                    new Child { FirstName = "Emma", LastName = "Test" },
+                    new Child { FirstName = TestChild1, LastName = "Test" }
+                }
             }
         };
 
         _childrenByName = new Dictionary<string, Child>
         {
-            { "emma", _testConfig.Children[0] },
-            { "testchild1", _testConfig.Children[1] }
+            { "emma", _testConfig.MinUddannelse.Children[0] },
+            { "testchild1", _testConfig.MinUddannelse.Children[1] }
         };
 
         _conversationContext = new ConversationContext();
