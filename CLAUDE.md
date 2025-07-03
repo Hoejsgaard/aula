@@ -106,8 +106,8 @@ Settings are handled through `appsettings.json` with sections for:
 
 ## Critical Test Issues (2025-07-03)
 
-### ❌ REFLECTION ABUSE IN TESTS
-**Problem**: Extensive use of reflection in unit tests making them brittle and hard to maintain.
+### ❌ REFLECTION ABUSE IN TESTS (TECHNICAL DEBT)
+**Problem**: 144+ reflection calls across 5 test files making tests brittle and hard to maintain.
 
 **Affected Files**:
 - **OpenAiServiceTests.cs**: 79+ reflection calls testing private methods
@@ -116,10 +116,23 @@ Settings are handled through `appsettings.json` with sections for:
 - **TelegramInteractiveBotTests.cs**: 9+ reflection calls testing private fields
 - **MessageSenderTests.cs**: 1+ reflection call
 
-**Solution**: These tests violate testing best practices and need to be refactored to:
-1. **Test public APIs only** - Private methods should not be tested directly
-2. **Use dependency injection** - Mock dependencies instead of accessing private fields
-3. **Focus on behavior** - Test what the class does, not how it does it internally
+**Examples of Violations**:
+```csharp
+// ❌ BAD: Testing private methods via reflection
+var method = typeof(OpenAiService).GetMethod("HandleDeleteReminderQuery", BindingFlags.NonPublic | BindingFlags.Instance);
+var result = await (Task<string>)method!.Invoke(service, new object[] { "delete reminder 3" })!;
+
+// ❌ BAD: Accessing private fields via reflection  
+var configField = typeof(TelegramInteractiveBot).GetField("_config", BindingFlags.NonPublic | BindingFlags.Instance);
+```
+
+**Solution Strategy**:
+1. **Refactor classes to make behavior testable through public APIs**
+2. **Extract interfaces for dependencies** - Enable proper mocking
+3. **Test behavior, not implementation** - Focus on what the class does
+4. **Delete tests that add no value** - Some private method tests may be unnecessary
+
+**Priority**: Address this technical debt before adding new features to prevent further reflection sprawl.
 
 ### ✅ INTEGRATION TESTS REMOVED
 **Problem**: Misnamed "integration" tests that were actually unit tests with mocks.
