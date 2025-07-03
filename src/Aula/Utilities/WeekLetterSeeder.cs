@@ -4,12 +4,6 @@ using Aula.Services;
 
 namespace Aula.Utilities;
 
-public interface IWeekLetterSeeder
-{
-    Task SeedTestDataAsync();
-    Task SeedWeekLetterAsync(string childName, int weekNumber, int year, string content, string? className = null);
-}
-
 public class WeekLetterSeeder : IWeekLetterSeeder
 {
     private readonly ISupabaseService _supabaseService;

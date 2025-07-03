@@ -11,12 +11,6 @@ using Aula.Utilities;
 
 namespace Aula.Scheduling;
 
-public interface ISchedulingService
-{
-    Task StartAsync();
-    Task StopAsync();
-}
-
 public class SchedulingService : ISchedulingService
 {
     private readonly ILogger _logger;
