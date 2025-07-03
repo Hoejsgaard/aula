@@ -243,7 +243,7 @@ public class Program
             var supabaseService = serviceProvider.GetRequiredService<ISupabaseService>();
             var config = serviceProvider.GetRequiredService<Config>();
 
-            logger.LogInformation("📅 Fetching historical week letters for past 8 weeks");
+            logger.LogInformation("📅 Fetching historical week letters from weeks 8-20 ago (avoiding recent summer holidays)");
 
             // Login to MinUddannelse
             var loginSuccess = await agentService.LoginAsync();
@@ -261,11 +261,12 @@ public class Program
             }
 
             var today = DateOnly.FromDateTime(DateTime.Today);
+            logger.LogInformation("📅 Today is: {Today} (calculated from DateTime.Today: {DateTimeToday})", today, DateTime.Today);
             var successCount = 0;
             var totalAttempts = 0;
 
-            // Go back 8 weeks from today
-            for (int weeksBack = 1; weeksBack <= 8; weeksBack++)
+            // Go back 8-20 weeks from today to find school weeks (avoiding summer holidays)
+            for (int weeksBack = 8; weeksBack <= 20; weeksBack++)
             {
                 var targetDate = today.AddDays(-7 * weeksBack);
                 var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(targetDate.ToDateTime(TimeOnly.MinValue));

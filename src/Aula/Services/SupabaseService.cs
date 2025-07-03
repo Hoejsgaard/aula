@@ -217,7 +217,9 @@ public class SupabaseService : ISupabaseService
 
         var result = await _supabase
             .From<PostedLetter>()
-            .Where(p => p.ChildName == childName && p.WeekNumber == weekNumber && p.Year == year)
+            .Where(p => p.ChildName == childName)
+            .Where(p => p.WeekNumber == weekNumber)
+            .Where(p => p.Year == year)
             .Get();
 
         return result.Models.Any();
@@ -274,7 +276,9 @@ public class SupabaseService : ISupabaseService
 
         var result = await _supabase
             .From<PostedLetter>()
-            .Where(p => p.ChildName == childName && p.WeekNumber == weekNumber && p.Year == year)
+            .Where(p => p.ChildName == childName)
+            .Where(p => p.WeekNumber == weekNumber)
+            .Where(p => p.Year == year)
             .Single();
 
         return result?.RawContent;
@@ -314,7 +318,8 @@ public class SupabaseService : ISupabaseService
 
         var result = await _supabase
             .From<PostedLetter>()
-            .Where(p => p.ChildName == childName && p.RawContent != null)
+            .Where(p => p.ChildName == childName)
+            .Where(p => p.RawContent != null)
             .Order("year", Supabase.Postgrest.Constants.Ordering.Descending)
             .Order("week_number", Supabase.Postgrest.Constants.Ordering.Descending)
             .Limit(1)
@@ -367,7 +372,9 @@ public class SupabaseService : ISupabaseService
 
         var result = await _supabase
             .From<RetryAttempt>()
-            .Where(r => r.ChildName == childName && r.WeekNumber == weekNumber && r.Year == year)
+            .Where(r => r.ChildName == childName)
+            .Where(r => r.WeekNumber == weekNumber)
+            .Where(r => r.Year == year)
             .Single();
 
         return result?.AttemptCount ?? 0;
@@ -380,7 +387,9 @@ public class SupabaseService : ISupabaseService
         // Try to get existing retry attempt
         var existing = await _supabase
             .From<RetryAttempt>()
-            .Where(r => r.ChildName == childName && r.WeekNumber == weekNumber && r.Year == year)
+            .Where(r => r.ChildName == childName)
+            .Where(r => r.WeekNumber == weekNumber)
+            .Where(r => r.Year == year)
             .Single();
 
         if (existing != null)
@@ -432,7 +441,9 @@ public class SupabaseService : ISupabaseService
 
         await _supabase
             .From<RetryAttempt>()
-            .Where(r => r.ChildName == childName && r.WeekNumber == weekNumber && r.Year == year)
+            .Where(r => r.ChildName == childName)
+            .Where(r => r.WeekNumber == weekNumber)
+            .Where(r => r.Year == year)
             .Set(r => r.IsSuccessful, true)
             .Update();
 
