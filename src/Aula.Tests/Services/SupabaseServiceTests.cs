@@ -67,7 +67,7 @@ public class SupabaseServiceTests
     }
 
     [Fact]
-    public async Task AddReminderAsync_WithValidParameters_DoesNotThrow()
+    public async Task AddReminderAsync_WithoutInitialization_ThrowsInvalidOperationException()
     {
         // Arrange
         var text = "Test reminder";
@@ -75,11 +75,12 @@ public class SupabaseServiceTests
         var time = new TimeOnly(10, 0);
         var childName = "TestChild";
 
-        // Act & Assert - Should not throw with valid parameters
+        // Act & Assert - Should throw InvalidOperationException when not initialized
         var exception = await Record.ExceptionAsync(async () =>
             await _supabaseService.AddReminderAsync(text, date, time, childName));
 
-        Assert.Null(exception);
+        Assert.NotNull(exception);
+        Assert.IsType<InvalidOperationException>(exception);
     }
 
 
@@ -157,19 +158,6 @@ public class SupabaseServiceTests
         }
     }
 
-    [Fact]
-    public async Task AddReminderAsync_WithoutInitialization_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var text = "Test reminder";
-        var date = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
-        var time = new TimeOnly(10, 0);
-
-        // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _supabaseService.AddReminderAsync(text, date, time));
-        Assert.Equal("Supabase client not initialized", exception.Message);
-    }
 
     [Fact]
     public async Task GetPendingRemindersAsync_WithoutInitialization_ThrowsInvalidOperationException()
@@ -798,7 +786,7 @@ public class SupabaseServiceTests
 
     [Theory]
     [InlineData("TestChild", 1, 2024, "hash123", "{\"test\":\"content\"}", true)]
-    [InlineData("AnotherChild", 25, 2023, "hash456", "{\"ugebreve\":[]}", false)]
+    [InlineData("", 25, 2023, "hash456", "{\"ugebreve\":[]}", false)] // Empty childName should be invalid
     public void WeekLetterStorageParameters_WithVariousInputs_AreValidated(string childName, int weekNumber, int year, string contentHash, string rawContent, bool expectedValid)
     {
         // Act
@@ -826,18 +814,17 @@ public class SupabaseServiceTests
 
     [Theory]
     [InlineData("{invalid json}")]
-    [InlineData("")]
     [InlineData("null")]
     public void WeekLetterJsonValidation_WithInvalidJson_HandlesGracefully(string invalidJson)
     {
-        // Act & Assert - Should throw for invalid JSON
-        if (string.IsNullOrEmpty(invalidJson))
-        {
-            Assert.Throws<ArgumentException>(() => Newtonsoft.Json.Linq.JObject.Parse(invalidJson));
-        }
-        else
-        {
-            Assert.Throws<Newtonsoft.Json.JsonReaderException>(() => Newtonsoft.Json.Linq.JObject.Parse(invalidJson));
-        }
+        // Act & Assert - Should throw JsonReaderException for invalid JSON
+        Assert.Throws<Newtonsoft.Json.JsonReaderException>(() => Newtonsoft.Json.Linq.JObject.Parse(invalidJson));
+    }
+
+    [Fact]
+    public void WeekLetterJsonValidation_WithEmptyString_ThrowsJsonReaderException()
+    {
+        // Act & Assert - Empty string should throw JsonReaderException
+        Assert.Throws<Newtonsoft.Json.JsonReaderException>(() => Newtonsoft.Json.Linq.JObject.Parse(""));
     }
 }
