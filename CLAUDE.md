@@ -310,6 +310,202 @@ var configField = typeof(TelegramInteractiveBot).GetField("_config", BindingFlag
 - ✅ **Documentation Update**: Added required security configuration and verification queries
 - ✅ **Production Security**: Resolved Supabase Security Advisor warnings for all tables
 
+## Architectural Improvement Plan (2025-07-03)
+
+Following comprehensive architecture analysis revealing **B+ rating** with specific improvement areas, this plan addresses architectural debt in order of **lowest effort/risk first** before implementing Crown Jewel Automatic Reminders feature.
+
+### 🔴 PHASE 1: Low Effort, Low Risk Improvements
+
+#### 1.1 Configuration Structure Compliance (Effort: 2-3 hours, Risk: LOW)
+**Problem**: `Children` array at root level violates CLAUDE.md requirement for MinUddannelse grouping  
+**Files**: `Configuration/Config.cs`, `appsettings.json`, DI setup  
+**Priority**: CRITICAL - Required for CLAUDE.md compliance
+
+**Implementation Rules**:
+- Move `Children` property from root Config to `MinUddannelse` section
+- Update all references to use `config.MinUddannelse.Children`
+- Maintain backward compatibility during transition
+- Add configuration validation to catch misconfigurations early
+- Test configuration loading with new structure
+
+**Validation Criteria**:
+- ✅ All child lookups work through MinUddannelse section
+- ✅ Configuration validation prevents invalid setups
+- ✅ No breaking changes to existing functionality
+- ✅ Clean, logical configuration hierarchy
+
+#### 1.2 Interface Organization (Effort: 1-2 hours, Risk: LOW)
+**Problem**: Interfaces mixed with implementations, some defined inline  
+**Files**: `Services/SupabaseService.cs`, `Integration/` folder  
+**Priority**: MEDIUM - Improves maintainability
+
+**Implementation Rules**:
+- Extract all interfaces to separate files (e.g., `ISupabaseService.cs`)
+- Group related interfaces in logical folders
+- Maintain consistent naming conventions (`IServiceName.cs`)
+- Update project references and using statements
+- No functional changes, pure reorganization
+
+**Validation Criteria**:
+- ✅ All interfaces in separate, logically organized files
+- ✅ No compilation errors or broken references
+- ✅ Consistent file naming and organization
+- ✅ Improved code navigation and maintainability
+
+### ⚠️ PHASE 2: Low-Medium Effort, Low-Medium Risk
+
+#### 2.1 Extract Program.cs Logic (Effort: 2-3 hours, Risk: MEDIUM)
+**Problem**: Historical seeding logic mixed with startup, violates single responsibility  
+**Files**: `Program.cs` lines 234-361  
+**Priority**: HIGH - Improves startup clarity and testability
+
+**Implementation Rules**:
+- Create `Services/HistoricalDataSeeder.cs` service
+- Extract `PopulateHistoricalWeekLetters` method and dependencies
+- Inject seeder service and call conditionally from Program.cs
+- Maintain same seeding logic and configuration checks
+- Add proper error handling and logging
+
+**Validation Criteria**:
+- ✅ Program.cs focused only on startup configuration
+- ✅ Seeding logic properly encapsulated in dedicated service
+- ✅ Same seeding behavior with improved separation
+- ✅ Better testability for seeding logic
+
+#### 2.2 Configuration Enhancement (Effort: 3-4 hours, Risk: LOW)
+**Problem**: Missing startup validation and error handling for configurations  
+**Files**: `Configuration/` folder, `Program.cs`  
+**Priority**: MEDIUM - Prevents runtime configuration errors
+
+**Implementation Rules**:
+- Add `IConfigurationValidator` interface and implementation
+- Validate all required configuration sections at startup
+- Provide clear error messages for missing/invalid configs
+- Add configuration change notifications for hot-reload scenarios
+- Implement graceful degradation for optional features
+
+**Validation Criteria**:
+- ✅ Clear startup errors for invalid configurations
+- ✅ Comprehensive validation for all config sections
+- ✅ Graceful handling of optional configuration
+- ✅ Improved developer experience with clear error messages
+
+### 🔄 PHASE 3: Medium Effort, Medium Risk
+
+#### 3.1 Resolve Circular Dependencies (Effort: 4-5 hours, Risk: MEDIUM)
+**Problem**: `IMessageSender` depends on bot classes, violates dependency inversion  
+**Files**: `Channels/IMessageSender.cs`, bot implementations  
+**Priority**: HIGH - Critical architectural violation
+
+**Implementation Rules**:
+- Extract messaging concerns from bot classes
+- Create `IChannelMessenger` abstraction independent of bots
+- Implement messenger services that bots can use
+- Maintain existing public APIs while fixing internal dependencies
+- Use dependency injection to wire up new abstractions
+
+**Validation Criteria**:
+- ✅ No circular dependencies in dependency graph
+- ✅ Clean separation between messaging and bot logic
+- ✅ Existing functionality preserved
+- ✅ Improved testability through proper abstractions
+
+#### 3.2 Shared Bot Infrastructure (Effort: 4-6 hours, Risk: MEDIUM)  
+**Problem**: Code duplication between Slack/Telegram bots for common patterns  
+**Files**: `Bots/SlackInteractiveBot.cs`, `Bots/TelegramInteractiveBot.cs`  
+**Priority**: MEDIUM - Reduces maintenance burden
+
+**Implementation Rules**:
+- Create `BotBase` abstract class with common functionality
+- Extract shared polling, error handling, and message processing logic
+- Maintain bot-specific implementations for platform differences
+- Preserve existing public interfaces and behaviors
+- Use template method pattern for customization points
+
+**Validation Criteria**:
+- ✅ Significantly reduced code duplication
+- ✅ Easier to add new bot platforms
+- ✅ Preserved platform-specific functionality
+- ✅ Consistent error handling and logging patterns
+
+### 🔴 PHASE 4: High Effort, Medium-High Risk
+
+#### 4.1 Split Large Service Classes (Effort: 6-8 hours, Risk: MEDIUM)
+**Problem**: Single responsibility violations in oversized classes  
+**Files**: `OpenAiService.cs` (678 lines), `SupabaseService.cs` (667 lines)  
+**Priority**: HIGH - Critical for maintainability
+
+**OpenAI Service Refactoring Rules**:
+- Extract `IConversationManager` for conversation history management
+- Create `IPromptBuilder` for prompt construction and templates
+- Keep `IOpenAiService` focused on OpenAI API communication
+- Maintain existing public APIs while improving internal structure
+- Ensure all conversation context and history features still work
+
+**Supabase Service Refactoring Rules**:
+- Extract repository pattern interfaces (`IWeekLetterRepository`, `IReminderRepository`)
+- Keep `ISupabaseService` as orchestrator/facade
+- Group related database operations in focused repositories
+- Maintain transaction boundaries and error handling
+- Preserve all existing database functionality
+
+**Validation Criteria**:
+- ✅ Each class has single, clear responsibility
+- ✅ Improved testability with focused interfaces
+- ✅ No functional regressions
+- ✅ Better code organization and navigation
+
+#### 4.2 Channel Architecture Modernization (Effort: 8-10 hours, Risk: HIGH)
+**Problem**: Current channel abstraction not truly extensible for new platforms  
+**Files**: `Channels/` folder, bot implementations  
+**Priority**: HIGH - Foundation for future channel additions
+
+**Implementation Rules**:
+- Design truly platform-agnostic `IChannel` interface
+- Create `ChannelManager` for multichannel coordination
+- Abstract message formatting, interactive capabilities, and platform quirks
+- Implement adapter pattern for existing Slack/Telegram integrations  
+- Support dynamic channel registration and configuration
+
+**Validation Criteria**:
+- ✅ Easy addition of new channel types (Discord, Teams, email)
+- ✅ Consistent message handling across all channels
+- ✅ Platform-specific features still accessible when needed
+- ✅ Configuration-driven channel selection and management
+
+### 📋 PHASE 5: Future Architectural Enhancements
+
+#### 5.1 Advanced Configuration Management
+- Configuration versioning and migration
+- Environment-specific configuration inheritance
+- Runtime configuration updates with validation
+
+#### 5.2 Observability and Monitoring
+- Structured logging with correlation IDs
+- Performance metrics and health checks
+- Distributed tracing for multi-service operations
+
+## Implementation Guidelines
+
+### General Rules for All Phases
+1. **Test Coverage**: Maintain or improve 76.5%+ line coverage
+2. **No Breaking Changes**: Preserve all existing public APIs
+3. **Incremental Approach**: Complete one phase before starting the next
+4. **Validation**: Each phase must pass all existing tests plus new validation criteria
+5. **Documentation**: Update CLAUDE.md and code comments for architectural changes
+6. **Code Style**: Follow all CLAUDE.md and RULES.md guidelines consistently
+
+### Success Metrics
+- **Phase 1-2 Complete**: Architecture moves from B+ to A- rating
+- **Phase 3-4 Complete**: Architecture achieves A rating with excellent separation of concerns
+- **Phase 5 Complete**: Architecture ready for Crown Jewel Automatic Reminders feature
+
+### Risk Mitigation
+- **Feature Branches**: Each phase in separate branch with thorough review
+- **Rollback Plan**: Maintain ability to revert any phase if issues arise
+- **Testing**: Comprehensive validation before merging each phase
+- **Incremental Deployment**: Phase-by-phase deployment with monitoring
+
 ## Development Philosophy
 
 ### Testing Strategy
