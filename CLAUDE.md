@@ -86,6 +86,14 @@ Settings are handled through `appsettings.json` with sections for:
 - Comment only when the "why" isn't obvious - never for the "what"
 - No XML documentation or verbose comments
 
+### Testing Rules
+- **UNIT TESTS ONLY**: Only write unit tests that use mocking and dependency injection
+- **NO INTEGRATION TESTS**: Integration tests are explicitly out of scope and should not be created
+- **NO REFLECTION**: Never use reflection (GetMethod, GetField, Invoke, BindingFlags) in tests - it creates brittle tests that break with refactoring
+- **PUBLIC API ONLY**: Test only public methods and properties - private/internal members should not be tested directly
+- **DEPENDENCY INJECTION**: Use constructor injection and mocking to isolate units under test
+- **CLEAR INTENT**: Test names should clearly describe what behavior is being verified
+
 ### Git Commits
 - Use semantic prefixes: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`
 - Common scopes: `unilogin`, `minuddannelse`, `aula`, `auth`, `api`, `secrets`, `infra`, `tests`
@@ -95,6 +103,27 @@ Settings are handled through `appsettings.json` with sections for:
 - .NET 9.0
 - EnableNETAnalyzers and TreatWarningsAsErrors are enabled
 - Tests use xUnit with Moq for mocking
+
+## Critical Test Issues (2025-07-03)
+
+### ❌ REFLECTION ABUSE IN TESTS
+**Problem**: Extensive use of reflection in unit tests making them brittle and hard to maintain.
+
+**Affected Files**:
+- **OpenAiServiceTests.cs**: 79+ reflection calls testing private methods
+- **SchedulingServiceTests.cs**: 28+ reflection calls testing private methods  
+- **AiToolsManagerTests.cs**: 27+ reflection calls testing private methods
+- **TelegramInteractiveBotTests.cs**: 9+ reflection calls testing private fields
+- **MessageSenderTests.cs**: 1+ reflection call
+
+**Solution**: These tests violate testing best practices and need to be refactored to:
+1. **Test public APIs only** - Private methods should not be tested directly
+2. **Use dependency injection** - Mock dependencies instead of accessing private fields
+3. **Focus on behavior** - Test what the class does, not how it does it internally
+
+### ✅ INTEGRATION TESTS REMOVED
+**Problem**: Misnamed "integration" tests that were actually unit tests with mocks.
+**Solution**: Deleted entire `src/Aula.Tests/Integration/` folder (4 files, 2000+ lines).
 
 ## Current Development Roadmap (2025-06-30)
 
@@ -242,7 +271,7 @@ Settings are handled through `appsettings.json` with sections for:
 - **Refactor first, test afterward** - Never compromise code quality by forcing tests onto problematic code
 - **Focus on shared utilities** - Extract common patterns before duplicating test code
 - **Comprehensive test coverage** - Aim for edge cases, error handling, and proper mocking
-- **Integration testing** - Test critical paths end-to-end
+- **Unit tests only** - No integration tests, no reflection, test public APIs only
 
 ### Architecture Principles
 - **Shared abstractions** - Use interfaces and dependency injection consistently
