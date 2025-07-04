@@ -10,6 +10,7 @@ public class Features
     public bool UseStoredWeekLetters { get; set; } = false;
     public int? TestWeekNumber { get; set; } = null;
     public int? TestYear { get; set; } = null;
+    public bool SeedHistoricalData { get; set; } = false;
 
     // Mock data configuration - when enabled, MinUddannelseClient returns stored data instead of hitting API
     public bool UseMockData { get; set; } = false;

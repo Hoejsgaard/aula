@@ -87,7 +87,7 @@ public class SchedulingServiceTests : IDisposable
         // Cleanup
         await schedulingService.StopAsync();
         slackBot.Dispose();
-        // TelegramInteractiveBot does not implement IDisposable
+        telegramBot.Dispose();
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class SchedulingServiceTests : IDisposable
 
         // Cleanup
         slackBot.Dispose();
-        // TelegramInteractiveBot does not implement IDisposable
+        telegramBot.Dispose();
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public class SchedulingServiceTests : IDisposable
         // Cleanup
         await schedulingService.StopAsync();
         slackBot.Dispose();
-        // TelegramInteractiveBot does not implement IDisposable
+        telegramBot.Dispose();
     }
 
     [Fact]
@@ -449,7 +449,7 @@ public class SchedulingServiceTests : IDisposable
 
         // Track disposable resources
         _disposables.Add(slackBot);
-        // Note: telegramBot does not implement IDisposable
+        telegramBot.Dispose();
 
         return new SchedulingService(
             _loggerFactory,
@@ -1129,38 +1129,45 @@ public class SchedulingServiceTests : IDisposable
 
         foreach (var config in configs)
         {
-            // Act - Should create service without issues
-            var testConfig = new Config
+            SlackInteractiveBot? slackBot = null;
+            TelegramInteractiveBot? telegramBot = null;
+            try
             {
-                Timers = new Aula.Configuration.Timers
+                // Act - Should create service without issues
+                var testConfig = new Config
                 {
-                    SchedulingIntervalSeconds = config.SchedulingInterval
-                },
-                Slack = new ConfigSlack { EnableInteractiveBot = true, ApiToken = "test-token" },
-                Telegram = new ConfigTelegram { Enabled = true, ChannelId = "@test", Token = "test-token" },
-                MinUddannelse = new MinUddannelse
-                {
-                    Children = new List<ConfigChild> { new ConfigChild { FirstName = "Test", LastName = "Child" } }
-                }
-            };
+                    Timers = new Aula.Configuration.Timers
+                    {
+                        SchedulingIntervalSeconds = config.SchedulingInterval
+                    },
+                    Slack = new ConfigSlack { EnableInteractiveBot = true, ApiToken = "test-token" },
+                    Telegram = new ConfigTelegram { Enabled = true, ChannelId = "@test", Token = "test-token" },
+                    MinUddannelse = new MinUddannelse
+                    {
+                        Children = new List<ConfigChild> { new ConfigChild { FirstName = "Test", LastName = "Child" } }
+                    }
+                };
 
-            var slackBot = new SlackInteractiveBot(_mockAgentService.Object, testConfig, _loggerFactory, _mockSupabaseService.Object);
-            var telegramBot = new TelegramInteractiveBot(_mockAgentService.Object, testConfig, _loggerFactory, _mockSupabaseService.Object);
+                slackBot = new SlackInteractiveBot(_mockAgentService.Object, testConfig, _loggerFactory, _mockSupabaseService.Object);
+                telegramBot = new TelegramInteractiveBot(_mockAgentService.Object, testConfig, _loggerFactory, _mockSupabaseService.Object);
 
-            var service = new SchedulingService(
-                _loggerFactory,
-                _mockSupabaseService.Object,
-                _mockAgentService.Object,
-                slackBot,
-                telegramBot,
-                testConfig);
+                var service = new SchedulingService(
+                    _loggerFactory,
+                    _mockSupabaseService.Object,
+                    _mockAgentService.Object,
+                    slackBot,
+                    telegramBot,
+                    testConfig);
 
-            // Assert
-            Assert.NotNull(service);
-
-            // Cleanup
-            slackBot.Dispose();
-            // Note: telegramBot does not implement IDisposable
+                // Assert
+                Assert.NotNull(service);
+            }
+            finally
+            {
+                // Cleanup
+                slackBot?.Dispose();
+                telegramBot?.Dispose();
+            }
         }
     }
 

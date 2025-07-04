@@ -66,14 +66,13 @@ public class Program
                 logger.LogInformation("Supabase connection test successful");
             }
 
-            // ONE-OFF: Populate database with past 8 weeks of week letters
-            // COMMENTED OUT: Historical data has been seeded - uncomment if you need to reseed
-            // if (connectionTest && config.Features?.UseStoredWeekLetters == true)
-            // {
-            //     logger.LogInformation("🗂️ Starting one-off historical week letter population");
-            //     var historicalDataSeeder = serviceProvider.GetRequiredService<IHistoricalDataSeeder>();
-            //     await historicalDataSeeder.SeedHistoricalWeekLettersAsync();
-            // }
+            // Historical data seeding (controlled by configuration)
+            if (connectionTest && config.Features?.SeedHistoricalData == true)
+            {
+                logger.LogInformation("🗂️ Starting historical week letter population");
+                var historicalDataSeeder = serviceProvider.GetRequiredService<IHistoricalDataSeeder>();
+                await historicalDataSeeder.SeedHistoricalWeekLettersAsync();
+            }
 
             // Preload week letters for all children to ensure data is available for interactive bots
             logger.LogInformation("Preloading week letters for all children");

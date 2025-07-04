@@ -22,7 +22,7 @@ using Aula.Utilities;
 
 namespace Aula.Bots;
 
-public class TelegramInteractiveBot
+public class TelegramInteractiveBot : IDisposable
 {
     private readonly IAgentService _agentService;
     private readonly Config _config;
@@ -293,5 +293,8 @@ public class TelegramInteractiveBot
         return Convert.ToBase64String(bytes);
     }
 
-
+    public void Dispose()
+    {
+        Stop();
+    }
 }
