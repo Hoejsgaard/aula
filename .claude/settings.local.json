@@ -1,5 +1,4 @@
 {
-  "disableBypassPermissionsMode": false,
   "includeCoAuthoredBy": false,
   "permissions": {
     "allow": [
@@ -34,8 +33,10 @@
       "Bash(~/.dotnet/tools/reportgenerator -reports:\"/mnt/d/git/aula/src/Aula.Tests/TestResults/*/coverage.cobertura.xml\" -targetdir:/tmp/coverage -reporttypes:TextSummary)",
       "Bash(dotnet --version)",
       "Bash(dotnet --list-sdks)",
-      "Bash(verbosity=minimal)"
+      "Bash(verbosity=minimal)",
+      "Bash(dotnet reportgenerator:*)"
     ],
     "deny": []
-  }
+  },
+  "disableBypassPermissionsMode": false
 }

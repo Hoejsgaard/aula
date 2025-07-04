@@ -328,7 +328,7 @@ public class TelegramClientTests
         // Arrange
         var client = new TelegramClient("123456789:AABBCCDDEEFFGG");
         var weekLetter = CreateSampleWeekLetter();
-        var child = new Child { FirstName = "Alice", LastName = "Johnson", Colour = colour };
+        var child = new Child { FirstName = "Alice", LastName = "Johnson", Colour = colour ?? "" };
 
         // Act & Assert - Should handle various color values
         var task = client.PostWeekLetter("@testchannel", weekLetter, child);
