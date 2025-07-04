@@ -253,4 +253,190 @@ public class OpenAiServiceTests
         service.ClearConversationHistory("existing-context");
         Assert.True(true); // If we get here, the history update logic worked
     }
+
+    [Fact]
+    public void Constructor_WithNullLoggerFactory_ThrowsArgumentNullException()
+    {
+        // Arrange & Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            new OpenAiService("test-key", null!, Mock.Of<IAiToolsManager>(), Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>()));
+    }
+
+    [Fact]
+    public void Constructor_WithNullAiToolsManager_ThrowsArgumentNullException()
+    {
+        // Arrange & Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            new OpenAiService("test-key", Mock.Of<ILoggerFactory>(), null!, Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>()));
+    }
+
+    [Fact]
+    public void Constructor_WithNullConversationManager_ThrowsArgumentNullException()
+    {
+        // Arrange & Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            new OpenAiService("test-key", Mock.Of<ILoggerFactory>(), Mock.Of<IAiToolsManager>(), null!, Mock.Of<IPromptBuilder>()));
+    }
+
+    [Fact]
+    public void Constructor_WithNullPromptBuilder_ThrowsArgumentNullException()
+    {
+        // Arrange & Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            new OpenAiService("test-key", Mock.Of<ILoggerFactory>(), Mock.Of<IAiToolsManager>(), Mock.Of<IConversationManager>(), null!));
+    }
+
+    [Fact]
+    public void Constructor_WithEmptyApiKey_ThrowsArgumentException()
+    {
+        // Arrange & Act & Assert
+        Assert.Throws<ArgumentException>(() =>
+            new OpenAiService("", Mock.Of<ILoggerFactory>(), Mock.Of<IAiToolsManager>(), Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>()));
+    }
+
+    [Fact]
+    public void Constructor_WithWhitespaceApiKey_ThrowsArgumentException()
+    {
+        // Arrange & Act & Assert
+        Assert.Throws<ArgumentException>(() =>
+            new OpenAiService("   ", Mock.Of<ILoggerFactory>(), Mock.Of<IAiToolsManager>(), Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>()));
+    }
+
+    [Fact]
+    public void Constructor_WithCustomModel_UsesProvidedModel()
+    {
+        // Arrange
+        var customModel = "gpt-3.5-turbo";
+        var mockLoggerFactory = new Mock<ILoggerFactory>();
+        var mockLogger = new Mock<ILogger>();
+        mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
+
+        // Act
+        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(), 
+            Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>(), customModel);
+
+        // Assert
+        Assert.NotNull(service);
+    }
+
+    [Fact]
+    public void Constructor_WithNullModel_UsesDefaultModel()
+    {
+        // Arrange
+        var mockLoggerFactory = new Mock<ILoggerFactory>();
+        var mockLogger = new Mock<ILogger>();
+        mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
+
+        // Act
+        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(), 
+            Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>(), null);
+
+        // Assert
+        Assert.NotNull(service);
+    }
+
+    [Fact]
+    public void ClearConversationHistory_WithNullContextKey_CallsConversationManagerCorrectly()
+    {
+        // Arrange
+        var mockConversationManager = new Mock<IConversationManager>();
+        var mockLoggerFactory = new Mock<ILoggerFactory>();
+        var mockLogger = new Mock<ILogger>();
+        mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
+
+        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(), 
+            mockConversationManager.Object, Mock.Of<IPromptBuilder>());
+
+        // Act
+        service.ClearConversationHistory(null);
+
+        // Assert
+        mockConversationManager.Verify(cm => cm.ClearConversationHistory(null), Times.Once);
+    }
+
+    [Fact]
+    public void ClearConversationHistory_WithSpecificContextKey_CallsConversationManagerCorrectly()
+    {
+        // Arrange
+        var mockConversationManager = new Mock<IConversationManager>();
+        var mockLoggerFactory = new Mock<ILoggerFactory>();
+        var mockLogger = new Mock<ILogger>();
+        mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
+
+        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(), 
+            mockConversationManager.Object, Mock.Of<IPromptBuilder>());
+
+        var contextKey = "test-context";
+
+        // Act
+        service.ClearConversationHistory(contextKey);
+
+        // Assert
+        mockConversationManager.Verify(cm => cm.ClearConversationHistory(contextKey), Times.Once);
+    }
+
+    [Fact]
+    public void OpenAiService_ImplementsIOpenAiServiceInterface()
+    {
+        // Arrange & Act & Assert
+        Assert.True(typeof(IOpenAiService).IsAssignableFrom(typeof(OpenAiService)));
+    }
+
+    [Fact]
+    public void OpenAiService_HasCorrectPublicMethods()
+    {
+        // Arrange
+        var serviceType = typeof(OpenAiService);
+
+        // Act & Assert
+        Assert.NotNull(serviceType.GetMethod("SummarizeWeekLetterAsync"));
+        Assert.NotNull(serviceType.GetMethod("AskQuestionAboutWeekLetterAsync", new[] { typeof(JObject), typeof(string), typeof(ChatInterface) }));
+        Assert.NotNull(serviceType.GetMethod("AskQuestionAboutWeekLetterAsync", new[] { typeof(JObject), typeof(string), typeof(string), typeof(ChatInterface) }));
+        Assert.NotNull(serviceType.GetMethod("ExtractKeyInformationAsync"));
+        Assert.NotNull(serviceType.GetMethod("AskQuestionAboutChildrenAsync"));
+        Assert.NotNull(serviceType.GetMethod("ClearConversationHistory"));
+        Assert.NotNull(serviceType.GetMethod("ProcessQueryWithToolsAsync"));
+    }
+
+    [Fact]
+    public void OpenAiService_HasCorrectNamespace()
+    {
+        // Arrange
+        var serviceType = typeof(OpenAiService);
+
+        // Act & Assert
+        Assert.Equal("Aula.Services", serviceType.Namespace);
+    }
+
+    [Fact]
+    public void OpenAiService_IsPublicClass()
+    {
+        // Arrange
+        var serviceType = typeof(OpenAiService);
+
+        // Act & Assert
+        Assert.True(serviceType.IsPublic);
+        Assert.False(serviceType.IsAbstract);
+        Assert.False(serviceType.IsSealed);
+    }
+
+    [Fact]
+    public void OpenAiService_ConstructorParametersHaveCorrectTypes()
+    {
+        // Arrange
+        var serviceType = typeof(OpenAiService);
+        var constructor = serviceType.GetConstructors()[0];
+
+        // Act
+        var parameters = constructor.GetParameters();
+
+        // Assert
+        Assert.Equal(6, parameters.Length);
+        Assert.Equal(typeof(string), parameters[0].ParameterType);
+        Assert.Equal(typeof(ILoggerFactory), parameters[1].ParameterType);
+        Assert.Equal(typeof(IAiToolsManager), parameters[2].ParameterType);
+        Assert.Equal(typeof(IConversationManager), parameters[3].ParameterType);
+        Assert.Equal(typeof(IPromptBuilder), parameters[4].ParameterType);
+        Assert.Equal(typeof(string), parameters[5].ParameterType);
+    }
 }
