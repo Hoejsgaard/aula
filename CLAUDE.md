@@ -155,7 +155,7 @@ Settings are handled through `appsettings.json` with comprehensive validation:
 
 ## Code Style & Development Guidelines
 
-### Testing Rules (945 Tests, 55.91% Coverage)
+### Testing Rules (1444 Tests, 60% Coverage → Target: 75%)
 - **UNIT TESTS ONLY**: Only write unit tests that use mocking and dependency injection
 - **NO INTEGRATION TESTS**: Integration tests are explicitly out of scope
 - **NO DATABASE REPOSITORY TESTS**: Repository classes that depend on Supabase.Client or other database clients require integration testing and are explicitly excluded from unit testing
@@ -163,6 +163,30 @@ Settings are handled through `appsettings.json` with comprehensive validation:
 - **PUBLIC API ONLY**: Test only public methods and properties
 - **DEPENDENCY INJECTION**: Use constructor injection and mocking to isolate units under test
 - **CLEAR INTENT**: Test names should clearly describe what behavior is being verified
+
+### Test Coverage Improvement Plan (55% → 75% Target)
+**Current Status**: 3,104/5,174 lines covered (60%) - Need +776 lines for 75%
+
+**Recent Progress (2025-07-04)**:
+- ✅ **TelegramChannel.cs**: Added 36 tests, covered 254 lines (0% → ~95%)
+- ✅ **BotBase.cs**: Added 21 tests, covered 98 lines (0% → ~85%) 
+- **Total Improvement**: +57 tests, +209 lines covered, +5% coverage
+
+**Next Priority Targets**:
+1. **SlackChannel.cs**: 20% coverage, ~198 uncovered lines
+2. **MinUddannelseClient.cs**: 25% coverage, ~72 uncovered lines
+3. **ConfigurationValidator.cs**: 45% coverage, ~224 uncovered lines
+4. **Error Handling Paths**: Exception scenarios, validation failures
+5. **Conditional Logic**: If/else branches, switch statements
+
+**Coverage Commands**:
+```bash
+# Generate coverage
+dotnet test src/Aula.Tests --collect:"XPlat Code Coverage"
+
+# Generate HTML report
+DOTNET_ROOT=/home/runeh/.dotnet ./tools/reportgenerator -reports:TestResults/*/coverage.cobertura.xml -targetdir:coverage -reporttypes:Html
+```
 
 ### Logging Standards
 - Use ILoggerFactory injection instead of ILogger<T> in constructors
@@ -317,8 +341,8 @@ During summer holidays, no fresh week letters are available, making development/
 - **Code Quality**: Comprehensive linting, nullable reference types, warning-as-errors
 
 ### Quality Metrics
-- **Test Coverage**: 68.66% line coverage, 56.7% branch coverage
-- **Test Count**: 813 passing tests (100% success rate)
+- **Test Coverage**: 60% line coverage, 51% branch coverage  
+- **Test Count**: 1,444 passing tests (98.6% success rate, 21 integration test failures)
 - **Build Quality**: Zero compilation errors, only 3 nullable warnings
 - **Architecture**: Clean dependency injection, proper abstractions
 
