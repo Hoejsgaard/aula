@@ -1,7 +1,8 @@
+using Aula.Services;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Aula.Services;
+namespace Aula.Repositories;
 
 public interface IWeekLetterRepository
 {

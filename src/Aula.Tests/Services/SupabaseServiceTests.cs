@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Aula.Configuration;
 using Aula.Services;
+using Aula.Repositories;
 using ConfigSupabase = Aula.Configuration.Supabase;
 
 namespace Aula.Tests.Services;

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Aula.Services;
+using Aula.Repositories;
 using System;
 using Xunit;
 
@@ -91,7 +92,7 @@ public class AppStateRepositoryTests
         var repositoryType = typeof(AppStateRepository);
 
         // Act & Assert
-        Assert.Equal("Aula.Services", repositoryType.Namespace);
+        Assert.Equal("Aula.Repositories", repositoryType.Namespace);
     }
 
     [Fact]

@@ -1,6 +1,7 @@
+using Aula.Services;
 using System.Threading.Tasks;
 
-namespace Aula.Services;
+namespace Aula.Repositories;
 
 public interface IAppStateRepository
 {

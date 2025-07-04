@@ -1,3 +1,4 @@
+using Aula.Services;
 using Microsoft.Extensions.Logging;
 using Supabase;
 using System;
@@ -5,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Aula.Services;
+namespace Aula.Repositories;
 
 public class ReminderRepository : IReminderRepository
 {
