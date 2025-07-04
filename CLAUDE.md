@@ -155,9 +155,10 @@ Settings are handled through `appsettings.json` with comprehensive validation:
 
 ## Code Style & Development Guidelines
 
-### Testing Rules (812 Tests, 68.66% Coverage)
+### Testing Rules (945 Tests, 55.91% Coverage)
 - **UNIT TESTS ONLY**: Only write unit tests that use mocking and dependency injection
 - **NO INTEGRATION TESTS**: Integration tests are explicitly out of scope
+- **NO DATABASE REPOSITORY TESTS**: Repository classes that depend on Supabase.Client or other database clients require integration testing and are explicitly excluded from unit testing
 - **NO REFLECTION**: Never use reflection (GetMethod, GetField, Invoke, BindingFlags) in tests
 - **PUBLIC API ONLY**: Test only public methods and properties
 - **DEPENDENCY INJECTION**: Use constructor injection and mocking to isolate units under test
