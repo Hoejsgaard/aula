@@ -244,16 +244,23 @@ public class TelegramChannel : IChannel
         return stripped;
     }
 
+    private static readonly Regex MarkdownPattern = new(@"(\*\*.*?\*\*)|(\*.*?\*)|(__.*?__)|(_.*?_)|(`.*?`)|(`{3}.*?`{3})|(\[.*?\]\(.*?\))", 
+        RegexOptions.Singleline | RegexOptions.Compiled);
+    
+    private static readonly Regex HtmlTagPattern = new(@"<\s*\/?\s*(?:b|strong|i|em|code|pre|a)\s*(?:\s[^>]*)?\s*>", 
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private string DetectAndFormat(string message)
     {
-        // Simple detection - if it contains markdown patterns, convert to HTML
-        if (message.Contains("**") || message.Contains("```") || message.Contains("[") && message.Contains("]("))
+        // Enhanced markdown detection using regex patterns
+        // Check for common markdown patterns: **bold**, *italic*, `code`, ```blocks```, [links](url)
+        if (MarkdownPattern.IsMatch(message))
         {
             return ConvertMarkdownToHtml(message);
         }
 
-        // If it already contains HTML tags, just escape special characters
-        if (message.Contains("<") && message.Contains(">"))
+        // Enhanced HTML detection using regex patterns
+        if (HtmlTagPattern.IsMatch(message))
         {
             return FormatForTelegram(message);
         }

@@ -103,7 +103,7 @@ public class SlackMessageHandler
 
         try
         {
-            var response = await _httpClient.PostAsync("https://slack.com/api/chat.postMessage", content);
+            var response = await _httpClient.PostAsync($"{_config.Slack.ApiBaseUrl.TrimEnd('/')}/chat.postMessage", content);
 
             if (response.IsSuccessStatusCode)
             {

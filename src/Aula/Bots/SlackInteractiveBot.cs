@@ -166,7 +166,7 @@ public class SlackInteractiveBot : IDisposable
                 }
 
                 // Removed noisy polling log - only log when there are actual messages
-                var url = $"https://slack.com/api/conversations.history?channel={_config.Slack.ChannelId}&oldest={adjustedTimestamp}&limit=10";
+                var url = $"{_config.Slack.ApiBaseUrl.TrimEnd('/')}/conversations.history?channel={_config.Slack.ChannelId}&oldest={adjustedTimestamp}&limit=10";
 
                 // Make the API call
                 var response = await _httpClient.GetAsync(url);
@@ -314,7 +314,7 @@ public class SlackInteractiveBot : IDisposable
                 Encoding.UTF8,
                 "application/json");
 
-            var response = await _httpClient.PostAsync("https://slack.com/api/chat.postMessage", content);
+            var response = await _httpClient.PostAsync($"{_config.Slack.ApiBaseUrl.TrimEnd('/')}/chat.postMessage", content);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -365,7 +365,7 @@ public class SlackInteractiveBot : IDisposable
                 "application/json");
 
             // Send to Slack API
-            var response = await _httpClient.PostAsync("https://slack.com/api/conversations.join", content);
+            var response = await _httpClient.PostAsync($"{_config.Slack.ApiBaseUrl.TrimEnd('/')}/conversations.join", content);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -434,7 +434,7 @@ public class SlackInteractiveBot : IDisposable
                 Encoding.UTF8);
             content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-            var response = await _httpClient.PostAsync("https://slack.com/api/chat.postMessage", content);
+            var response = await _httpClient.PostAsync($"{_config.Slack.ApiBaseUrl.TrimEnd('/')}/chat.postMessage", content);
 
             if (!response.IsSuccessStatusCode)
             {
