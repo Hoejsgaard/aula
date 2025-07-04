@@ -61,9 +61,17 @@ public class SlackInteractiveBot : IDisposable
             _httpClient.Timeout = TimeSpan.FromSeconds(30); // Add 30 second timeout
         }
         _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
-        _childrenByName = _config.MinUddannelse.Children.ToDictionary(
-            c => c.FirstName.ToLowerInvariant(),
-            c => c);
+        _childrenByName = new Dictionary<string, Child>();
+        foreach (var child in _config.MinUddannelse.Children)
+        {
+            var key = child.FirstName.ToLowerInvariant();
+            if (_childrenByName.ContainsKey(key))
+            {
+                // Handle duplicate first names by appending last name
+                key = $"{child.FirstName.ToLowerInvariant()} {child.LastName.ToLowerInvariant()}";
+            }
+            _childrenByName[key] = child;
+        }
 
         var conversationContext = new ConversationContext();
         var reminderHandler = new ReminderCommandHandler(_logger, _supabaseService, _childrenByName);

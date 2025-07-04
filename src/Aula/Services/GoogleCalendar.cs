@@ -149,7 +149,7 @@ public class GoogleCalendar
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to clear events for calendar {CalendarId} with prefix {Prefix}", calendarId, _prefix);
+            _logger.LogError(ex, "Failed to create events for calendar {CalendarId} with prefix {Prefix}", calendarId, _prefix);
             return false;
         }
 

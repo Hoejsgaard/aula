@@ -258,9 +258,12 @@ public class ConfigurationValidator : IConfigurationValidator
             {
                 errors.Add("Features.MockCurrentWeek must be between 1 and 53 when UseMockData is true");
             }
-            if (features.MockCurrentYear < 2020 || features.MockCurrentYear > _timeProvider.CurrentYear + 1)
+            // Allow reasonable range: past 5 years to next year
+            var minYear = _timeProvider.CurrentYear - 5;
+            var maxYear = _timeProvider.CurrentYear + 1;
+            if (features.MockCurrentYear < minYear || features.MockCurrentYear > maxYear)
             {
-                errors.Add($"Features.MockCurrentYear must be between 2020 and {_timeProvider.CurrentYear + 1} when UseMockData is true");
+                errors.Add($"Features.MockCurrentYear must be between {minYear} and {maxYear} when UseMockData is true");
             }
         }
     }
@@ -280,10 +283,6 @@ public class ConfigurationValidator : IConfigurationValidator
         if (timers.SlackPollingIntervalSeconds <= 0)
         {
             errors.Add("Timers.SlackPollingIntervalSeconds must be greater than 0");
-        }
-        else if (timers.SlackPollingIntervalSeconds < 1)
-        {
-            warnings.Add("Timers.SlackPollingIntervalSeconds is less than 1 second - this may cause excessive API calls");
         }
 
         if (timers.CleanupIntervalHours <= 0)

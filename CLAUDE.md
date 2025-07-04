@@ -107,7 +107,7 @@ Settings are handled through `appsettings.json` with sections for:
 ## Critical Test Issues (2025-07-03)
 
 ### ❌ REFLECTION ABUSE IN TESTS (TECHNICAL DEBT)
-**Problem**: 144+ reflection calls across 5 test files, making tests brittle and hard to maintain.
+**Problem**: 144+ reflection calls across 5 test files, making tests brittle and difficult to maintain.
 
 **Affected Files**:
 - **OpenAiServiceTests.cs**: 79+ reflection calls testing private methods
@@ -169,6 +169,165 @@ var configField = typeof(TelegramInteractiveBot).GetField("_config", BindingFlag
 - ✅ **Easy testing** - Switch between real and mock data instantly
 
 **Usage**: Set `UseMockData: true` and configure desired week/year. App will simulate that week as current.
+
+## Post-Architecture Review Action Plan (2025-07-04)
+
+Following comprehensive architectural and code quality review, this plan addresses all findings systematically with enough context for proper execution.
+
+### 🔴 **IMMEDIATE FIXES** (Critical Issues from review.txt)
+
+#### Fix 1: Unreachable Condition in Slack Polling Validation
+**File**: `src/Aula/Configuration/ConfigurationValidator.cs:283-287`
+**Issue**: `else if (timers.SlackPollingIntervalSeconds < 1)` is unreachable after `<= 0` check
+**Fix**: Remove the redundant validation block entirely
+
+#### Fix 2: Duplicate Keys in Case-Insensitive Dictionary  
+**File**: `src/Aula/Bots/SlackInteractiveBot.cs:63-66`
+**Issue**: `_childrenByName` dictionary can throw ArgumentException with duplicate first names
+**Fix**: Add duplicate handling logic - either concatenate with last name or add numeric suffix
+
+#### Fix 3: Event Creation Error Message Misleading
+**File**: `src/Aula/Services/GoogleCalendar.cs:150-153`  
+**Issue**: Catch block says "Failed to clear events" instead of "Failed to create events"
+**Fix**: Update error message to match actual operation
+
+### 🔷 **MEDIUM PRIORITY** (Architectural Improvements)
+
+#### Arch 1: Remove Unused Aula.Api Project
+**Context**: Legacy Azure Functions project from pre-IP-blocking era
+**Actions**:
+1. Verify no references exist: `grep -r "Aula\.Api" src/`
+2. Remove entire `src/Aula.Api/` folder
+3. Clean up any Azure deployment artifacts
+
+#### Arch 2: Fix Solution File Structure
+**File**: `src/Aula.sln`
+**Issue**: Solution structure may be inconsistent after Aula.Api removal
+**Fix**: Ensure only Aula and Aula.Tests projects are included
+
+#### Arch 3: Refactor SchedulingService to Use IChannelManager
+**Context**: Excellent channel architecture not fully utilized
+**Current**: SchedulingService directly depends on SlackInteractiveBot/TelegramInteractiveBot
+**Target**: Use IChannelManager.BroadcastMessageAsync() for unified messaging
+**Files**: `src/Aula/Scheduling/SchedulingService.cs`, `src/Aula/Program.cs`
+
+#### Arch 4: Service Organization - Move GoogleCalendar  
+**From**: `src/Aula/Services/GoogleCalendar.cs`
+**To**: `src/Aula/Integration/GoogleCalendarService.cs`
+**Reason**: Integration services should be in Integration/ folder
+**Update**: All references and DI registration
+
+#### Arch 5: Create Missing Interface Abstractions
+**Missing Interfaces**:
+- `IGoogleCalendar` for GoogleCalendar service  
+- `IAiToolsManager` for AiToolsManager
+**Benefit**: Consistency with other services, better testability
+
+### 🔷 **MEDIUM PRIORITY** (Code Quality & Testing)
+
+#### Test 1: Add Comprehensive ChannelManager Tests
+**Context**: Excellent channel architecture deserves thorough testing
+**Target**: Test ChannelManager.BroadcastMessageAsync(), capability filtering, error isolation
+**File**: Create `src/Aula.Tests/Channels/ChannelManagerTests.cs`
+
+#### Quality 1: Implement AI Usage Monitoring
+**Context**: No visibility into OpenAI token usage and costs
+**Implementation**:
+- Add token counting to OpenAiService
+- Log usage statistics per conversation
+- Add monthly cost tracking configuration
+- Consider usage alerts/budgets
+
+#### Quality 2: Add Basic Operational Monitoring
+**Context**: Missing health checks and uptime tracking
+**Implementation**:
+- Add database connection health checks
+- Monitor external API availability (Slack, Telegram)
+- Basic uptime/availability metrics
+
+### 🔷 **LOW PRIORITY** (Code Organization)
+
+#### Naming 1: Service Naming Consistency
+**Changes**:
+- `DataService` → `DataManager` (reflects caching behavior)
+- `GoogleCalendar` → `GoogleCalendarService` (service naming convention)
+**Files**: Update class names, interfaces, and all references
+
+#### Doc 1: Create Consolidated Setup Guides
+**Request**: Consolidate service setup guides in docs/ folder
+**Structure**:
+```
+docs/
+├── setup/
+│   ├── slack-setup.md      # Slack bot and webhook setup
+│   ├── telegram-setup.md   # Telegram bot configuration  
+│   ├── google-calendar.md  # Service account and calendar setup
+│   ├── openai-setup.md     # API key and model configuration
+│   └── supabase-setup.md   # Move existing SUPABASE_SETUP.md here
+└── deployment/
+    └── architecture.md     # Document home hosting constraints
+```
+
+#### Doc 2: Remove Backup/Recovery Supabase Documentation
+**Action**: Remove backup/recovery sections from SUPABASE_SETUP.md as requested
+
+### 🔴 **REVIEW COMPLETION** (Address All review.txt Points)
+
+#### Final Task: Comprehensive Review.txt Resolution
+**Context**: Address every point mentioned in review.txt including duplicates and nitpicks
+**Scope**: 
+- All 3 Cursor bugs (polling validation, duplicate keys, error message)
+- All 4 CodeRabbit duplicate comments 
+- All 7 CodeRabbit nitpick comments
+- Typography fixes in CLAUDE.md (en-dashes, grammar)
+- HISTORICAL_WEEK_LETTERS.md improvements
+
+**CodeRabbit Issues to Address**:
+1. **Duplicate Comments (4)**:
+   - Remove redundant SlackPollingIntervalSeconds validation ✓ (covered above)
+   - Update outdated TelegramInteractiveBot disposal comments
+   - Fix multi-channel posting test to verify actual behavior
+   - Fix resource leaks in test loop disposal
+
+2. **Nitpick Comments (7)**:
+   - Validate SlackChannel messenger parameter consistency  
+   - Improve year validation range logic in ConfigurationValidator
+   - Improve SchedulingService dependency resolution error handling
+   - Remove commented historical data seeding code (make configurable)
+   - Fix typography: "hard" → "difficult", add "the" before Crown Jewel
+   - Fix HISTORICAL_WEEK_LETTERS.md possessive apostrophe
+   - Use en-dashes for time ranges
+
+### 📋 **Execution Strategy**
+
+#### Phase 1: Critical Fixes (1-2 hours)
+Execute the 3 immediate fixes from Cursor/CodeRabbit review
+
+#### Phase 2: Architecture Clean-up (2-3 hours)  
+Remove Aula.Api, fix solution structure, move services to correct folders
+
+#### Phase 3: Channel Architecture Integration (3-4 hours)
+Refactor SchedulingService to use IChannelManager properly
+
+#### Phase 4: Testing & Quality (2-3 hours)
+Add ChannelManager tests, implement basic monitoring
+
+#### Phase 5: Documentation & Polish (1-2 hours)
+Create consolidated setup guides, fix typography issues
+
+#### Phase 6: Review Resolution (1-2 hours)
+Address all remaining review.txt points systematically
+
+### 🎯 **Success Criteria**
+- ✅ All 813 tests continue passing
+- ✅ All Cursor bugs resolved  
+- ✅ All CodeRabbit feedback addressed
+- ✅ Solution structure cleaned up
+- ✅ Channel architecture fully utilized
+- ✅ Consolidated documentation created
+- ✅ Ready for Crown Jewel automatic reminders development
+
+---
 
 ## Current Development Roadmap (2025-06-30)
 
@@ -233,9 +392,9 @@ var configField = typeof(TelegramInteractiveBot).GetField("_config", BindingFlag
 ### 🔄 Human-Aware Retry Policy Enhancement
 **Problem**: Current 1-hour linear retry doesn't match human publishing behavior
 **Reality**: Week letters expected Sunday 4 PM but humans cause delays:
-- **Common**: 1-4 hours late (Sunday evening)
-- **Occasional**: 6-18 hours late (Monday morning) 
-- **Rare**: 24-48 hours late (Tuesday)
+- **Common**: 1–4 hours late (Sunday evening)
+- **Occasional**: 6–18 hours late (Monday morning) 
+- **Rare**: 24–48 hours late (Tuesday)
 - **Never**: >48 hours (week is over, no longer relevant)
 
 **Smart Retry Strategy**:
@@ -344,7 +503,7 @@ var configField = typeof(TelegramInteractiveBot).GetField("_config", BindingFlag
 
 ## Architectural Improvement Plan (2025-07-03)
 
-Following comprehensive architecture analysis revealing **B+ rating** with specific improvement areas, this plan addresses architectural debt in order of **lowest effort/risk first** before implementing Crown Jewel Automatic Reminders feature.
+Following comprehensive architecture analysis revealing **B+ rating** with specific improvement areas, this plan addresses architectural debt in order of **lowest effort/risk first** before implementing the Crown Jewel Automatic Reminders feature.
 
 ### 🔴 PHASE 1: Low Effort, Low Risk Improvements
 
