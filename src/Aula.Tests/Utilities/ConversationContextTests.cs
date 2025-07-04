@@ -18,7 +18,7 @@ public class ConversationContextTests
         Assert.False(context.WasAboutToday);
         Assert.False(context.WasAboutTomorrow);
         Assert.False(context.WasAboutHomework);
-        var now = DateTime.Now;
+        var now = DateTime.UtcNow;
         var tolerance = TimeSpan.FromSeconds(2);
         Assert.True(context.Timestamp <= now + tolerance);
         Assert.True(context.Timestamp >= now - tolerance);
@@ -29,7 +29,7 @@ public class ConversationContextTests
     {
         // Arrange
         var context = new ConversationContext();
-        var testTime = DateTime.Now.AddMinutes(-5);
+        var testTime = DateTime.UtcNow.AddMinutes(-5);
 
         // Act
         context.LastChildName = "Hans";
@@ -52,7 +52,7 @@ public class ConversationContextTests
         // Arrange
         var context = new ConversationContext
         {
-            Timestamp = DateTime.Now.AddMinutes(-5) // 5 minutes ago
+            Timestamp = DateTime.UtcNow.AddMinutes(-5) // 5 minutes ago
         };
 
         // Act & Assert
@@ -65,7 +65,7 @@ public class ConversationContextTests
         // Arrange
         var context = new ConversationContext
         {
-            Timestamp = DateTime.Now.AddMinutes(-10) // Exactly 10 minutes ago
+            Timestamp = DateTime.UtcNow.AddMinutes(-10) // Exactly 10 minutes ago
         };
 
         // Act & Assert
@@ -78,7 +78,7 @@ public class ConversationContextTests
         // Arrange
         var context = new ConversationContext
         {
-            Timestamp = DateTime.Now.AddMinutes(-15) // 15 minutes ago
+            Timestamp = DateTime.UtcNow.AddMinutes(-15) // 15 minutes ago
         };
 
         // Act & Assert
@@ -91,7 +91,7 @@ public class ConversationContextTests
         // Arrange
         var context = new ConversationContext
         {
-            Timestamp = DateTime.Now.AddMinutes(-9.9) // Just under 10 minutes ago
+            Timestamp = DateTime.UtcNow.AddMinutes(-9.9) // Just under 10 minutes ago
         };
 
         // Act & Assert
@@ -108,7 +108,7 @@ public class ConversationContextTests
             WasAboutToday = true,
             WasAboutTomorrow = false,
             WasAboutHomework = true,
-            Timestamp = DateTime.Now.AddMinutes(-3.5)
+            Timestamp = DateTime.UtcNow.AddMinutes(-3.5)
         };
 
         // Act
@@ -130,7 +130,7 @@ public class ConversationContextTests
         var context = new ConversationContext
         {
             LastChildName = null,
-            Timestamp = DateTime.Now.AddMinutes(-1)
+            Timestamp = DateTime.UtcNow.AddMinutes(-1)
         };
 
         // Act
@@ -151,7 +151,7 @@ public class ConversationContextTests
         var context = new ConversationContext
         {
             LastChildName = "",
-            Timestamp = DateTime.Now.AddSeconds(-30)
+            Timestamp = DateTime.UtcNow.AddSeconds(-30)
         };
 
         // Act
@@ -166,7 +166,7 @@ public class ConversationContextTests
     public void ToString_AgeCalculation_IsAccurate()
     {
         // Arrange
-        var exactTime = DateTime.Now.AddMinutes(-2.5);
+        var exactTime = DateTime.UtcNow.AddMinutes(-2.5);
         var context = new ConversationContext
         {
             Timestamp = exactTime

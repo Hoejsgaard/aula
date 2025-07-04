@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using Aula.Configuration;
 using Aula.Integration;
+using Newtonsoft.Json.Linq;
 
 namespace Aula.Services;
 
@@ -86,11 +87,16 @@ public class HistoricalDataSeeder : IHistoricalDataSeeder
 
                         // Try to fetch week letter for this historical date - DISABLE MOCK MODE temporarily
                         var originalUseMockData = _config.Features.UseMockData;
-                        _config.Features.UseMockData = false; // Force real API call
-
-                        var weekLetter = await _agentService.GetWeekLetterAsync(child, targetDate, false);
-
-                        _config.Features.UseMockData = originalUseMockData; // Restore original setting
+                        JObject? weekLetter;
+                        try
+                        {
+                            _config.Features.UseMockData = false; // Force real API call
+                            weekLetter = await _agentService.GetWeekLetterAsync(child, targetDate, false);
+                        }
+                        finally
+                        {
+                            _config.Features.UseMockData = originalUseMockData; // Restore original setting
+                        }
 
                         if (weekLetter != null)
                         {

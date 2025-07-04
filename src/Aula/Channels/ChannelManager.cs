@@ -42,13 +42,13 @@ public class ChannelManager : IChannelManager
         if (channel == null)
             throw new ArgumentNullException(nameof(channel));
 
-        _channels.AddOrUpdate(channel.PlatformId, channel, (key, existing) => 
+        _channels.AddOrUpdate(channel.PlatformId, channel, (key, existing) =>
         {
             _logger.LogWarning("Replacing existing channel for platform: {PlatformId}", key);
             return channel;
         });
 
-        _logger.LogInformation("Registered channel: {PlatformId} ({DisplayName})", 
+        _logger.LogInformation("Registered channel: {PlatformId} ({DisplayName})",
             channel.PlatformId, channel.DisplayName);
     }
 
@@ -60,7 +60,7 @@ public class ChannelManager : IChannelManager
         var removed = _channels.TryRemove(platformId, out var channel);
         if (removed && channel != null)
         {
-            _logger.LogInformation("Unregistered channel: {PlatformId} ({DisplayName})", 
+            _logger.LogInformation("Unregistered channel: {PlatformId} ({DisplayName})",
                 channel.PlatformId, channel.DisplayName);
         }
 
@@ -160,7 +160,7 @@ public class ChannelManager : IChannelManager
             return;
         }
 
-        _logger.LogInformation("Sending formatted message to {Count} channels with format: {Format}", 
+        _logger.LogInformation("Sending formatted message to {Count} channels with format: {Format}",
             enabledChannels.Count, format);
 
         var tasks = enabledChannels.Select(async channel =>
@@ -193,13 +193,13 @@ public class ChannelManager : IChannelManager
             {
                 var isConnected = await channel.TestConnectionAsync();
                 results[channel.PlatformId] = isConnected;
-                _logger.LogDebug("Channel {PlatformId} connection test: {Result}", 
+                _logger.LogDebug("Channel {PlatformId} connection test: {Result}",
                     channel.PlatformId, isConnected ? "PASS" : "FAIL");
             }
             catch (Exception ex)
             {
                 results[channel.PlatformId] = false;
-                _logger.LogError(ex, "Channel {PlatformId} connection test failed with exception", 
+                _logger.LogError(ex, "Channel {PlatformId} connection test failed with exception",
                     channel.PlatformId);
             }
         });
@@ -276,31 +276,31 @@ public class ChannelManager : IChannelManager
         if (filter == null)
             return GetAllChannels();
 
-        return _channels.Values.Where(channel => 
+        return _channels.Values.Where(channel =>
         {
             var caps = channel.Capabilities;
 
-            if (filter.RequiresInteractivity.HasValue && 
+            if (filter.RequiresInteractivity.HasValue &&
                 channel.SupportsInteractivity != filter.RequiresInteractivity.Value)
                 return false;
 
-            if (filter.RequiresBold.HasValue && 
+            if (filter.RequiresBold.HasValue &&
                 caps.SupportsBold != filter.RequiresBold.Value)
                 return false;
 
-            if (filter.RequiresLinks.HasValue && 
+            if (filter.RequiresLinks.HasValue &&
                 caps.SupportsLinks != filter.RequiresLinks.Value)
                 return false;
 
-            if (filter.RequiresButtons.HasValue && 
+            if (filter.RequiresButtons.HasValue &&
                 caps.SupportsButtons != filter.RequiresButtons.Value)
                 return false;
 
-            if (filter.RequiresImages.HasValue && 
+            if (filter.RequiresImages.HasValue &&
                 caps.SupportsImages != filter.RequiresImages.Value)
                 return false;
 
-            if (filter.MinMessageLength.HasValue && 
+            if (filter.MinMessageLength.HasValue &&
                 caps.MaxMessageLength < filter.MinMessageLength.Value)
                 return false;
 

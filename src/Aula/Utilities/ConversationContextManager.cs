@@ -9,13 +9,13 @@ public class ConversationContext
     public bool WasAboutToday { get; set; }
     public bool WasAboutTomorrow { get; set; }
     public bool WasAboutHomework { get; set; }
-    public DateTime Timestamp { get; set; } = DateTime.Now;
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
-    public bool IsStillValid => (DateTime.Now - Timestamp).TotalMinutes < 10; // Context expires after 10 minutes
+    public bool IsStillValid => (DateTime.UtcNow - Timestamp).TotalMinutes < 10; // Context expires after 10 minutes
 
     public override string ToString()
     {
-        return $"Child: {LastChildName ?? "none"}, Today: {WasAboutToday}, Tomorrow: {WasAboutTomorrow}, Homework: {WasAboutHomework}, Age: {(DateTime.Now - Timestamp).TotalMinutes.ToString("F1", CultureInfo.InvariantCulture)} minutes";
+        return $"Child: {LastChildName ?? "none"}, Today: {WasAboutToday}, Tomorrow: {WasAboutTomorrow}, Homework: {WasAboutHomework}, Age: {(DateTime.UtcNow - Timestamp).TotalMinutes.ToString("F1", CultureInfo.InvariantCulture)} minutes";
     }
 }
 
@@ -37,7 +37,7 @@ public class ConversationContextManager<TKey> where TKey : notnull
             WasAboutToday = isAboutToday,
             WasAboutTomorrow = isAboutTomorrow,
             WasAboutHomework = isAboutHomework,
-            Timestamp = DateTime.Now
+            Timestamp = DateTime.UtcNow
         };
 
         _logger.LogInformation("Updated conversation context for key {Key}: {Context}", key, _conversationContexts[key]);

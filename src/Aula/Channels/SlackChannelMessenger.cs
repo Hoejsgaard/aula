@@ -24,10 +24,6 @@ public class SlackChannelMessenger : IChannelMessenger
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<SlackChannelMessenger>();
-
-        // Configure HTTP client for Slack API
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _config.Slack.ApiToken);
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "Aula Bot 1.0");
     }
 
     public async Task SendMessageAsync(string message)
@@ -52,7 +48,14 @@ public class SlackChannelMessenger : IChannelMessenger
             var json = JsonSerializer.Serialize(payload);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await _httpClient.PostAsync("https://slack.com/api/chat.postMessage", content);
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://slack.com/api/chat.postMessage")
+            {
+                Content = content
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _config.Slack.ApiToken);
+            request.Headers.Add("User-Agent", "Aula Bot 1.0");
+
+            var response = await _httpClient.SendAsync(request);
 
             if (!response.IsSuccessStatusCode)
             {

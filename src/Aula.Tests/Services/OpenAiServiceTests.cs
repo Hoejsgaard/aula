@@ -22,8 +22,8 @@ public class OpenAiServiceTests
             mockLoggerFactory.Object);
         var mockConversationManager = new Mock<IConversationManager>();
         var mockPromptBuilder = new Mock<IPromptBuilder>();
-        
-        return new OpenAiService(apiKey, mockLoggerFactory.Object, mockAiToolsManager.Object, 
+
+        return new OpenAiService(apiKey, mockLoggerFactory.Object, mockAiToolsManager.Object,
             mockConversationManager.Object, mockPromptBuilder.Object);
     }
     [Fact]

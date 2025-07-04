@@ -134,7 +134,7 @@ public class TelegramChannel : IChannel
         try
         {
             _logger.LogInformation("Initializing Telegram channel");
-            
+
             if (_bot != null && SupportsInteractivity)
             {
                 // Bot initialization is handled by the bot itself
@@ -214,13 +214,13 @@ public class TelegramChannel : IChannel
         // Convert markdown to HTML for Telegram
         // Bold: **text** -> <b>text</b>
         converted = Regex.Replace(converted, @"\*\*(.*?)\*\*", "<b>$1</b>", RegexOptions.Singleline);
-        
+
         // Italic: *text* -> <i>text</i>
         converted = Regex.Replace(converted, @"(?<!\*)\*([^*]+?)\*(?!\*)", "<i>$1</i>", RegexOptions.Singleline);
-        
+
         // Code: `text` -> <code>text</code>
         converted = Regex.Replace(converted, @"`([^`]+?)`", "<code>$1</code>", RegexOptions.Singleline);
-        
+
         // Code block: ```text``` -> <pre>text</pre>
         converted = Regex.Replace(converted, @"```([^`]+?)```", "<pre>$1</pre>", RegexOptions.Singleline);
 

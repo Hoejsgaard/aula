@@ -1,206 +1,1611 @@
-12:55:22 info: Program[0]
-      Starting aula
-12:55:23 info: Aula.Services.SupabaseService[0]
-      Initializing Supabase connection
-12:55:23 info: Aula.Services.SupabaseService[0]
-      Supabase client initialized successfully
-12:55:24 info: Aula.Services.SupabaseService[0]
-      Supabase connection test successful
-12:55:24 info: Program[0]
-      Supabase connection test successful
-12:55:24 info: Program[0]
-      Preloading week letters for all children
-12:55:24 info: AgentService[0]
-      Logging in to MinUddannelse
-12:55:27 info: AgentService[0]
-      Getting all children
-12:55:27 info: AgentService[0]
-      Found 2 children
-12:55:27 info: AgentService[0]
-      ?? MONITOR: GetWeekLetterAsync for Soren Johannes for date 07/03/2025, useCache: False
-12:55:27 info: AgentService[0]
-      ?? MONITOR: Fetching fresh week letter for Soren Johannes for date 07/03/2025
-12:55:27 info: Aula.Integration.MinUddannelseClient[0]
-      ?? Mock mode enabled - returning stored week letter for Soren Johannes
-12:55:27 info: Aula.Integration.MinUddannelseClient[0]
-      ?? Simulating week 24/2025 as current week for Soren Johannes
-12:55:27 warn: Aula.Integration.MinUddannelseClient[0]
-      ?? No stored week letter found for Soren Johannes week 24/2025 - returning empty
-12:55:27 info: AgentService[0]
-      ?? MONITOR: Raw week letter structure for Soren Johannes: errorMessage, ugebreve, klasser
-12:55:27 info: AgentService[0]
-      ?? MONITOR: Week letter for Soren Johannes contains 1 ugebreve items, first item has keys: klasseNavn, uge, indhold
-12:55:27 info: AgentService[0]
-      ?? MONITOR: Week letter content length for Soren Johannes: 60 characters
-12:55:27 info: AgentService[0]
-      ?? MONITOR: Week letter content starts with: Der er ikke skrevet nogen ugenoter til denne uge (mock mode)
-12:55:27 info: AgentService[0]
-      ?? MONITOR: Added child name to week letter: Soren Johannes
-12:55:27 info: DataService[0]
-      Cached week letter for Soren Johannes
-12:55:27 info: AgentService[0]
-      ?? MONITOR: Cached week letter for Soren Johannes
-12:55:27 info: Program[0]
-      Preloaded week letter for Soren Johannes
-12:55:27 info: AgentService[0]
-      ?? MONITOR: GetWeekLetterAsync for Hans Martin for date 07/03/2025, useCache: False
-12:55:27 info: AgentService[0]
-      ?? MONITOR: Fetching fresh week letter for Hans Martin for date 07/03/2025
-12:55:27 info: Aula.Integration.MinUddannelseClient[0]
-      ?? Mock mode enabled - returning stored week letter for Hans Martin
-12:55:27 info: Aula.Integration.MinUddannelseClient[0]
-      ?? Simulating week 24/2025 as current week for Hans Martin
-12:55:27 warn: Aula.Integration.MinUddannelseClient[0]
-      ?? No stored week letter found for Hans Martin week 24/2025 - returning empty
-12:55:27 info: AgentService[0]
-      ?? MONITOR: Raw week letter structure for Hans Martin: errorMessage, ugebreve, klasser
-12:55:27 info: AgentService[0]
-      ?? MONITOR: Week letter for Hans Martin contains 1 ugebreve items, first item has keys: klasseNavn, uge, indhold
-12:55:27 info: AgentService[0]
-      ?? MONITOR: Week letter content length for Hans Martin: 60 characters
-12:55:27 info: AgentService[0]
-      ?? MONITOR: Week letter content starts with: Der er ikke skrevet nogen ugenoter til denne uge (mock mode)
-12:55:27 info: AgentService[0]
-      ?? MONITOR: Added child name to week letter: Hans Martin
-12:55:27 info: DataService[0]
-      Cached week letter for Hans Martin
-12:55:27 info: AgentService[0]
-      ?? MONITOR: Cached week letter for Hans Martin
-12:55:27 info: Program[0]
-      Preloaded week letter for Hans Martin
-12:55:27 info: Program[0]
-      ?? About to start SchedulingService
-12:55:27 info: Program[0]
-      ?? Got SchedulingService instance, calling StartAsync
-12:55:27 info: Aula.Scheduling.SchedulingService[0]
-      Starting scheduling service
-12:55:27 info: Aula.Scheduling.SchedulingService[0]
-      Scheduling service timer started - checking every 10 seconds
-12:55:27 info: Program[0]
-      ?? SchedulingService.StartAsync completed
-12:55:27 info: Aula.Scheduling.SchedulingService[0]
-      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 07/03/2025 12:55:27
-12:55:27 info: Aula.Bots.SlackInteractiveBot[0]
-      Starting Slack polling bot
-12:55:27 info: Aula.Bots.SlackInteractiveBot[0]
-      Initial timestamp set to: 1751540127.000000
-12:55:27 info: Aula.Bots.SlackInteractiveBot[0]
-      Slack polling started - checking every 5 seconds
-12:55:27 info: Aula.Bots.SlackInteractiveBot[0]
-      Slack cleanup timer started - running every 1 hour
-12:55:27 info: Aula.Scheduling.SchedulingService[0]
-      Checking for missed reminders on startup
-12:55:27 info: Aula.Scheduling.SchedulingService[0]
-      ?? Timer fired: Checking scheduled tasks and reminders at 07/03/2025 12:55:27 (UTC: 07/03/2025 10:55:27)
-12:55:27 info: Aula.Services.SupabaseService[0]
-      Checking for pending reminders. Current UTC: 07/03/2025 10:55:27, Local: 07/03/2025 12:55:27
-12:55:27 info: Aula.Bots.SlackInteractiveBot[0]
-      Sending message to Slack
-12:55:27 info: Aula.Scheduling.SchedulingService[0]
-      ?? ExecutePendingReminders called at 07/03/2025 12:55:27 (UTC: 07/03/2025 10:55:27)
-12:55:27 info: Aula.Services.SupabaseService[0]
-      Checking for pending reminders. Current UTC: 07/03/2025 10:55:27, Local: 07/03/2025 12:55:27
-12:55:27 info: Aula.Services.SupabaseService[0]
-      Found 0 pending reminders
-12:55:27 info: Aula.Services.SupabaseService[0]
-      Found 0 pending reminders
-12:55:27 info: Aula.Scheduling.SchedulingService[0]
-      No pending reminders found
-12:55:27 info: Aula.Scheduling.SchedulingService[0]
-      No missed reminders found on startup
-12:55:28 info: Aula.Bots.SlackInteractiveBot[0]
-      Stored sent message ID: 1751540127.395529
-12:55:28 info: Aula.Bots.SlackInteractiveBot[0]
-      Message sent successfully
-12:55:28 info: Aula.Bots.SlackInteractiveBot[0]
-      Slack polling bot started
-12:55:28 info: Program[0]
-      Aula started
-12:55:37 info: Aula.Scheduling.SchedulingService[0]
-      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 07/03/2025 12:55:37
-12:55:37 info: Aula.Scheduling.SchedulingService[0]
-      ?? Timer fired: Checking scheduled tasks and reminders at 07/03/2025 12:55:37 (UTC: 07/03/2025 10:55:37)
-12:55:37 info: Aula.Scheduling.SchedulingService[0]
-      ?? ExecutePendingReminders called at 07/03/2025 12:55:37 (UTC: 07/03/2025 10:55:37)
-12:55:37 info: Aula.Services.SupabaseService[0]
-      Checking for pending reminders. Current UTC: 07/03/2025 10:55:37, Local: 07/03/2025 12:55:37
-12:55:37 info: Aula.Services.SupabaseService[0]
-      Found 0 pending reminders
-12:55:37 info: Aula.Scheduling.SchedulingService[0]
-      No pending reminders found
-12:55:42 info: Aula.Bots.SlackInteractiveBot[0]
-      Found 1 new user messages
-12:55:42 info: Aula.Bots.SlackInteractiveBot[0]
-      Processing Slack message in channel C06CVUAEL82: hvad skal soren i dag?
-12:55:42 info: Aula.Bots.SlackInteractiveBot[0]
-      Found first name in text: soren johannes
-12:55:42 info: AgentService[0]
-      Processing query with tools: hvad skal soren i dag?
-12:55:42 info: OpenAiService[0]
-      Processing query with intelligent tool selection: hvad skal soren i dag?
-12:55:42 info: OpenAiService[0]
-      Starting intent analysis for query: hvad skal soren i dag?
-12:55:42 info: OpenAiService[0]
-      Sending intent analysis request to OpenAI
-12:55:44 info: OpenAiService[0]
-      Intent analysis completed successfully: INFORMATION_QUERY
-12:55:44 info: OpenAiService[0]
-      Intent analysis result: INFORMATION_QUERY
-12:55:44 info: OpenAiService[0]
-      Delegating Aula query to existing system: hvad skal soren i dag?
-12:55:44 info: AgentService[0]
-      Falling back to existing week letter system for query: hvad skal soren i dag?
-12:55:44 info: AgentService[0]
-      Getting all children
-12:55:44 info: AgentService[0]
-      Found 2 children
-12:55:44 info: AgentService[0]
-      ?? MONITOR: GetWeekLetterAsync for Soren Johannes for date 07/03/2025, useCache: True
-12:55:44 info: DataService[0]
-      Retrieved week letter from cache for Soren Johannes
-12:55:44 info: AgentService[0]
-      ?? MONITOR: Returning cached week letter for Soren Johannes
-12:55:44 info: AgentService[0]
-      ?? MONITOR: Cached week letter content length for Soren Johannes: 60 characters
-12:55:44 info: AgentService[0]
-      ?? MONITOR: GetWeekLetterAsync for Hans Martin for date 07/03/2025, useCache: True
-12:55:44 info: DataService[0]
-      Retrieved week letter from cache for Hans Martin
-12:55:44 info: AgentService[0]
-      ?? MONITOR: Returning cached week letter for Hans Martin
-12:55:44 info: AgentService[0]
-      ?? MONITOR: Cached week letter content length for Hans Martin: 60 characters
-12:55:44 info: OpenAiService[0]
-      Asking question about multiple children: hvad skal soren i dag? (Today is Thursday) (CRITICAL: Respond in Danish - the user asked in Danish) for Slack
-12:55:47 info: Aula.Scheduling.SchedulingService[0]
-      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 07/03/2025 12:55:47
-12:55:47 info: Aula.Scheduling.SchedulingService[0]
-      ?? Timer fired: Checking scheduled tasks and reminders at 07/03/2025 12:55:47 (UTC: 07/03/2025 10:55:47)
-12:55:47 info: Aula.Scheduling.SchedulingService[0]
-      ?? ExecutePendingReminders called at 07/03/2025 12:55:47 (UTC: 07/03/2025 10:55:47)
-12:55:47 info: Aula.Services.SupabaseService[0]
-      Checking for pending reminders. Current UTC: 07/03/2025 10:55:47, Local: 07/03/2025 12:55:47
-12:55:47 info: Aula.Services.SupabaseService[0]
-      Found 0 pending reminders
-12:55:47 info: Aula.Scheduling.SchedulingService[0]
-      No pending reminders found
-12:55:47 info: Aula.Bots.SlackInteractiveBot[0]
-      Updated conversation context: Child: soren johannes, Today: True, Tomorrow: False, Homework: False, Age: 0.0 minutes
-12:55:47 info: Aula.Bots.SlackInteractiveBot[0]
-      Message sent successfully to Slack channel C06CVUAEL82
-12:55:47 info: Aula.Bots.SlackInteractiveBot[0]
-      Sent response to Slack channel C06CVUAEL82
-12:55:47 info: Aula.Bots.SlackInteractiveBot[0]
-      Updated last timestamp to 1751540138.571789
-12:55:57 info: Aula.Scheduling.SchedulingService[0]
-      ?? TIMER FIRED - CheckScheduledTasksWrapper called at 07/03/2025 12:55:57
-12:55:57 info: Aula.Scheduling.SchedulingService[0]
-      ?? Timer fired: Checking scheduled tasks and reminders at 07/03/2025 12:55:57 (UTC: 07/03/2025 10:55:57)
-12:55:57 info: Aula.Scheduling.SchedulingService[0]
-      ?? ExecutePendingReminders called at 07/03/2025 12:55:57 (UTC: 07/03/2025 10:55:57)
-12:55:57 info: Aula.Services.SupabaseService[0]
-      Checking for pending reminders. Current UTC: 07/03/2025 10:55:57, Local: 07/03/2025 12:55:57
-12:55:57 info: Aula.Services.SupabaseService[0]
-      Found 0 pending reminders
-12:55:57 info: Aula.Scheduling.SchedulingService[0]
-      No pending reminders found
+Cursor bot feedback:
+
+
+cursor[bot] <notifications@github.com>
+04:48 (4 minutes ago)
+to Hoejsgaard/aula, Rune, Author
+
+@cursor[bot] commented on this pull request.
+
+Bug: Repository Methods Incorrectly Handle Null Records
+The Single() method is incorrectly used in WeekLetterRepository.cs (lines 59, 101, 139). It throws an InvalidOperationException when no matching record is found, but the code expects null (e.g., line 61's null check). This causes runtime exceptions, particularly when storing new week letters or retrieving non-existent ones. SingleOrDefault() should be used instead to correctly handle scenarios where no record exists.
+
+src/Aula/Services/WeekLetterRepository.cs#L53-L59
+https://github.com/Hoejsgaard/aula/blob/77fbabdf8224c0244a3330a2d9c7b67fc72e09ff/src/Aula/Services/WeekLetterRepository.cs#L53-L59
+
+src/Aula/Services/WeekLetterRepository.cs#L105-L106
+https://github.com/Hoejsgaard/aula/blob/77fbabdf8224c0244a3330a2d9c7b67fc72e09ff/src/Aula/Services/WeekLetterRepository.cs#L105-L106
+
+src/Aula/Services/WeekLetterRepository.cs#L145-L146
+https://github.com/Hoejsgaard/aula/blob/77fbabdf8224c0244a3330a2d9c7b67fc72e09ff/src/Aula/Services/WeekLetterRepository.cs#L145-L146
+
+Fix in Cursor • Fix in Web
+
+Bug: Race Condition and Exception Handling in Shared Config
+Temporarily modifying the shared _config.Features.UseMockData setting creates a race condition if accessed concurrently, potentially affecting other operations. Additionally, the restoration of the original setting is not exception-safe; if an exception occurs, the UseMockData flag may remain false. This should be wrapped in a try/finally block to ensure restoration, and a thread-safe approach should be considered.
+
+src/Aula/Services/HistoricalDataSeeder.cs#L87-L94
+https://github.com/Hoejsgaard/aula/blob/77fbabdf8224c0244a3330a2d9c7b67fc72e09ff/src/Aula/Services/HistoricalDataSeeder.cs#L87-L94
+
+Fix in Cursor • Fix in Web
+
+Bug: Timezone Bugs in Conversation Context
+The ConversationContext and ConversationContextManager classes use DateTime.Now for timestamping and context validity checks. This can lead to timezone-related bugs, incorrect context expiration, and issues in distributed environments or during daylight saving time changes. For reliable time comparisons, all DateTime operations should consistently use DateTime.UtcNow.
+
+src/Aula/Utilities/ConversationContextManager.cs#L11-L18
+https://github.com/Hoejsgaard/aula/blob/77fbabdf8224c0244a3330a2d9c7b67fc72e09ff/src/Aula/Utilities/ConversationContextManager.cs#L11-L18
+
+Fix in Cursor • Fix in Web
+
+Bug: Incorrect Use of Single() Causes Exceptions
+The Single() method is incorrectly used instead of SingleOrDefault() in StoreWeekLetterAsync, GetStoredWeekLetterAsync, and GetLatestStoredWeekLetterAsync. This causes an InvalidOperationException when no matching record is found, despite the code expecting a null result.
+
+src/Aula/Services/WeekLetterRepository.cs#L100-L106
+https://github.com/Hoejsgaard/aula/blob/77fbabdf8224c0244a3330a2d9c7b67fc72e09ff/src/Aula/Services/WeekLetterRepository.cs#L100-L106
+
+src/Aula/Services/WeekLetterRepository.cs#L138-L146
+https://github.com/Hoejsgaard/aula/blob/77fbabdf8224c0244a3330a2d9c7b67fc72e09ff/src/Aula/Services/WeekLetterRepository.cs#L138-L146
+
+Fix in Cursor • Fix in Web
+
+Bug: Shared HttpClient Causes Authorization Header Leakage
+Modifying the DefaultRequestHeaders (Authorization and User-Agent) of an injected HttpClient in the SlackChannelMessenger constructor will cause these headers to persist for all subsequent requests made by that shared HttpClient instance. This can lead to unintended side effects for other services using the same client. Headers should be set per-request or the HttpClient should be scoped to this service.
+
+src/Aula/Channels/SlackChannelMessenger.cs#L27-L30
+https://github.com/Hoejsgaard/aula/blob/77fbabdf8224c0244a3330a2d9c7b67fc72e09ff/src/Aula/Channels/SlackChannelMessenger.cs#L27-L30
+
+Fix in Cursor • Fix in Web
+
+Was this report helpful? Give feedback by reacting with 👍 or 👎
+
+—-----------------------
+
+Code Rabbit feedback
+
+@coderabbitai[bot] commented on this pull request.
+
+Actionable comments posted: 11
+
+♻️ Duplicate comments (6)
+log.txt (1)
+20-68: Debug logging cleanup needed.
+
+The log contains many debug messages prefixed with "??" that should be cleaned up for production readiness.
+
+src/Aula/Program.cs (1)
+218-223: Duplicate issue: Avoid creating temporary Config object for Telegram bot registration.
+
+This implementation still creates a temporary Config object to check if Telegram is enabled, which was flagged in previous reviews as inefficient.
+
+The previous recommendation to restructure service registration to avoid duplicate configuration binding should be implemented.
+
+src/Aula.Tests/Bots/SlackInteractiveBotTests.cs (1)
+33-33: MaxMessageLength constant mismatch with implementation.
+
+This issue has already been identified in previous reviews. The test constant should be updated to match the 4000-character limit used in SlackInteractiveBot.
+
+src/Aula.Tests/Scheduling/SchedulingServiceTests.cs (3)
+88-90: Update outdated comment about TelegramInteractiveBot disposal.
+
+This comment appears outdated based on past review feedback indicating TelegramInteractiveBot should implement IDisposable for consistency with SlackInteractiveBot.
+
+898-906: Ineffective concurrency test needs actual service interaction.
+
+The concurrent tasks only delay without interacting with the scheduling service, which doesn't test true concurrency scenarios.
+
+1140-1156: Resource leak: bot instances not properly disposed in loop.
+
+Multiple bot instances are created in the loop but only the last SlackInteractiveBot is disposed, potentially causing resource leaks.
+
+🧹 Nitpick comments (14)
+src/Aula/Configuration/IConfigurationValidator.cs (1)
+3-6: Consider enhancing the interface design for better validation feedback.
+
+While the interface is functional, consider these improvements:
+
+Return validation results instead of void to allow callers to handle validation failures gracefully
+Add XML documentation for better API clarity
+Consider making the method async for future extensibility
++/// <summary>
++/// Provides contract for validating configuration objects.
++/// </summary>
+ public interface IConfigurationValidator
+ {
+-    void ValidateConfiguration(Config config);
++    /// <summary>
++    /// Validates the provided configuration and returns validation results.
++    /// </summary>
++    /// <param name="config">The configuration to validate.</param>
++    /// <returns>A task representing the validation operation.</returns>
++    Task ValidateConfigurationAsync(Config config);
+ }
+src/Aula/Configuration/IConfig.cs (1)
+3-14: Consider making configuration properties read-only for better immutability.
+
+While the interface is well-structured, configuration objects typically benefit from immutability after initialization to prevent accidental modification during runtime.
+
+ public interface IConfig
+ {
+-    UniLogin UniLogin { get; set; }
+-    MinUddannelse MinUddannelse { get; set; }
+-    Slack Slack { get; set; }
+-    GoogleServiceAccount GoogleServiceAccount { get; set; }
+-    Telegram Telegram { get; set; }
+-    OpenAi OpenAi { get; set; }
+-    Supabase Supabase { get; set; }
+-    Features Features { get; set; }
+-    Timers Timers { get; set; }
++    UniLogin UniLogin { get; }
++    MinUddannelse MinUddannelse { get; }
++    Slack Slack { get; }
++    GoogleServiceAccount GoogleServiceAccount { get; }
++    Telegram Telegram { get; }
++    OpenAi OpenAi { get; }
++    Supabase Supabase { get; }
++    Features Features { get; }
++    Timers Timers { get; }
+ }
+src/Aula/Channels/SlackChannelMessenger.cs (1)
+52-55: Consider extracting the API endpoint to configuration.
+
+The Slack API endpoint is hardcoded, which makes it difficult to test or change for different environments.
+
+-            var response = await _httpClient.PostAsync("https://slack.com/api/chat.postMessage", content);
++            const string slackApiEndpoint = "https://slack.com/api/chat.postMessage";
++            var response = await _httpClient.PostAsync(slackApiEndpoint, content);
+Or better yet, move it to configuration for greater flexibility.
+
+src/Aula/Channels/TelegramChannelMessenger.cs (1)
+44-63: Consider implementing IDisposable for resource cleanup.
+
+If the TelegramBotClient implements IDisposable, the messenger should also implement IDisposable to ensure proper cleanup of resources.
+
+-public class TelegramChannelMessenger : IChannelMessenger
++public class TelegramChannelMessenger : IChannelMessenger, IDisposable
+ {
+     // ... existing code ...
++
++    public void Dispose()
++    {
++        _telegramClient?.Dispose();
++    }
+ }
+HISTORICAL_WEEK_LETTERS.md (2)
+42-48: Add language specification to fenced code blocks.
+
+For better syntax highlighting and clarity, specify the language for console output blocks.
+
+Apply these changes:
+
+For the code block starting at line 42:
+
+-```
++```console
+📅 Fetching historical week letters for past 8 weeks
+For the code block starting at line 128:
+
+-```
++```console
+🗂️ Starting one-off historical week letter population
+Also applies to: 128-140
+
+115-115: Minor typographical refinements.
+
+Consider these improvements for better readability:
+
+-- ❌ **Network errors**: Logs errors but continues with next week letter
++- ❌ **Network errors**: Logs errors but continues with next week's letter
+-- **Duration**: Approximately 8-10 seconds for full population
++- **Duration**: Approximately 8–10 seconds for full population
+Also applies to: 122-122
+
+src/Aula/Channels/IMessageSender.cs (1)
+9-57: Consider reducing code duplication between platform implementations.
+
+Both SlackMessageSender and TelegramMessageSender have identical implementations except for the platform type validation. Consider consolidating into a base class or generic implementation.
+
+Example refactoring using a base class:
+
+public abstract class MessageSenderBase : IMessageSender
+{
+    private readonly IChannelMessenger _messenger;
+    protected abstract string ExpectedPlatformType { get; }
+
+    protected MessageSenderBase(IChannelMessenger messenger)
+    {
+        _messenger = messenger ?? throw new ArgumentNullException(nameof(messenger));
+
+        if (messenger.PlatformType != ExpectedPlatformType)
+        {
+            throw new ArgumentException($"Expected {ExpectedPlatformType} messenger", nameof(messenger));
+        }
+    }
+
+    public async Task SendMessageAsync(string message)
+    {
+        await _messenger.SendMessageAsync(message);
+    }
+
+    public async Task SendMessageAsync(string chatId, string message)
+    {
+        await _messenger.SendMessageAsync(chatId, message);
+    }
+}
+
+public class SlackMessageSender : MessageSenderBase
+{
+    protected override string ExpectedPlatformType => "Slack";
+    
+    public SlackMessageSender(IChannelMessenger messenger) : base(messenger) { }
+}
+
+public class TelegramMessageSender : MessageSenderBase
+{
+    protected override string ExpectedPlatformType => "Telegram";
+    
+    public TelegramMessageSender(IChannelMessenger messenger) : base(messenger) { }
+}
+src/Aula/Configuration/ConfigurationValidator.cs (1)
+228-231: Consider making year validation more testable.
+
+Using DateTime.Now.Year in validation logic can make tests non-deterministic, especially around year boundaries.
+
+Consider injecting a time provider or making the current year configurable:
+
+// Option 1: Accept current year as parameter
+private void ValidateFeatures(Features features, int? currentYear = null)
+{
+    var maxYear = (currentYear ?? DateTime.Now.Year) + 1;
+    if (features.MockCurrentYear < 2020 || features.MockCurrentYear > maxYear)
+    {
+        throw new InvalidOperationException($"Features.MockCurrentYear must be between 2020 and {maxYear} when UseMockData is true");
+    }
+}
+
+// Option 2: Use ISystemClock or similar abstraction
+src/Aula/Program.cs (1)
+20-158: Review the startup sequence and error handling patterns.
+
+The async Main method implementation is well-structured with proper configuration validation and graceful shutdown. However, there are a few areas for improvement:
+
+Preloading resilience: The individual child preloading (lines 69-80) has proper per-child error handling, which is good.
+
+Commented historical seeder: The large commented block (lines 54-61) should either be removed or moved to documentation if it's truly a one-off operation.
+
+Consider extracting the preloading logic into a separate method:
+
++    private static async Task PreloadWeekLettersAsync(IAgentService agentService, ILogger logger)
++    {
++        logger.LogInformation("Preloading week letters for all children");
++        await agentService.LoginAsync();
++
++        var allChildren = await agentService.GetAllChildrenAsync();
++        foreach (var child in allChildren)
++        {
++            try
++            {
++                var weekLetter = await agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), false);
++                logger.LogInformation("Preloaded week letter for {ChildName}", child.FirstName);
++            }
++            catch (Exception ex)
++            {
++                logger.LogError(ex, "Failed to preload week letter for {ChildName}", child.FirstName);
++            }
++        }
++    }
+And replace lines 63-80 with:
+
+-            // Preload week letters for all children to ensure data is available for interactive bots
+-            logger.LogInformation("Preloading week letters for all children");
+-            var agentService = serviceProvider.GetRequiredService<IAgentService>();
+-            await agentService.LoginAsync();
+-
+-            var allChildren = await agentService.GetAllChildrenAsync();
+-            foreach (var child in allChildren)
+-            {
+-                try
+-                {
+-                    var weekLetter = await agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), false);
+-                    logger.LogInformation("Preloaded week letter for {ChildName}", child.FirstName);
+-                }
+-                catch (Exception ex)
+-                {
+-                    logger.LogError(ex, "Failed to preload week letter for {ChildName}", child.FirstName);
+-                }
+-            }
++            // Preload week letters for all children to ensure data is available for interactive bots
++            var agentService = serviceProvider.GetRequiredService<IAgentService>();
++            await PreloadWeekLettersAsync(agentService, logger);
+src/Aula/Channels/SlackChannel.cs (1)
+91-256: Review formatting logic for edge cases and performance.
+
+The formatting implementation is comprehensive, but there are a few considerations:
+
+Regex patterns: The regex patterns look correct for basic formatting conversion, but consider edge cases with nested formatting.
+
+Auto-detection reliability: The auto-detection logic (lines 246-256) is simple but may not handle complex mixed content well.
+
+Consider enhancing the auto-detection logic:
+
+private string DetectAndFormat(string message)
+{
+-    // Simple detection - if it contains HTML tags, treat as HTML, otherwise as markdown
+-    if (message.Contains("<") && message.Contains(">") && 
+-        (message.Contains("<b>") || message.Contains("<i>") || message.Contains("<code>")))
++    // Enhanced detection - check for common HTML patterns
++    var htmlTagPattern = @"<(?:b|i|em|strong|code|pre|br)\b[^>]*>";
++    if (Regex.IsMatch(message, htmlTagPattern, RegexOptions.IgnoreCase))
+     {
+         return ConvertHtmlToSlack(message);
+     }
+
+     return FormatForSlack(message);
+ }
+This would be more reliable for detecting HTML content.
+
+src/Aula/Channels/TelegramChannel.cs (2)
+116-119: Consider implementing the actual bot API test.
+
+The comment suggests implementing a getMe API call for more robust connection testing.
+
+Would you like me to implement the actual Telegram Bot API getMe call to properly test the connection?
+
+247-262: Improve markdown detection logic.
+
+The current detection logic using simple string contains checks could produce false positives. For example, mathematical expressions like "a[i]" would be incorrectly identified as markdown.
+
+Consider using more specific patterns:
+
+ private string DetectAndFormat(string message)
+ {
+     // Simple detection - if it contains markdown patterns, convert to HTML
+-    if (message.Contains("**") || message.Contains("```") || message.Contains("[") && message.Contains("]("))
++    // Check for actual markdown patterns with more context
++    bool hasMarkdownBold = Regex.IsMatch(message, @"\*\*[^*]+\*\*");
++    bool hasMarkdownCode = Regex.IsMatch(message, @"```[\s\S]+```");
++    bool hasMarkdownLink = Regex.IsMatch(message, @"\[[^\]]+\]\([^)]+\)");
++    
++    if (hasMarkdownBold || hasMarkdownCode || hasMarkdownLink)
+     {
+         return ConvertMarkdownToHtml(message);
+     }
+CLAUDE.md (2)
+110-110: Minor grammatical improvement for clarity.
+
+Consider adding a comma for better readability.
+
+-**Problem**: 144+ reflection calls across 5 test files making tests brittle and hard to maintain.
++**Problem**: 144+ reflection calls across 5 test files, making tests brittle and hard to maintain.
+161-162: Improve sentence structure for clarity.
+
+The sentence could be clearer with better punctuation and article usage.
+
+-2. Instead returns stored week letters from database for configured week/year
+-3. App thinks it's getting "live" data but it's actually historical
++2. Instead returns stored week letters from the database for configured week/year
++3. App thinks it's getting "live" data, but it's actually historical
+📜 Review details
+Configuration used: CodeRabbit UI
+Review profile: CHILL
+Plan: Pro
+
+📥 Commits
+Reviewing files that changed from the base of the PR and between d89dd30 and 77fbabd.
+
+📒 Files selected for processing (40)
+CLAUDE.md (1 hunks)
+HISTORICAL_WEEK_LETTERS.md (1 hunks)
+log.txt (1 hunks)
+src/Aula.Api/Functions.cs (1 hunks)
+src/Aula.Tests/Bots/SlackInteractiveBotTests.cs (1 hunks)
+src/Aula.Tests/Bots/SlackMessageHandlerTests.cs (1 hunks)
+src/Aula.Tests/Bots/TelegramInteractiveBotTests.cs (1 hunks)
+src/Aula.Tests/Bots/TelegramMessageHandlerTests.cs (1 hunks)
+src/Aula.Tests/Channels/MessageSenderTests.cs (1 hunks)
+src/Aula.Tests/Configuration/ConfigurationTests.cs (1 hunks)
+src/Aula.Tests/Scheduling/SchedulingServiceIntegrationTests.cs (1 hunks)
+src/Aula.Tests/Scheduling/SchedulingServiceTests.cs (1 hunks)
+src/Aula.Tests/Services/ConversationManagerTests.cs (1 hunks)
+src/Aula.Tests/Services/OpenAiServiceIntegrationTests.cs (1 hunks)
+src/Aula.Tests/Services/OpenAiServiceTests.cs (1 hunks)
+src/Aula.Tests/Services/PromptBuilderTests.cs (1 hunks)
+src/Aula.Tests/Services/SupabaseServiceTests.cs (1 hunks)
+src/Aula.Tests/test-appsettings.json (1 hunks)
+src/Aula/Bots/BotBase.cs (1 hunks)
+src/Aula/Bots/SlackInteractiveBot.cs (1 hunks)
+src/Aula/Bots/TelegramInteractiveBot.cs (1 hunks)
+src/Aula/Channels/ChannelManager.cs (1 hunks)
+src/Aula/Channels/IChannel.cs (1 hunks)
+src/Aula/Channels/IChannelManager.cs (1 hunks)
+src/Aula/Channels/IChannelMessenger.cs (1 hunks)
+src/Aula/Channels/IMessageSender.cs (1 hunks)
+src/Aula/Channels/SlackChannel.cs (1 hunks)
+src/Aula/Channels/SlackChannelMessenger.cs (1 hunks)
+src/Aula/Channels/TelegramChannel.cs (1 hunks)
+src/Aula/Channels/TelegramChannelMessenger.cs (1 hunks)
+src/Aula/Configuration/Config.cs (1 hunks)
+src/Aula/Configuration/ConfigurationValidator.cs (1 hunks)
+src/Aula/Configuration/Features.cs (1 hunks)
+src/Aula/Configuration/IConfig.cs (1 hunks)
+src/Aula/Configuration/IConfigurationValidator.cs (1 hunks)
+src/Aula/Configuration/MinUddannelse.cs (1 hunks)
+src/Aula/Integration/IMinUddannelseClient.cs (1 hunks)
+src/Aula/Integration/MinUddannelseClient.cs (1 hunks)
+src/Aula/Program.cs (1 hunks)
+src/Aula/Scheduling/ISchedulingService.cs (1 hunks)
+✅ Files skipped from review due to trivial changes (3)
+src/Aula/Configuration/MinUddannelse.cs
+src/Aula/Channels/IChannelMessenger.cs
+src/Aula.Tests/test-appsettings.json
+🚧 Files skipped from review as they are similar to previous changes (13)
+src/Aula.Api/Functions.cs
+src/Aula.Tests/Bots/TelegramInteractiveBotTests.cs
+src/Aula.Tests/Bots/TelegramMessageHandlerTests.cs
+src/Aula.Tests/Configuration/ConfigurationTests.cs
+src/Aula.Tests/Services/OpenAiServiceIntegrationTests.cs
+src/Aula/Configuration/Config.cs
+src/Aula/Bots/TelegramInteractiveBot.cs
+src/Aula.Tests/Channels/MessageSenderTests.cs
+src/Aula/Integration/IMinUddannelseClient.cs
+src/Aula.Tests/Services/OpenAiServiceTests.cs
+src/Aula.Tests/Bots/SlackMessageHandlerTests.cs
+src/Aula.Tests/Scheduling/SchedulingServiceIntegrationTests.cs
+src/Aula/Bots/SlackInteractiveBot.cs
+🧰 Additional context used 🧬 Code Graph Analysis (5) src/Aula/Configuration/IConfig.cs (9)
+src/Aula/Configuration/UniLogin.cs (1)
+UniLogin (3-7)
+src/Aula/Configuration/MinUddannelse.cs (1)
+MinUddannelse (3-6)
+src/Aula/Configuration/Slack.cs (1)
+Slack (3-11)
+src/Aula/Configuration/GoogleServiceAccount.cs (1)
+GoogleServiceAccount (3-16)
+src/Aula/Configuration/Telegram.cs (1)
+Telegram (3-11)
+src/Aula/Configuration/OpenAi.cs (1)
+OpenAi (3-10)
+src/Aula/Configuration/Supabase.cs (1)
+Supabase (3-8)
+src/Aula/Configuration/Features.cs (1)
+Features (3-18)
+src/Aula/Configuration/Timers.cs (1)
+Timers (3-11)
+src/Aula/Configuration/ConfigurationValidator.cs (10)
+src/Aula/Configuration/IConfigurationValidator.cs (1)
+ValidateConfiguration (5-5)
+src/Aula/Configuration/Config.cs (1)
+Config (3-14)
+src/Aula/Configuration/MinUddannelse.cs (1)
+MinUddannelse (3-6)
+src/Aula/Configuration/UniLogin.cs (1)
+UniLogin (3-7)
+src/Aula/Configuration/OpenAi.cs (1)
+OpenAi (3-10)
+src/Aula/Configuration/Supabase.cs (1)
+Supabase (3-8)
+src/Aula/Configuration/Slack.cs (1)
+Slack (3-11)
+src/Aula/Configuration/Telegram.cs (1)
+Telegram (3-11)
+src/Aula/Configuration/Features.cs (1)
+Features (3-18)
+src/Aula/Configuration/Timers.cs (1)
+Timers (3-11)
+src/Aula/Channels/IMessageSender.cs (3)
+src/Aula.Tests/Channels/MessageSenderTests.cs (6)
+Task (15-15)
+Task (20-20)
+Task (33-36)
+Task (38-42)
+Task (56-59)
+Task (61-64)
+src/Aula/Channels/IChannelMessenger.cs (2)
+Task (12-12)
+Task (17-17)
+src/Aula/Bots/BotBase.cs (7)
+Task (47-63)
+Task (84-110)
+Task (152-152)
+Task (157-157)
+Task (162-162)
+Task (167-167)
+Task (177-177)
+src/Aula/Program.cs (19)
+src/Aula/Services/SupabaseService.cs (18)
+Task (28-57)
+Task (59-84)
+Task (86-90)
+Task (92-96)
+Task (98-102)
+Task (104-108)
+Task (110-114)
+Task (116-120)
+Task (122-126)
+Task (128-132)
+Task (134-138)
+Task (140-144)
+Task (146-150)
+Task (152-156)
+Task (158-162)
+Task (164-168)
+SupabaseService (9-199)
+SupabaseService (21-26)
+src/Aula/Configuration/Config.cs (1)
+Config (3-14)
+src/Aula/Configuration/ConfigurationValidator.cs (3)
+ValidateConfiguration (14-31)
+ConfigurationValidator (5-268)
+ConfigurationValidator (9-12)
+src/Aula/Configuration/IConfigurationValidator.cs (1)
+ValidateConfiguration (5-5)
+src/Aula/Channels/SlackBot.cs (3)
+SlackBot (8-83)
+SlackBot (13-14)
+SlackBot (16-20)
+src/Aula/Channels/TelegramClient.cs (3)
+TelegramClient (15-272)
+TelegramClient (21-29)
+TelegramClient (31-36)
+src/Aula/Scheduling/SchedulingService.cs (2)
+SchedulingService (14-532)
+SchedulingService (26-40)
+src/Aula/Bots/SlackInteractiveBot.cs (2)
+SlackInteractiveBot (23-533)
+SlackInteractiveBot (48-71)
+src/Aula/Configuration/Slack.cs (1)
+Slack (3-11)
+src/Aula/Bots/TelegramInteractiveBot.cs (2)
+TelegramInteractiveBot (25-297)
+TelegramInteractiveBot (40-68)
+src/Aula/Configuration/Telegram.cs (1)
+Telegram (3-11)
+src/Aula/Services/DataService.cs (2)
+DataService (8-76)
+DataService (15-20)
+src/Aula/Integration/MinUddannelseClient.cs (4)
+MinUddannelseClient (12-302)
+MinUddannelseClient (19-22)
+MinUddannelseClient (24-30)
+MinUddannelseClient (32-36)
+src/Aula/Tools/AiToolsManager.cs (2)
+AiToolsManager (8-250)
+AiToolsManager (14-19)
+src/Aula/Services/OpenAiService.cs (3)
+OpenAiService (18-479)
+OpenAiService (32-54)
+OpenAiService (56-75)
+src/Aula/Configuration/OpenAi.cs (1)
+OpenAi (3-10)
+src/Aula/Integration/AgentService.cs (2)
+AgentService (8-283)
+AgentService (16-26)
+src/Aula/Utilities/WeekLetterSeeder.cs (2)
+WeekLetterSeeder (7-107)
+WeekLetterSeeder (12-16)
+src/Aula/Services/HistoricalDataSeeder.cs (2)
+HistoricalDataSeeder (9-160)
+HistoricalDataSeeder (16-26)
+src/Aula/Channels/IChannel.cs (4)
+src/Aula/Channels/ChannelManager.cs (1)
+IChannel (34-38)
+src/Aula/Channels/IChannelManager.cs (1)
+IChannel (25-25)
+src/Aula/Channels/SlackChannel.cs (2)
+FormatMessage (91-104)
+GetDefaultChannelId (106-109)
+src/Aula/Channels/TelegramChannel.cs (2)
+FormatMessage (91-104)
+GetDefaultChannelId (106-109)
+🪛 LanguageTool CLAUDE.md
+[uncategorized] ~110-~110: Possible missing comma found.
+Context: ...**: 144+ reflection calls across 5 test files making tests brittle and hard to mainta...
+
+(AI_HYDRA_LEO_MISSING_COMMA)
+
+[style] ~110-~110: To elevate your writing, try using a synonym here.
+Context: ...s 5 test files making tests brittle and hard to maintain.
+
+Affected Files:
+
+...
+(HARD_TO)
+
+[uncategorized] ~161-~161: You might be missing the article “the” here.
+Context: ...nstead returns stored week letters from database for configured week/year
+3. App thinks...
+
+(AI_EN_LECTOR_MISSING_DETERMINER_THE)
+
+[uncategorized] ~162-~162: Use a comma before ‘but’ if it connects two independent clauses (unless they are closely connected and short).
+Context: ...
+3. App thinks it's getting "live" data but it's actually historical
+4. Enables ye...
+
+(COMMA_COMPOUND_SENTENCE)
+
+[uncategorized] ~171-~171: You might be missing the article “the” here.
+Context: ...: Set UseMockData: true and configure desired week/year. App will simulate that week ...
+
+(AI_EN_LECTOR_MISSING_DETERMINER_THE)
+
+[uncategorized] ~171-~171: A determiner appears to be missing. Consider inserting it.
+Context: ... true` and configure desired week/year. App will simulate that week as current.
+
+...
+
+(AI_EN_LECTOR_MISSING_DETERMINER)
+
+[typographical] ~236-~236: If specifying a range, consider using an en dash instead of a hyphen.
+Context: ...but humans cause delays:
+
+Common: 1-4 hours late (Sunday evening)
+**Occasi...
+(HYPHEN_TO_EN)
+
+[typographical] ~237-~237: If specifying a range, consider using an en dash instead of a hyphen.
+Context: ...ate (Sunday evening)
+
+Occasional: 6-18 hours late (Monday morning)
+*Rare...
+(HYPHEN_TO_EN)
+
+[typographical] ~238-~238: If specifying a range, consider using an en dash instead of a hyphen.
+Context: ...urs late (Monday morning)
+
+Rare: 24-48 hours late (Tuesday)
+Never: >48 ...
+(HYPHEN_TO_EN)
+
+[style] ~254-~254: The word ‘til’ with one ‘l’ is informal. Consider replacing it.
+Context: ...tore "Der er ikke skrevet noget ugebrev til denne uge endnu" on first failure
+2. *...
+
+(TIL)
+
+[grammar] ~347-~347: A determiner may be missing.
+Context: ...resses architectural debt in order of lowest effort/risk first before implementing...
+
+(THE_SUPERLATIVE)
+
+[uncategorized] ~347-~347: You might be missing the article “the” here.
+Context: ...effort/risk first** before implementing Crown Jewel Automatic Reminders feature.
+
+#...
+
+(AI_EN_LECTOR_MISSING_DETERMINER_THE)
+
+[uncategorized] ~349-~349: If this is a compound adjective that modifies the following noun, use a hyphen.
+Context: ...feature.
+
+🔴 PHASE 1: Low Effort, Low Risk Improvements
+✅ 1.1 Configuratio...
+(EN_COMPOUND_ADJECTIVE_INTERNAL)
+
+[uncategorized] ~418-~418: You might be missing the article “a” here.
+Context: ... Seeding logic properly encapsulated in dedicated service
+
+✅ Same seeding behavior with...
+(AI_EN_LECTOR_MISSING_DETERMINER_A)
+
+[misspelling] ~582-~582: This word is normally spelled as one.
+Context: ...ealth checks
+
+Distributed tracing for multi-service operations
+Implementation Guideli...
+(EN_COMPOUNDS_MULTI_SERVICE)
+
+HISTORICAL_WEEK_LETTERS.md
+[uncategorized] ~115-~115: It looks like there might be a possessive apostrophe missing. Consider inserting it.
+Context: ...**: Logs errors but continues with next week letter
+
+❌ Missing content: Skips ...
+(AI_EN_LECTOR_MISSING_NOUN_POSSESSIVE)
+
+[typographical] ~122-~122: If specifying a range, consider using an en dash instead of a hyphen.
+Context: ...s delays
+
+Duration: Approximately 8-10 seconds for full population
+**Storag...
+(HYPHEN_TO_EN)
+
+log.txt
+[uncategorized] ~26-~26: You might be missing the article “the” here.
+Context: ...[0] ?? Simulating week 24/2025 as current week for Soren Johannes 12:55:27 warn: ...
+
+(AI_EN_LECTOR_MISSING_DETERMINER_THE)
+
+[uncategorized] ~28-~28: Possible missing comma found.
+Context: ...? No stored week letter found for Soren Johannes week 24/2025 - returning empty 12:55:27...
+
+(AI_HYDRA_LEO_MISSING_COMMA)
+
+[style] ~36-~36: The word ‘til’ with one ‘l’ is informal. Consider replacing it.
+Context: ...ith: Der er ikke skrevet nogen ugenoter til denne uge (mock mode) 12:55:27 info: Ag...
+
+(TIL)
+
+[uncategorized] ~54-~54: Possible missing comma found.
+Context: ...?? No stored week letter found for Hans Martin week 24/2025 - returning empty 12:55:27...
+
+(AI_HYDRA_LEO_MISSING_COMMA)
+
+[style] ~62-~62: The word ‘til’ with one ‘l’ is informal. Consider replacing it.
+Context: ...ith: Der er ikke skrevet nogen ugenoter til denne uge (mock mode) 12:55:27 info: Ag...
+
+(TIL)
+
+🪛 markdownlint-cli2 (0.17.2) HISTORICAL_WEEK_LETTERS.md
+42-42: Fenced code blocks should have a language specified
+
+(MD040, fenced-code-language)
+
+128-128: Fenced code blocks should have a language specified
+
+(MD040, fenced-code-language)
+
+⏰ Context from checks skipped due to timeout of 90000ms (1)
+GitHub Check: Cursor BugBot
+🔇 Additional comments (29)
+src/Aula/Scheduling/ISchedulingService.cs (1)
+3-7: LGTM! Well-designed service lifecycle interface.
+
+The interface follows standard patterns for service lifecycle management with async methods, which is appropriate for scheduling operations that may involve I/O operations.
+
+src/Aula/Channels/TelegramChannelMessenger.cs (1)
+34-42: Good defensive programming with configuration validation.
+
+The validation of the default channel ID before using it is a good practice that prevents runtime errors.
+
+src/Aula/Configuration/Features.cs (1)
+1-18: Well-structured feature configuration class.
+
+The implementation provides a clean and extensible way to manage feature flags with sensible defaults. Good use of nullable types for optional test parameters.
+
+src/Aula/Channels/IMessageSender.cs (1)
+3-7: Clean interface design for platform-agnostic message sending.
+
+The interface provides a simple contract that supports both general and targeted message sending.
+
+src/Aula/Configuration/ConfigurationValidator.cs (1)
+14-31: Comprehensive configuration validation implementation.
+
+The validator provides thorough validation of all configuration sections with clear error messages and appropriate logging. Good separation of concerns with individual validation methods.
+
+src/Aula/Program.cs (4)
+1-14: LGTM - Well-organized imports.
+
+The import statements are well-organized and all appear necessary for the functionality implemented in this file.
+
+230-240: LGTM - Proper dependency injection pattern for SchedulingService.
+
+The factory registration correctly handles the optional TelegramInteractiveBot dependency using GetService<TelegramInteractiveBot>() which may return null, consistent with the conditional registration pattern.
+
+89-103: LGTM - Consistent service resolution pattern for bots.
+
+Both Slack and Telegram interactive bots now use GetRequiredService consistently, which is appropriate since the services are only resolved when enabled in configuration.
+
+26-157: LGTM - Comprehensive error handling and graceful shutdown.
+
+The error handling strategy is well-implemented with:
+
+High-level try-catch for startup failures
+Individual error handling for specific operations (preloading, bot startup)
+Proper graceful shutdown with cancellation token support
+Appropriate logging at each level
+src/Aula/Channels/SlackChannel.cs (4)
+13-49: LGTM - Well-designed class structure with proper dependency injection.
+
+The class properly implements the IChannel interface with:
+
+Appropriate null checking in constructor
+Proper dependency injection pattern
+Sensible defaults for optional dependencies
+Comprehensive capability configuration
+51-89: LGTM - Robust message sending implementation.
+
+Both message sending methods include:
+
+Proper input validation for empty messages
+Comprehensive error handling with logging
+Appropriate delegation to the messenger layer
+Consistent error logging patterns
+112-197: LGTM - Well-implemented lifecycle management.
+
+The lifecycle methods provide:
+
+Proper initialization with bot integration
+Appropriate start/stop logic for interactive features
+Reasonable connection testing approach
+Comprehensive error handling and logging throughout
+34-48: LGTM - Comprehensive capability configuration.
+
+The ChannelCapabilities configuration accurately represents Slack's messaging features with appropriate limits and supported format tags.
+
+src/Aula.Tests/Services/PromptBuilderTests.cs (3)
+7-32: LGTM - Well-organized test structure.
+
+The test class demonstrates excellent organization with:
+
+Clean helper method for test instance creation
+Descriptive test method names following conventions
+Proper arrangement of test data and assertions
+33-163: LGTM - Comprehensive test coverage.
+
+The tests provide excellent coverage including:
+
+Platform-specific instructions for both Slack and Telegram
+Various prompt generation scenarios
+Proper validation of message roles and content
+Multi-child scenarios with combined content
+203-221: LGTM - Proper edge case testing.
+
+The Theory test appropriately covers edge cases with empty, whitespace, and null content, ensuring the service handles invalid input gracefully.
+
+src/Aula/Channels/IChannel.cs (2)
+10-76: LGTM - Well-designed channel abstraction interface.
+
+The interface provides:
+
+Comprehensive property definitions for channel identification and capabilities
+Appropriate async method signatures for messaging operations
+Flexible message formatting with optional parameters
+Proper lifecycle management methods
+Excellent XML documentation throughout
+100-107: LGTM - Well-defined message format enumeration.
+
+The MessageFormat enum provides comprehensive options for different formatting scenarios with clear, descriptive values.
+
+src/Aula/Channels/IChannelManager.cs (2)
+10-76: LGTM - Comprehensive channel management interface.
+
+The interface provides:
+
+Complete CRUD operations for channel registration
+Flexible messaging options (broadcast, targeted, formatted)
+Proper lifecycle management methods
+Capability-based channel filtering
+Appropriate return types and async patterns
+Excellent documentation throughout
+81-89: LGTM - Flexible capability filtering design.
+
+The ChannelCapabilityFilter class uses nullable properties effectively to allow optional filtering criteria, providing flexibility for different channel selection scenarios.
+
+src/Aula/Channels/ChannelManager.cs (2)
+14-23: LGTM! Well-designed constructor with proper null checking.
+
+The use of ConcurrentDictionary for thread-safe channel storage is appropriate, and the null check with specific exception type provides clear error messaging.
+
+24-27: Good thread-safe implementation.
+
+Creating a snapshot with ToList() ensures thread safety by preventing concurrent modification exceptions during enumeration.
+
+src/Aula.Tests/Services/ConversationManagerTests.cs (1)
+1-224: Excellent test coverage!
+
+The test suite comprehensively covers all major scenarios including:
+
+Constructor validation with null checks
+Context key generation and handling
+Conversation history management
+Thread safety scenarios
+The use of factory methods and proper mocking setup promotes maintainability.
+
+src/Aula/Integration/MinUddannelseClient.cs (1)
+164-172: Add bounds checking before substring operation.
+
+The code calculates endIndex - startIndex without validating it's positive, which could cause an ArgumentOutOfRangeException.
+
+Add validation:
+
+ var endIndex = scriptText.IndexOf(";", startIndex);
+ if (endIndex == -1 || endIndex <= startIndex)
+     throw new Exception("Invalid UserProfile context format");
+
++var length = endIndex - startIndex;
++if (length <= 0)
++    throw new Exception("Invalid UserProfile context length");
++
+-var jsonText = scriptText.Substring(startIndex, endIndex - startIndex).Trim();
++var jsonText = scriptText.Substring(startIndex, length).Trim();
+ if (string.IsNullOrWhiteSpace(jsonText))
+     throw new Exception("Extracted JSON text is empty");
+Likely an incorrect or invalid review comment.
+
+src/Aula.Tests/Bots/SlackInteractiveBotTests.cs (1)
+22-1078: Excellent test coverage and structure.
+
+The test file demonstrates comprehensive coverage with well-organized test scenarios covering constructor validation, message handling, error conditions, polling mechanics, and edge cases. The use of proper mocking, dependency injection, and async patterns (except for the noted blocking calls) follows testing best practices.
+
+CLAUDE.md (1)
+1-656: Comprehensive and valuable documentation.
+
+This documentation file provides excellent guidance for AI assistants and developers working with the codebase. It covers essential areas including development workflow, architecture overview, coding standards, testing guidelines, and project roadmap. The detailed information about testing rules, git commit standards, and architectural improvements makes this a valuable resource for maintaining code quality.
+
+src/Aula.Tests/Services/SupabaseServiceTests.cs (3)
+1-100: Well-structured test setup and constructor validation.
+
+The test class setup is clean with good separation of valid and invalid configuration scenarios. Constructor tests appropriately verify both successful initialization and graceful handling of invalid configurations.
+
+160-294: Excellent comprehensive validation of uninitialized service state.
+
+This section thoroughly tests that all service methods properly throw InvalidOperationException with consistent error messages when the service is not initialized. This defensive programming approach ensures robust error handling.
+
+467-694: Comprehensive business logic and timezone testing.
+
+This section provides excellent coverage of complex business logic, particularly timezone conversions and reminder timing calculations. The parameterized tests effectively cover edge cases and the business logic validation ensures model integrity.
+
+In src/Aula/Channels/SlackChannelMessenger.cs:
+
+> +        // Configure HTTP client for Slack API
++        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _config.Slack.ApiToken);
++        _httpClient.DefaultRequestHeaders.Add("User-Agent", "Aula Bot 1.0");
++    }
+🛠️ Refactor suggestion
+
+Avoid configuring HttpClient in constructor when using DI.
+
+Configuring HttpClient headers in the constructor can cause issues when the HttpClient is managed by the DI container, as the same instance might be shared across multiple messenger instances.
+
+-    public SlackChannelMessenger(HttpClient httpClient, Config config, ILoggerFactory loggerFactory)
+-    {
+-        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+-        _config = config ?? throw new ArgumentNullException(nameof(config));
+-        _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<SlackChannelMessenger>();
+-
+-        // Configure HTTP client for Slack API
+-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _config.Slack.ApiToken);
+-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "Aula Bot 1.0");
+-    }
++    public SlackChannelMessenger(HttpClient httpClient, Config config, ILoggerFactory loggerFactory)
++    {
++        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
++        _config = config ?? throw new ArgumentNullException(nameof(config));
++        _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<SlackChannelMessenger>();
++    }
+Configure the HttpClient using a typed client or named client in the DI container instead.
+
+🤖 Prompt for AI Agents
+In src/Aula/Channels/SlackChannelMessenger.cs around lines 28 to 31, avoid
+setting HttpClient headers directly in the constructor because the HttpClient
+instance may be shared via dependency injection. Instead, move the configuration
+of DefaultRequestHeaders (Authorization and User-Agent) to a typed or named
+HttpClient configuration within the DI container setup, ensuring each client
+instance is properly configured without side effects.
+In src/Aula/Channels/SlackChannelMessenger.cs:
+
+> +            var response = await _httpClient.PostAsync("https://slack.com/api/chat.postMessage", content);
++
++            if (!response.IsSuccessStatusCode)
++            {
++                _logger.LogError("Failed to send Slack message: HTTP {StatusCode}", response.StatusCode);
++                throw new HttpRequestException($"Slack API returned {response.StatusCode}");
++            }
++
++            var responseText = await response.Content.ReadAsStringAsync();
++            _logger.LogInformation("Slack message sent successfully");
++        }
+🛠️ Refactor suggestion
+
+Add Slack API response validation for better error handling.
+
+The current implementation only checks HTTP status codes but doesn't validate the Slack API response structure, which could contain error information even with a 200 status code.
+
+             var response = await _httpClient.PostAsync("https://slack.com/api/chat.postMessage", content);
++            var responseText = await response.Content.ReadAsStringAsync();
+
+             if (!response.IsSuccessStatusCode)
+             {
+-                _logger.LogError("Failed to send Slack message: HTTP {StatusCode}", response.StatusCode);
++                _logger.LogError("Failed to send Slack message: HTTP {StatusCode}, Response: {Response}", response.StatusCode, responseText);
+                 throw new HttpRequestException($"Slack API returned {response.StatusCode}");
+             }
+
+-            var responseText = await response.Content.ReadAsStringAsync();
++            // Parse and validate Slack API response
++            using var document = JsonDocument.Parse(responseText);
++            if (document.RootElement.TryGetProperty("ok", out var okElement) && !okElement.GetBoolean())
++            {
++                var error = document.RootElement.TryGetProperty("error", out var errorElement) ? errorElement.GetString() : "Unknown error";
++                _logger.LogError("Slack API returned error: {Error}", error);
++                throw new InvalidOperationException($"Slack API error: {error}");
++            }
++
+             _logger.LogInformation("Slack message sent successfully");
+🤖 Prompt for AI Agents
+In src/Aula/Channels/SlackChannelMessenger.cs around lines 55 to 65, the code
+only checks the HTTP status code after posting a message to Slack but does not
+validate the Slack API response body for errors. To fix this, parse the JSON
+response content and check the "ok" field; if it is false, log the specific
+Slack error message and throw an exception with that error detail to improve
+error handling.
+In src/Aula/Channels/TelegramChannelMessenger.cs:
+
+> +    public TelegramChannelMessenger(Config config, ILoggerFactory loggerFactory)
++    {
++        _config = config ?? throw new ArgumentNullException(nameof(config));
++        _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<TelegramChannelMessenger>();
++
++        if (string.IsNullOrEmpty(_config.Telegram.Token))
++        {
++            throw new ArgumentException("Telegram token is required", nameof(config));
++        }
++
++        _telegramClient = new TelegramBotClient(_config.Telegram.Token);
++    }
+🛠️ Refactor suggestion
+
+Use dependency injection for ITelegramBotClient instead of direct instantiation.
+
+Creating the TelegramBotClient directly in the constructor violates the dependency inversion principle and makes the class harder to test and configure.
+
+-    public TelegramChannelMessenger(Config config, ILoggerFactory loggerFactory)
++    public TelegramChannelMessenger(ITelegramBotClient telegramClient, Config config, ILoggerFactory loggerFactory)
+     {
++        _telegramClient = telegramClient ?? throw new ArgumentNullException(nameof(telegramClient));
+         _config = config ?? throw new ArgumentNullException(nameof(config));
+         _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<TelegramChannelMessenger>();
+
+-        if (string.IsNullOrEmpty(_config.Telegram.Token))
+-        {
+-            throw new ArgumentException("Telegram token is required", nameof(config));
+-        }
+-
+-        _telegramClient = new TelegramBotClient(_config.Telegram.Token);
+     }
+Configure the ITelegramBotClient in the DI container instead.
+
+📝 Committable suggestion
+‼️ IMPORTANT
+Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
+
+⬇️ Suggested change
+-    public TelegramChannelMessenger(Config config, ILoggerFactory loggerFactory)
+-    {
+-        _config = config ?? throw new ArgumentNullException(nameof(config));
+-        _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<TelegramChannelMessenger>();
+-
+-        if (string.IsNullOrEmpty(_config.Telegram.Token))
+-        {
+-            throw new ArgumentException("Telegram token is required", nameof(config));
+-        }
+-
+-        _telegramClient = new TelegramBotClient(_config.Telegram.Token);
+-    }
++    public TelegramChannelMessenger(ITelegramBotClient telegramClient, Config config, ILoggerFactory loggerFactory)
++    {
++        _telegramClient = telegramClient ?? throw new ArgumentNullException(nameof(telegramClient));
++        _config = config ?? throw new ArgumentNullException(nameof(config));
++        _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<TelegramChannelMessenger>();
++    }
+🤖 Prompt for AI Agents
+In src/Aula/Channels/TelegramChannelMessenger.cs around lines 21 to 32, the
+TelegramBotClient is instantiated directly in the constructor, which violates
+dependency inversion and hinders testing. Refactor the constructor to accept an
+ITelegramBotClient instance via dependency injection instead of creating it
+inside the constructor. Remove the direct instantiation and update the DI
+container configuration to provide the ITelegramBotClient implementation when
+constructing TelegramChannelMessenger.
+In src/Aula/Configuration/ConfigurationValidator.cs:
+
+> +        if (timers.SlackPollingIntervalSeconds <= 0)
++        {
++            throw new InvalidOperationException("Timers.SlackPollingIntervalSeconds must be greater than 0");
++        }
++        if (timers.CleanupIntervalHours <= 0)
++        {
++            throw new InvalidOperationException("Timers.CleanupIntervalHours must be greater than 0");
++        }
++
++        if (timers.SlackPollingIntervalSeconds < 1)
++        {
++            _logger.LogWarning("Timers.SlackPollingIntervalSeconds is less than 1 second - this may cause excessive API calls");
++        }
+⚠️ Potential issue
+
+Remove redundant validation check.
+
+The check for SlackPollingIntervalSeconds < 1 on lines 256-259 is redundant since the earlier check on lines 247-250 already throws an exception for values <= 0.
+
+Remove the redundant validation:
+
+        if (timers.CleanupIntervalHours <= 0)
+        {
+            throw new InvalidOperationException("Timers.CleanupIntervalHours must be greater than 0");
+        }
+
+-       if (timers.SlackPollingIntervalSeconds < 1)
+-       {
+-           _logger.LogWarning("Timers.SlackPollingIntervalSeconds is less than 1 second - this may cause excessive API calls");
+-       }
+        if (timers.AdaptivePolling)
+        {
+📝 Committable suggestion
+‼️ IMPORTANT
+Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
+
+⬇️ Suggested change
+-        if (timers.SlackPollingIntervalSeconds <= 0)
+-        {
+-            throw new InvalidOperationException("Timers.SlackPollingIntervalSeconds must be greater than 0");
+-        }
+-        if (timers.CleanupIntervalHours <= 0)
+-        {
+-            throw new InvalidOperationException("Timers.CleanupIntervalHours must be greater than 0");
+-        }
+-
+-        if (timers.SlackPollingIntervalSeconds < 1)
+-        {
+-            _logger.LogWarning("Timers.SlackPollingIntervalSeconds is less than 1 second - this may cause excessive API calls");
+-        }
++        if (timers.SlackPollingIntervalSeconds <= 0)
++        {
++            throw new InvalidOperationException("Timers.SlackPollingIntervalSeconds must be greater than 0");
++        }
++        if (timers.CleanupIntervalHours <= 0)
++        {
++            throw new InvalidOperationException("Timers.CleanupIntervalHours must be greater than 0");
++        }
++
++        if (timers.AdaptivePolling)
++        {
+🤖 Prompt for AI Agents
+In src/Aula/Configuration/ConfigurationValidator.cs around lines 247 to 259,
+remove the redundant check for timers.SlackPollingIntervalSeconds being less
+than 1, since the earlier check already throws an exception for values less than
+or equal to 0. Delete the if block that logs a warning when
+SlackPollingIntervalSeconds is less than 1 to avoid duplicate validation.
+In src/Aula/Channels/IChannel.cs:
+
+> +public class ChannelCapabilities
++{
++    public bool SupportsBold { get; set; } = false;
++    public bool SupportsItalic { get; set; } = false;
++    public bool SupportsCode { get; set; } = false;
++    public bool SupportsCodeBlocks { get; set; } = false;
++    public bool SupportsLinks { get; set; } = false;
++    public bool SupportsButtons { get; set; } = false;
++    public bool SupportsImages { get; set; } = false;
++    public bool SupportsFiles { get; set; } = false;
++    public bool SupportsThreads { get; set; } = false;
++    public bool SupportsEmojis { get; set; } = false;
++    public int MaxMessageLength { get; set; } = 4000;
++    public string[] SupportedFormatTags { get; set; } = Array.Empty<string>();
++}
+⚠️ Potential issue
+
+Fix missing using statement for Array.Empty.
+
+The Array.Empty<string>() call requires a using statement for System.
+
+Add the missing using statement:
+
++using System;
+ using System.Collections.Generic;
+ using System.Threading.Tasks;
+📝 Committable suggestion
+‼️ IMPORTANT
+Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
+
+⬇️ Suggested change
+-public class ChannelCapabilities
+-{
+-    public bool SupportsBold { get; set; } = false;
+-    public bool SupportsItalic { get; set; } = false;
+-    public bool SupportsCode { get; set; } = false;
+-    public bool SupportsCodeBlocks { get; set; } = false;
+-    public bool SupportsLinks { get; set; } = false;
+-    public bool SupportsButtons { get; set; } = false;
+-    public bool SupportsImages { get; set; } = false;
+-    public bool SupportsFiles { get; set; } = false;
+-    public bool SupportsThreads { get; set; } = false;
+-    public bool SupportsEmojis { get; set; } = false;
+-    public int MaxMessageLength { get; set; } = 4000;
+-    public string[] SupportedFormatTags { get; set; } = Array.Empty<string>();
+-}
++using System;
++using System.Collections.Generic;
++using System.Threading.Tasks;
+🤖 Prompt for AI Agents
+In src/Aula/Channels/IChannel.cs around lines 81 to 95, the code uses
+Array.Empty<string>() but is missing the necessary using directive for the
+System namespace. Add "using System;" at the top of the file to resolve this
+missing reference and enable the use of Array.Empty.
+In src/Aula/Channels/ChannelManager.cs:
+
+> +    public async Task<Dictionary<string, bool>> TestAllChannelsAsync()
++    {
++        var results = new Dictionary<string, bool>();
++        var allChannels = GetAllChannels();
++
++        _logger.LogInformation("Testing connectivity for {Count} channels", allChannels.Count);
++
++        var tasks = allChannels.Select(async channel =>
++        {
++            try
++            {
++                var isConnected = await channel.TestConnectionAsync();
++                results[channel.PlatformId] = isConnected;
++                _logger.LogDebug("Channel {PlatformId} connection test: {Result}", 
++                    channel.PlatformId, isConnected ? "PASS" : "FAIL");
++            }
++            catch (Exception ex)
++            {
++                results[channel.PlatformId] = false;
++                _logger.LogError(ex, "Channel {PlatformId} connection test failed with exception", 
++                    channel.PlatformId);
++            }
++        });
++
++        await Task.WhenAll(tasks);
++        return results;
++    }
+⚠️ Potential issue
+
+Fix race condition in concurrent dictionary access.
+
+The results dictionary is being accessed concurrently by multiple tasks without synchronization, which can cause race conditions and potential crashes.
+
+Replace the regular Dictionary with ConcurrentDictionary:
+
+ public async Task<Dictionary<string, bool>> TestAllChannelsAsync()
+ {
+-    var results = new Dictionary<string, bool>();
++    var results = new ConcurrentDictionary<string, bool>();
+     var allChannels = GetAllChannels();
+
+     _logger.LogInformation("Testing connectivity for {Count} channels", allChannels.Count);
+
+     var tasks = allChannels.Select(async channel =>
+     {
+         try
+         {
+             var isConnected = await channel.TestConnectionAsync();
+-            results[channel.PlatformId] = isConnected;
++            results.TryAdd(channel.PlatformId, isConnected);
+             _logger.LogDebug("Channel {PlatformId} connection test: {Result}", 
+                 channel.PlatformId, isConnected ? "PASS" : "FAIL");
+         }
+         catch (Exception ex)
+         {
+-            results[channel.PlatformId] = false;
++            results.TryAdd(channel.PlatformId, false);
+             _logger.LogError(ex, "Channel {PlatformId} connection test failed with exception", 
+                 channel.PlatformId);
+         }
+     });
+
+     await Task.WhenAll(tasks);
+-    return results;
++    return results.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+ }
+🤖 Prompt for AI Agents
+In src/Aula/Channels/ChannelManager.cs lines 183 to 209, the results dictionary
+is accessed concurrently by multiple async tasks causing a race condition.
+Replace the Dictionary<string, bool> with a thread-safe
+ConcurrentDictionary<string, bool> to ensure safe concurrent writes. Update the
+declaration of results to be a ConcurrentDictionary and keep the rest of the
+code unchanged.
+In src/Aula/Bots/BotBase.cs:
+
+> +        _childrenByName = _config.MinUddannelse.Children.ToDictionary(
++            c => c.FirstName.ToLowerInvariant(),
++            c => c);
+💡 Verification agent
+
+🧩 Analysis chain
+Potential data loss from duplicate child names.
+
+The dictionary creation doesn't handle cases where multiple children have the same first name (case-insensitive). The last child with a duplicate name will overwrite previous ones.
+
+Consider using ToLookup instead or add duplicate checking:
+
+-_childrenByName = _config.MinUddannelse.Children.ToDictionary(
+-    c => c.FirstName.ToLowerInvariant(),
+-    c => c);
++var duplicates = _config.MinUddannelse.Children
++    .GroupBy(c => c.FirstName.ToLowerInvariant())
++    .Where(g => g.Count() > 1)
++    .Select(g => g.Key);
++
++if (duplicates.Any())
++{
++    _logger.LogWarning("Duplicate child names found: {Names}. Using full names as keys.", 
++        string.Join(", ", duplicates));
++    _childrenByName = _config.MinUddannelse.Children.ToDictionary(
++        c => c.FullName.ToLowerInvariant(),
++        c => c);
++}
++else
++{
++    _childrenByName = _config.MinUddannelse.Children.ToDictionary(
++        c => c.FirstName.ToLowerInvariant(),
++        c => c);
++}
+Let me verify if the Child class has a FullName property:
+
+🏁 Script executed:
+
+#!/bin/bash
+# Description: Check if Child class has FullName property or alternative unique identifier
+
+# Search for Child class definition
+ast-grep --pattern 'class Child {
+  $$$
+}'
+
+# Also search for record/struct definitions
+ast-grep --pattern 'record Child($$$)'
+
+# Search for property definitions in Child
+rg -A 10 "class Child|record Child" --type cs
+Length of output: 621
+
+Ensure duplicate FirstName keys are handled to prevent silent data loss
+
+The current code at src/Aula/Bots/BotBase.cs (lines 36–38):
+
+_childrenByName = _config.MinUddannelse.Children.ToDictionary(
+    c => c.FirstName.ToLowerInvariant(),
+    c => c);
+will overwrite earlier entries when two or more children share the same FirstName (case-insensitive). You have a few options to address this:
+
+• Use a lookup to preserve all entries under the same key:
+
+_childrenByName = _config.MinUddannelse.Children
+    .ToLookup(c => c.FirstName.ToLowerInvariant());
+• Use a composite key (e.g. FirstName + LastName) to make keys unique:
+
+_childrenByName = _config.MinUddannelse.Children
+    .ToDictionary(
+        c => $"{c.FirstName}_{c.LastName}".ToLowerInvariant(),
+        c => c
+    );
+• Detect duplicates up front and either throw or log a warning before choosing an alternative key strategy:
+
+var dupes = _config.MinUddannelse.Children
+    .GroupBy(c => c.FirstName.ToLowerInvariant())
+    .Where(g => g.Count() > 1)
+    .Select(g => g.Key)
+    .ToList();
+
+if (dupes.Any())
+{
+    _logger.LogWarning("Duplicate first names: {Names}", string.Join(", ", dupes));
+    // …switch to composite key or throw…
+}
+else
+{
+    _childrenByName = _config.MinUddannelse.Children
+        .ToDictionary(c => c.FirstName.ToLowerInvariant(), c => c);
+}
+Please choose the strategy that best fits your domain requirements.
+
+🤖 Prompt for AI Agents
+In src/Aula/Bots/BotBase.cs around lines 36 to 38, the current use of
+ToDictionary with FirstName.ToLowerInvariant() as the key can cause silent
+overwriting when duplicate first names exist. To fix this, either switch to
+ToLookup to preserve all children under the same key, or create a composite key
+combining FirstName and LastName to ensure uniqueness, or add a pre-check that
+detects duplicates and logs a warning or throws an exception before deciding
+which key strategy to use. Implement the approach that best fits the domain
+needs to prevent data loss.
+In src/Aula/Integration/MinUddannelseClient.cs:
+
+> +    private int GetIsoWeekNumber(DateOnly date)
++    {
++        var cultureInfo = CultureInfo.CurrentCulture;
++        var calendarWeekRule = cultureInfo.DateTimeFormat.CalendarWeekRule;
++        var firstDayOfWeek = cultureInfo.DateTimeFormat.FirstDayOfWeek;
++        return cultureInfo.Calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue), calendarWeekRule, firstDayOfWeek);
++    }
+💡 Verification agent
+
+🧩 Analysis chain
+Inconsistent ISO week calculation across codebase.
+
+This method uses CultureInfo.Calendar.GetWeekOfYear while BotBase.cs uses System.Globalization.ISOWeek.GetWeekOfYear. These can produce different results depending on culture settings.
+
+Standardize on one approach:
+
+ private int GetIsoWeekNumber(DateOnly date)
+ {
+-    var cultureInfo = CultureInfo.CurrentCulture;
+-    var calendarWeekRule = cultureInfo.DateTimeFormat.CalendarWeekRule;
+-    var firstDayOfWeek = cultureInfo.DateTimeFormat.FirstDayOfWeek;
+-    return cultureInfo.Calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue), calendarWeekRule, firstDayOfWeek);
++    return System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
+ }
+Let me verify the inconsistency:
+
+🏁 Script executed:
+
+#!/bin/bash
+# Description: Check for different ISO week calculation methods in the codebase
+
+# Search for ISOWeek.GetWeekOfYear usage
+echo "=== ISOWeek.GetWeekOfYear usage ==="
+rg "ISOWeek\.GetWeekOfYear" -A 2 -B 2
+
+# Search for Calendar.GetWeekOfYear usage
+echo -e "\n=== Calendar.GetWeekOfYear usage ==="
+rg "Calendar\.GetWeekOfYear|GetWeekOfYear" -A 2 -B 2
+Length of output: 4671
+
+Standardize ISO week calculation in MinUddannelseClient
+
+The GetIsoWeekNumber method in MinUddannelseClient.cs uses a culture-dependent Calendar.GetWeekOfYear, whereas all other callers rely on the culture-agnostic System.Globalization.ISOWeek.GetWeekOfYear. This discrepancy can produce inconsistent week numbers. Please update the implementation to match the rest of the codebase:
+
+• File to update
+
+src/Aula/Integration/MinUddannelseClient.cs: GetIsoWeekNumber method
+• Suggested diff
+
+ private int GetIsoWeekNumber(DateOnly date)
+ {
+-    var cultureInfo = CultureInfo.CurrentCulture;
+-    var calendarWeekRule = cultureInfo.DateTimeFormat.CalendarWeekRule;
+-    var firstDayOfWeek = cultureInfo.DateTimeFormat.FirstDayOfWeek;
+-    return cultureInfo.Calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue), calendarWeekRule, firstDayOfWeek);
++    return System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
+ }
+📝 Committable suggestion
+‼️ IMPORTANT
+Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
+
+⬇️ Suggested change
+-    private int GetIsoWeekNumber(DateOnly date)
+-    {
+-        var cultureInfo = CultureInfo.CurrentCulture;
+-        var calendarWeekRule = cultureInfo.DateTimeFormat.CalendarWeekRule;
+-        var firstDayOfWeek = cultureInfo.DateTimeFormat.FirstDayOfWeek;
+-        return cultureInfo.Calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue), calendarWeekRule, firstDayOfWeek);
+-    }
++    private int GetIsoWeekNumber(DateOnly date)
++    {
++        return System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
++    }
+🤖 Prompt for AI Agents
+In src/Aula/Integration/MinUddannelseClient.cs around lines 120 to 126, the
+GetIsoWeekNumber method uses a culture-dependent approach to calculate the week
+number, which is inconsistent with the rest of the codebase that uses the
+culture-agnostic System.Globalization.ISOWeek.GetWeekOfYear. To fix this,
+replace the current implementation with a call to ISOWeek.GetWeekOfYear, passing
+the DateOnly converted to DateTime, ensuring consistent ISO week number
+calculation across the codebase.
+In src/Aula/Integration/MinUddannelseClient.cs:
+
+> +    private string? GetChildId(Child child)
++    {
++        if (_userProfile == null) throw new Exception("User profile not loaded");
++        var kids = _userProfile["boern"];
++        if (kids == null) throw new Exception("No children found in user profile");
++        var id = "";
++        foreach (var kid in kids)
++            if (kid["fornavn"]?.ToString() == child.FirstName)
++                id = kid["id"]?.ToString() ?? "";
++
++        if (id == "") throw new Exception("Child not found");
++
++        return id;
++    }
+🛠️ Refactor suggestion
+
+Use specific exception types instead of generic Exception.
+
+Throwing generic Exception makes it difficult for callers to handle specific error cases appropriately.
+
+Use more specific exception types:
+
+ private string? GetChildId(Child child)
+ {
+-    if (_userProfile == null) throw new Exception("User profile not loaded");
++    if (_userProfile == null) throw new InvalidOperationException("User profile not loaded");
+     var kids = _userProfile["boern"];
+-    if (kids == null) throw new Exception("No children found in user profile");
++    if (kids == null) throw new InvalidOperationException("No children found in user profile");
+     var id = "";
+     foreach (var kid in kids)
+         if (kid["fornavn"]?.ToString() == child.FirstName)
+             id = kid["id"]?.ToString() ?? "";
+
+-    if (id == "") throw new Exception("Child not found");
++    if (id == "") throw new ArgumentException($"Child '{child.FirstName}' not found in user profile", nameof(child));
+
+     return id;
+ }
+📝 Committable suggestion
+‼️ IMPORTANT
+Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
+
+⬇️ Suggested change
+-    private string? GetChildId(Child child)
+-    {
+-        if (_userProfile == null) throw new Exception("User profile not loaded");
+-        var kids = _userProfile["boern"];
+-        if (kids == null) throw new Exception("No children found in user profile");
+-        var id = "";
+-        foreach (var kid in kids)
+-            if (kid["fornavn"]?.ToString() == child.FirstName)
+-                id = kid["id"]?.ToString() ?? "";
+-
+-        if (id == "") throw new Exception("Child not found");
+-
+-        return id;
+-    }
++    private string? GetChildId(Child child)
++    {
++        if (_userProfile == null) throw new InvalidOperationException("User profile not loaded");
++        var kids = _userProfile["boern"];
++        if (kids == null) throw new InvalidOperationException("No children found in user profile");
++        var id = "";
++        foreach (var kid in kids)
++            if (kid["fornavn"]?.ToString() == child.FirstName)
++                id = kid["id"]?.ToString() ?? "";
++
++        if (id == "") throw new ArgumentException($"Child '{child.FirstName}' not found in user profile", nameof(child));
++
++        return id;
++    }
+🤖 Prompt for AI Agents
+In src/Aula/Integration/MinUddannelseClient.cs around lines 105 to 118, replace
+the generic Exception throws with more specific exception types such as
+InvalidOperationException or ArgumentException to clearly indicate the nature of
+the error. This will help callers handle different error cases more precisely.
+For example, throw InvalidOperationException when the user profile or children
+data is missing, and ArgumentException when the child is not found.
+In src/Aula.Tests/Bots/SlackInteractiveBotTests.cs:
+
+> +                req.Content!.ReadAsStringAsync().Result.Contains("Emma og Hans")),
++            ItExpr.IsAny<CancellationToken>());
+🛠️ Refactor suggestion
+
+Avoid blocking calls to async methods in tests.
+
+Same issue as the previous blocking call - using .Result can cause deadlocks and reduces test reliability.
+
+-                req.RequestUri!.ToString() == "https://slack.com/api/chat.postMessage" &&
+-                req.Content!.ReadAsStringAsync().Result.Contains("Emma og Hans")),
++                req.RequestUri!.ToString() == "https://slack.com/api/chat.postMessage"),
+Committable suggestion skipped: line range outside the PR's diff.
+
+🤖 Prompt for AI Agents
+In src/Aula.Tests/Bots/SlackInteractiveBotTests.cs around lines 983 to 984,
+avoid using the blocking call `.Result` on the async method
+`ReadAsStringAsync()`. Instead, make the test method async and use the `await`
+keyword to asynchronously wait for `ReadAsStringAsync()`. This change prevents
+potential deadlocks and improves test reliability.
+In src/Aula.Tests/Bots/SlackInteractiveBotTests.cs:
+
+> +                req.Content!.ReadAsStringAsync().Result.Contains("Emma og Hans")),
++            ItExpr.IsAny<CancellationToken>());
+🛠️ Refactor suggestion
+
+Avoid blocking calls to async methods in tests.
+
+Using .Result on async methods can lead to deadlocks and makes tests less reliable. Consider using async assertions or proper await patterns.
+
+-                req.RequestUri!.ToString() == "https://slack.com/api/chat.postMessage" &&
+-                req.Content!.ReadAsStringAsync().Result.Contains("Emma og Hans")),
++                req.RequestUri!.ToString() == "https://slack.com/api/chat.postMessage"),
+For content verification, consider extracting the content validation to a separate async helper method or use a more robust verification approach that doesn't block.
+
+📝 Committable suggestion
+‼️ IMPORTANT
+Carefully review the code before committing. Ensure that it accurately replaces the highlighted code, contains no missing lines, and has no issues with indentation. Thoroughly test & benchmark the code to ensure it meets the requirements.
+
+⬇️ Suggested change
+-                req.Content!.ReadAsStringAsync().Result.Contains("Emma og Hans")),
+-            ItExpr.IsAny<CancellationToken>());
++                req.RequestUri!.ToString() == "https://slack.com/api/chat.postMessage"),
++            ItExpr.IsAny<CancellationToken>());
+🤖 Prompt for AI Agents
+In src/Aula.Tests/Bots/SlackInteractiveBotTests.cs around lines 418 to 419, the
+test code uses .Result on the async method ReadAsStringAsync(), which can cause
+deadlocks and unreliable tests. Refactor the test to use async/await by making
+the test method async and awaiting ReadAsStringAsync() instead of blocking on
+.Result. Alternatively, extract the content verification into a separate async
+helper method that can be awaited properly.
+—
+Reply to this email directly, view it on GitHub, or unsubscribe.
+You are receiving this because you authored the thread.
+

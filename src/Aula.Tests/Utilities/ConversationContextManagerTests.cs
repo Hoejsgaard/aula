@@ -118,7 +118,7 @@ public class ConversationContextManagerTests
         // Manually set the timestamp to be expired (simulate time passing)
         var context = _manager.GetContext(key);
         Assert.NotNull(context);
-        context.Timestamp = DateTime.Now.AddMinutes(-11); // Make it expired
+        context.Timestamp = DateTime.UtcNow.AddMinutes(-11); // Make it expired
 
         // Act
         var result = _manager.GetContext(key);

@@ -44,19 +44,21 @@ public class WeekLetterRepository : IWeekLetterRepository
             .From<PostedLetter>()
             .Insert(postedLetter);
 
-        _logger.LogInformation("Marked week letter as posted for {ChildName}, week {WeekNumber}, year {Year}", 
+        _logger.LogInformation("Marked week letter as posted for {ChildName}, week {WeekNumber}, year {Year}",
             childName, weekNumber, year);
     }
 
     public async Task StoreWeekLetterAsync(string childName, int weekNumber, int year, string contentHash, string rawContent, bool postedToSlack = false, bool postedToTelegram = false)
     {
         // Check if record already exists
-        var existingRecord = await _supabase
+        var existingRecordQuery = await _supabase
             .From<PostedLetter>()
             .Where(p => p.ChildName == childName)
             .Where(p => p.WeekNumber == weekNumber)
             .Where(p => p.Year == year)
-            .Single();
+            .Get();
+
+        var existingRecord = existingRecordQuery.Models.FirstOrDefault();
 
         if (existingRecord != null)
         {
@@ -98,12 +100,14 @@ public class WeekLetterRepository : IWeekLetterRepository
 
     public async Task<string?> GetStoredWeekLetterAsync(string childName, int weekNumber, int year)
     {
-        var result = await _supabase
+        var resultQuery = await _supabase
             .From<PostedLetter>()
             .Where(p => p.ChildName == childName)
             .Where(p => p.WeekNumber == weekNumber)
             .Where(p => p.Year == year)
-            .Single();
+            .Get();
+
+        var result = resultQuery.Models.FirstOrDefault();
 
         return result?.RawContent;
     }
@@ -136,14 +140,16 @@ public class WeekLetterRepository : IWeekLetterRepository
 
     public async Task<StoredWeekLetter?> GetLatestStoredWeekLetterAsync(string childName)
     {
-        var result = await _supabase
+        var resultQuery = await _supabase
             .From<PostedLetter>()
             .Where(p => p.ChildName == childName)
             .Where(p => p.RawContent != null)
             .Order("year", Supabase.Postgrest.Constants.Ordering.Descending)
             .Order("week_number", Supabase.Postgrest.Constants.Ordering.Descending)
             .Limit(1)
-            .Single();
+            .Get();
+
+        var result = resultQuery.Models.FirstOrDefault();
 
         if (result == null) return null;
 
