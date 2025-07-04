@@ -182,7 +182,7 @@ public class ChannelManager : IChannelManager
 
     public async Task<Dictionary<string, bool>> TestAllChannelsAsync()
     {
-        var results = new Dictionary<string, bool>();
+        var results = new ConcurrentDictionary<string, bool>();
         var allChannels = GetAllChannels();
 
         _logger.LogInformation("Testing connectivity for {Count} channels", allChannels.Count);
@@ -205,7 +205,7 @@ public class ChannelManager : IChannelManager
         });
 
         await Task.WhenAll(tasks);
-        return results;
+        return new Dictionary<string, bool>(results);
     }
 
     public async Task InitializeAllChannelsAsync()

@@ -219,6 +219,12 @@ public class Program
         configuration.Bind(tempConfig);
         if (tempConfig.Telegram.Enabled && !string.IsNullOrEmpty(tempConfig.Telegram.Token))
         {
+            services.AddSingleton<Telegram.Bot.ITelegramBotClient>(provider =>
+            {
+                var config = provider.GetRequiredService<Config>();
+                return new Telegram.Bot.TelegramBotClient(config.Telegram.Token);
+            });
+            services.AddSingleton<TelegramChannelMessenger>();
             services.AddSingleton<TelegramInteractiveBot>();
         }
 

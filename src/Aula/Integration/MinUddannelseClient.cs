@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+﻿using System.IO;
 using System.Net.Http.Headers;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Linq;
@@ -104,25 +104,22 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
 
     private string? GetChildId(Child child)
     {
-        if (_userProfile == null) throw new Exception("User profile not loaded");
+        if (_userProfile == null) throw new InvalidOperationException("User profile not loaded");
         var kids = _userProfile["boern"];
-        if (kids == null) throw new Exception("No children found in user profile");
+        if (kids == null) throw new InvalidOperationException("No children found in user profile");
         var id = "";
         foreach (var kid in kids)
             if (kid["fornavn"]?.ToString() == child.FirstName)
                 id = kid["id"]?.ToString() ?? "";
 
-        if (id == "") throw new Exception("Child not found");
+        if (id == "") throw new ArgumentException($"Child with first name '{child.FirstName}' not found in user profile");
 
         return id;
     }
 
     private int GetIsoWeekNumber(DateOnly date)
     {
-        var cultureInfo = CultureInfo.CurrentCulture;
-        var calendarWeekRule = cultureInfo.DateTimeFormat.CalendarWeekRule;
-        var firstDayOfWeek = cultureInfo.DateTimeFormat.FirstDayOfWeek;
-        return cultureInfo.Calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue), calendarWeekRule, firstDayOfWeek);
+        return System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
     }
 
     public new async Task<bool> LoginAsync()
@@ -151,25 +148,25 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
             .FirstOrDefault(n => n.InnerText.Contains("__tempcontext__"));
 
         if (script == null)
-            throw new Exception("No UserProfile found");
+            throw new InvalidDataException("No UserProfile script tag found in response");
 
         var scriptText = script.InnerText;
         if (string.IsNullOrWhiteSpace(scriptText))
-            throw new Exception("Script content is empty");
+            throw new InvalidDataException("UserProfile script content is empty");
 
         var contextStart = "window.__tempcontext__['currentUser'] = ";
         var startIndex = scriptText.IndexOf(contextStart);
         if (startIndex == -1)
-            throw new Exception("UserProfile context not found in script");
+            throw new InvalidDataException("UserProfile context not found in script");
 
         startIndex += contextStart.Length;
         var endIndex = scriptText.IndexOf(";", startIndex);
         if (endIndex == -1 || endIndex <= startIndex)
-            throw new Exception("Invalid UserProfile context format");
+            throw new InvalidDataException("Invalid UserProfile context format");
 
         var jsonText = scriptText.Substring(startIndex, endIndex - startIndex).Trim();
         if (string.IsNullOrWhiteSpace(jsonText))
-            throw new Exception("Extracted JSON text is empty");
+            throw new InvalidDataException("Extracted UserProfile JSON text is empty");
 
         try
         {
@@ -177,7 +174,7 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
         }
         catch (Exception ex)
         {
-            throw new Exception($"Failed to parse UserProfile JSON: {ex.Message}");
+            throw new InvalidDataException($"Failed to parse UserProfile JSON: {ex.Message}", ex);
         }
     }
 

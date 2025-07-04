@@ -10,7 +10,7 @@ namespace Aula.Channels;
 /// Telegram-specific implementation of IChannelMessenger that sends messages
 /// via Telegram Bot API without depending on bot implementations.
 /// </summary>
-public class TelegramChannelMessenger : IChannelMessenger
+public class TelegramChannelMessenger : IChannelMessenger, IDisposable
 {
     private readonly ITelegramBotClient _telegramClient;
     private readonly Config _config;
@@ -18,17 +18,11 @@ public class TelegramChannelMessenger : IChannelMessenger
 
     public string PlatformType => "Telegram";
 
-    public TelegramChannelMessenger(Config config, ILoggerFactory loggerFactory)
+    public TelegramChannelMessenger(ITelegramBotClient telegramClient, Config config, ILoggerFactory loggerFactory)
     {
+        _telegramClient = telegramClient ?? throw new ArgumentNullException(nameof(telegramClient));
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<TelegramChannelMessenger>();
-
-        if (string.IsNullOrEmpty(_config.Telegram.Token))
-        {
-            throw new ArgumentException("Telegram token is required", nameof(config));
-        }
-
-        _telegramClient = new TelegramBotClient(_config.Telegram.Token);
     }
 
     public async Task SendMessageAsync(string message)
@@ -59,6 +53,14 @@ public class TelegramChannelMessenger : IChannelMessenger
         {
             _logger.LogError(ex, "Error sending Telegram message to chat {ChatId}", channelId);
             throw;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_telegramClient is IDisposable disposableClient)
+        {
+            disposableClient.Dispose();
         }
     }
 }

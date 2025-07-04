@@ -33,9 +33,17 @@ public abstract class BotBase
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
 
-        _childrenByName = _config.MinUddannelse.Children.ToDictionary(
-            c => c.FirstName.ToLowerInvariant(),
-            c => c);
+        _childrenByName = new Dictionary<string, Child>();
+        foreach (var child in _config.MinUddannelse.Children)
+        {
+            var key = child.FirstName.ToLowerInvariant();
+            if (_childrenByName.ContainsKey(key))
+            {
+                _logger.LogError("Duplicate child first name found: '{FirstName}'. Child names must be unique for bot functionality.", child.FirstName);
+                throw new InvalidOperationException($"Duplicate child first name: '{child.FirstName}'. All children must have unique first names.");
+            }
+            _childrenByName[key] = child;
+        }
 
         _postedWeekLetterHashes = new ConcurrentDictionary<string, byte>();
         _reminderHandler = new ReminderCommandHandler(_logger, _supabaseService, _childrenByName);
