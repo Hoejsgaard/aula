@@ -4,7 +4,7 @@ using System.Reflection;
 using Newtonsoft.Json.Linq;
 using Aula.Integration;
 using Aula.Scheduling;
-using Aula.Bots;
+using Aula.Channels;
 using Aula.Configuration;
 using Aula.Services;
 using ConfigSlack = Aula.Configuration.Slack;
@@ -18,6 +18,7 @@ public class SchedulingServiceTests : IDisposable
     private readonly ILoggerFactory _loggerFactory;
     private readonly Mock<ISupabaseService> _mockSupabaseService;
     private readonly Mock<IAgentService> _mockAgentService;
+    private readonly Mock<IChannelManager> _mockChannelManager;
     private readonly Config _testConfig;
     private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
@@ -26,6 +27,10 @@ public class SchedulingServiceTests : IDisposable
         _loggerFactory = new LoggerFactory();
         _mockSupabaseService = new Mock<ISupabaseService>();
         _mockAgentService = new Mock<IAgentService>();
+        _mockChannelManager = new Mock<IChannelManager>();
+        
+        // Setup mock channel manager to return empty channels list by default
+        _mockChannelManager.Setup(m => m.GetEnabledChannels()).Returns(new List<IChannel>());
 
         _testConfig = new Config
         {
@@ -41,21 +46,21 @@ public class SchedulingServiceTests : IDisposable
         };
     }
 
-    [Fact]
-    public void Constructor_WithValidParameters_InitializesCorrectly()
+    private SchedulingService CreateSchedulingService()
     {
-        // Arrange
-        var slackBot = new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _loggerFactory, _mockSupabaseService.Object);
-        var telegramBot = new TelegramInteractiveBot(_mockAgentService.Object, _testConfig, _loggerFactory, _mockSupabaseService.Object);
-
-        // Act
-        var schedulingService = new SchedulingService(
+        return new SchedulingService(
             _loggerFactory,
             _mockSupabaseService.Object,
             _mockAgentService.Object,
-            slackBot,
-            telegramBot,
+            _mockChannelManager.Object,
             _testConfig);
+    }
+
+    [Fact]
+    public void Constructor_WithValidParameters_InitializesCorrectly()
+    {
+        // Act
+        var schedulingService = CreateSchedulingService();
 
         // Assert
         Assert.NotNull(schedulingService);
@@ -70,24 +75,13 @@ public class SchedulingServiceTests : IDisposable
         _mockSupabaseService.Setup(s => s.GetScheduledTasksAsync())
             .ReturnsAsync(new List<ScheduledTask>());
 
-        var slackBot = new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _loggerFactory, _mockSupabaseService.Object);
-        var telegramBot = new TelegramInteractiveBot(_mockAgentService.Object, _testConfig, _loggerFactory, _mockSupabaseService.Object);
-
-        var schedulingService = new SchedulingService(
-            _loggerFactory,
-            _mockSupabaseService.Object,
-            _mockAgentService.Object,
-            slackBot,
-            telegramBot,
-            _testConfig);
+        var schedulingService = CreateSchedulingService();
 
         // Act & Assert - Should not throw
         await schedulingService.StartAsync();
 
         // Cleanup
         await schedulingService.StopAsync();
-        slackBot.Dispose();
-        telegramBot.Dispose();
     }
 
     [Fact]
@@ -99,25 +93,12 @@ public class SchedulingServiceTests : IDisposable
         _mockSupabaseService.Setup(s => s.GetScheduledTasksAsync())
             .ReturnsAsync(new List<ScheduledTask>());
 
-        var slackBot = new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _loggerFactory, _mockSupabaseService.Object);
-        var telegramBot = new TelegramInteractiveBot(_mockAgentService.Object, _testConfig, _loggerFactory, _mockSupabaseService.Object);
-
-        var schedulingService = new SchedulingService(
-            _loggerFactory,
-            _mockSupabaseService.Object,
-            _mockAgentService.Object,
-            slackBot,
-            telegramBot,
-            _testConfig);
+        var schedulingService = CreateSchedulingService();
 
         await schedulingService.StartAsync();
 
         // Act & Assert - Should not throw
         await schedulingService.StopAsync();
-
-        // Cleanup
-        slackBot.Dispose();
-        telegramBot.Dispose();
     }
 
     [Fact]
@@ -129,16 +110,8 @@ public class SchedulingServiceTests : IDisposable
         _mockSupabaseService.Setup(s => s.GetScheduledTasksAsync())
             .ReturnsAsync(new List<ScheduledTask>());
 
-        var slackBot = new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _loggerFactory, _mockSupabaseService.Object);
-        var telegramBot = new TelegramInteractiveBot(_mockAgentService.Object, _testConfig, _loggerFactory, _mockSupabaseService.Object);
 
-        var schedulingService = new SchedulingService(
-            _loggerFactory,
-            _mockSupabaseService.Object,
-            _mockAgentService.Object,
-            slackBot,
-            telegramBot,
-            _testConfig);
+        var schedulingService = CreateSchedulingService();
 
         // Act
         await schedulingService.StartAsync();
@@ -152,8 +125,6 @@ public class SchedulingServiceTests : IDisposable
 
         // Cleanup
         await schedulingService.StopAsync();
-        slackBot.Dispose();
-        telegramBot.Dispose();
     }
 
     [Fact]
@@ -442,23 +413,6 @@ public class SchedulingServiceTests : IDisposable
     }
 
     // Helper methods for testing private methods
-    private SchedulingService CreateSchedulingService()
-    {
-        var slackBot = new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _loggerFactory, _mockSupabaseService.Object);
-        var telegramBot = new TelegramInteractiveBot(_mockAgentService.Object, _testConfig, _loggerFactory, _mockSupabaseService.Object);
-
-        // Track disposable resources
-        _disposables.Add(slackBot);
-        telegramBot.Dispose();
-
-        return new SchedulingService(
-            _loggerFactory,
-            _mockSupabaseService.Object,
-            _mockAgentService.Object,
-            slackBot,
-            telegramBot,
-            _testConfig);
-    }
 
     private bool TestShouldRunTask(SchedulingService service, ScheduledTask task, DateTime now)
     {
@@ -1129,8 +1083,6 @@ public class SchedulingServiceTests : IDisposable
 
         foreach (var config in configs)
         {
-            SlackInteractiveBot? slackBot = null;
-            TelegramInteractiveBot? telegramBot = null;
             try
             {
                 // Act - Should create service without issues
@@ -1148,25 +1100,21 @@ public class SchedulingServiceTests : IDisposable
                     }
                 };
 
-                slackBot = new SlackInteractiveBot(_mockAgentService.Object, testConfig, _loggerFactory, _mockSupabaseService.Object);
-                telegramBot = new TelegramInteractiveBot(_mockAgentService.Object, testConfig, _loggerFactory, _mockSupabaseService.Object);
-
                 var service = new SchedulingService(
                     _loggerFactory,
                     _mockSupabaseService.Object,
                     _mockAgentService.Object,
-                    slackBot,
-                    telegramBot,
+                    _mockChannelManager.Object,
                     testConfig);
 
                 // Assert
                 Assert.NotNull(service);
             }
-            finally
+            catch (Exception ex)
             {
-                // Cleanup
-                slackBot?.Dispose();
-                telegramBot?.Dispose();
+                // Log test failure for debugging
+                _loggerFactory.CreateLogger<SchedulingServiceTests>().LogError(ex, "Test failed for interval {Interval}", config.SchedulingInterval);
+                throw;
             }
         }
     }

@@ -3,7 +3,7 @@ using NCrontab;
 using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using Aula.Bots;
+using Aula.Channels;
 using Aula.Integration;
 using Aula.Configuration;
 using Aula.Services;
@@ -16,8 +16,7 @@ public class SchedulingService : ISchedulingService
     private readonly ILogger _logger;
     private readonly ISupabaseService _supabaseService;
     private readonly IAgentService _agentService;
-    private readonly SlackInteractiveBot _slackBot;
-    private readonly TelegramInteractiveBot? _telegramBot;
+    private readonly IChannelManager _channelManager;
     private readonly Config _config;
     private Timer? _schedulingTimer;
     private readonly object _lockObject = new object();
@@ -27,15 +26,13 @@ public class SchedulingService : ISchedulingService
         ILoggerFactory loggerFactory,
         ISupabaseService supabaseService,
         IAgentService agentService,
-        SlackInteractiveBot slackBot,
-        TelegramInteractiveBot? telegramBot,
+        IChannelManager channelManager,
         Config config)
     {
         _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<SchedulingService>();
         _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
         _agentService = agentService ?? throw new ArgumentNullException(nameof(agentService));
-        _slackBot = slackBot ?? throw new ArgumentNullException(nameof(slackBot));
-        _telegramBot = telegramBot; // Nullable, so no null check needed
+        _channelManager = channelManager ?? throw new ArgumentNullException(nameof(channelManager));
         _config = config ?? throw new ArgumentNullException(nameof(config));
     }
 
@@ -272,33 +269,15 @@ public class SchedulingService : ISchedulingService
         string childInfo = !string.IsNullOrEmpty(reminder.ChildName) ? $" ({reminder.ChildName})" : "";
         string message = $"🔔 *Reminder*{childInfo}: {reminder.Text}";
 
-        // Send to Slack if enabled
-        if (_config.Slack.EnableInteractiveBot)
+        // Send to all enabled channels
+        try
         {
-            try
-            {
-                await _slackBot.SendMessage(message);
-                _logger.LogInformation("Sent reminder {ReminderId} to Slack", reminder.Id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send reminder {ReminderId} to Slack", reminder.Id);
-            }
+            await _channelManager.BroadcastMessageAsync(message);
+            _logger.LogInformation("Sent reminder {ReminderId} to all enabled channels", reminder.Id);
         }
-
-        // Send to Telegram if enabled
-        if (_config.Telegram.Enabled && _telegramBot != null)
+        catch (Exception ex)
         {
-            try
-            {
-                // ChatId constructor handles both string usernames (@channel) and numeric IDs
-                await _telegramBot.SendMessage(_config.Telegram.ChannelId, message);
-                _logger.LogInformation("Sent reminder {ReminderId} to Telegram", reminder.Id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send reminder {ReminderId} to Telegram", reminder.Id);
-            }
+            _logger.LogError(ex, "Failed to send reminder {ReminderId} to channels", reminder.Id);
         }
     }
 
@@ -462,16 +441,38 @@ public class SchedulingService : ISchedulingService
             var html2MarkdownConverter = new Html2SlackMarkdownConverter();
             var markdownContent = html2MarkdownConverter.Convert(content).Replace("**", "*");
 
-            // Post to Slack if enabled
-            if (_config.Slack.EnableInteractiveBot)
+            // TODO: Refactor week letter posting to use channel architecture
+            // Week letter posting is complex and platform-specific (Slack uses markdown, Telegram uses JSON)
+            // For now, use channels directly until IChannel interface is enhanced with week letter capabilities
+            
+            var enabledChannels = _channelManager.GetEnabledChannels();
+            
+            foreach (var channel in enabledChannels)
             {
-                await _slackBot.PostWeekLetter(child.FirstName, markdownContent, weekLetterTitle);
-            }
-
-            // Post to Telegram if enabled
-            if (_config.Telegram.Enabled && _telegramBot != null)
-            {
-                await _telegramBot.PostWeekLetter(child.FirstName, weekLetter);
+                try
+                {
+                    if (channel.PlatformId == "slack" && channel is SlackChannel slackChannel)
+                    {
+                        // Use the channel's underlying bot for complex week letter posting
+                        if (slackChannel.SupportsInteractivity)
+                        {
+                            var slackBot = _channelManager.GetChannel("slack") as SlackChannel;
+                            // For now, construct a formatted message instead of using the bot directly
+                            var formattedMessage = $"📅 **{weekLetterTitle}**\n\n{markdownContent}";
+                            await channel.SendMessageAsync(formattedMessage);
+                        }
+                    }
+                    else if (channel.PlatformId == "telegram" && channel is TelegramChannel telegramChannel)
+                    {
+                        // For Telegram, we need the raw JSON processing - use simple message for now
+                        var formattedMessage = $"📅 **{weekLetterTitle}**\n\n{content}";
+                        await channel.SendMessageAsync(formattedMessage);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to post week letter to {Platform}", channel.PlatformId);
+                }
             }
         }
         catch (Exception ex)
@@ -503,15 +504,8 @@ public class SchedulingService : ISchedulingService
                                    $"_Was scheduled for {reminderLocalDateTime:HH:mm} ({missedBy.TotalMinutes:F0} minutes ago)_";
 
                     // Send notification about missed reminder
-                    if (_config.Slack.EnableInteractiveBot)
-                    {
-                        await _slackBot.SendMessage(message);
-                    }
-
-                    if (_config.Telegram.Enabled && _telegramBot != null)
-                    {
-                        await _telegramBot.SendMessage(_config.Telegram.ChannelId, message);
-                    }
+                    // Send missed reminder notification to all enabled channels
+                    await _channelManager.BroadcastMessageAsync(message);
 
                     // Delete the missed reminder so it doesn't keep showing up
                     await _supabaseService.DeleteReminderAsync(reminder.Id);
