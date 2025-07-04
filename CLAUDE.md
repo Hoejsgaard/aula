@@ -654,3 +654,93 @@ The end goal is an AI-powered family assistant that:
 - Reduces mental load on parents while ensuring nothing important is missed
 
 This system should feel like having a highly organized, never-forgetting family assistant that understands the complexities of school life and family logistics.
+
+## CodeRabbit Feedback Resolution Plan (2025-07-04)
+
+Following comprehensive CodeRabbit feedback analysis, this plan addresses **all 31 feedback items** systematically, including duplicates and nitpicks as requested.
+
+### 📊 Feedback Summary
+- **11 Actionable Comments** (critical issues requiring fixes)
+- **6 Duplicate Comments** (previously identified but still need addressing)
+- **14 Nitpick Comments** (code quality improvements)
+
+### 🔴 PHASE 1: Critical Issues (11 Actionable Comments)
+
+#### 1.1 Architecture & Dependency Issues
+- **SlackChannelMessenger HTTP header leakage** - Move to typed/named HttpClient DI configuration ✅ ALREADY FIXED
+- **SlackChannelMessenger Slack API response validation** - Add JSON response parsing for "ok" field
+- **TelegramChannelMessenger DI violation** - Accept ITelegramBotClient via DI instead of direct instantiation  
+- **TelegramChannelMessenger IDisposable** - Implement proper resource cleanup
+- **ConfigurationValidator redundant validation** - Remove duplicate SlackPollingIntervalSeconds check
+
+#### 1.2 Concurrency & Thread Safety Issues  
+- **ChannelManager race condition** - Replace Dictionary with ConcurrentDictionary in TestAllChannelsAsync
+- **BotBase duplicate child names** - Add duplicate detection/handling for FirstName dictionary keys
+
+#### 1.3 Code Quality & Standards
+- **IChannel missing using statement** - Add `using System;` for Array.Empty<string>()
+- **MinUddannelseClient ISO week inconsistency** - Use ISOWeek.GetWeekOfYear instead of culture-dependent calculation
+- **MinUddannelseClient exception types** - Replace generic Exception with specific types (InvalidOperationException, ArgumentException)
+- **SlackInteractiveBotTests async/await violations** - Fix .Result blocking calls in test methods
+
+### 🔶 PHASE 2: Duplicate Issues (6 Items - Still Need Fixing)
+
+#### 2.1 Configuration & Service Registration
+- **Program.cs temporary Config objects** - Restructure service registration to avoid duplicate configuration binding
+- **SlackInteractiveBotTests MaxMessageLength mismatch** - Update test constant to match 4000-character limit
+
+#### 2.2 Test Quality Issues
+- **SchedulingServiceTests outdated comments** - Update TelegramInteractiveBot disposal comments
+- **SchedulingServiceTests ineffective concurrency** - Fix concurrent tasks to actually interact with service  
+- **SchedulingServiceTests resource leaks** - Properly dispose all bot instances in loops
+
+#### 2.3 Maintenance
+- **log.txt debug cleanup** - Remove "??" prefixed debug messages for production readiness
+
+### 🔷 PHASE 3: Code Quality Improvements (14 Nitpicks)
+
+#### 3.1 Interface & Configuration Design
+- **IConfigurationValidator async enhancement** - Make validation async, return results, add XML docs
+- **IConfig immutability** - Make properties read-only for better immutability  
+- **ConfigurationValidator testable year validation** - Inject time provider or make year configurable
+
+#### 3.2 Channel Architecture Improvements  
+- **SlackChannelMessenger API endpoint** - Extract hardcoded Slack API URL to configuration
+- **IMessageSender code duplication** - Create MessageSenderBase abstract class to reduce duplication
+- **SlackChannel formatting edge cases** - Enhance HTML auto-detection with regex patterns
+- **TelegramChannel markdown detection** - Use specific regex patterns instead of simple string contains
+
+#### 3.3 Program Structure & Documentation
+- **Program.cs preloading extraction** - Extract preloading logic to separate method
+- **HISTORICAL_WEEK_LETTERS.md language tags** - Add `console` language to fenced code blocks  
+- **HISTORICAL_WEEK_LETTERS.md typography** - Fix "week letter" → "week's letter", use en-dash for ranges
+- **CLAUDE.md grammar** - Add comma: "files, making tests brittle", add articles "the database", "but it's"
+
+### 🚀 Implementation Strategy
+
+#### Execution Order
+1. **Phase 1 (Critical)** - Address architectural issues, concurrency problems, and standards violations first
+2. **Phase 2 (Duplicates)** - Fix previously identified but unresolved issues  
+3. **Phase 3 (Quality)** - Implement code quality improvements and documentation fixes
+
+#### Quality Gates
+- All changes must maintain **813 passing tests**
+- Code must pass `dotnet format` and `dotnet build` without warnings
+- No breaking changes to public APIs
+- Document any design decisions or tradeoffs
+
+#### Justification Process
+For any CodeRabbit recommendation **not implemented**, provide clear justification:
+- **Technical constraints** (e.g., external library limitations)
+- **Architectural decisions** (e.g., maintaining consistency with existing patterns)
+- **Risk/benefit analysis** (e.g., extensive refactoring for minimal benefit)
+- **Alternative solutions** implemented instead
+
+### 📋 Success Criteria
+- ✅ All 31 CodeRabbit feedback items addressed or justified
+- ✅ All tests remain passing (813 tests)
+- ✅ No new compiler warnings introduced
+- ✅ Code style compliance maintained
+- ✅ Architectural integrity preserved
+
+This systematic approach ensures comprehensive resolution of all feedback while maintaining code quality and system stability.
