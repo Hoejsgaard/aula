@@ -38,7 +38,14 @@
       "Bash(for file in *.cs)",
       "Bash(do sed -i '1i using Aula.Services;' \"$file\")",
       "Bash(done)",
-      "Bash(do sed -i '/using Aula\\.Services;/h; /using Aula\\.Services;/{x; s/using Aula\\.Services;//; x;}' \"$file\")"
+      "Bash(do sed -i '/using Aula\\.Services;/h; /using Aula\\.Services;/{x; s/using Aula\\.Services;//; x;}' \"$file\")",
+      "Bash(dotnet tool list:*)",
+      "Bash(dotnet-coverage:*)",
+      "Bash(dotnet tool run reportgenerator:*)",
+      "Bash(./tools/reportgenerator:*)",
+      "Bash(~/.dotnet/tools/reportgenerator -reports:TestResults/*/coverage.cobertura.xml -targetdir:coverage -reporttypes:Html)",
+      "Bash(DOTNET_ROOT=/home/runeh/.dotnet ./tools/reportgenerator -reports:TestResults/*/coverage.cobertura.xml -targetdir:coverage -reporttypes:Html)",
+      "Bash(python3:*)"
     ],
     "deny": []
   },
