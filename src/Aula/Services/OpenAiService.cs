@@ -19,7 +19,7 @@ public class OpenAiService : IOpenAiService
 {
     private readonly OpenAIService _openAiClient;
     private readonly ILogger _logger;
-    private readonly AiToolsManager _aiToolsManager;
+    private readonly IAiToolsManager _aiToolsManager;
     private readonly IConversationManager _conversationManager;
     private readonly IPromptBuilder _promptBuilder;
     private readonly string _aiModel;
@@ -29,7 +29,7 @@ public class OpenAiService : IOpenAiService
     private const int ConversationTrimAmount = 4;
     private const string FallbackToExistingSystem = "FALLBACK_TO_EXISTING_SYSTEM";
 
-    public OpenAiService(string apiKey, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, IConversationManager conversationManager, IPromptBuilder promptBuilder, string? model = null)
+    public OpenAiService(string apiKey, ILoggerFactory loggerFactory, IAiToolsManager aiToolsManager, IConversationManager conversationManager, IPromptBuilder promptBuilder, string? model = null)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new ArgumentException("API key cannot be null or empty", nameof(apiKey));

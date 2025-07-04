@@ -5,7 +5,7 @@ using Moq;
 using Xunit;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
-using Aula.Services;
+using Aula.Integration;
 
 namespace Aula.Tests.Services;
 
@@ -27,7 +27,7 @@ public class GoogleCalendarTests
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new GoogleCalendar(testServiceAccount, null!, _loggerFactory));
+            new GoogleCalendarService(testServiceAccount, null!, _loggerFactory));
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public class GoogleCalendarTests
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new GoogleCalendar(testServiceAccount, "", _loggerFactory));
+            new GoogleCalendarService(testServiceAccount, "", _loggerFactory));
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class GoogleCalendarTests
 
         // Act & Assert
         Assert.Throws<ArgumentException>(() =>
-            new GoogleCalendar(testServiceAccount, "ab", _loggerFactory));
+            new GoogleCalendarService(testServiceAccount, "ab", _loggerFactory));
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class GoogleCalendarTests
         // Act - We expect Google API to fail but we can verify the JSON generation works
         try
         {
-            var calendar = new GoogleCalendar(serviceAccount, "TEST", _loggerFactory);
+            var calendar = new GoogleCalendarService(serviceAccount, "TEST", _loggerFactory);
             // If no exception is thrown, that's also acceptable (credentials might be valid)
             Assert.True(true, "Service account configuration processed successfully");
         }
@@ -142,7 +142,7 @@ public class GoogleCalendarTests
 
         // Act & Assert - Should throw an exception (not parameter validation)
         var exception = Assert.ThrowsAny<Exception>(() =>
-            new GoogleCalendar(invalidServiceAccount, "TEST", _loggerFactory));
+            new GoogleCalendarService(invalidServiceAccount, "TEST", _loggerFactory));
 
         // Should fail with Google API or JSON exceptions, not parameter validation
         Assert.IsNotType<ArgumentNullException>(exception);
@@ -400,7 +400,7 @@ public class GoogleCalendarTests
             // Should not throw ArgumentException (may throw Google API exceptions)
             try
             {
-                var calendar = new GoogleCalendar(serviceAccount, prefix, _loggerFactory);
+                var calendar = new GoogleCalendarService(serviceAccount, prefix, _loggerFactory);
                 Assert.True(true, "Valid prefix accepted");
             }
             catch (ArgumentNullException)
@@ -420,7 +420,7 @@ public class GoogleCalendarTests
         else
         {
             // Should throw ArgumentException or ArgumentNullException
-            Assert.ThrowsAny<ArgumentException>(() => new GoogleCalendar(serviceAccount, prefix, _loggerFactory));
+            Assert.ThrowsAny<ArgumentException>(() => new GoogleCalendarService(serviceAccount, prefix, _loggerFactory));
         }
     }
 
@@ -444,7 +444,7 @@ public class GoogleCalendarTests
             // Act & Assert - Each configuration should be processable
             try
             {
-                var calendar = new GoogleCalendar(scenario.Account, "TEST", _loggerFactory);
+                var calendar = new GoogleCalendarService(scenario.Account, "TEST", _loggerFactory);
                 Assert.True(true, $"{scenario.Name} configuration processed");
             }
             catch (ArgumentNullException nullEx)
