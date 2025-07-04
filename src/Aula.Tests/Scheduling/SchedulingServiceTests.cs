@@ -599,7 +599,7 @@ public class SchedulingServiceTests : IDisposable
             .ReturnsAsync(false);
 
         _mockAgentService.Setup(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), true))
-            .ReturnsAsync((JObject?)null);
+            .ReturnsAsync(default(JObject?));
 
         _mockSupabaseService.Setup(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
             .Returns(Task.CompletedTask);
@@ -762,7 +762,7 @@ public class SchedulingServiceTests : IDisposable
         var child = new Child { FirstName = "TestChild", LastName = "TestLast" };
 
         _mockAgentService.Setup(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), true))
-            .ReturnsAsync((JObject?)null);
+            .ReturnsAsync(default(JObject?));
 
         _mockSupabaseService.Setup(x => x.IncrementRetryAttemptAsync("TestChild", 42, 2024))
             .Returns(Task.CompletedTask);

@@ -32,7 +32,7 @@ public class AgentService : IAgentService
         return _isLoggedIn;
     }
 
-    public async Task<JObject> GetWeekLetterAsync(Child child, DateOnly date, bool useCache = true)
+    public async Task<JObject?> GetWeekLetterAsync(Child child, DateOnly date, bool useCache = true)
     {
         _logger.LogInformation("📌 MONITOR: GetWeekLetterAsync for {ChildName} for date {Date}, useCache: {UseCache}",
             child.FirstName, date, useCache);
@@ -109,7 +109,7 @@ public class AgentService : IAgentService
         return weekLetter;
     }
 
-    public async Task<JObject> GetWeekScheduleAsync(Child child, DateOnly date, bool useCache = true)
+    public async Task<JObject?> GetWeekScheduleAsync(Child child, DateOnly date, bool useCache = true)
     {
         if (!_isLoggedIn)
         {
@@ -141,6 +141,10 @@ public class AgentService : IAgentService
             child.FirstName, date, chatInterface);
 
         var weekLetter = await GetWeekLetterAsync(child, date);
+        if (weekLetter == null)
+        {
+            return "No week letter available for the specified date.";
+        }
         return await _openAiService.SummarizeWeekLetterAsync(weekLetter, chatInterface);
     }
 
@@ -150,6 +154,10 @@ public class AgentService : IAgentService
             child.FirstName, date, chatInterface, question);
 
         var weekLetter = await GetWeekLetterAsync(child, date);
+        if (weekLetter == null)
+        {
+            return "No week letter available for the specified date.";
+        }
         return await _openAiService.AskQuestionAboutWeekLetterAsync(weekLetter, question, chatInterface);
     }
 
@@ -159,6 +167,10 @@ public class AgentService : IAgentService
             child.FirstName, contextKey, chatInterface, question);
 
         var weekLetter = await GetWeekLetterAsync(child, date);
+        if (weekLetter == null)
+        {
+            return "No week letter available for the specified date.";
+        }
 
         // Extract and log the content to ensure it's being passed correctly
         var content = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
@@ -179,6 +191,10 @@ public class AgentService : IAgentService
             child.FirstName, date, chatInterface);
 
         var weekLetter = await GetWeekLetterAsync(child, date);
+        if (weekLetter == null)
+        {
+            return new JObject { ["error"] = "No week letter available for the specified date." };
+        }
         return await _openAiService.ExtractKeyInformationAsync(weekLetter, chatInterface);
     }
 
