@@ -64,7 +64,7 @@ public class SlackChannelMessenger : IChannelMessenger
             }
 
             var responseText = await response.Content.ReadAsStringAsync();
-            
+
             // Parse Slack API response to check for errors
             try
             {
@@ -75,8 +75,8 @@ public class SlackChannelMessenger : IChannelMessenger
                 }
                 else
                 {
-                    var error = responseJson.TryGetProperty("error", out var errorElement) 
-                        ? errorElement.GetString() 
+                    var error = responseJson.TryGetProperty("error", out var errorElement)
+                        ? errorElement.GetString()
                         : "Unknown error";
                     _logger.LogError("Slack API returned error: {Error}", error);
                     throw new InvalidOperationException($"Slack API error: {error}");
