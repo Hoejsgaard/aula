@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Aula.Bots;
+using Aula.Channels;
 using Aula.Configuration;
 using Aula.Integration;
 using Aula.Scheduling;
@@ -18,8 +19,7 @@ public class SchedulingServiceIntegrationTests
     private readonly Mock<ILogger> _mockLogger;
     private readonly Mock<ISupabaseService> _mockSupabaseService;
     private readonly Mock<IAgentService> _mockAgentService;
-    private readonly SlackInteractiveBot _slackBot;
-    private readonly TelegramInteractiveBot? _telegramBot;
+    private readonly Mock<IChannelManager> _mockChannelManager;
     private readonly Config _testConfig;
     private readonly SchedulingService _schedulingService;
 
@@ -29,6 +29,7 @@ public class SchedulingServiceIntegrationTests
         _mockLogger = new Mock<ILogger>();
         _mockSupabaseService = new Mock<ISupabaseService>();
         _mockAgentService = new Mock<IAgentService>();
+        _mockChannelManager = new Mock<IChannelManager>();
 
         _mockLoggerFactory.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
 
@@ -54,15 +55,11 @@ public class SchedulingServiceIntegrationTests
             }
         };
 
-        _slackBot = new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object);
-        _telegramBot = null; // Keep null for simpler testing
-
         _schedulingService = new SchedulingService(
             _mockLoggerFactory.Object,
             _mockSupabaseService.Object,
             _mockAgentService.Object,
-            _slackBot,
-            _telegramBot,
+            _mockChannelManager.Object,
             _testConfig);
     }
 
@@ -80,8 +77,7 @@ public class SchedulingServiceIntegrationTests
                 null!,
                 _mockSupabaseService.Object,
                 _mockAgentService.Object,
-                _slackBot,
-                _telegramBot,
+                _mockChannelManager.Object,
                 _testConfig));
         Assert.Equal("loggerFactory", exception.ParamName);
     }
@@ -94,8 +90,7 @@ public class SchedulingServiceIntegrationTests
                 _mockLoggerFactory.Object,
                 null!,
                 _mockAgentService.Object,
-                _slackBot,
-                _telegramBot,
+                _mockChannelManager.Object,
                 _testConfig));
         Assert.Equal("supabaseService", exception.ParamName);
     }
@@ -108,14 +103,13 @@ public class SchedulingServiceIntegrationTests
                 _mockLoggerFactory.Object,
                 _mockSupabaseService.Object,
                 null!,
-                _slackBot,
-                _telegramBot,
+                _mockChannelManager.Object,
                 _testConfig));
         Assert.Equal("agentService", exception.ParamName);
     }
 
     [Fact]
-    public void Constructor_WithNullSlackBot_ThrowsArgumentNullException()
+    public void Constructor_WithNullChannelManager_ThrowsArgumentNullException()
     {
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new SchedulingService(
@@ -123,9 +117,8 @@ public class SchedulingServiceIntegrationTests
                 _mockSupabaseService.Object,
                 _mockAgentService.Object,
                 null!,
-                null, // Use null for telegram bot
                 _testConfig));
-        Assert.Equal("slackBot", exception.ParamName);
+        Assert.Equal("channelManager", exception.ParamName);
     }
 
     [Fact]
@@ -136,21 +129,20 @@ public class SchedulingServiceIntegrationTests
                 _mockLoggerFactory.Object,
                 _mockSupabaseService.Object,
                 _mockAgentService.Object,
-                _slackBot,
-                _telegramBot,
+                _mockChannelManager.Object,
                 null!));
         Assert.Equal("config", exception.ParamName);
     }
 
     [Fact]
-    public void Constructor_WithNullTelegramBot_AllowsNull()
+    public void Constructor_WithValidChannelManager_InitializesCorrectly()
     {
+        var mockChannelManager = new Mock<IChannelManager>();
         var service = new SchedulingService(
             _mockLoggerFactory.Object,
             _mockSupabaseService.Object,
             _mockAgentService.Object,
-            new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _mockLoggerFactory.Object, _mockSupabaseService.Object),
-            null, // TelegramBot can be null
+            mockChannelManager.Object,
             _testConfig);
 
         Assert.NotNull(service);
@@ -283,14 +275,13 @@ public class SchedulingServiceIntegrationTests
             }
         };
 
-        var slackBot = new SlackInteractiveBot(_mockAgentService.Object, config, _mockLoggerFactory.Object, _mockSupabaseService.Object);
+        var mockChannelManager = new Mock<IChannelManager>();
 
         var service = new SchedulingService(
             _mockLoggerFactory.Object,
             _mockSupabaseService.Object,
             _mockAgentService.Object,
-            slackBot,
-            null, // Keep simple for testing
+            mockChannelManager.Object,
             config);
 
         await service.StartAsync();

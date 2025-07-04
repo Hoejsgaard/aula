@@ -236,16 +236,42 @@ public class Program
         services.AddSingleton<IWeekLetterSeeder, WeekLetterSeeder>();
         services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
         services.AddSingleton<IHistoricalDataSeeder, HistoricalDataSeeder>();
+        
+        // Channel Manager and Channel Registration
+        services.AddSingleton<IChannelManager>(provider =>
+        {
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var config = provider.GetRequiredService<Config>();
+            var channelManager = new ChannelManager(loggerFactory);
+            
+            // Register Slack channel if enabled
+            if (config.Slack.Enabled)
+            {
+                var slackBot = provider.GetService<SlackInteractiveBot>();
+                var slackChannel = new SlackChannel(config, loggerFactory, slackBot);
+                channelManager.RegisterChannel(slackChannel);
+            }
+            
+            // Register Telegram channel if enabled
+            if (config.Telegram.Enabled)
+            {
+                var telegramBot = provider.GetService<TelegramInteractiveBot>();
+                var telegramMessenger = provider.GetService<TelegramChannelMessenger>();
+                var telegramChannel = new TelegramChannel(config, loggerFactory, telegramMessenger!, telegramBot);
+                channelManager.RegisterChannel(telegramChannel);
+            }
+            
+            return channelManager;
+        });
         services.AddSingleton<ISchedulingService>(provider =>
         {
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
             var supabaseService = provider.GetRequiredService<ISupabaseService>();
             var agentService = provider.GetRequiredService<IAgentService>();
-            var slackBot = provider.GetRequiredService<SlackInteractiveBot>();
-            var telegramBot = provider.GetService<TelegramInteractiveBot>(); // May be null
+            var channelManager = provider.GetRequiredService<IChannelManager>();
             var config = provider.GetRequiredService<Config>();
 
-            return new SchedulingService(loggerFactory, supabaseService, agentService, slackBot, telegramBot, config);
+            return new SchedulingService(loggerFactory, supabaseService, agentService, channelManager, config);
         });
 
         return services.BuildServiceProvider();
