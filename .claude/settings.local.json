@@ -34,7 +34,11 @@
       "Bash(dotnet --version)",
       "Bash(dotnet --list-sdks)",
       "Bash(verbosity=minimal)",
-      "Bash(dotnet reportgenerator:*)"
+      "Bash(dotnet reportgenerator:*)",
+      "Bash(for file in *.cs)",
+      "Bash(do sed -i '1i using Aula.Services;' \"$file\")",
+      "Bash(done)",
+      "Bash(do sed -i '/using Aula\\.Services;/h; /using Aula\\.Services;/{x; s/using Aula\\.Services;//; x;}' \"$file\")"
     ],
     "deny": []
   },

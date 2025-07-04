@@ -1,10 +1,11 @@
+using Aula.Services;
 using Microsoft.Extensions.Logging;
 using Supabase;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Aula.Services;
+namespace Aula.Repositories;
 
 public class AppStateRepository : IAppStateRepository
 {
