@@ -247,7 +247,7 @@ public class OpenAiService : IOpenAiService
 
         var baseMessages = _promptBuilder.CreateMultiChildMessages(childrenContent, chatInterface);
         var existingHistory = _conversationManager.GetConversationHistory(contextKeyToUse);
-        
+
         var messages = new List<ChatMessage>(baseMessages);
         messages.AddRange(existingHistory);
         messages.Add(ChatMessage.FromUser(question));

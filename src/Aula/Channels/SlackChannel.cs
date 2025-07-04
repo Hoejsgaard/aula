@@ -135,7 +135,7 @@ public class SlackChannel : IChannel
         try
         {
             _logger.LogInformation("Initializing Slack channel");
-            
+
             if (_bot != null && SupportsInteractivity)
             {
                 // Bot initialization is handled by the bot itself
@@ -246,7 +246,7 @@ public class SlackChannel : IChannel
     private string DetectAndFormat(string message)
     {
         // Simple detection - if it contains HTML tags, treat as HTML, otherwise as markdown
-        if (message.Contains("<") && message.Contains(">") && 
+        if (message.Contains("<") && message.Contains(">") &&
             (message.Contains("<b>") || message.Contains("<i>") || message.Contains("<code>")))
         {
             return ConvertHtmlToSlack(message);

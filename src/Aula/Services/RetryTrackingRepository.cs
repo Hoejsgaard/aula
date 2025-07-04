@@ -44,7 +44,7 @@ public class RetryTrackingRepository : IRetryTrackingRepository
             var retryAttempt = existing.Models.First();
             retryAttempt.AttemptCount += 1;
             retryAttempt.LastAttempt = DateTime.UtcNow;
-            
+
             // Use default retry hours (can be made configurable later)
             var retryHours = 1;
             retryAttempt.NextAttempt = DateTime.UtcNow.AddHours(retryHours);
@@ -53,7 +53,7 @@ public class RetryTrackingRepository : IRetryTrackingRepository
                 .From<RetryAttempt>()
                 .Update(retryAttempt);
 
-            _logger.LogInformation("Incremented retry attempt for {ChildName} week {WeekNumber}/{Year} to {Count}", 
+            _logger.LogInformation("Incremented retry attempt for {ChildName} week {WeekNumber}/{Year} to {Count}",
                 childName, weekNumber, year, retryAttempt.AttemptCount);
         }
         else
@@ -79,7 +79,7 @@ public class RetryTrackingRepository : IRetryTrackingRepository
                 .From<RetryAttempt>()
                 .Insert(newRetryAttempt);
 
-            _logger.LogInformation("Created first retry attempt for {ChildName} week {WeekNumber}/{Year}", 
+            _logger.LogInformation("Created first retry attempt for {ChildName} week {WeekNumber}/{Year}",
                 childName, weekNumber, year);
         }
     }
@@ -92,7 +92,7 @@ public class RetryTrackingRepository : IRetryTrackingRepository
             .Where(ra => ra.ChildName == childName && ra.WeekNumber == weekNumber && ra.Year == year)
             .Delete();
 
-        _logger.LogInformation("Marked retry as successful and removed tracking for {ChildName} week {WeekNumber}/{Year}", 
+        _logger.LogInformation("Marked retry as successful and removed tracking for {ChildName} week {WeekNumber}/{Year}",
             childName, weekNumber, year);
     }
 }

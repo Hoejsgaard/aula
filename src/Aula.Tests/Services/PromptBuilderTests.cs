@@ -18,10 +18,10 @@ public class PromptBuilderTests
         var builder = CreateTestPromptBuilder();
         var childName = "Emma";
         var chatInterface = ChatInterface.Slack;
-        
+
         // Act
         var result = builder.CreateSystemInstructionsMessage(childName, chatInterface);
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Equal("system", result.Role);
@@ -37,10 +37,10 @@ public class PromptBuilderTests
         var builder = CreateTestPromptBuilder();
         var childName = TestChild1;
         var chatInterface = ChatInterface.Telegram;
-        
+
         // Act
         var result = builder.CreateSystemInstructionsMessage(childName, chatInterface);
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Contains("Telegram", result.Content);
@@ -56,10 +56,10 @@ public class PromptBuilderTests
         var builder = CreateTestPromptBuilder();
         var childName = "Emma";
         var weekLetterContent = "This week we will have math on Monday and science on Tuesday.";
-        
+
         // Act
         var result = builder.CreateWeekLetterContentMessage(childName, weekLetterContent);
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Equal("system", result.Role);
@@ -78,19 +78,19 @@ public class PromptBuilderTests
         var weekNumber = "15";
         var weekLetterContent = "Math on Monday, Science on Tuesday";
         var chatInterface = ChatInterface.Slack;
-        
+
         // Act
         var result = builder.CreateSummarizationMessages(childName, className, weekNumber, weekLetterContent, chatInterface);
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Equal(2, result.Count);
-        
+
         // System message
         Assert.Equal("system", result[0].Role);
         Assert.Contains("summarizes weekly school letters", result[0].Content);
         Assert.Contains("Slack", result[0].Content);
-        
+
         // User message
         Assert.Equal("user", result[1].Role);
         Assert.Contains(className, result[1].Content);
@@ -107,20 +107,20 @@ public class PromptBuilderTests
         var className = "2A";
         var weekNumber = "15";
         var weekLetterContent = "Math on Monday, Science on Tuesday";
-        
+
         // Act
         var result = builder.CreateKeyInformationExtractionMessages(childName, className, weekNumber, weekLetterContent);
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Equal(2, result.Count);
-        
+
         // System message
         Assert.Equal("system", result[0].Role);
         Assert.Contains("extracts structured information", result[0].Content);
         Assert.Contains("JSON format", result[0].Content);
         Assert.Contains("monday", result[0].Content);
-        
+
         // User message
         Assert.Equal("user", result[1].Role);
         Assert.Contains(childName, result[1].Content);
@@ -140,20 +140,20 @@ public class PromptBuilderTests
             { TestChild1, "Science on Tuesday for TestChild1's class" }
         };
         var chatInterface = ChatInterface.Telegram;
-        
+
         // Act
         var result = builder.CreateMultiChildMessages(childrenContent, chatInterface);
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Equal(2, result.Count);
-        
+
         // System message
         Assert.Equal("system", result[0].Role);
         Assert.Contains("multiple children", result[0].Content);
         Assert.Contains("Telegram", result[0].Content);
         Assert.Contains("HTML tags", result[0].Content);
-        
+
         // User message with combined content
         Assert.Equal("user", result[1].Role);
         Assert.Contains("Emma", result[1].Content);
@@ -167,10 +167,10 @@ public class PromptBuilderTests
     {
         // Arrange
         var builder = CreateTestPromptBuilder();
-        
+
         // Act
         var result = builder.GetChatInterfaceInstructions(ChatInterface.Slack);
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Contains("Slack", result);
@@ -186,10 +186,10 @@ public class PromptBuilderTests
     {
         // Arrange
         var builder = CreateTestPromptBuilder();
-        
+
         // Act
         var result = builder.GetChatInterfaceInstructions(ChatInterface.Telegram);
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Contains("Telegram", result);
@@ -209,10 +209,10 @@ public class PromptBuilderTests
         // Arrange
         var builder = CreateTestPromptBuilder();
         var childName = "Emma";
-        
+
         // Act
         var result = builder.CreateWeekLetterContentMessage(childName, content ?? "");
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Equal("system", result.Role);

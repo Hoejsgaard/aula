@@ -14,13 +14,13 @@ public class ConversationManagerTests
         var mockLoggerFactory = new Mock<ILoggerFactory>();
         var mockLogger = new Mock<ILogger>();
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
-        
+
         var mockPromptBuilder = new Mock<IPromptBuilder>();
         mockPromptBuilder.Setup(x => x.CreateSystemInstructionsMessage(It.IsAny<string>(), It.IsAny<ChatInterface>()))
             .Returns(ChatMessage.FromSystem("Test system message"));
         mockPromptBuilder.Setup(x => x.CreateWeekLetterContentMessage(It.IsAny<string>(), It.IsAny<string>()))
             .Returns(ChatMessage.FromSystem("Test week letter content"));
-        
+
         return new ConversationManager(mockLoggerFactory.Object, mockPromptBuilder.Object);
     }
 
@@ -29,7 +29,7 @@ public class ConversationManagerTests
     {
         // Arrange & Act
         var manager = CreateTestConversationManager();
-        
+
         // Assert
         Assert.NotNull(manager);
     }
@@ -39,9 +39,9 @@ public class ConversationManagerTests
     {
         // Arrange
         var mockPromptBuilder = new Mock<IPromptBuilder>();
-        
+
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new ConversationManager(null!, mockPromptBuilder.Object));
     }
 
@@ -50,9 +50,9 @@ public class ConversationManagerTests
     {
         // Arrange
         var mockLoggerFactory = new Mock<ILoggerFactory>();
-        
+
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new ConversationManager(mockLoggerFactory.Object, null!));
     }
 
@@ -62,10 +62,10 @@ public class ConversationManagerTests
         // Arrange
         var manager = CreateTestConversationManager();
         var childName = "TestChild";
-        
+
         // Act
         var result = manager.EnsureContextKey(null, childName);
-        
+
         // Assert
         Assert.Equal("testchild", result);
     }
@@ -76,10 +76,10 @@ public class ConversationManagerTests
         // Arrange
         var manager = CreateTestConversationManager();
         var childName = "TestChild";
-        
+
         // Act
         var result = manager.EnsureContextKey("", childName);
-        
+
         // Assert
         Assert.Equal("testchild", result);
     }
@@ -91,10 +91,10 @@ public class ConversationManagerTests
         var manager = CreateTestConversationManager();
         var contextKey = "custom-context";
         var childName = "TestChild";
-        
+
         // Act
         var result = manager.EnsureContextKey(contextKey, childName);
-        
+
         // Assert
         Assert.Equal("custom-context", result);
     }
@@ -105,10 +105,10 @@ public class ConversationManagerTests
         // Arrange
         var manager = CreateTestConversationManager();
         var contextKey = "new-context";
-        
+
         // Act
         var result = manager.GetConversationHistory(contextKey);
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Empty(result);
@@ -122,11 +122,11 @@ public class ConversationManagerTests
         var contextKey = "test-context";
         var childName = "TestChild";
         var weekLetterContent = "Test content";
-        
+
         // Act
         manager.EnsureConversationHistory(contextKey, childName, weekLetterContent, ChatInterface.Slack);
         var history = manager.GetConversationHistory(contextKey);
-        
+
         // Assert
         Assert.NotNull(history);
         Assert.Equal(2, history.Count); // System instructions + week letter content
@@ -143,12 +143,12 @@ public class ConversationManagerTests
         var childName = "TestChild";
         var weekLetterContent = "Test content";
         var question = "What activities are planned?";
-        
+
         // Act
         manager.EnsureConversationHistory(contextKey, childName, weekLetterContent, ChatInterface.Slack);
         manager.AddUserQuestionToHistory(contextKey, question);
         var history = manager.GetConversationHistory(contextKey);
-        
+
         // Assert
         Assert.Equal(3, history.Count);
         Assert.Equal("user", history[2].Role);
@@ -164,12 +164,12 @@ public class ConversationManagerTests
         var childName = "TestChild";
         var weekLetterContent = "Test content";
         var response = "Here are the planned activities...";
-        
+
         // Act
         manager.EnsureConversationHistory(contextKey, childName, weekLetterContent, ChatInterface.Slack);
         manager.AddAssistantResponseToHistory(contextKey, response);
         var history = manager.GetConversationHistory(contextKey);
-        
+
         // Assert
         Assert.Equal(3, history.Count);
         Assert.Equal("assistant", history[2].Role);
@@ -185,15 +185,15 @@ public class ConversationManagerTests
         var contextKey2 = "context2";
         var childName = "TestChild";
         var weekLetterContent = "Test content";
-        
+
         // Act
         manager.EnsureConversationHistory(contextKey1, childName, weekLetterContent, ChatInterface.Slack);
         manager.EnsureConversationHistory(contextKey2, childName, weekLetterContent, ChatInterface.Slack);
         manager.ClearConversationHistory(contextKey1);
-        
+
         var history1 = manager.GetConversationHistory(contextKey1);
         var history2 = manager.GetConversationHistory(contextKey2);
-        
+
         // Assert
         Assert.Empty(history1);
         Assert.Equal(2, history2.Count);
@@ -208,15 +208,15 @@ public class ConversationManagerTests
         var contextKey2 = "context2";
         var childName = "TestChild";
         var weekLetterContent = "Test content";
-        
+
         // Act
         manager.EnsureConversationHistory(contextKey1, childName, weekLetterContent, ChatInterface.Slack);
         manager.EnsureConversationHistory(contextKey2, childName, weekLetterContent, ChatInterface.Slack);
         manager.ClearConversationHistory(null);
-        
+
         var history1 = manager.GetConversationHistory(contextKey1);
         var history2 = manager.GetConversationHistory(contextKey2);
-        
+
         // Assert
         Assert.Empty(history1);
         Assert.Empty(history2);
