@@ -13,12 +13,13 @@ using ConfigChild = Aula.Configuration.Child;
 
 namespace Aula.Tests.Scheduling;
 
-public class SchedulingServiceTests
+public class SchedulingServiceTests : IDisposable
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly Mock<ISupabaseService> _mockSupabaseService;
     private readonly Mock<IAgentService> _mockAgentService;
     private readonly Config _testConfig;
+    private readonly List<IDisposable> _disposables = new List<IDisposable>();
 
     public SchedulingServiceTests()
     {
@@ -445,6 +446,10 @@ public class SchedulingServiceTests
     {
         var slackBot = new SlackInteractiveBot(_mockAgentService.Object, _testConfig, _loggerFactory, _mockSupabaseService.Object);
         var telegramBot = new TelegramInteractiveBot(_mockAgentService.Object, _testConfig, _loggerFactory, _mockSupabaseService.Object);
+
+        // Track disposable resources
+        _disposables.Add(slackBot);
+        // Note: telegramBot does not implement IDisposable
 
         return new SchedulingService(
             _loggerFactory,
@@ -898,10 +903,12 @@ public class SchedulingServiceTests
         var tasks = new List<Task>();
         for (int i = 0; i < 10; i++)
         {
+            int taskId = i;
             tasks.Add(Task.Run(async () =>
             {
-                await Task.Delay(10); // Small delay to create concurrency
-                // Timer should be running in background during these operations
+                await Task.Delay(10 + taskId); // Staggered delays to create real concurrency
+                // Actually interact with the service by calling methods that trigger internal operations
+                await TestExecutePendingReminders(schedulingService);
             }));
         }
 
@@ -1153,6 +1160,7 @@ public class SchedulingServiceTests
 
             // Cleanup
             slackBot.Dispose();
+            // Note: telegramBot does not implement IDisposable
         }
     }
 
@@ -1175,5 +1183,15 @@ public class SchedulingServiceTests
         _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", 42, 2024), Times.Once);
         // GetWeekLetterAsync should not be called if already posted
         _mockAgentService.Verify(x => x.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()), Times.Never);
+    }
+
+    public void Dispose()
+    {
+        foreach (var disposable in _disposables)
+        {
+            disposable?.Dispose();
+        }
+        _disposables.Clear();
+        _loggerFactory?.Dispose();
     }
 }

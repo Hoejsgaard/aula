@@ -215,9 +215,9 @@ public class Program
         services.AddSingleton<SlackInteractiveBot>();
 
         // Only register TelegramInteractiveBot if enabled
-        var tempConfig = new Config();
-        configuration.Bind(tempConfig);
-        if (tempConfig.Telegram.Enabled && !string.IsNullOrEmpty(tempConfig.Telegram.Token))
+        var telegramEnabled = configuration.GetValue<bool>("Telegram:Enabled");
+        var telegramToken = configuration.GetValue<string>("Telegram:Token");
+        if (telegramEnabled && !string.IsNullOrEmpty(telegramToken))
         {
             services.AddSingleton<Telegram.Bot.ITelegramBotClient>(provider =>
             {

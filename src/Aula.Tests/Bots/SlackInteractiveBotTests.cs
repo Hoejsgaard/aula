@@ -30,7 +30,7 @@ public class SlackInteractiveBotTests : IDisposable
     private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler;
     private readonly HttpClient _httpClient;
     private bool _disposed = false;
-    private const int MaxMessageLength = 5000;
+    private const int MaxMessageLength = 4000;
 
     public SlackInteractiveBotTests()
     {
@@ -184,7 +184,7 @@ public class SlackInteractiveBotTests : IDisposable
     [Fact]
     public async Task SendMessage_WithLongText_TruncatesMessage()
     {
-        var longMessage = new string('a', MaxMessageLength);
+        var longMessage = new string('a', MaxMessageLength + 1);
         SetupSuccessfulHttpResponse();
 
         await _slackBot.SendMessage(longMessage);

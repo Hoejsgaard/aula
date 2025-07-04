@@ -252,7 +252,7 @@ public class ConfigurationValidator : IConfigurationValidator
         {
             _logger.LogWarning("Timers.SlackPollingIntervalSeconds is less than 1 second - this may cause excessive API calls");
         }
-        
+
         if (timers.CleanupIntervalHours <= 0)
         {
             throw new InvalidOperationException("Timers.CleanupIntervalHours must be greater than 0");
