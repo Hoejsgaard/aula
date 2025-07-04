@@ -5,7 +5,7 @@ using Aula.Services;
 
 namespace Aula.Tools;
 
-public class AiToolsManager
+public class AiToolsManager : IAiToolsManager
 {
     private readonly ISupabaseService _supabaseService;
     private readonly IDataService _dataService;

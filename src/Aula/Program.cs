@@ -202,14 +202,14 @@ public class Program
         });
         services.AddSingleton<SlackBot>();
         services.AddSingleton<TelegramClient>();
-        services.AddSingleton<GoogleCalendar>();
+        services.AddSingleton<IGoogleCalendarService, GoogleCalendarService>();
         services.AddSingleton<IConversationManager, ConversationManager>();
         services.AddSingleton<IPromptBuilder, PromptBuilder>();
         services.AddSingleton<IOpenAiService>(provider =>
         {
             var config = provider.GetRequiredService<Config>();
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-            var aiToolsManager = provider.GetRequiredService<AiToolsManager>();
+            var aiToolsManager = provider.GetRequiredService<IAiToolsManager>();
             var conversationManager = provider.GetRequiredService<IConversationManager>();
             var promptBuilder = provider.GetRequiredService<IPromptBuilder>();
             return new OpenAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager, conversationManager, promptBuilder);
@@ -232,7 +232,7 @@ public class Program
         }
 
         services.AddSingleton<ISupabaseService, SupabaseService>();
-        services.AddSingleton<AiToolsManager>();
+        services.AddSingleton<IAiToolsManager, AiToolsManager>();
         services.AddSingleton<IWeekLetterSeeder, WeekLetterSeeder>();
         services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
         services.AddSingleton<IHistoricalDataSeeder, HistoricalDataSeeder>();

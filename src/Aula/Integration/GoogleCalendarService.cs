@@ -8,21 +8,21 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 
-namespace Aula.Services;
+namespace Aula.Integration;
 
-public class GoogleCalendar
+public class GoogleCalendarService : IGoogleCalendarService
 {
     private readonly CalendarService _calendarService;
     private readonly string _prefix;
     private readonly ILogger _logger;
 
 
-    public GoogleCalendar(GoogleServiceAccount serviceAccount, string prefix, ILoggerFactory loggerFactory)
+    public GoogleCalendarService(GoogleServiceAccount serviceAccount, string prefix, ILoggerFactory loggerFactory)
     {
         if (string.IsNullOrEmpty(prefix)) throw new ArgumentNullException(nameof(prefix));
         if (prefix.Length < 3) throw new ArgumentException("Prefix must be at least 3 chars");
         _prefix = prefix;
-        _logger = loggerFactory.CreateLogger<GoogleCalendar>();
+        _logger = loggerFactory.CreateLogger<GoogleCalendarService>();
         var credential = GoogleCredential.FromJson(GetJsonKey(serviceAccount))
             .CreateScoped(CalendarService.Scope.Calendar);
 
