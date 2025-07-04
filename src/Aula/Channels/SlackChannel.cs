@@ -243,11 +243,17 @@ public class SlackChannel : IChannel
         return stripped;
     }
 
+    private static readonly Regex HtmlTagPattern = new(@"<\s*\/?\s*(?:b|strong|i|em|code|pre|br|p|div|span)\s*(?:\s[^>]*)?\s*>", 
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    
+    private static readonly Regex HtmlEntityPattern = new(@"&(?:amp|lt|gt|quot|apos|nbsp);", 
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     private string DetectAndFormat(string message)
     {
-        // Simple detection - if it contains HTML tags, treat as HTML, otherwise as markdown
-        if (message.Contains("<") && message.Contains(">") &&
-            (message.Contains("<b>") || message.Contains("<i>") || message.Contains("<code>")))
+        // Enhanced HTML detection using regex patterns
+        // Check for HTML tags or entities that indicate HTML content
+        if (HtmlTagPattern.IsMatch(message) || HtmlEntityPattern.IsMatch(message))
         {
             return ConvertHtmlToSlack(message);
         }

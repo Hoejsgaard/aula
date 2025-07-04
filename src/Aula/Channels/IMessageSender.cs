@@ -6,52 +6,45 @@ public interface IMessageSender
     Task SendMessageAsync(string chatId, string message);
 }
 
-public class SlackMessageSender : IMessageSender
+/// <summary>
+/// Abstract base class for message senders that provides common functionality
+/// for validating and delegating to platform-specific channel messengers.
+/// </summary>
+public abstract class MessageSenderBase : IMessageSender
 {
-    private readonly IChannelMessenger _messenger;
+    protected readonly IChannelMessenger _messenger;
 
-    public SlackMessageSender(IChannelMessenger messenger)
+    protected MessageSenderBase(IChannelMessenger messenger, string expectedPlatformType)
     {
         _messenger = messenger ?? throw new ArgumentNullException(nameof(messenger));
 
-        if (messenger.PlatformType != "Slack")
+        if (messenger.PlatformType != expectedPlatformType)
         {
-            throw new ArgumentException("Expected Slack messenger", nameof(messenger));
+            throw new ArgumentException($"Expected {expectedPlatformType} messenger", nameof(messenger));
         }
     }
 
-    public async Task SendMessageAsync(string message)
+    public virtual async Task SendMessageAsync(string message)
     {
         await _messenger.SendMessageAsync(message);
     }
 
-    public async Task SendMessageAsync(string chatId, string message)
+    public virtual async Task SendMessageAsync(string chatId, string message)
     {
         await _messenger.SendMessageAsync(chatId, message);
     }
 }
 
-public class TelegramMessageSender : IMessageSender
+public class SlackMessageSender : MessageSenderBase
 {
-    private readonly IChannelMessenger _messenger;
-
-    public TelegramMessageSender(IChannelMessenger messenger)
+    public SlackMessageSender(IChannelMessenger messenger) : base(messenger, "Slack")
     {
-        _messenger = messenger ?? throw new ArgumentNullException(nameof(messenger));
-
-        if (messenger.PlatformType != "Telegram")
-        {
-            throw new ArgumentException("Expected Telegram messenger", nameof(messenger));
-        }
     }
+}
 
-    public async Task SendMessageAsync(string message)
+public class TelegramMessageSender : MessageSenderBase
+{
+    public TelegramMessageSender(IChannelMessenger messenger) : base(messenger, "Telegram")
     {
-        await _messenger.SendMessageAsync(message);
-    }
-
-    public async Task SendMessageAsync(string chatId, string message)
-    {
-        await _messenger.SendMessageAsync(chatId, message);
     }
 }

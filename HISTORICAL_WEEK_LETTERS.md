@@ -4,7 +4,7 @@ This document describes the one-off feature for populating the database with his
 
 ## Purpose
 
-During summer holidays, the MinUddannelse system typically doesn't have fresh week letters available. This makes it difficult to test the week letter functionality. The historical population feature solves this by:
+During summer holidays, the MinUddannelse system typically doesn't have fresh week letters available. This makes it difficult to test the week's letter functionality. The historical population feature solves this by:
 
 1. Fetching week letters from the past 8 weeks
 2. Storing them in the Supabase database
@@ -39,11 +39,11 @@ When you start the application with `UseStoredWeekLetters` set to `true`, it wil
 
 Watch the console output for progress indicators:
 
-```
+```console
 📅 Fetching historical week letters for past 8 weeks
 📆 Processing week 25/2024 (date: 06/17/2024)
-✅ Stored week letter for Søren Johannes week 25/2024 (1234 chars)
-⚠️ Week letter for Hans Martin week 25/2024 has no content - skipping
+✅ Stored week's letter for Søren Johannes week 25/2024 (1234 chars)
+⚠️ Week's letter for Hans Martin week 25/2024 has no content – skipping
 🎉 Historical week letter population complete: 12/16 successful
 ```
 
@@ -119,21 +119,21 @@ The system gracefully handles:
 ## Performance
 
 - **API Calls**: Up to 16 calls (8 weeks × 2 children) with 500ms delays
-- **Duration**: Approximately 8-10 seconds for full population
-- **Storage**: ~5-50KB per week letter depending on content
+- **Duration**: Approximately 8–10 seconds for full population
+- **Storage**: ~5–50KB per week's letter depending on content
 - **One-time**: Only runs when `UseStoredWeekLetters` is `true`
 
 ## Example Output
 
-```
+```console
 🗂️ Starting one-off historical week letter population
 📅 Fetching historical week letters for past 8 weeks
 📆 Processing week 26/2024 (date: 06/24/2024)
-✅ Week letter for Søren Johannes week 26/2024 already exists - skipping
-✅ Stored week letter for Hans Martin week 26/2024 (1567 chars)
+✅ Week's letter for Søren Johannes week 26/2024 already exists – skipping
+✅ Stored week's letter for Hans Martin week 26/2024 (1567 chars)
 📆 Processing week 25/2024 (date: 06/17/2024)
-✅ Stored week letter for Søren Johannes week 25/2024 (2134 chars)
-⚠️ Week letter for Hans Martin week 25/2024 has no content - skipping
+✅ Stored week's letter for Søren Johannes week 25/2024 (2134 chars)
+⚠️ Week's letter for Hans Martin week 25/2024 has no content – skipping
 🎉 Historical week letter population complete: 14/16 successful
 📊 You can now test with stored week letters by setting Features.UseStoredWeekLetters = true
 🔧 Remember to remove this PopulateHistoricalWeekLetters method once you're done seeding data

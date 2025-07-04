@@ -31,7 +31,22 @@ public class Program
 
             // Validate configuration at startup
             var configValidator = serviceProvider.GetRequiredService<IConfigurationValidator>();
-            configValidator.ValidateConfiguration(config);
+            var validationResult = await configValidator.ValidateConfigurationAsync(config);
+            
+            if (!validationResult.IsValid)
+            {
+                foreach (var error in validationResult.Errors)
+                {
+                    logger.LogError("Configuration error: {Error}", error);
+                }
+                logger.LogError("Application startup failed due to configuration errors");
+                return;
+            }
+            
+            foreach (var warning in validationResult.Warnings)
+            {
+                logger.LogWarning("Configuration warning: {Warning}", warning);
+            }
 
             var slackBot = serviceProvider.GetRequiredService<SlackBot>();
             var telegramClient = serviceProvider.GetRequiredService<TelegramClient>();
@@ -65,19 +80,7 @@ public class Program
             var agentService = serviceProvider.GetRequiredService<IAgentService>();
             await agentService.LoginAsync();
 
-            var allChildren = await agentService.GetAllChildrenAsync();
-            foreach (var child in allChildren)
-            {
-                try
-                {
-                    var weekLetter = await agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), false);
-                    logger.LogInformation("Preloaded week letter for {ChildName}", child.FirstName);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to preload week letter for {ChildName}", child.FirstName);
-                }
-            }
+            await PreloadChildrenWeekLetters(agentService, logger);
 
             // Start scheduling service FIRST before bots
             logger.LogInformation("🚀 About to start SchedulingService");
@@ -105,6 +108,7 @@ public class Program
             // Check if we need to post week letters on startup for either Slack or Telegram
             if (config.Slack.PostWeekLettersOnStartup || (config.Telegram.Enabled && config.Telegram.PostWeekLettersOnStartup))
             {
+                var allChildren = await agentService.GetAllChildrenAsync();
                 foreach (var child in allChildren)
                 {
                     var weekLetter = await agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
@@ -248,4 +252,24 @@ public class Program
         return services.BuildServiceProvider();
     }
 
+    /// <summary>
+    /// Preloads week letters for all children to ensure data is available for interactive bots.
+    /// This improves response times and provides better user experience.
+    /// </summary>
+    private static async Task PreloadChildrenWeekLetters(IAgentService agentService, ILogger logger)
+    {
+        var allChildren = await agentService.GetAllChildrenAsync();
+        foreach (var child in allChildren)
+        {
+            try
+            {
+                var weekLetter = await agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), false);
+                logger.LogInformation("Preloaded week letter for {ChildName}", child.FirstName);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to preload week letter for {ChildName}", child.FirstName);
+            }
+        }
+    }
 }

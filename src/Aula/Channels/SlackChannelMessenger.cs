@@ -48,7 +48,8 @@ public class SlackChannelMessenger : IChannelMessenger
             var json = JsonSerializer.Serialize(payload);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, "https://slack.com/api/chat.postMessage")
+            var apiUrl = $"{_config.Slack.ApiBaseUrl.TrimEnd('/')}/chat.postMessage";
+            using var request = new HttpRequestMessage(HttpMethod.Post, apiUrl)
             {
                 Content = content
             };
