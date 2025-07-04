@@ -64,7 +64,29 @@ public class SlackChannelMessenger : IChannelMessenger
             }
 
             var responseText = await response.Content.ReadAsStringAsync();
-            _logger.LogInformation("Slack message sent successfully");
+            
+            // Parse Slack API response to check for errors
+            try
+            {
+                var responseJson = JsonSerializer.Deserialize<JsonElement>(responseText);
+                if (responseJson.TryGetProperty("ok", out var okElement) && okElement.GetBoolean())
+                {
+                    _logger.LogInformation("Slack message sent successfully");
+                }
+                else
+                {
+                    var error = responseJson.TryGetProperty("error", out var errorElement) 
+                        ? errorElement.GetString() 
+                        : "Unknown error";
+                    _logger.LogError("Slack API returned error: {Error}", error);
+                    throw new InvalidOperationException($"Slack API error: {error}");
+                }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Failed to parse Slack API response: {Response}", responseText);
+                throw new InvalidOperationException("Invalid JSON response from Slack API", ex);
+            }
         }
         catch (Exception ex)
         {

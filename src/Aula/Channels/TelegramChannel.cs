@@ -24,12 +24,12 @@ public class TelegramChannel : IChannel
 
     public ChannelCapabilities Capabilities { get; }
 
-    public TelegramChannel(Config config, ILoggerFactory loggerFactory, TelegramInteractiveBot? bot = null, IChannelMessenger? messenger = null)
+    public TelegramChannel(Config config, ILoggerFactory loggerFactory, IChannelMessenger messenger, TelegramInteractiveBot? bot = null)
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _logger = loggerFactory?.CreateLogger<TelegramChannel>() ?? throw new ArgumentNullException(nameof(loggerFactory));
         _bot = bot;
-        _messenger = messenger ?? new TelegramChannelMessenger(config, loggerFactory);
+        _messenger = messenger ?? throw new ArgumentNullException(nameof(messenger));
 
         Capabilities = new ChannelCapabilities
         {

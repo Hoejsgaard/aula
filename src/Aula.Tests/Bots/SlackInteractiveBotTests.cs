@@ -415,7 +415,7 @@ public class SlackInteractiveBotTests : IDisposable
             ItExpr.Is<HttpRequestMessage>(req =>
                 req.Method == HttpMethod.Post &&
                 req.RequestUri!.ToString() == "https://slack.com/api/chat.postMessage" &&
-                req.Content!.ReadAsStringAsync().Result.Contains("Emma og TestChild1")),
+                req.Content!.ReadAsStringAsync().GetAwaiter().GetResult().Contains("Emma og TestChild1")),
             ItExpr.IsAny<CancellationToken>());
     }
 
@@ -980,7 +980,7 @@ public class SlackInteractiveBotTests : IDisposable
             ItExpr.Is<HttpRequestMessage>(req =>
                 req.Method == HttpMethod.Post &&
                 req.RequestUri!.ToString() == "https://slack.com/api/chat.postMessage" &&
-                req.Content!.ReadAsStringAsync().Result.Contains("Emma og TestChild1")),
+                req.Content!.ReadAsStringAsync().GetAwaiter().GetResult().Contains("Emma og TestChild1")),
             ItExpr.IsAny<CancellationToken>());
     }
 
