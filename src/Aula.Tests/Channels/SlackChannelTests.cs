@@ -71,7 +71,7 @@ public class SlackChannelTests
     }
 
     [Fact]
-    public void Constructor_WithInvalidMessenger_ThrowsArgumentException()
+    public void Constructor_WithNonSlackChannelMessenger_ThrowsArgumentException()
     {
         var invalidMessenger = new Mock<IChannelMessenger>();
         
@@ -539,17 +539,16 @@ public class SlackChannelTests
     }
 
     [Fact]
-    public async Task TestConnectionAsync_WhenExceptionThrown_ReturnsFalse()
+    public async Task TestConnectionAsync_WithValidConfiguration_ReturnsTrue()
     {
-        // Create a channel that will throw an exception during test
+        // Create a channel with valid configuration
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null);
         
-        // Force an exception by making the bot null after construction
-        // This simulates an error during connection test
+        // Test connection with valid setup
         var result = await channel.TestConnectionAsync();
         
-        // Even if bot is available, the method should handle exceptions gracefully
-        Assert.True(result); // This specific case should still return true
+        // With valid configuration, connection test should succeed
+        Assert.True(result);
     }
 
     [Fact]

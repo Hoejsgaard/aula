@@ -690,7 +690,7 @@ public class SupabaseServiceTests
 
             // Assert - Don't assert exact values due to timing
             // isPending value depends on current time and test execution timing
-            Assert.True(reminderUtcDateTime.Kind == DateTimeKind.Utc || reminderUtcDateTime.Kind == DateTimeKind.Unspecified);
+            Assert.Equal(DateTimeKind.Utc, reminderUtcDateTime.Kind);
         }
     }
 
