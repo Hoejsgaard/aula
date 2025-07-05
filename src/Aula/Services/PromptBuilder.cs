@@ -9,9 +9,10 @@ public class PromptBuilder : IPromptBuilder
 {
     public ChatMessage CreateSystemInstructionsMessage(string childName, ChatInterface chatInterface)
     {
+        var currentDateTime = DateTime.UtcNow;
         return ChatMessage.FromSystem($"You are a helpful assistant that answers questions about {childName}'s weekly school letter. " +
                                     $"This letter is specifically about {childName}'s class and activities. " +
-                                    $"Today is {DateTime.Now.DayOfWeek}, {DateTime.Now.ToString("MMMM d, yyyy")}. " +
+                                    $"Today is {currentDateTime.DayOfWeek}, {currentDateTime.ToString("MMMM d, yyyy")}. " +
                                     "Answer based on the content of the letter. If the specific information isn't in the letter, " +
                                     "say 'I don't have that specific information in the weekly letter' and then provide any related " +
                                     "information that might be helpful. For example, if asked about Tuesday's activities but only " +
@@ -83,7 +84,7 @@ When answering about multiple children, clearly indicate which child each piece 
 If a question is about a specific child, focus on that child but you can mention relevant information about other children if helpful.
 If a question could apply to multiple children, provide information for all relevant children.
 
-Current day context: Today is {DateTime.Now.ToString("dddd, MMMM dd, yyyy")}";
+Current day context: Today is {DateTime.UtcNow.ToString("dddd, MMMM dd, yyyy")}";
 
         return new List<ChatMessage>
         {
