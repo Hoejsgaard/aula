@@ -270,7 +270,16 @@ public class TelegramInteractiveBot : IDisposable
             // Post the week letter using the TelegramChannel
             try
             {
-                await _telegramChannel.SendMessageAsync($"📚 **Ugebrev for {child.FirstName}**\n\n{weekLetter}");
+                // Extract the actual content from the JObject
+                var @class = weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? "";
+                var week = weekLetter["ugebreve"]?[0]?["uge"]?.ToString() ?? "";
+                var htmlContent = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
+                
+                // Create formatted message
+                var title = $"📚 **Ugebrev for {child.FirstName} ({@class}) uge {week}**";
+                var message = $"{title}\n\n{htmlContent}";
+                
+                await _telegramChannel.SendMessageAsync(message);
                 
                 // Add the hash to avoid duplicates
                 _postedWeekLetterHashes.TryAdd(hash, 0);
