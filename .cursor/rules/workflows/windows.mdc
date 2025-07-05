@@ -1,6 +1,7 @@
 ---
-description: 
-globs: 
+description: "Windows-specific developer workflow hints"
+globs:
+  - "**/*"
 alwaysApply: true
 ---
 

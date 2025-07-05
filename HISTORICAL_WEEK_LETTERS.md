@@ -4,7 +4,7 @@ This document describes the one-off feature for populating the database with his
 
 ## Purpose
 
-During summer holidays, the MinUddannelse system typically doesn't have fresh week letters available. This makes it difficult to test the week's letter functionality. The historical population feature solves this by:
+During summer holidays, the MinUddannelse system typically doesn't have fresh week letters available. This makes it difficult to test the week letter functionality. The historical population feature solves this by:
 
 1. Fetching week letters from the past 8 weeks
 2. Storing them in the Supabase database

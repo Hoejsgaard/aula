@@ -1,6 +1,6 @@
 ---
-description: 
-globs: appsettings.Development.json,appsettings.json
+description: Configuration file management and security
+globs: "**/appsettings*.json"
 alwaysApply: false
 ---
 # Configuration Rules

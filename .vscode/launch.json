@@ -10,7 +10,7 @@
 			"request": "launch",
 			"preLaunchTask": "build",
 			// If you have changed target frameworks, make sure to update the program path.
-			"program": "${workspaceFolder}/src/Aula/bin/Debug/net9.0/Aula.dll",
+			"program": "${workspaceFolder}/src/Aula/bin/Debug/${config:dotnet.defaultSolution.targetFramework}/Aula.dll",
 			"args": [],
 			"cwd": "${workspaceFolder}/src/Aula",
 			// For more information about the 'console' field, see https://aka.ms/VSCode-CS-LaunchJson-Console

@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description: Git commit message formatting and workflow
+globs: "**/*"
 alwaysApply: true
 ---
 # Git Commit Guidelines

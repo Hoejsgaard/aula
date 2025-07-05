@@ -1,6 +1,6 @@
 ---
 description: Personal preferences for communication and behavior
-globs: 
+globs: "**/*"
 alwaysApply: true
 ---
 

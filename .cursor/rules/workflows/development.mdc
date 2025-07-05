@@ -1,6 +1,6 @@
 ---
-description: 
-globs: 
+description: Development workflow and build requirements
+globs: "**/*.cs"
 alwaysApply: true
 ---
 
