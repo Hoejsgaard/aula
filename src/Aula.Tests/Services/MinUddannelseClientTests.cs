@@ -129,4 +129,73 @@ public class MinUddannelseClientTests
 
         Assert.Null(result);
     }
+
+    [Fact]
+    public async Task GetStoredWeekLetter_SupabaseServiceThrowsException_ReturnsNull()
+    {
+        _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024))
+            .ThrowsAsync(new InvalidOperationException("Database connection failed"));
+
+        var client = new MinUddannelseClient(_testConfig, _mockSupabaseService.Object, _mockLoggerFactory.Object);
+
+        var result = await client.GetStoredWeekLetter(_testChild, 25, 2024);
+
+        Assert.Null(result);
+        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetStoredWeekLetter_SupabaseServiceReturnsInvalidJson_ReturnsNull()
+    {
+        _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024))
+            .ReturnsAsync("invalid json content {{{");
+
+        var client = new MinUddannelseClient(_testConfig, _mockSupabaseService.Object, _mockLoggerFactory.Object);
+
+        var result = await client.GetStoredWeekLetter(_testChild, 25, 2024);
+
+        Assert.Null(result);
+        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetWeekLetter_MockModeWithSupabaseException_ThrowsException()
+    {
+        _testConfig.Features.UseMockData = true;
+        _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024))
+            .ThrowsAsync(new TimeoutException("Request timeout"));
+
+        var client = new MinUddannelseClient(_testConfig, _mockSupabaseService.Object, _mockLoggerFactory.Object);
+        var testDate = new DateOnly(2024, 6, 17);
+
+        await Assert.ThrowsAsync<TimeoutException>(() => client.GetWeekLetter(_testChild, testDate));
+        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once);
+    }
+
+    [Fact]
+    public void Constructor_WithNullConfig_ThrowsNullReferenceException()
+    {
+        Assert.Throws<NullReferenceException>(() => new MinUddannelseClient((Config)null!));
+    }
+
+    [Fact]
+    public void Constructor_WithNullUsername_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new MinUddannelseClient(null!, "password"));
+    }
+
+    [Fact]
+    public void Constructor_WithNullPassword_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() => new MinUddannelseClient("username", null!));
+    }
+
+    [Fact]
+    public void Constructor_WithConfigAndServices_VerifyDependencyInjection()
+    {
+        var client = new MinUddannelseClient(_testConfig, _mockSupabaseService.Object, _mockLoggerFactory.Object);
+        
+        Assert.NotNull(client);
+        _mockLoggerFactory.Verify(x => x.CreateLogger(typeof(MinUddannelseClient).FullName!), Times.Once);
+    }
 }

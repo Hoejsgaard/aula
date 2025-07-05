@@ -28,7 +28,7 @@ public class TelegramInteractiveBot : IDisposable
     private readonly Config _config;
     private readonly ILogger _logger;
     private readonly ITelegramBotClient _telegramClient;
-    private readonly TelegramClient _telegramWeekLetterClient;
+    private readonly TelegramChannel _telegramChannel;
     private readonly ISupabaseService _supabaseService;
     private readonly Dictionary<string, Child> _childrenByName;
     private readonly ConcurrentDictionary<string, byte> _postedWeekLetterHashes = new ConcurrentDictionary<string, byte>();
@@ -51,7 +51,8 @@ public class TelegramInteractiveBot : IDisposable
         if (_config.Telegram.Enabled && !string.IsNullOrEmpty(_config.Telegram.Token))
         {
             _telegramClient = new TelegramBotClient(_config.Telegram.Token);
-            _telegramWeekLetterClient = new TelegramClient(_config);
+            var telegramMessenger = new TelegramChannelMessenger(_telegramClient, _config, loggerFactory);
+            _telegramChannel = new TelegramChannel(_config, loggerFactory, telegramMessenger, this);
         }
         else
         {
@@ -59,7 +60,7 @@ public class TelegramInteractiveBot : IDisposable
         }
 
         _childrenByName = _config.MinUddannelse.Children.ToDictionary(
-            c => c.FirstName.ToLowerInvariant(),
+            c => $"{c.FirstName} {c.LastName}".ToLowerInvariant(),
             c => c);
 
         var reminderHandler = new ReminderCommandHandler(_logger, _supabaseService, _childrenByName);
@@ -266,8 +267,9 @@ public class TelegramInteractiveBot : IDisposable
                 return;
             }
 
-            // Post the week letter using the existing TelegramClient functionality
-            bool success = await _telegramWeekLetterClient.PostWeekLetter(_config.Telegram.ChannelId, weekLetter, child);
+            // Post the week letter using the TelegramChannel
+            await _telegramChannel.SendMessageAsync($"📚 **Ugebrev for {child.FirstName}**\n\n{weekLetter}");
+            bool success = true; // Assume success if no exception thrown
 
             if (success)
             {

@@ -222,7 +222,7 @@ public class TelegramChannel : IChannel
         converted = Regex.Replace(converted, @"`([^`]+?)`", "<code>$1</code>", RegexOptions.Singleline);
 
         // Code block: ```text``` -> <pre>text</pre>
-        converted = Regex.Replace(converted, @"```([^`]+?)```", "<pre>$1</pre>", RegexOptions.Singleline);
+        converted = Regex.Replace(converted, @"```(.*?)```", "<pre>$1</pre>", RegexOptions.Singleline);
 
         // Links: [text](url) -> <a href="url">text</a>
         converted = Regex.Replace(converted, @"\[([^\]]+?)\]\(([^)]+?)\)", "<a href=\"$2\">$1</a>", RegexOptions.Singleline);
@@ -276,7 +276,7 @@ public class TelegramChannel : IChannel
 
         // Only escape < and > that are not part of valid HTML tags
         // This is a simple approach - for production, consider using a proper HTML parser
-        escaped = Regex.Replace(escaped, @"<(?![bi/]|code|pre|a\s|/[bi]|/code|/pre|/a>)", "&lt;");
+        escaped = Regex.Replace(escaped, @"<(?!(?:b|i|/|code|pre|a\s|/b|/i|/code|/pre|/a)(?:\s|>))", "&lt;");
         escaped = Regex.Replace(escaped, @"(?<!<[^>]*)>(?![^<]*>)", "&gt;");
 
         return escaped;

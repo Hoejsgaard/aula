@@ -68,18 +68,20 @@ public class TimeProviderTests
     }
 
     [Fact]
-    public void SystemTimeProvider_MultipleCallsToNow_ReturnProgressiveTime()
+    public void SystemTimeProvider_MultipleCallsToNow_ReturnConsistentTime()
     {
         // Arrange
         var timeProvider = new SystemTimeProvider();
 
         // Act
         var time1 = timeProvider.Now;
-        Thread.Sleep(1); // Ensure some time passes
         var time2 = timeProvider.Now;
 
         // Assert
-        Assert.True(time2 >= time1); // Time should progress or stay the same
+        // Time should be consistent within microseconds and not go backwards
+        Assert.True(time2 >= time1);
+        // Verify times are reasonably close (within 1 second)
+        Assert.True((time2 - time1).TotalSeconds < 1);
     }
 
     [Fact]
