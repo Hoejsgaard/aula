@@ -268,18 +268,17 @@ public class TelegramInteractiveBot : IDisposable
             }
 
             // Post the week letter using the TelegramChannel
-            await _telegramChannel.SendMessageAsync($"📚 **Ugebrev for {child.FirstName}**\n\n{weekLetter}");
-            bool success = true; // Assume success if no exception thrown
-
-            if (success)
+            try
             {
+                await _telegramChannel.SendMessageAsync($"📚 **Ugebrev for {child.FirstName}**\n\n{weekLetter}");
+                
                 // Add the hash to avoid duplicates
                 _postedWeekLetterHashes.TryAdd(hash, 0);
                 _logger.LogInformation("Week letter for {ChildName} posted successfully", childName);
             }
-            else
+            catch (Exception ex)
             {
-                _logger.LogWarning("Failed to post week letter for {ChildName}", childName);
+                _logger.LogWarning(ex, "Failed to post week letter for {ChildName}", childName);
             }
         }
         catch (Exception ex)

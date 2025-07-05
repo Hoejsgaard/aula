@@ -276,7 +276,7 @@ public class TelegramChannel : IChannel
 
         // Only escape < and > that are not part of valid HTML tags
         // This is a simple approach - for production, consider using a proper HTML parser
-        escaped = Regex.Replace(escaped, @"<(?!(?:b|i|/|code|pre|a\s|/b|/i|/code|/pre|/a)(?:\s|>))", "&lt;");
+        escaped = Regex.Replace(escaped, @"<(?!(?:b|i|code|pre|a(?:\s|>)|/b|/i|/code|/pre|/a(?:\s|>)))", "&lt;");
         escaped = Regex.Replace(escaped, @"(?<!<[^>]*)>(?![^<]*>)", "&gt;");
 
         return escaped;
