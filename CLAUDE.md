@@ -164,20 +164,33 @@ Settings are handled through `appsettings.json` with comprehensive validation:
 - **DEPENDENCY INJECTION**: Use constructor injection and mocking to isolate units under test
 - **CLEAR INTENT**: Test names should clearly describe what behavior is being verified
 
-### Test Coverage Improvement Plan (55% → 75% Target)
-**Current Status**: 3,104/5,174 lines covered (60%) - Need +776 lines for 75%
+### Test Coverage Improvement Plan (56% → 75% Target)
+**Current Status**: 2,893/5,174 lines covered (55.9%) - Need +988 lines for 75%
 
-**Recent Progress (2025-07-04)**:
+**Recent Progress (2025-07-05)**:
 - ✅ **TelegramChannel.cs**: Added 36 tests, covered 254 lines (0% → ~95%)
 - ✅ **BotBase.cs**: Added 21 tests, covered 98 lines (0% → ~85%) 
 - ✅ **SlackChannel.cs**: Added 75 tests, comprehensive coverage of public API
 - **Total Improvement**: +132 tests, significant coverage increase
 
-**Next Priority Targets**:
-1. **MinUddannelseClient.cs**: 25% coverage, ~72 uncovered lines
-2. **ConfigurationValidator.cs**: 45% coverage, ~224 uncovered lines
-3. **Error Handling Paths**: Exception scenarios, validation failures
-4. **Conditional Logic**: If/else branches, switch statements
+**STRATEGIC COVERAGE ROADMAP** (Based on 2025-07-05 analysis):
+
+**🟢 PHASE 1: Quick Wins (Easy Targets - 414 lines potential)**
+1. **ChannelCapabilityFilter.cs** (12 lines, 0% → 85%) - Simple POCO properties
+2. **TelegramChannel.cs** (254 lines, 0% → 85%) - Format methods, property getters
+3. **BotBase.cs** (98 lines, 0% → 85%) - Hash computation, message building
+4. **ChannelManager.cs** (90 lines, 36.6% → 85%) - Edge cases, error paths
+
+**🟡 PHASE 2: Medium Effort (Medium Targets - 262 lines potential)**
+5. **ConfigurationValidator.cs** (224 lines, 45.4% → 75%) - Validation methods, error paths
+6. **AgentService.cs** (38 lines, 36.7% → 75%) - Child lookup, async delegation
+
+**🔴 AVOID: Integration-Heavy Classes**
+- **MinUddannelseClient.cs** - Requires HTTP mocking, complex auth flows
+- **AulaClient.cs** - External API dependencies
+- **Repository classes** - Database integration required
+
+**Realistic Target**: 60-65% coverage (+350-500 lines) by focusing on phases 1-2
 
 **Coverage Commands**:
 ```bash
