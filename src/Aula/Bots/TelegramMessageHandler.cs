@@ -64,7 +64,7 @@ public class TelegramMessageHandler
             await botClient.SendTextMessageAsync(
                 chatId: chatId,
                 text: response,
-                parseMode: ParseMode.Markdown,
+                parseMode: ParseMode.Html,
                 cancellationToken: cancellationToken);
 
             _logger.LogInformation("Sent response to Telegram chat {ChatId}", chatId);
