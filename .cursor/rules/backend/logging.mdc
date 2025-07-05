@@ -1,6 +1,6 @@
 ---
-description: 
-globs: *.cs
+description: Logging standards and best practices
+globs: "**/*.cs"
 alwaysApply: false
 ---
 # Logging Rules

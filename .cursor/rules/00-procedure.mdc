@@ -1,6 +1,6 @@
 ---
 description: Step-by-step reasoning and dev heuristics
-globs:
+globs: "**/*"
 alwaysApply: true
 ---
 

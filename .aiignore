@@ -2,7 +2,7 @@
 # This file is respected by various AI tools and crawlers
 
 # Exclude entire project (comprehensive protection)
-*
+# Using whitelist approach: exclude all, then selectively include
 **/*
 
 # Configuration files with potentially sensitive info
@@ -80,6 +80,5 @@ test-data/
 appsettings*.json
 
 # Version control
-.git/
 .gitignore
 .gitattributes 

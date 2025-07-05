@@ -2,9 +2,9 @@ root = true
 
 [*.cs]
 # Disable problematic rules entirely
-dotnet_diagnostic.IDE0051.severity = none    # Remove unused private members
-dotnet_diagnostic.IDE0052.severity = none    # Remove unread private members
-dotnet_diagnostic.IDE0161.severity = none    # Use file-scoped namespace
+dotnet_diagnostic.IDE0051.severity = suggestion    # Remove unused private members
+dotnet_diagnostic.IDE0052.severity = suggestion    # Remove unread private members
+dotnet_diagnostic.IDE0161.severity = suggestion    # Use file-scoped namespace
 
 # Keep some rules as warnings
 dotnet_analyzer_diagnostic.category-security.severity = warning
@@ -29,5 +29,5 @@ dotnet_diagnostic.CS0067.severity = suggestion   # Event is never used
 dotnet_diagnostic.CS0649.severity = suggestion   # Field is never assigned to
 dotnet_diagnostic.CS0168.severity = suggestion   # Variable is declared but never used
 
-# Explicitly prefer file-scoped namespaces
-csharp_style_namespace_declarations = file_scoped:suggestion 
+# Explicitly prefer file-scoped namespaces (C# 10+ style)
+csharp_style_namespace_declarations = file_scoped:warning 

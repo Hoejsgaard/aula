@@ -1,6 +1,6 @@
 ---
 description: Core enforcement rules and guidance entry point
-globs: 
+globs: "**/*"
 alwaysApply: true
 ---
 # Core AI Enforcement Rules for Aula Integration
