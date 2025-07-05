@@ -1,0 +1,35 @@
+---
+description: Git commit message formatting and workflow
+globs: "**/*"
+alwaysApply: true
+---
+# Git Commit Guidelines
+
+- DO NOT commit, push, or stage files without explicit user confirmation.
+- Use semantic prefixes: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`
+
+## Write Like Rune
+
+Tell the story: why was this needed, what does it accomplish.
+Be direct and professional. Avoid fluff.
+
+## Workflow
+
+Always use temporary file for proper formatting:
+
+```bash
+cat > temp_commit_msg.txt << 'EOF'
+feat: add retry logic for MinUddannelse API failures
+
+The MinUddannelse API fails during peak hours, blocking data retrieval.
+Added exponential backoff with 3 retries to handle 503/504 errors.
+This should reduce failed imports by 80%.
+EOF
+
+git commit -F temp_commit_msg.txt
+rm temp_commit_msg.txt
+```
+
+## Common Scopes
+
+`unilogin`, `minuddannelse`, `aula`, `auth`, `api`, `secrets`, `infra`, `tests`

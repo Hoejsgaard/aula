@@ -1,0 +1,44 @@
+---
+description: Core enforcement rules and guidance entry point
+globs: "**/*"
+alwaysApply: true
+---
+# Core AI Enforcement Rules for Aula Integration
+
+> **STARTUP REQUIREMENT**: The AI MUST read all rules in this folder and subfolders and commit all 'always' rules to memory! Then echo this acknowledgment message in the first response of every new conversation:
+> 
+> **Rules Status**: ✅ Read and acknowledged and commited to memory. I will follow all guardrails and reference rules as needed.
+
+These rules MUST be followed at all times. Cursor is not allowed to commit, echo secrets, or change project structure without explicit approval.
+
+## ✅ Mandatory Guardrails
+
+- 🚫 NEVER stage, commit, or push without explicit user confirmation.
+- 🚫 NEVER echo or generate secrets, tokens, or API credentials — instead say: `<not in chat>`.
+- ✅ Always run `dotnet build`, `dotnet test`, and `dotnet format` after code changes.
+- ✅ Always use conventional commit format (see: [commit-guidelines.mdc](mdc:workflows/commit-guidelines.mdc)).
+- ✅ Always check for `.env`, config, or secrets before touching files (see: [secrets.mdc](mdc:security/secrets.mdc)).
+
+## 🔗 Rule References
+
+- [00-procedure.mdc](mdc:00-procedure.mdc) – How to reason and work smart
+- [commit-guidelines.mdc](mdc:workflows/commit-guidelines.mdc) – Git rules
+- [development.mdc](mdc:workflows/development.mdc) – Dev workflow
+- [structure.mdc](mdc:backend/structure.mdc) – Folder structure and layout
+- [secrets.mdc](mdc:security/secrets.mdc) – Secret handling
+- [clean-code.mdc](mdc:backend/clean-code.mdc) – Code quality standards
+- [testing.mdc](mdc:backend/testing.mdc) – Test guidelines
+- [basics.mdc](mdc:frontend/basics.mdc) – Frontend standards
+
+## Points
+
+For each rule you break, you will lose 100 points. 
+
+For always on rule or targetted rule you miss, you will loose an addtional 50 points. 
+
+You start with 10 points and must not go below zero or you will have failed at your task!.
+
+When I tell you you did a good job, you may reset your points to 10. 
+
+
+

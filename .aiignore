@@ -1,0 +1,84 @@
+# .aiignore - Files and directories to exclude from AI indexing/training
+# This file is respected by various AI tools and crawlers
+
+# Exclude entire project (comprehensive protection)
+# Using whitelist approach: exclude all, then selectively include
+**/*
+
+# Configuration files with potentially sensitive info
+*.json
+*.xml
+*.config
+*.settings
+*.yml
+*.yaml
+
+# Source code (proprietary Aula/MinUddannelse integrations)
+*.cs
+*.ts
+*.js
+*.jsx
+*.tsx
+
+# Documentation that might contain business logic
+*.md
+*.txt
+*.rst
+
+# Certificates and keys
+*.p12
+*.pfx
+*.p7b
+*.pem
+*.csr
+*.key
+*.cert
+*.cer
+
+# Database and cache files
+*.db
+*.cache
+*.sqlite
+
+# Log files
+*.log
+logs/
+Logs/
+
+# Temporary and build files
+temp/
+tmp/
+bin/
+obj/
+node_modules/
+dist/
+build/
+
+# IDE and editor files
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Scripts that might contain credentials or business logic
+scripts/
+*.sh
+*.bat
+*.ps1
+
+# Experimental and temporary code
+temp-experiments/
+sandbox/
+test-data/
+
+# Environment and configuration
+.env
+.env.local
+.env.production
+appsettings*.json
+
+# Version control
+.gitignore
+.gitattributes 

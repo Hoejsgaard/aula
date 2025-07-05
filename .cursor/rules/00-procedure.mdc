@@ -1,0 +1,18 @@
+---
+description: Step-by-step reasoning and dev heuristics
+globs: "**/*"
+alwaysApply: true
+---
+
+# Development & Reasoning Procedure
+
+Follow this mental loop when working with the codebase:
+
+1. **Understand** the context and task. Don’t act until the problem is clear.
+2. **Investigate**: read existing code, review structure, locate relevant modules.
+3. **Plan**: break changes into steps, define expected outcomes.
+4. **Execute carefully**: respect commit/secret/dev rules.
+5. **Verify**: run all tests, format the code, confirm no secrets leaked.
+6. **Reflect**: was this the minimal, cleanest fix? Did I improve things?
+
+Never default to fast output — quality matters more than speed.
