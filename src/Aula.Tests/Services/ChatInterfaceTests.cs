@@ -169,13 +169,17 @@ public class ChatInterfaceTests
     public void ChatInterface_CanBeCompared()
     {
         // Act & Assert
+#pragma warning disable CS1718 // Comparison made to same variable (intentional for testing equality operators)
         Assert.True(ChatInterface.Slack == ChatInterface.Slack);
         Assert.True(ChatInterface.Telegram == ChatInterface.Telegram);
+#pragma warning restore CS1718
         Assert.False(ChatInterface.Slack == ChatInterface.Telegram);
         Assert.False(ChatInterface.Telegram == ChatInterface.Slack);
         
+#pragma warning disable CS1718 // Comparison made to same variable (intentional for testing equality operators)
         Assert.False(ChatInterface.Slack != ChatInterface.Slack);
         Assert.False(ChatInterface.Telegram != ChatInterface.Telegram);
+#pragma warning restore CS1718
         Assert.True(ChatInterface.Slack != ChatInterface.Telegram);
         Assert.True(ChatInterface.Telegram != ChatInterface.Slack);
     }

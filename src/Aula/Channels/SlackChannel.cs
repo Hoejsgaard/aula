@@ -208,12 +208,16 @@ public class SlackChannel : IChannel
         // Convert common markdown to Slack format
         var formatted = message;
 
-        // Bold: **text** or __text__ -> *text*
-        formatted = Regex.Replace(formatted, @"\*\*(.*?)\*\*", "*$1*", RegexOptions.Singleline);
-        formatted = Regex.Replace(formatted, @"__(.*?)__", "*$1*", RegexOptions.Singleline);
+        // Process in order to avoid conflicts:
+        // 1. First convert double asterisks (bold) and double underscores (bold) to single asterisks
+        formatted = Regex.Replace(formatted, @"\*\*(.*?)\*\*", "BOLD_PLACEHOLDER_$1_PLACEHOLDER", RegexOptions.Singleline);
+        formatted = Regex.Replace(formatted, @"__(.*?)__", "BOLD_PLACEHOLDER_$1_PLACEHOLDER", RegexOptions.Singleline);
 
-        // Italic: *text* or _text_ -> _text_
-        formatted = Regex.Replace(formatted, @"(?<!\*)\*([^*]+?)\*(?!\*)", "_$1_", RegexOptions.Singleline);
+        // 2. Then convert remaining single asterisks to underscores (italic)
+        formatted = Regex.Replace(formatted, @"\*([^*]+?)\*", "_$1_", RegexOptions.Singleline);
+
+        // 3. Finally replace placeholders with actual Slack bold format
+        formatted = Regex.Replace(formatted, @"BOLD_PLACEHOLDER_(.*?)_PLACEHOLDER", "*$1*", RegexOptions.Singleline);
 
         return formatted;
     }
@@ -239,17 +243,17 @@ public class SlackChannel : IChannel
 
     private string StripFormatting(string message)
     {
-        // Remove Slack formatting
+        // Remove Slack formatting - process longer patterns first
         var stripped = message;
+        stripped = Regex.Replace(stripped, @"```(.*?)```", "$1", RegexOptions.Singleline); // Code block (3 backticks)
+        stripped = Regex.Replace(stripped, @"`([^`]+?)`", "$1", RegexOptions.Singleline);   // Code (1 backtick)
         stripped = Regex.Replace(stripped, @"\*([^*]+?)\*", "$1", RegexOptions.Singleline); // Bold
         stripped = Regex.Replace(stripped, @"_([^_]+?)_", "$1", RegexOptions.Singleline);   // Italic
-        stripped = Regex.Replace(stripped, @"`([^`]+?)`", "$1", RegexOptions.Singleline);   // Code
-        stripped = Regex.Replace(stripped, @"```([^`]+?)```", "$1", RegexOptions.Singleline); // Code block
 
         return stripped;
     }
 
-    private static readonly Regex HtmlTagPattern = new(@"<\s*\/?\s*(?:b|strong|i|em|code|pre|br|p|div|span)\s*(?:\s[^>]*)?\s*>", 
+    private static readonly Regex HtmlTagPattern = new(@"<\s*\/?\s*(?:b|strong|i|em|code|pre|br|p|div|span)\s*[^>]*\s*\/?\s*>", 
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
     
     private static readonly Regex HtmlEntityPattern = new(@"&(?:amp|lt|gt|quot|apos|nbsp);", 

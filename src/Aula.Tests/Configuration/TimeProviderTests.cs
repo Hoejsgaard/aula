@@ -157,7 +157,7 @@ public class TimeProviderTests
         Assert.True(property.CanRead);
         Assert.False(property.CanWrite);
         Assert.Equal(typeof(DateTime), property.PropertyType);
-        Assert.True(property.GetMethod.IsPublic);
+        Assert.True(property.GetMethod!.IsPublic);
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class TimeProviderTests
         Assert.True(property.CanRead);
         Assert.False(property.CanWrite);
         Assert.Equal(typeof(int), property.PropertyType);
-        Assert.True(property.GetMethod.IsPublic);
+        Assert.True(property.GetMethod!.IsPublic);
     }
 
     [Fact]
