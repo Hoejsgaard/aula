@@ -22,11 +22,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="appsettings.json.example" />
+    <None Remove="appsettings.example.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="appsettings.json.example" />
+    <EmbeddedResource Include="appsettings.example.json" />
     <EmbeddedResource Include="appsettings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
