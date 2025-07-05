@@ -45,7 +45,8 @@
       "Bash(./tools/reportgenerator:*)",
       "Bash(~/.dotnet/tools/reportgenerator -reports:TestResults/*/coverage.cobertura.xml -targetdir:coverage -reporttypes:Html)",
       "Bash(DOTNET_ROOT=/home/runeh/.dotnet ./tools/reportgenerator -reports:TestResults/*/coverage.cobertura.xml -targetdir:coverage -reporttypes:Html)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": []
   },
