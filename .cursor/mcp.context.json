@@ -5,11 +5,14 @@
     "Working with Aula and MinUddannelse APIs for retrieving educational data",
     "Handling week letters, schedules, and messages from school platforms",
     "Implementing proper error handling for educational API responses",
-    "Following security best practices for handling student and parent data"
+    "Following security best practices for handling student and parent data",
+    "Working with C# and .NET applications",
+    "Handling authentication and data synchronization"
   ],
   "constraints": [
     "Never suggest hardcoding secrets or credentials",
     "Always prioritize security in authentication flows",
-    "Respect privacy concerns for educational data"
+    "Respect privacy concerns for educational data",
+    "Follow specific integration requirements for educational systems"
   ]
 } 
