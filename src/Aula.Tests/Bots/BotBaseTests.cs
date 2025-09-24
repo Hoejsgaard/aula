@@ -307,7 +307,7 @@ public class BotBaseTests
         var result = (string)method!.Invoke(bot, null)!;
 
         Assert.Contains("Emma", result);
-        Assert.Contains("🤖 Jeg er online", result);
+        Assert.Contains("Jeg er online", result);
         Assert.Contains("Uge", result);
     }
 

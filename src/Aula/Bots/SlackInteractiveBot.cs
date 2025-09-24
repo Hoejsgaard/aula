@@ -122,11 +122,15 @@ public class SlackInteractiveBot : IDisposable
         // Get the current week number
         int weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Now);
 
-        // Send welcome message in Danish with children info and usage hints
-        await SendMessageInternal($"🤖 Jeg er online og har ugeplan for {childrenList} for Uge {weekNumber}\n\n" +
+        // Get the first child's name for examples (use only first word if multiple)
+        var firstChild = _childrenByName.Values.FirstOrDefault();
+        string exampleChildName = firstChild?.FirstName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? firstChild?.FirstName ?? "barnet";
+
+        // Send welcome message in Danish with children info and usage hints (no emoji)
+        await SendMessageInternal($"Jeg er online og har ugeplan for {childrenList} for Uge {weekNumber}\n\n" +
                                  "Du kan spørge mig om:\n" +
-                                 "• Aktiviteter for en bestemt dag: 'Hvad skal Emma i dag?'\n" +
-                                 "• Oprette påmindelser: 'Mind mig om at hente TestChild1 kl 15'\n" +
+                                 $"• Aktiviteter for en bestemt dag: 'Hvad skal {exampleChildName} i dag?'\n" +
+                                 $"• Oprette påmindelser: 'Mind mig om at hente {exampleChildName} kl 15'\n" +
                                  "• Se ugeplaner: 'Vis ugeplanen for denne uge'\n" +
                                  "• Hjælp: 'hjælp' eller 'help'");
 
