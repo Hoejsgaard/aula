@@ -62,36 +62,38 @@ public class ConfigurationValidator : IConfigurationValidator
             return;
         }
 
+        var hasAtLeastOneValidChild = false;
         foreach (var child in minUddannelse.Children)
         {
             if (string.IsNullOrWhiteSpace(child.FirstName))
             {
-                errors.Add("Child FirstName is required");
+                errors.Add($"Child FirstName is required");
             }
             if (string.IsNullOrWhiteSpace(child.LastName))
             {
-                errors.Add("Child LastName is required");
+                errors.Add($"Child LastName is required for {child.FirstName}");
             }
+
+            // Check per-child UniLogin credentials
+            if (child.UniLogin != null &&
+                !string.IsNullOrWhiteSpace(child.UniLogin.Username) &&
+                !string.IsNullOrWhiteSpace(child.UniLogin.Password))
+            {
+                hasAtLeastOneValidChild = true;
+            }
+        }
+
+        if (!hasAtLeastOneValidChild)
+        {
+            errors.Add("At least one child must have valid UniLogin credentials configured");
         }
     }
 
     private void ValidateUniLogin(UniLogin uniLogin, List<string> errors)
     {
-        if (uniLogin == null)
-        {
-            errors.Add("UniLogin configuration section is required");
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(uniLogin.Username))
-        {
-            errors.Add("UniLogin.Username is required");
-        }
-
-        if (string.IsNullOrWhiteSpace(uniLogin.Password))
-        {
-            errors.Add("UniLogin.Password is required");
-        }
+        // Per-child authentication: root UniLogin is no longer required
+        // Keeping this method for backward compatibility but it doesn't validate anything
+        // The actual validation happens in ValidateMinUddannelse for per-child credentials
     }
 
     private void ValidateOpenAi(OpenAi openAi, List<string> errors)

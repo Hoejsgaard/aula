@@ -141,7 +141,7 @@ public class ConfigurationValidatorTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Contains("Child LastName is required", result.Errors);
+        Assert.Contains("Child LastName is required for Test", result.Errors);
     }
 
     [Fact]
@@ -164,7 +164,7 @@ public class ConfigurationValidatorTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Contains("UniLogin.Username is required", result.Errors);
+        Assert.Contains("At least one child must have valid UniLogin credentials configured", result.Errors);
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public class ConfigurationValidatorTests
 
         // Assert
         Assert.False(result.IsValid);
-        Assert.Contains("UniLogin.Password is required", result.Errors);
+        Assert.Contains("At least one child must have valid UniLogin credentials configured", result.Errors);
     }
 
     [Fact]
@@ -322,13 +322,17 @@ public class ConfigurationValidatorTests
             {
                 Children = new List<Child>
                 {
-                    new Child { FirstName = "Test", LastName = "Child" }
+                    new Child
+                    {
+                        FirstName = "Test",
+                        LastName = "Child",
+                        UniLogin = new UniLogin
+                        {
+                            Username = "test-user",
+                            Password = "REDACTED_PASSWORD"
+                        }
+                    }
                 }
-            },
-            UniLogin = new UniLogin
-            {
-                Username = "test-user",
-                Password = "REDACTED_PASSWORD"
             },
             OpenAi = new OpenAi
             {
