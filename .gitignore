@@ -44,3 +44,6 @@ coverage/
 log.txt
 # MCP cache
 .serena/
+
+# Node.js dependencies
+node_modules/
