@@ -16,6 +16,7 @@ nupkg/
 *.pubxml
 appsettings.json
 temp_commit_msg.txt
+temp/
 
 # Build results
 [Dd]ebug/
@@ -41,3 +42,5 @@ TestResults/
 coverage/
 *.trx
 log.txt
+# MCP cache
+.serena/
