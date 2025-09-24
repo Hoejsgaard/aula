@@ -47,27 +47,80 @@ public abstract class UniLoginClient
     {
         var maxSteps = 10;
         var success = false;
+        var hasSubmittedCredentials = false;
+
         for (var stepCounter = 0; stepCounter < maxSteps; stepCounter++)
+        {
             try
             {
                 var formData = ExtractFormData(content);
+
+                // Check if this form contains credentials
+                if (formData.Item2.ContainsKey("username") ||
+                    formData.Item2.ContainsKey("Username") ||
+                    formData.Item2.ContainsKey("j_username"))
+                {
+                    hasSubmittedCredentials = true;
+                    Console.WriteLine($"[UniLogin] Submitting credentials at step {stepCounter}");
+                }
+
                 var response = await HttpClient.PostAsync(formData.Item1, new FormUrlEncodedContent(formData.Item2));
                 content = await response.Content.ReadAsStringAsync();
 
+                // Check if we're back at MinUddannelse after submitting credentials
+                var currentUrl = response.RequestMessage?.RequestUri?.ToString() ?? "";
+                if (hasSubmittedCredentials && currentUrl.Contains("minuddannelse.net"))
+                {
+                    Console.WriteLine($"[UniLogin] Back at MinUddannelse after credentials");
+
+                    // Verify authentication with API call
+                    var apiUrl = $"https://www.minuddannelse.net/api/stamdata/elev/getElev?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+                    var apiResponse = await HttpClient.GetAsync(apiUrl);
+
+                    if (apiResponse.IsSuccessStatusCode)
+                    {
+                        Console.WriteLine($"[UniLogin] API verification successful - authenticated!");
+                        HttpClient.DefaultRequestHeaders.Accept.Add(
+                            new MediaTypeWithQualityHeaderValue("application/json"));
+                        return true;
+                    }
+                }
 
                 success = CheckIfLoginSuccessful(response);
                 if (success)
                 {
                     HttpClient.DefaultRequestHeaders.Accept.Add(
                         new MediaTypeWithQualityHeaderValue("application/json"));
-
                     return true;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // ignored - this is kind of fragile
+                // Log the exception for debugging
+                Console.WriteLine($"[UniLogin] Step {stepCounter} failed: {ex.Message}");
+
+                // If we can't extract form data, we might be at the end of the flow
+                if (ex.Message.Contains("Form not found") && hasSubmittedCredentials)
+                {
+                    Console.WriteLine($"[UniLogin] No more forms after credentials - checking authentication");
+
+                    // Try API verification
+                    try
+                    {
+                        var apiUrl = $"https://www.minuddannelse.net/api/stamdata/elev/getElev?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+                        var apiResponse = await HttpClient.GetAsync(apiUrl);
+                        if (apiResponse.IsSuccessStatusCode)
+                        {
+                            Console.WriteLine($"[UniLogin] API verification successful!");
+                            HttpClient.DefaultRequestHeaders.Accept.Add(
+                                new MediaTypeWithQualityHeaderValue("application/json"));
+                            return true;
+                        }
+                    }
+                    catch { }
+                }
             }
+        }
 
         return success;
     }
@@ -107,10 +160,12 @@ public abstract class UniLoginClient
 
             if (string.IsNullOrWhiteSpace(name)) continue;
 
-            formData[name] = name switch
+            // Handle various field names for username and password
+            var lowerName = name.ToLowerInvariant();
+            formData[name] = lowerName switch
             {
-                "username" => _username,
-                "password" => _password,
+                "username" or "j_username" or "user" or "login" => _username,
+                "password" or "j_password" or "pass" or "pwd" => _password,
                 _ => value
             };
         }

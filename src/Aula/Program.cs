@@ -199,7 +199,9 @@ public class Program
             var config = provider.GetRequiredService<Config>();
             var supabaseService = provider.GetRequiredService<ISupabaseService>();
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-            return new MinUddannelseClient(config, supabaseService, loggerFactory);
+
+            // Use the new per-child authentication client
+            return new PerChildMinUddannelseClient(config, supabaseService, loggerFactory);
         });
         services.AddSingleton<SlackBot>();
         services.AddSingleton<TelegramClient>();
