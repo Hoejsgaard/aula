@@ -95,7 +95,19 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
 
         // Create fresh authenticated client and fetch
         _logger.LogInformation("🔑 Creating fresh authenticated session for {ChildName}", child.FirstName);
-        var childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _logger);
+
+        // Choose authentication method based on config
+        IChildAuthenticatedClient childClient;
+        if (child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null)
+        {
+            _logger.LogInformation("🖼️ Using pictogram authentication for {ChildName}", child.FirstName);
+            childClient = new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _logger);
+        }
+        else
+        {
+            _logger.LogInformation("🔐 Using standard authentication for {ChildName}", child.FirstName);
+            childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _logger);
+        }
 
         var loginSuccess = await childClient.LoginAsync();
         if (!loginSuccess)
@@ -139,7 +151,19 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
         }
 
         _logger.LogInformation("🔑 Creating fresh authenticated session for {ChildName} (schedule request)", child.FirstName);
-        var childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _logger);
+
+        // Choose authentication method based on config
+        IChildAuthenticatedClient childClient;
+        if (child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null)
+        {
+            _logger.LogInformation("🖼️ Using pictogram authentication for {ChildName}", child.FirstName);
+            childClient = new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _logger);
+        }
+        else
+        {
+            _logger.LogInformation("🔐 Using standard authentication for {ChildName}", child.FirstName);
+            childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _logger);
+        }
 
         var loginSuccess = await childClient.LoginAsync();
         if (!loginSuccess)
@@ -230,7 +254,7 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
     /// <summary>
     /// Inner class that handles authentication for a specific child
     /// </summary>
-    private class ChildAuthenticatedClient : UniLoginDebugClient
+    private class ChildAuthenticatedClient : UniLoginDebugClient, IChildAuthenticatedClient
     {
         private readonly Child _child;
         private readonly ILogger _logger;
