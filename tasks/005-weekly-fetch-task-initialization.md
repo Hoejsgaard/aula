@@ -1,9 +1,13 @@
 # Task 005: Weekly Fetch Task Database Initialization
 
-**Status:** INVESTIGATED ✅
-**Priority:** High
+**Status:** RESOLVED - WONTFIX ✅
+**Priority:** ~~High~~ N/A
 **Created:** 2025-01-24
 **Investigation Completed:** 2025-01-24
+**Resolved:** 2025-01-25
+
+## Resolution
+Task closed as WONTFIX. The required `WeeklyLetterCheck` scheduled task is already created via the database setup instructions in `SUPABASE_SETUP.md` (lines 91-94). Users following the setup guide will have this task automatically created. No code changes needed.
 
 ## Investigation Results
 

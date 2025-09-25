@@ -7,10 +7,10 @@ This folder contains detailed task descriptions for planned improvements and bug
 | Task | Title | Priority | Status |
 |------|-------|----------|--------|
 | [001](001-move-post-week-letters-on-startup.md) | Move PostWeekLettersOnStartup Configuration | Medium | COMPLETED ✅ |
-| [002](002-investigate-agent-service-authentication.md) | Investigate AgentService Authentication | High | PENDING |
+| [002](002-investigate-agent-service-authentication.md) | Investigate AgentService Authentication | High | INVESTIGATED ✅ |
 | [003](003-move-polling-frequency-to-config.md) | Move Polling Frequency to Configuration | Medium | PENDING |
 | [004](004-ai-screening-automatic-reminders.md) | AI Screening for Automatic Reminders | HIGH (Crown Jewel) | PENDING |
-| [005](005-weekly-fetch-task-initialization.md) | Weekly Fetch Task Database Initialization | High | INVESTIGATED ✅ |
+| [005](005-weekly-fetch-task-initialization.md) | ~~Weekly Fetch Task Database Initialization~~ | ~~High~~ | RESOLVED - WONTFIX ✅ |
 
 ## Task Categories
 
@@ -20,7 +20,7 @@ This folder contains detailed task descriptions for planned improvements and bug
 
 ### Performance & Reliability
 - **Task 002**: Fix authentication session timeout issue
-- **Task 005**: Ensure scheduled tasks are properly initialized
+- ~~**Task 005**: Ensure scheduled tasks are properly initialized~~ (Resolved - handled by setup docs)
 
 ### Feature Enhancements
 - **Task 004**: Implement intelligent automatic reminder extraction (Crown Jewel Feature)
@@ -54,7 +54,7 @@ This folder contains detailed task descriptions for planned improvements and bug
 
 **HIGH Priority (Do First)**
 - Task 002: Authentication issues impact all users
-- Task 005: Core functionality broken without this
+- ~~Task 005: Core functionality broken without this~~ (Resolved via setup docs)
 - Task 004: Major feature that provides unique value
 
 **MEDIUM Priority (Do Next)**
@@ -63,7 +63,7 @@ This folder contains detailed task descriptions for planned improvements and bug
 
 ## Notes
 
-- Task 005 investigation is complete and shows a critical missing piece
+- Task 005 resolved as WONTFIX - already handled by database setup instructions
 - Task 004 is the "crown jewel" feature that would differentiate this application
 - Tasks 001 and 003 are quality-of-life improvements for operators
 - Task 002 needs investigation to determine root cause before implementation
