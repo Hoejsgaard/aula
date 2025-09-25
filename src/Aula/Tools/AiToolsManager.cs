@@ -118,10 +118,15 @@ public class AiToolsManager : IAiToolsManager
                 return $"❌ No children found matching '{childName}'.";
             }
 
+            // Get current week number and year
+            var now = DateTime.Now;
+            var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(now);
+            var year = now.Year;
+
             var weekLetterSummaries = new List<string>();
             foreach (var child in children)
             {
-                var weekLetter = _dataService.GetWeekLetter(child);
+                var weekLetter = _dataService.GetWeekLetter(child, weekNumber, year);
                 if (weekLetter != null)
                 {
                     var summary = ExtractSummaryFromWeekLetter(weekLetter);
@@ -159,7 +164,11 @@ public class AiToolsManager : IAiToolsManager
                 return $"❌ Child '{childName}' not found.";
             }
 
-            var weekLetter = _dataService.GetWeekLetter(child);
+            // Get week number and year for the target date
+            var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(targetDate);
+            var year = targetDate.Year;
+
+            var weekLetter = _dataService.GetWeekLetter(child, weekNumber, year);
             if (weekLetter == null)
             {
                 return $"📝 No week letter available for {child.FirstName} {child.LastName}.";
