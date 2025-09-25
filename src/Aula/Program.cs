@@ -76,11 +76,17 @@ public class Program
             }
 
             // Preload week letters for all children to ensure data is available for interactive bots
-            logger.LogInformation("Preloading week letters for all children");
             var agentService = serviceProvider.GetRequiredService<IAgentService>();
-            await agentService.LoginAsync();
-
-            await PreloadChildrenWeekLetters(agentService, logger);
+            if (config.Features?.PreloadWeekLettersOnStartup == true)
+            {
+                logger.LogInformation("Preloading week letters for all children");
+                await agentService.LoginAsync();
+                await PreloadChildrenWeekLetters(agentService, config, logger);
+            }
+            else
+            {
+                logger.LogInformation("Week letter preloading disabled in configuration");
+            }
 
             // Start scheduling service FIRST before bots
             logger.LogInformation("🚀 About to start SchedulingService");
@@ -111,7 +117,8 @@ public class Program
                 var allChildren = await agentService.GetAllChildrenAsync();
                 foreach (var child in allChildren)
                 {
-                    var weekLetter = await agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
+                    // Don't allow live fetch here since we already preloaded
+                    var weekLetter = await agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true, false);
                     if (weekLetter != null)
                     {
                         // Post to Slack if enabled
@@ -282,22 +289,57 @@ public class Program
 
     /// <summary>
     /// Preloads week letters for all children to ensure data is available for interactive bots.
+    /// Fetches current week and past 2 weeks to ensure we have recent data.
     /// This improves response times and provides better user experience.
     /// </summary>
-    private static async Task PreloadChildrenWeekLetters(IAgentService agentService, ILogger logger)
+    private static async Task PreloadChildrenWeekLetters(IAgentService agentService, Config config, ILogger logger)
     {
+        logger.LogInformation("📚 Starting week letter preload for current and recent weeks");
+
         var allChildren = await agentService.GetAllChildrenAsync();
-        foreach (var child in allChildren)
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var weeksToCheck = config.Features?.WeeksToPreload ?? 3; // Use configured value or default to 3
+        var successCount = 0;
+        var totalAttempts = 0;
+
+        for (int weeksBack = 0; weeksBack < weeksToCheck; weeksBack++)
         {
-            try
+            var targetDate = today.AddDays(-7 * weeksBack);
+            var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(targetDate.ToDateTime(TimeOnly.MinValue));
+            var year = targetDate.Year;
+
+            logger.LogInformation("📅 Checking week {WeekNumber}/{Year} (date: {Date})", weekNumber, year, targetDate);
+
+            foreach (var child in allChildren)
             {
-                var weekLetter = await agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), false);
-                logger.LogInformation("Preloaded week letter for {ChildName}", child.FirstName);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to preload week letter for {ChildName}", child.FirstName);
+                totalAttempts++;
+                try
+                {
+                    // Use allowLiveFetch: true on startup to ensure we fetch from MinUddannelse if needed
+                    // This will check: cache → database → MinUddannelse (and store to DB)
+                    var weekLetter = await agentService.GetWeekLetterAsync(child, targetDate, true, true);
+
+                    if (weekLetter != null && weekLetter["ugebreve"] != null)
+                    {
+                        logger.LogInformation("✅ Preloaded week letter for {ChildName} week {WeekNumber}/{Year}",
+                            child.FirstName, weekNumber, year);
+                        successCount++;
+                    }
+                    else
+                    {
+                        logger.LogInformation("📭 No week letter available for {ChildName} week {WeekNumber}/{Year}",
+                            child.FirstName, weekNumber, year);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to preload week letter for {ChildName} week {WeekNumber}/{Year}",
+                        child.FirstName, weekNumber, year);
+                }
             }
         }
+
+        logger.LogInformation("📚 Week letter preload complete: {SuccessCount}/{TotalAttempts} successfully loaded",
+            successCount, totalAttempts);
     }
 }

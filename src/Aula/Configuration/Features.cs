@@ -19,4 +19,6 @@ public class Features
 
     // Startup behavior
     public bool PostWeekLettersOnStartup { get; set; } = false; // Whether to post week letters when the service starts
+    public bool PreloadWeekLettersOnStartup { get; set; } = true; // Whether to preload recent week letters on startup
+    public int WeeksToPreload { get; set; } = 3; // Number of weeks to preload (current + past weeks)
 }

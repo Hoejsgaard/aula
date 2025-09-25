@@ -91,7 +91,8 @@ public class HistoricalDataSeeder : IHistoricalDataSeeder
                         try
                         {
                             _config.Features.UseMockData = false; // Force real API call
-                            weekLetter = await _agentService.GetWeekLetterAsync(child, targetDate, false);
+                            // Use allowLiveFetch: true to fetch from MinUddannelse
+                            weekLetter = await _agentService.GetWeekLetterAsync(child, targetDate, false, true);
                         }
                         finally
                         {
