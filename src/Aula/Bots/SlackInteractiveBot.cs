@@ -58,7 +58,7 @@ public class SlackInteractiveBot : IDisposable
         _httpClient = httpClient ?? new HttpClient();
         if (httpClient == null)
         {
-            _httpClient.Timeout = TimeSpan.FromSeconds(30); // Add 30 second timeout
+            _httpClient.Timeout = TimeSpan.FromSeconds(_config.Timers.HttpTimeoutSeconds); // Configurable HTTP timeout
         }
         _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
         _childrenByName = new Dictionary<string, Child>();
@@ -494,8 +494,8 @@ public class SlackInteractiveBot : IDisposable
     {
         try
         {
-            // Keep message IDs for 24 hours to be safe
-            var cutoff = DateTime.UtcNow.AddHours(-24);
+            // Keep message IDs for configured retention period
+            var cutoff = DateTime.UtcNow.AddHours(-_config.Timers.ProcessedMessageRetentionHours);
             int removedCount = 0;
 
             // Find message IDs older than the cutoff

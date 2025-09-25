@@ -45,7 +45,7 @@ public class SupabaseService : ISupabaseService
             _reminderRepository = new ReminderRepository(_supabase, _loggerFactory);
             _weekLetterRepository = new WeekLetterRepository(_supabase, _loggerFactory);
             _appStateRepository = new AppStateRepository(_supabase, _loggerFactory);
-            _retryTrackingRepository = new RetryTrackingRepository(_supabase, _loggerFactory);
+            _retryTrackingRepository = new RetryTrackingRepository(_supabase, _loggerFactory, _config);
             _scheduledTaskRepository = new ScheduledTaskRepository(_supabase, _loggerFactory);
 
             _logger.LogInformation("Supabase client initialized successfully");

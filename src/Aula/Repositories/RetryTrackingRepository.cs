@@ -1,3 +1,4 @@
+using Aula.Configuration;
 using Aula.Services;
 using Microsoft.Extensions.Logging;
 using Supabase;
@@ -11,11 +12,13 @@ public class RetryTrackingRepository : IRetryTrackingRepository
 {
     private readonly Client _supabase;
     private readonly ILogger _logger;
+    private readonly Config _config;
 
-    public RetryTrackingRepository(Client supabase, ILoggerFactory loggerFactory)
+    public RetryTrackingRepository(Client supabase, ILoggerFactory loggerFactory, Config config)
     {
         _supabase = supabase ?? throw new ArgumentNullException(nameof(supabase));
         _logger = loggerFactory.CreateLogger<RetryTrackingRepository>();
+        _config = config ?? throw new ArgumentNullException(nameof(config));
     }
 
     public async Task<int> GetRetryAttemptsAsync(string childName, int weekNumber, int year)
@@ -46,8 +49,8 @@ public class RetryTrackingRepository : IRetryTrackingRepository
             retryAttempt.AttemptCount += 1;
             retryAttempt.LastAttempt = DateTime.UtcNow;
 
-            // Use default retry hours (can be made configurable later)
-            var retryHours = 1;
+            // Use configured retry hours
+            var retryHours = _config.Timers.WeekLetterRetryIntervalHours;
             retryAttempt.NextAttempt = DateTime.UtcNow.AddHours(retryHours);
 
             await _supabase
@@ -59,9 +62,9 @@ public class RetryTrackingRepository : IRetryTrackingRepository
         }
         else
         {
-            // Use default retry settings (can be made configurable later)
-            var retryHours = 1;
-            var maxRetryHours = 48;
+            // Use configured retry settings
+            var retryHours = _config.Timers.WeekLetterRetryIntervalHours;
+            var maxRetryHours = 48; // Could be made configurable if needed
             var maxAttempts = maxRetryHours / retryHours; // Calculate max attempts based on retry duration
 
             // Create new retry attempt record

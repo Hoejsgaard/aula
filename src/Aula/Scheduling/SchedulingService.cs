@@ -91,7 +91,7 @@ public class SchedulingService : ISchedulingService
         }
 
         // Wait for running tasks to complete (with timeout)
-        // await Task.WhenAny(Task.WhenAll(_runningTasks), Task.Delay(TimeSpan.FromSeconds(30)));
+        // await Task.WhenAny(Task.WhenAll(_runningTasks), Task.Delay(TimeSpan.FromSeconds(_config.Timers.ShutdownTimeoutSeconds)));
 
         _logger.LogInformation("Scheduling service stopped");
 
@@ -181,10 +181,10 @@ public class SchedulingService : ISchedulingService
             var schedule = CrontabSchedule.Parse(task.CronExpression);
             var nextRun = task.LastRun != null
                 ? schedule.GetNextOccurrence(task.LastRun.Value)
-                : schedule.GetNextOccurrence(now.AddMinutes(-1));
+                : schedule.GetNextOccurrence(now.AddMinutes(-_config.Timers.InitialOccurrenceOffsetMinutes));
 
-            // Allow for a 1-minute window to account for timing variations
-            return now >= nextRun && now <= nextRun.AddMinutes(1);
+            // Allow for a window to account for timing variations
+            return now >= nextRun && now <= nextRun.AddMinutes(_config.Timers.TaskExecutionWindowMinutes);
         }
         catch (Exception ex)
         {
