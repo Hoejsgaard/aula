@@ -105,8 +105,8 @@ public class Program
                 await telegramInteractiveBot.Start();
             }
 
-            // Check if we need to post week letters on startup for either Slack or Telegram
-            if (config.Slack.PostWeekLettersOnStartup || (config.Telegram.Enabled && config.Telegram.PostWeekLettersOnStartup))
+            // Check if we need to post week letters on startup
+            if (config.Features?.PostWeekLettersOnStartup == true)
             {
                 var allChildren = await agentService.GetAllChildrenAsync();
                 foreach (var child in allChildren)
@@ -115,13 +115,13 @@ public class Program
                     if (weekLetter != null)
                     {
                         // Post to Slack if enabled
-                        if (config.Slack.PostWeekLettersOnStartup)
+                        if (config.Slack.Enabled)
                         {
                             await slackBot.PostWeekLetter(weekLetter, child);
                         }
 
                         // Post to Telegram if enabled
-                        if (config.Telegram.Enabled && config.Telegram.PostWeekLettersOnStartup && telegramInteractiveBot != null)
+                        if (config.Telegram.Enabled && telegramInteractiveBot != null)
                         {
                             await telegramInteractiveBot.PostWeekLetter(child.FirstName, weekLetter);
                         }

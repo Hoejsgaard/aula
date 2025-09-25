@@ -6,7 +6,6 @@ public class Slack
     public string ApiToken { get; set; } = string.Empty;
     public bool EnableInteractiveBot { get; set; } = false;
     public string ChannelId { get; set; } = string.Empty;
-    public bool PostWeekLettersOnStartup { get; set; } = true;
     public bool Enabled { get; set; } = true;
     public string ApiBaseUrl { get; set; } = "https://slack.com/api";
 }

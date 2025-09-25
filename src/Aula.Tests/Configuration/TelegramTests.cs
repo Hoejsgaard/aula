@@ -19,7 +19,6 @@ public class TelegramTests
         Assert.Equal(string.Empty, telegram.Token);
         Assert.NotNull(telegram.ChannelId);
         Assert.Equal(string.Empty, telegram.ChannelId);
-        Assert.False(telegram.PostWeekLettersOnStartup);
         Assert.True(telegram.EnableInteractiveBot);
     }
 
@@ -76,19 +75,6 @@ public class TelegramTests
 
         // Assert
         Assert.Equal(testChannelId, telegram.ChannelId);
-    }
-
-    [Fact]
-    public void PostWeekLettersOnStartup_CanSetAndGetValue()
-    {
-        // Arrange
-        var telegram = new Aula.Configuration.Telegram();
-
-        // Act
-        telegram.PostWeekLettersOnStartup = true;
-
-        // Assert
-        Assert.True(telegram.PostWeekLettersOnStartup);
     }
 
     [Fact]
@@ -173,7 +159,6 @@ public class TelegramTests
         var botName = "TestBot";
         var token = "123456789:TestToken";
         var channelId = "@test_channel";
-        var postWeekLettersOnStartup = true;
         var enableInteractiveBot = false;
 
         // Act
@@ -181,7 +166,6 @@ public class TelegramTests
         telegram.BotName = botName;
         telegram.Token = token;
         telegram.ChannelId = channelId;
-        telegram.PostWeekLettersOnStartup = postWeekLettersOnStartup;
         telegram.EnableInteractiveBot = enableInteractiveBot;
 
         // Assert
@@ -189,7 +173,6 @@ public class TelegramTests
         Assert.Equal(botName, telegram.BotName);
         Assert.Equal(token, telegram.Token);
         Assert.Equal(channelId, telegram.ChannelId);
-        Assert.Equal(postWeekLettersOnStartup, telegram.PostWeekLettersOnStartup);
         Assert.Equal(enableInteractiveBot, telegram.EnableInteractiveBot);
     }
 
@@ -203,7 +186,6 @@ public class TelegramTests
             BotName = "InitBot",
             Token = "init:token",
             ChannelId = "@init_channel",
-            PostWeekLettersOnStartup = true,
             EnableInteractiveBot = false
         };
 
@@ -212,7 +194,6 @@ public class TelegramTests
         Assert.Equal("InitBot", telegram.BotName);
         Assert.Equal("init:token", telegram.Token);
         Assert.Equal("@init_channel", telegram.ChannelId);
-        Assert.True(telegram.PostWeekLettersOnStartup);
         Assert.False(telegram.EnableInteractiveBot);
     }
 
@@ -267,7 +248,6 @@ public class TelegramTests
         Assert.Equal(string.Empty, telegram.BotName); // Should remain default
         Assert.Equal(string.Empty, telegram.Token); // Should remain default
         Assert.Equal(string.Empty, telegram.ChannelId); // Should remain default
-        Assert.False(telegram.PostWeekLettersOnStartup); // Should remain default
         Assert.True(telegram.EnableInteractiveBot); // Should remain default
     }
 
@@ -356,12 +336,10 @@ public class TelegramTests
 
         // Act
         telegram.Enabled = true;
-        telegram.PostWeekLettersOnStartup = true;
         telegram.EnableInteractiveBot = false;
 
         // Assert
         Assert.True(telegram.Enabled);
-        Assert.True(telegram.PostWeekLettersOnStartup);
         Assert.False(telegram.EnableInteractiveBot);
     }
 
@@ -377,13 +355,6 @@ public class TelegramTests
         Assert.True(telegram.Enabled);
         telegram.Enabled = false;
         Assert.False(telegram.Enabled);
-
-        // Act & Assert - Toggle PostWeekLettersOnStartup
-        Assert.False(telegram.PostWeekLettersOnStartup);
-        telegram.PostWeekLettersOnStartup = true;
-        Assert.True(telegram.PostWeekLettersOnStartup);
-        telegram.PostWeekLettersOnStartup = false;
-        Assert.False(telegram.PostWeekLettersOnStartup);
 
         // Act & Assert - Toggle EnableInteractiveBot
         Assert.True(telegram.EnableInteractiveBot);

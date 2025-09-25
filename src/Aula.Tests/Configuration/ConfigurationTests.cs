@@ -56,7 +56,6 @@ public class ConfigurationTests
         Assert.Equal("xoxb-test-token", _config.Slack.ApiToken);
         Assert.True(_config.Slack.EnableInteractiveBot);
         Assert.Equal("C1234567890", _config.Slack.ChannelId);
-        Assert.True(_config.Slack.PostWeekLettersOnStartup);
     }
 
     [Fact]
@@ -67,7 +66,6 @@ public class ConfigurationTests
         Assert.Equal("TestBot", _config.Telegram.BotName);
         Assert.Equal("123456789:AABBCCDDEEFFGGHHTest", _config.Telegram.Token);
         Assert.Equal("@testchannel", _config.Telegram.ChannelId);
-        Assert.False(_config.Telegram.PostWeekLettersOnStartup);
     }
 
     [Fact]
@@ -131,11 +129,10 @@ public class ConfigurationTests
         Assert.Empty(defaultConfig.UniLogin.Username);
         Assert.Empty(defaultConfig.UniLogin.Password);
         Assert.False(defaultConfig.Slack.EnableInteractiveBot);
-        Assert.True(defaultConfig.Slack.PostWeekLettersOnStartup); // Default to true for backward compatibility
         Assert.False(defaultConfig.Telegram.Enabled);
-        Assert.False(defaultConfig.Telegram.PostWeekLettersOnStartup); // Default to false
         Assert.Equal("gpt-4", defaultConfig.OpenAi.Model); // Default to GPT-4
         Assert.Empty(defaultConfig.MinUddannelse.Children);
+        Assert.False(defaultConfig.Features.PostWeekLettersOnStartup); // Default to false
     }
 
     [Fact]

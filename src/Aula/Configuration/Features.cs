@@ -16,4 +16,7 @@ public class Features
     public bool UseMockData { get; set; } = false;
     public int MockCurrentWeek { get; set; } = 15; // Simulate this as the "current" week
     public int MockCurrentYear { get; set; } = 2025; // Simulate this as the "current" year
+
+    // Startup behavior
+    public bool PostWeekLettersOnStartup { get; set; } = false; // Whether to post week letters when the service starts
 }

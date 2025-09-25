@@ -19,7 +19,6 @@ public class SlackTests
         Assert.False(slack.EnableInteractiveBot);
         Assert.NotNull(slack.ChannelId);
         Assert.Equal(string.Empty, slack.ChannelId);
-        Assert.True(slack.PostWeekLettersOnStartup);
         Assert.True(slack.Enabled);
         Assert.Equal("https://slack.com/api", slack.ApiBaseUrl);
     }
@@ -77,19 +76,6 @@ public class SlackTests
 
         // Assert
         Assert.Equal(testChannelId, slack.ChannelId);
-    }
-
-    [Fact]
-    public void PostWeekLettersOnStartup_CanSetAndGetValue()
-    {
-        // Arrange
-        var slack = new Aula.Configuration.Slack();
-
-        // Act
-        slack.PostWeekLettersOnStartup = false;
-
-        // Assert
-        Assert.False(slack.PostWeekLettersOnStartup);
     }
 
     [Fact]
@@ -203,7 +189,6 @@ public class SlackTests
         var apiToken = "xoxb-test-token";
         var enableInteractiveBot = true;
         var channelId = "#test";
-        var postWeekLettersOnStartup = false;
         var enabled = false;
         var apiBaseUrl = "https://test.slack.com/api";
 
@@ -212,7 +197,6 @@ public class SlackTests
         slack.ApiToken = apiToken;
         slack.EnableInteractiveBot = enableInteractiveBot;
         slack.ChannelId = channelId;
-        slack.PostWeekLettersOnStartup = postWeekLettersOnStartup;
         slack.Enabled = enabled;
         slack.ApiBaseUrl = apiBaseUrl;
 
@@ -221,7 +205,6 @@ public class SlackTests
         Assert.Equal(apiToken, slack.ApiToken);
         Assert.Equal(enableInteractiveBot, slack.EnableInteractiveBot);
         Assert.Equal(channelId, slack.ChannelId);
-        Assert.Equal(postWeekLettersOnStartup, slack.PostWeekLettersOnStartup);
         Assert.Equal(enabled, slack.Enabled);
         Assert.Equal(apiBaseUrl, slack.ApiBaseUrl);
     }
@@ -236,7 +219,6 @@ public class SlackTests
             ApiToken = "xoxb-init-token",
             EnableInteractiveBot = true,
             ChannelId = "#init",
-            PostWeekLettersOnStartup = false,
             Enabled = false,
             ApiBaseUrl = "https://init.slack.com/api"
         };
@@ -246,7 +228,6 @@ public class SlackTests
         Assert.Equal("xoxb-init-token", slack.ApiToken);
         Assert.True(slack.EnableInteractiveBot);
         Assert.Equal("#init", slack.ChannelId);
-        Assert.False(slack.PostWeekLettersOnStartup);
         Assert.False(slack.Enabled);
         Assert.Equal("https://init.slack.com/api", slack.ApiBaseUrl);
     }
@@ -302,7 +283,6 @@ public class SlackTests
         Assert.Equal(string.Empty, slack.ApiToken); // Should remain default
         Assert.False(slack.EnableInteractiveBot); // Should remain default
         Assert.Equal(string.Empty, slack.ChannelId); // Should remain default
-        Assert.True(slack.PostWeekLettersOnStartup); // Should remain default
         Assert.True(slack.Enabled); // Should remain default
         Assert.Equal("https://slack.com/api", slack.ApiBaseUrl); // Should remain default
     }
@@ -433,12 +413,10 @@ public class SlackTests
 
         // Act
         slack.EnableInteractiveBot = true;
-        slack.PostWeekLettersOnStartup = false;
         slack.Enabled = false;
 
         // Assert
         Assert.True(slack.EnableInteractiveBot);
-        Assert.False(slack.PostWeekLettersOnStartup);
         Assert.False(slack.Enabled);
     }
 
@@ -454,13 +432,6 @@ public class SlackTests
         Assert.True(slack.EnableInteractiveBot);
         slack.EnableInteractiveBot = false;
         Assert.False(slack.EnableInteractiveBot);
-
-        // Act & Assert - Toggle PostWeekLettersOnStartup
-        Assert.True(slack.PostWeekLettersOnStartup);
-        slack.PostWeekLettersOnStartup = false;
-        Assert.False(slack.PostWeekLettersOnStartup);
-        slack.PostWeekLettersOnStartup = true;
-        Assert.True(slack.PostWeekLettersOnStartup);
 
         // Act & Assert - Toggle Enabled
         Assert.True(slack.Enabled);
