@@ -11,6 +11,7 @@ This folder contains detailed task descriptions for planned improvements and bug
 | [003](003-move-polling-frequency-to-config.md) | Move Polling Frequency to Configuration | Medium | PENDING |
 | [004](004-ai-screening-automatic-reminders.md) | AI Screening for Automatic Reminders | HIGH (Crown Jewel) | PENDING |
 | [005](005-weekly-fetch-task-initialization.md) | ~~Weekly Fetch Task Database Initialization~~ | ~~High~~ | RESOLVED - WONTFIX ✅ |
+| [006](006-pictogram-authentication-support.md) | Pictogram Authentication Support | High | INVESTIGATED ✅ |
 
 ## Task Categories
 
@@ -24,6 +25,7 @@ This folder contains detailed task descriptions for planned improvements and bug
 
 ### Feature Enhancements
 - **Task 004**: Implement intelligent automatic reminder extraction (Crown Jewel Feature)
+- **Task 006**: Support pictogram-based authentication for younger children
 
 ## How to Use These Tasks
 
@@ -56,6 +58,7 @@ This folder contains detailed task descriptions for planned improvements and bug
 - Task 002: Authentication issues impact all users
 - ~~Task 005: Core functionality broken without this~~ (Resolved via setup docs)
 - Task 004: Major feature that provides unique value
+- Task 006: Essential for families with younger children
 
 **MEDIUM Priority (Do Next)**
 - Task 001: Code cleanup for maintainability
@@ -65,5 +68,6 @@ This folder contains detailed task descriptions for planned improvements and bug
 
 - Task 005 resolved as WONTFIX - already handled by database setup instructions
 - Task 004 is the "crown jewel" feature that would differentiate this application
+- Task 006 enables support for younger children with pictogram-based authentication
 - Tasks 001 and 003 are quality-of-life improvements for operators
 - Task 002 needs investigation to determine root cause before implementation

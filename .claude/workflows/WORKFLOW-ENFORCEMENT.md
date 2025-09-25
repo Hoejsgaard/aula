@@ -5,6 +5,7 @@
 ## RESPONSE FORMAT - MANDATORY
 
 **Every response MUST start with:**
+First get the timestamp.
 ```
 [HH:MM:SS UTC] [Workflow: Question|Task|Hybrid] [Agents: @name|None] [MCP: tool-name|None]
 ```
