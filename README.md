@@ -71,9 +71,25 @@ This is a **hard requirement** - the bot will not work on major cloud platforms.
 
 ## Setup
 
+### Configuration
+
 1. Clone this repository
-2. Copy `appsettings.json.example` to `appsettings.json`
-3. Fill in your UniLogin credentials, OpenAI API key, and platform configurations
+2. **IMPORTANT**: Copy `appsettings.example.json` to `appsettings.json`:
+   ```bash
+   cp src/Aula/appsettings.example.json src/Aula/appsettings.json
+   ```
+3. Edit `appsettings.json` with your credentials:
+   - **UniLogin**: Your Danish school system credentials (per child)
+   - **Slack**: Webhook URL and API token for your workspace
+   - **Telegram**: Bot token from BotFather
+   - **OpenAI**: API key for GPT-3.5-turbo
+   - **Supabase**: Database URL and keys
+   - **Google Calendar**: Service account credentials
+
+**⚠️ Security Note**: Never commit `appsettings.json` to version control! It contains sensitive credentials and is already in `.gitignore`. Always use `appsettings.example.json` as a template.
+
+### Environment Setup
+
 4. **Ensure hosting environment** can reach MinUddannelse (not on blocked cloud providers)
 5. **Set up database**: Follow the [Supabase Setup Guide](SUPABASE_SETUP.md) for reminders and scheduling
 6. Build and run the application
@@ -93,7 +109,6 @@ This is a **hard requirement** - the bot will not work on major cloud platforms.
   - Copy the Bot User OAuth Token to the `ApiToken` field in `appsettings.json`
   - Set `EnableInteractiveBot` to `true` in `appsettings.json`
   - Set `ChannelId` to the ID of the channel where you want the bot to listen
-  - Set `PostWeekLettersOnStartup` to control whether week letters are automatically posted on startup
 
 ### Telegram Configuration
 
@@ -102,7 +117,6 @@ This is a **hard requirement** - the bot will not work on major cloud platforms.
 - Create a channel and add your bot as an administrator
 - Copy the channel ID to the `ChannelId` field in `appsettings.json`
 - Set `Enabled` to `true` in `appsettings.json`
-- Set `PostWeekLettersOnStartup` to control whether week letters are automatically posted on startup
 
 ### Google Calendar Configuration
 
@@ -126,7 +140,7 @@ dotnet run
 The application will:
 1. Login to Aula via UniLogin
 2. Fetch weekly letters for your children
-3. Post weekly letters to Slack and/or Telegram (if configured to do so on startup)
+3. Post weekly letters to Slack and/or Telegram (if `PostWeekLettersOnStartup` is enabled in Features)
 4. Start interactive bots (if enabled)
 5. Keep running to handle interactive requests
 
