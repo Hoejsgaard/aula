@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
@@ -19,8 +18,7 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
     private readonly ILogger _logger;
     private readonly Config _config;
 
-    // Store authenticated clients per child
-    private readonly ConcurrentDictionary<string, ChildAuthenticatedClient> _authenticatedClients = new();
+    // No longer storing authenticated clients - creating fresh instances per request
 
     public PerChildMinUddannelseClient(Config config, ISupabaseService? supabaseService, ILoggerFactory loggerFactory)
     {
@@ -29,55 +27,12 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
         _logger = loggerFactory.CreateLogger<PerChildMinUddannelseClient>();
     }
 
-    public async Task<bool> LoginAsync()
+    public Task<bool> LoginAsync()
     {
-        _logger.LogInformation("🔐 Starting per-child authentication process");
-
-        var children = _config.MinUddannelse.Children;
-        if (!children.Any())
-        {
-            _logger.LogError("No children configured in MinUddannelse.Children");
-            return false;
-        }
-
-        var successCount = 0;
-        foreach (var child in children)
-        {
-            if (child.UniLogin == null || string.IsNullOrEmpty(child.UniLogin.Username) || string.IsNullOrEmpty(child.UniLogin.Password))
-            {
-                _logger.LogWarning("⚠️ Skipping {ChildName} - no UniLogin credentials configured", child.FirstName);
-                continue;
-            }
-
-            try
-            {
-                _logger.LogInformation("🔑 Authenticating as {ChildName} with username {Username}",
-                    child.FirstName, child.UniLogin.Username);
-
-                var childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _logger);
-                var loginSuccess = await childClient.LoginAsync();
-
-                if (loginSuccess)
-                {
-                    _authenticatedClients[child.FirstName] = childClient;
-                    successCount++;
-                    _logger.LogInformation("✅ Successfully authenticated as {ChildName}", child.FirstName);
-                }
-                else
-                {
-                    _logger.LogError("❌ Failed to authenticate as {ChildName}", child.FirstName);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "❌ Error authenticating as {ChildName}", child.FirstName);
-            }
-        }
-
-        _logger.LogInformation("🔐 Authentication complete: {SuccessCount}/{TotalCount} children authenticated",
-            successCount, children.Count());
-
-        return successCount > 0; // Return true if at least one child authenticated successfully
+        // This method is now a no-op since we authenticate per-request
+        // Keeping it for backward compatibility with IMinUddannelseClient interface
+        _logger.LogInformation("🔐 LoginAsync called - authentication will happen per-request");
+        return Task.FromResult(true);
     }
 
     public async Task<JObject> GetWeekLetter(Child child, DateOnly date)
@@ -104,48 +59,51 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
             return CreateEmptyWeekLetter(mockWeek);
         }
 
-        // Get the authenticated client for this child
-        if (!_authenticatedClients.TryGetValue(child.FirstName, out var childClient))
+        // Create a fresh authenticated client for this request
+        if (child.UniLogin == null || string.IsNullOrEmpty(child.UniLogin.Username) || string.IsNullOrEmpty(child.UniLogin.Password))
         {
-            _logger.LogError("❌ No authenticated client found for {ChildName}. Attempting to authenticate...", child.FirstName);
-
-            // Try to authenticate this specific child
-            if (child.UniLogin != null && !string.IsNullOrEmpty(child.UniLogin.Username) && !string.IsNullOrEmpty(child.UniLogin.Password))
-            {
-                childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _logger);
-                var loginSuccess = await childClient.LoginAsync();
-
-                if (loginSuccess)
-                {
-                    _authenticatedClients[child.FirstName] = childClient;
-                    _logger.LogInformation("✅ Successfully authenticated {ChildName} on demand", child.FirstName);
-                }
-                else
-                {
-                    _logger.LogError("❌ Failed to authenticate {ChildName}", child.FirstName);
-                    return CreateEmptyWeekLetter(GetIsoWeekNumber(date));
-                }
-            }
-            else
-            {
-                _logger.LogError("❌ No credentials available for {ChildName}", child.FirstName);
-                return CreateEmptyWeekLetter(GetIsoWeekNumber(date));
-            }
+            _logger.LogError("❌ No credentials available for {ChildName}", child.FirstName);
+            return CreateEmptyWeekLetter(GetIsoWeekNumber(date));
         }
 
-        // Use the child's authenticated client to get their week letter
+        _logger.LogInformation("🔑 Creating fresh authenticated session for {ChildName}", child.FirstName);
+        var childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _logger);
+
+        var loginSuccess = await childClient.LoginAsync();
+        if (!loginSuccess)
+        {
+            _logger.LogError("❌ Failed to authenticate {ChildName}", child.FirstName);
+            return CreateEmptyWeekLetter(GetIsoWeekNumber(date));
+        }
+
+        _logger.LogInformation("✅ Successfully authenticated {ChildName} for this request", child.FirstName);
+
+        // Use the fresh client to get their week letter
         return await childClient.GetWeekLetter(date);
     }
 
     public async Task<JObject> GetWeekSchedule(Child child, DateOnly date)
     {
-        // Get the authenticated client for this child
-        if (!_authenticatedClients.TryGetValue(child.FirstName, out var childClient))
+        // Create a fresh authenticated client for this request
+        if (child.UniLogin == null || string.IsNullOrEmpty(child.UniLogin.Username) || string.IsNullOrEmpty(child.UniLogin.Password))
         {
-            _logger.LogError("❌ No authenticated client found for {ChildName}", child.FirstName);
+            _logger.LogError("❌ No credentials available for {ChildName}", child.FirstName);
             return new JObject();
         }
 
+        _logger.LogInformation("🔑 Creating fresh authenticated session for {ChildName} (schedule request)", child.FirstName);
+        var childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _logger);
+
+        var loginSuccess = await childClient.LoginAsync();
+        if (!loginSuccess)
+        {
+            _logger.LogError("❌ Failed to authenticate {ChildName} for schedule request", child.FirstName);
+            return new JObject();
+        }
+
+        _logger.LogInformation("✅ Successfully authenticated {ChildName} for schedule request", child.FirstName);
+
+        // Use the fresh client to get their week schedule
         return await childClient.GetWeekSchedule(date);
     }
 

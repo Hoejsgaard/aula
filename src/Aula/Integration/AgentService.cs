@@ -11,7 +11,6 @@ public class AgentService : IAgentService
     private readonly IDataService _dataManager;
     private readonly IOpenAiService _openAiService;
     private readonly ILogger _logger;
-    private bool _isLoggedIn;
 
     public AgentService(
         IMinUddannelseClient minUddannelseClient,
@@ -27,9 +26,10 @@ public class AgentService : IAgentService
 
     public async Task<bool> LoginAsync()
     {
-        _logger.LogInformation("Logging in to MinUddannelse");
-        _isLoggedIn = await _minUddannelseClient.LoginAsync();
-        return _isLoggedIn;
+        _logger.LogInformation("LoginAsync called - authentication now happens per-request");
+        // Authentication is now handled per-request in MinUddannelseClient
+        // This method kept for backward compatibility
+        return await _minUddannelseClient.LoginAsync();
     }
 
     public async Task<JObject?> GetWeekLetterAsync(Child child, DateOnly date, bool useCache = true)
@@ -37,11 +37,7 @@ public class AgentService : IAgentService
         _logger.LogInformation("📌 MONITOR: GetWeekLetterAsync for {ChildName} for date {Date}, useCache: {UseCache}",
             child.FirstName, date, useCache);
 
-        if (!_isLoggedIn)
-        {
-            _logger.LogWarning("📌 MONITOR: Not logged in. Attempting to login before getting week letter");
-            await LoginAsync();
-        }
+        // Authentication now happens per-request in MinUddannelseClient, no need to check here
 
         if (useCache)
         {
@@ -111,11 +107,7 @@ public class AgentService : IAgentService
 
     public async Task<JObject?> GetWeekScheduleAsync(Child child, DateOnly date, bool useCache = true)
     {
-        if (!_isLoggedIn)
-        {
-            _logger.LogWarning("Not logged in. Attempting to login before getting week schedule");
-            await LoginAsync();
-        }
+        // Authentication now happens per-request in MinUddannelseClient, no need to check here
 
         if (useCache)
         {
