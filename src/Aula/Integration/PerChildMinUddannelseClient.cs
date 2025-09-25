@@ -35,8 +35,11 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
         return Task.FromResult(true);
     }
 
-    public async Task<JObject> GetWeekLetter(Child child, DateOnly date)
+    public async Task<JObject> GetWeekLetter(Child child, DateOnly date, bool allowLiveFetch = false)
     {
+        var weekNumber = GetIsoWeekNumber(date);
+        var year = date.Year;
+
         // Check if we're in mock mode
         if (_config.Features.UseMockData && _supabaseService != null)
         {
@@ -59,13 +62,38 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
             return CreateEmptyWeekLetter(mockWeek);
         }
 
-        // Create a fresh authenticated client for this request
+        // Step 1: Check database first
+        if (_supabaseService != null)
+        {
+            var storedLetter = await GetStoredWeekLetter(child, weekNumber, year);
+            if (storedLetter != null)
+            {
+                _logger.LogInformation("📚 Found week letter in database for {ChildName} week {WeekNumber}/{Year}",
+                    child.FirstName, weekNumber, year);
+                return storedLetter;
+            }
+        }
+
+        // Step 2: If not in database and live fetch not allowed, return empty
+        if (!allowLiveFetch)
+        {
+            _logger.LogInformation("🚫 Week letter not in database and live fetch not allowed for {ChildName} week {WeekNumber}/{Year}",
+                child.FirstName, weekNumber, year);
+            return CreateEmptyWeekLetter(weekNumber);
+        }
+
+        // Step 3: Live fetch from MinUddannelse (only if allowed)
+        _logger.LogInformation("🌐 Fetching week letter from MinUddannelse for {ChildName} week {WeekNumber}/{Year}",
+            child.FirstName, weekNumber, year);
+
+        // Check credentials
         if (child.UniLogin == null || string.IsNullOrEmpty(child.UniLogin.Username) || string.IsNullOrEmpty(child.UniLogin.Password))
         {
             _logger.LogError("❌ No credentials available for {ChildName}", child.FirstName);
-            return CreateEmptyWeekLetter(GetIsoWeekNumber(date));
+            return CreateEmptyWeekLetter(weekNumber);
         }
 
+        // Create fresh authenticated client and fetch
         _logger.LogInformation("🔑 Creating fresh authenticated session for {ChildName}", child.FirstName);
         var childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _logger);
 
@@ -73,13 +101,32 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
         if (!loginSuccess)
         {
             _logger.LogError("❌ Failed to authenticate {ChildName}", child.FirstName);
-            return CreateEmptyWeekLetter(GetIsoWeekNumber(date));
+            return CreateEmptyWeekLetter(weekNumber);
         }
 
         _logger.LogInformation("✅ Successfully authenticated {ChildName} for this request", child.FirstName);
 
-        // Use the fresh client to get their week letter
-        return await childClient.GetWeekLetter(date);
+        // Fetch from MinUddannelse
+        var weekLetter = await childClient.GetWeekLetter(date);
+
+        // Store to database if we have Supabase service
+        if (_supabaseService != null && weekLetter != null)
+        {
+            try
+            {
+                var contentHash = ComputeContentHash(weekLetter.ToString());
+                await _supabaseService.StoreWeekLetterAsync(
+                    child.FirstName, weekNumber, year, contentHash, weekLetter.ToString());
+                _logger.LogInformation("💾 Stored week letter to database for {ChildName} week {WeekNumber}/{Year}",
+                    child.FirstName, weekNumber, year);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to store week letter to database");
+            }
+        }
+
+        return weekLetter ?? CreateEmptyWeekLetter(weekNumber);
     }
 
     public async Task<JObject> GetWeekSchedule(Child child, DateOnly date)
@@ -107,51 +154,6 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
         return await childClient.GetWeekSchedule(date);
     }
 
-    public async Task<JObject> GetWeekLetterWithFallback(Child child, DateOnly date)
-    {
-        var weekNumber = GetIsoWeekNumber(date);
-        var year = date.Year;
-
-        try
-        {
-            var liveWeekLetter = await GetWeekLetter(child, date);
-
-            // Store it if we have Supabase service available
-            if (_supabaseService != null)
-            {
-                try
-                {
-                    var contentHash = ComputeContentHash(liveWeekLetter.ToString());
-                    await _supabaseService.StoreWeekLetterAsync(
-                        child.FirstName, weekNumber, year, contentHash, liveWeekLetter.ToString());
-                    _logger.LogInformation("Stored fresh week letter for {ChildName}, week {WeekNumber}/{Year}",
-                        child.FirstName, weekNumber, year);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to store week letter");
-                }
-            }
-
-            return liveWeekLetter;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to fetch live week letter for {ChildName}, trying stored version",
-                child.FirstName);
-
-            // Fallback to stored version
-            var storedWeekLetter = await GetStoredWeekLetter(child, weekNumber, year);
-            if (storedWeekLetter != null)
-            {
-                _logger.LogInformation("Retrieved stored week letter for {ChildName}, week {WeekNumber}/{Year}",
-                    child.FirstName, weekNumber, year);
-                return storedWeekLetter;
-            }
-
-            throw;
-        }
-    }
 
     public async Task<JObject?> GetStoredWeekLetter(Child child, int weekNumber, int year)
     {

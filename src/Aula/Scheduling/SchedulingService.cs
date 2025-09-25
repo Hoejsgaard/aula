@@ -365,7 +365,8 @@ public class SchedulingService : ISchedulingService
 
     private async Task<dynamic?> TryGetWeekLetter(Child child, int weekNumber, int year)
     {
-        var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
+        // Pass allowLiveFetch=true to fetch from MinUddannelse when needed
+        var weekLetter = await _agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true, true);
         if (weekLetter == null)
         {
             _logger.LogWarning("No week letter available for {ChildName}, will retry later", child.FirstName);

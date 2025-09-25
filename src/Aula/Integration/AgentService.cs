@@ -32,16 +32,20 @@ public class AgentService : IAgentService
         return await _minUddannelseClient.LoginAsync();
     }
 
-    public async Task<JObject?> GetWeekLetterAsync(Child child, DateOnly date, bool useCache = true)
+    public async Task<JObject?> GetWeekLetterAsync(Child child, DateOnly date, bool useCache = true, bool allowLiveFetch = false)
     {
-        _logger.LogInformation("📌 MONITOR: GetWeekLetterAsync for {ChildName} for date {Date}, useCache: {UseCache}",
-            child.FirstName, date, useCache);
+        _logger.LogInformation("📌 MONITOR: GetWeekLetterAsync for {ChildName} for date {Date}, useCache: {UseCache}, allowLiveFetch: {AllowLiveFetch}",
+            child.FirstName, date, useCache, allowLiveFetch);
+
+        // Calculate week number and year for caching
+        var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
+        var year = date.Year;
 
         // Authentication now happens per-request in MinUddannelseClient, no need to check here
 
         if (useCache)
         {
-            var cachedWeekLetter = _dataManager.GetWeekLetter(child);
+            var cachedWeekLetter = _dataManager.GetWeekLetter(child, weekNumber, year);
             if (cachedWeekLetter != null)
             {
                 _logger.LogInformation("📌 MONITOR: Returning cached week letter for {ChildName}", child.FirstName);
@@ -67,8 +71,8 @@ public class AgentService : IAgentService
             }
         }
 
-        _logger.LogInformation("📌 MONITOR: Fetching fresh week letter for {ChildName} for date {Date}", child.FirstName, date);
-        var weekLetter = await _minUddannelseClient.GetWeekLetter(child, date);
+        _logger.LogInformation("📌 MONITOR: Fetching fresh week letter for {ChildName} for date {Date}, allowLiveFetch: {AllowLiveFetch}", child.FirstName, date, allowLiveFetch);
+        var weekLetter = await _minUddannelseClient.GetWeekLetter(child, date, allowLiveFetch);
 
         // Log the raw week letter structure
         _logger.LogInformation("📌 MONITOR: Raw week letter structure for {ChildName}: {Keys}",
@@ -99,7 +103,7 @@ public class AgentService : IAgentService
         weekLetter["child"] = child.FirstName;
         _logger.LogInformation("📌 MONITOR: Added child name to week letter: {ChildName}", child.FirstName);
 
-        _dataManager.CacheWeekLetter(child, weekLetter);
+        _dataManager.CacheWeekLetter(child, weekNumber, year, weekLetter);
         _logger.LogInformation("📌 MONITOR: Cached week letter for {ChildName}", child.FirstName);
 
         return weekLetter;
@@ -107,11 +111,15 @@ public class AgentService : IAgentService
 
     public async Task<JObject?> GetWeekScheduleAsync(Child child, DateOnly date, bool useCache = true)
     {
+        // Calculate week number and year for caching
+        var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
+        var year = date.Year;
+
         // Authentication now happens per-request in MinUddannelseClient, no need to check here
 
         if (useCache)
         {
-            var cachedWeekSchedule = _dataManager.GetWeekSchedule(child);
+            var cachedWeekSchedule = _dataManager.GetWeekSchedule(child, weekNumber, year);
             if (cachedWeekSchedule != null)
             {
                 _logger.LogInformation("Returning cached week schedule for {ChildName}", child.FirstName);
@@ -122,7 +130,7 @@ public class AgentService : IAgentService
         _logger.LogInformation("Getting week schedule for {ChildName} for date {Date}", child.FirstName, date);
         var weekSchedule = await _minUddannelseClient.GetWeekSchedule(child, date);
 
-        _dataManager.CacheWeekSchedule(child, weekSchedule);
+        _dataManager.CacheWeekSchedule(child, weekNumber, year, weekSchedule);
 
         return weekSchedule;
     }
