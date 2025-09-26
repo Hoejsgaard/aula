@@ -7,11 +7,12 @@ This folder contains detailed task descriptions for planned improvements and bug
 | Task | Title | Priority | Status |
 |------|-------|----------|--------|
 | [001](001-move-post-week-letters-on-startup.md) | Move PostWeekLettersOnStartup Configuration | Medium | COMPLETED ✅ |
-| [002](002-investigate-agent-service-authentication.md) | Investigate AgentService Authentication | High | INVESTIGATED ✅ |
+| [002](002-investigate-agent-service-authentication.md) | Investigate AgentService Authentication | High | COMPLETED ✅ |
 | [003](003-move-polling-frequency-to-config.md) | Move Polling Frequency to Configuration | Medium | PENDING |
 | [004](004-ai-screening-automatic-reminders.md) | AI Screening for Automatic Reminders | HIGH (Crown Jewel) | PENDING |
 | [005](005-weekly-fetch-task-initialization.md) | ~~Weekly Fetch Task Database Initialization~~ | ~~High~~ | RESOLVED - WONTFIX ✅ |
-| [006](006-pictogram-authentication-support.md) | Pictogram Authentication Support | High | INVESTIGATED ✅ |
+| [006](006-pictogram-authentication-support.md) | Pictogram Authentication Support | High | COMPLETED ✅ |
+| **[007](007-child-centric-architecture.md)** | **Child-Centric Architecture Transformation** | **CRITICAL** | **READY** ⚠️ |
 
 ## Task Categories
 
@@ -54,20 +55,27 @@ This folder contains detailed task descriptions for planned improvements and bug
 
 ## Priority Guidance
 
-**HIGH Priority (Do First)**
-- Task 002: Authentication issues impact all users
-- ~~Task 005: Core functionality broken without this~~ (Resolved via setup docs)
-- Task 004: Major feature that provides unique value
-- Task 006: Essential for families with younger children
+**CRITICAL (Do Now)**
+- **Task 007: Child-Centric Architecture** - Fundamental architecture fix enabling proper child isolation
+  - ⚠️ **MUST use ultrathink mode when implementing**
+  - 7-week phased implementation with incremental testing
+  - See detailed plan and appendices in task file
 
-**MEDIUM Priority (Do Next)**
-- Task 001: Code cleanup for maintainability
-- Task 003: Configuration improvement
+**HIGH Priority (Do Next)**
+- Task 004: AI Screening for Automatic Reminders - Major feature that provides unique value
+
+**MEDIUM Priority (Future)**
+- Task 003: Move Polling Frequency to Configuration - Quality of life improvement
 
 ## Notes
 
+- **NEW: Task 007** - Child-Centric Architecture is CRITICAL for proper data isolation
+- Task 002 & 006 COMPLETED - TestChild1's pictogram authentication now works
 - Task 005 resolved as WONTFIX - already handled by database setup instructions
 - Task 004 is the "crown jewel" feature that would differentiate this application
-- Task 006 enables support for younger children with pictogram-based authentication
-- Tasks 001 and 003 are quality-of-life improvements for operators
-- Task 002 needs investigation to determine root cause before implementation
+- Task 003 - quality-of-life improvement for operators (polling frequency config)
+
+## Appendices
+
+Detailed architecture documentation available in:
+- [`appendices/child-architecture/`](appendices/child-architecture/) - Comprehensive architecture analysis and diagrams
