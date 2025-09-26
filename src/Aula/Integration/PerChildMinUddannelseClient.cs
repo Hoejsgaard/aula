@@ -86,8 +86,9 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
         _logger.LogInformation("🌐 Fetching week letter from MinUddannelse for {ChildName} week {WeekNumber}/{Year}",
             child.FirstName, weekNumber, year);
 
-        // Check credentials
-        if (child.UniLogin == null || string.IsNullOrEmpty(child.UniLogin.Username) || string.IsNullOrEmpty(child.UniLogin.Password))
+        // Check credentials - need username and either password or pictogram sequence
+        if (child.UniLogin == null || string.IsNullOrEmpty(child.UniLogin.Username) ||
+            (string.IsNullOrEmpty(child.UniLogin.Password) && (child.UniLogin.PictogramSequence == null || child.UniLogin.PictogramSequence.Length == 0)))
         {
             _logger.LogError("❌ No credentials available for {ChildName}", child.FirstName);
             return CreateEmptyWeekLetter(weekNumber);
@@ -144,7 +145,9 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
     public async Task<JObject> GetWeekSchedule(Child child, DateOnly date)
     {
         // Create a fresh authenticated client for this request
-        if (child.UniLogin == null || string.IsNullOrEmpty(child.UniLogin.Username) || string.IsNullOrEmpty(child.UniLogin.Password))
+        // Check credentials - need username and either password or pictogram sequence
+        if (child.UniLogin == null || string.IsNullOrEmpty(child.UniLogin.Username) ||
+            (string.IsNullOrEmpty(child.UniLogin.Password) && (child.UniLogin.PictogramSequence == null || child.UniLogin.PictogramSequence.Length == 0)))
         {
             _logger.LogError("❌ No credentials available for {ChildName}", child.FirstName);
             return new JObject();
