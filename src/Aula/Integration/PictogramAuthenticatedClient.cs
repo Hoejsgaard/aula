@@ -348,25 +348,63 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
     {
         try
         {
-            // Fetch the child ID from the API after successful login
-            var apiUrl = $"https://www.minuddannelse.net/api/stamdata/elev/getElev?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
-            var response = await HttpClient.GetAsync(apiUrl);
+            _logger.LogInformation("🔍 Extracting child ID for {ChildName}...", _child.FirstName);
 
-            if (response.IsSuccessStatusCode)
+            // First try: Extract from page context (same method as ChildAuthenticatedClient)
+            // Navigate to any MinUddannelse page after authentication to get this
+            var response = await HttpClient.GetAsync("https://www.minuddannelse.net/node/minuge");
+            var content = await response.Content.ReadAsStringAsync();
+
+            // Look for personid in the __tempcontext__ object
+            // Format: "personid":2643430
+            var personIdMatch = System.Text.RegularExpressions.Regex.Match(content, @"""personid"":(\d+)");
+            if (personIdMatch.Success)
             {
-                var content = await response.Content.ReadAsStringAsync();
-                var json = Newtonsoft.Json.Linq.JObject.Parse(content);
-                _childId = json["ChildId"]?.ToString();
+                _childId = personIdMatch.Groups[1].Value;
+                _logger.LogInformation("✅ Extracted child ID from page context: {ChildId}", _childId);
 
-                if (!string.IsNullOrEmpty(_childId))
+                // Verify the user name matches what we expect
+                var nameMatch = System.Text.RegularExpressions.Regex.Match(content,
+                    @"""fornavn"":""([^""]*)"",""efternavn"":""([^""]*)""");
+                if (nameMatch.Success)
                 {
-                    _logger.LogDebug("🆔 Set child ID: {ChildId} for {ChildName}", _childId, _child.FirstName);
+                    var firstName = nameMatch.Groups[1].Value;
+                    var lastName = nameMatch.Groups[2].Value;
+                    _logger.LogInformation("✅ Confirmed authenticated as: {FirstName} {LastName}",
+                        firstName, lastName);
+                }
+
+                return;
+            }
+
+            // Fallback: Try the API method (improved version)
+            _logger.LogInformation("Page context method failed, trying API...");
+            var apiUrl = $"https://www.minuddannelse.net/api/stamdata/elev/getElev?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+
+            var apiResponse = await HttpClient.GetAsync(apiUrl);
+            if (apiResponse.IsSuccessStatusCode)
+            {
+                var apiContent = await apiResponse.Content.ReadAsStringAsync();
+                if (apiContent.StartsWith("{") || apiContent.StartsWith("["))
+                {
+                    var studentData = Newtonsoft.Json.Linq.JObject.Parse(apiContent);
+                    _childId = studentData["id"]?.ToString() ??
+                              studentData["elevId"]?.ToString() ??
+                              studentData["personid"]?.ToString();
+
+                    if (!string.IsNullOrEmpty(_childId))
+                    {
+                        _logger.LogInformation("✅ Extracted child ID from API: {ChildId}", _childId);
+                        return;
+                    }
                 }
             }
+
+            _logger.LogWarning("❌ Could not extract child ID from any source");
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "⚠️ Failed to fetch child ID, continuing anyway");
+            _logger.LogError(ex, "Error extracting child ID");
         }
     }
 
