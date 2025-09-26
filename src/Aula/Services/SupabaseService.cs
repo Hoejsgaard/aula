@@ -150,6 +150,12 @@ public class SupabaseService : ISupabaseService
         return await _weekLetterRepository.GetLatestStoredWeekLetterAsync(childName);
     }
 
+    public async Task DeleteWeekLetterAsync(string childName, int weekNumber, int year)
+    {
+        if (_weekLetterRepository == null) throw new InvalidOperationException("Supabase client not initialized");
+        await _weekLetterRepository.DeleteWeekLetterAsync(childName, weekNumber, year);
+    }
+
     public async Task<string?> GetAppStateAsync(string key)
     {
         if (_appStateRepository == null) throw new InvalidOperationException("Supabase client not initialized");

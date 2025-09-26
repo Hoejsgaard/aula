@@ -12,4 +12,5 @@ public interface IWeekLetterRepository
     Task<string?> GetStoredWeekLetterAsync(string childName, int weekNumber, int year);
     Task<List<StoredWeekLetter>> GetStoredWeekLettersAsync(string? childName = null, int? year = null);
     Task<StoredWeekLetter?> GetLatestStoredWeekLetterAsync(string childName);
+    Task DeleteWeekLetterAsync(string childName, int weekNumber, int year);
 }

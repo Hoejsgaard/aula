@@ -163,4 +163,17 @@ public class WeekLetterRepository : IWeekLetterRepository
             PostedAt = result.PostedAt
         };
     }
+
+    public async Task DeleteWeekLetterAsync(string childName, int weekNumber, int year)
+    {
+        await _supabase
+            .From<PostedLetter>()
+            .Where(p => p.ChildName == childName)
+            .Where(p => p.WeekNumber == weekNumber)
+            .Where(p => p.Year == year)
+            .Delete();
+
+        _logger.LogInformation("Deleted week letter for {ChildName}, week {WeekNumber}/{Year}",
+            childName, weekNumber, year);
+    }
 }
