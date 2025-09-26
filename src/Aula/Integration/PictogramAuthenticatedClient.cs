@@ -123,8 +123,8 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
                     _logger.LogDebug("🔑 Built password from pictogram sequence");
 
                     // Submit the form with the password
-                    var success = await SubmitPictogramForm(doc, response, _username, password);
-                    if (success)
+                    var authenticated = await SubmitPictogramForm(doc, response, _username, password);
+                    if (authenticated)
                     {
                         _logger.LogInformation("✅ Successfully authenticated {ChildName} with pictograms!", _child.FirstName);
 
@@ -134,7 +134,7 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
                     }
                     else
                     {
-                        _logger.LogError("❌ Failed to submit pictogram form");
+                        _logger.LogError("❌ Failed to complete pictogram authentication");
                         return false;
                     }
                 }
@@ -278,16 +278,8 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
         var response = await HttpClient.PostAsync(action, new FormUrlEncodedContent(formData));
         var content = await response.Content.ReadAsStringAsync();
 
-        // Check for success indicators
-        if (content.Contains("MinUddannelse") || content.Contains("Dashboard") ||
-            content.Contains("Forside") || content.Contains("Ugeplaner") ||
-            content.Contains("SAMLResponse") ||
-            (response.RequestMessage?.RequestUri?.ToString().Contains("minuddannelse.net") ?? false))
-        {
-            _logger.LogInformation("✅ Pictogram authentication successful!");
-            return true;
-        }
-        else if (content.Contains("fejl") || content.Contains("error") || content.Contains("Der skete en fejl"))
+        // Check for error indicators first
+        if (content.Contains("fejl") || content.Contains("error") || content.Contains("Der skete en fejl"))
         {
             _logger.LogError("❌ Login failed - error in response");
 
@@ -303,7 +295,101 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
             return false;
         }
 
-        // Sometimes there's another redirect after successful auth
+        // Handle SAML response form if present
+        if (content.Contains("SAMLResponse"))
+        {
+            _logger.LogDebug("🔑 Found SAML response, processing...");
+
+            var samlDoc = new HtmlDocument();
+            samlDoc.LoadHtml(content);
+
+            // Look for the SAML response form
+            var samlForm = samlDoc.DocumentNode.SelectSingleNode("//input[@name='SAMLResponse']")?.Ancestors("form").FirstOrDefault();
+            if (samlForm != null)
+            {
+                var samlAction = HttpUtility.HtmlDecode(samlForm.GetAttributeValue("action", ""));
+                samlAction = GetAbsoluteUrl(samlAction, response.RequestMessage?.RequestUri?.ToString() ?? "");
+
+                // Extract all form fields for SAML submission
+                var samlFormData = new Dictionary<string, string>();
+                var inputs = samlForm.SelectNodes(".//input");
+                if (inputs != null)
+                {
+                    foreach (var input in inputs)
+                    {
+                        var name = input.GetAttributeValue("name", "");
+                        var value = input.GetAttributeValue("value", "");
+                        if (!string.IsNullOrEmpty(name))
+                        {
+                            samlFormData[name] = value;
+                        }
+                    }
+                }
+
+                _logger.LogDebug("📤 Submitting SAML response to: {Action}", samlAction);
+
+                // Submit the SAML response
+                response = await HttpClient.PostAsync(samlAction, new FormUrlEncodedContent(samlFormData));
+                content = await response.Content.ReadAsStringAsync();
+
+                // Continue processing any additional forms/redirects
+                var maxRedirects = 5;
+                for (int i = 0; i < maxRedirects; i++)
+                {
+                    // Check if we've reached MinUddannelse
+                    if (response.RequestMessage?.RequestUri?.ToString().Contains("minuddannelse.net") ?? false)
+                    {
+                        _logger.LogInformation("✅ Successfully reached MinUddannelse!");
+                        return true;
+                    }
+
+                    // Check for additional forms to submit
+                    var nextDoc = new HtmlDocument();
+                    nextDoc.LoadHtml(content);
+                    var nextForm = nextDoc.DocumentNode.SelectSingleNode("//form");
+
+                    if (nextForm != null && !nextForm.InnerHtml.Contains("username") && !nextForm.InnerHtml.Contains("password"))
+                    {
+                        var nextAction = HttpUtility.HtmlDecode(nextForm.GetAttributeValue("action", ""));
+                        nextAction = GetAbsoluteUrl(nextAction, response.RequestMessage?.RequestUri?.ToString() ?? "");
+
+                        var nextFormData = new Dictionary<string, string>();
+                        var nextInputs = nextForm.SelectNodes(".//input");
+                        if (nextInputs != null)
+                        {
+                            foreach (var input in nextInputs)
+                            {
+                                var name = input.GetAttributeValue("name", "");
+                                var value = input.GetAttributeValue("value", "");
+                                if (!string.IsNullOrEmpty(name))
+                                {
+                                    nextFormData[name] = value;
+                                }
+                            }
+                        }
+
+                        _logger.LogDebug("➡️ Following redirect to: {Action}", nextAction);
+                        response = await HttpClient.PostAsync(nextAction, new FormUrlEncodedContent(nextFormData));
+                        content = await response.Content.ReadAsStringAsync();
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Check for success after all processing
+        if (content.Contains("MinUddannelse") || content.Contains("Dashboard") ||
+            content.Contains("Forside") || content.Contains("Ugeplaner") ||
+            (response.RequestMessage?.RequestUri?.ToString().Contains("minuddannelse.net") ?? false))
+        {
+            _logger.LogInformation("✅ Pictogram authentication successful!");
+            return true;
+        }
+
+        // Handle Location header redirects
         if (response.Headers.Location != null)
         {
             var redirectUrl = GetAbsoluteUrl(response.Headers.Location.ToString(), action);
@@ -425,14 +511,44 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
         if (response.IsSuccessStatusCode)
         {
             var content = await response.Content.ReadAsStringAsync();
-            var json = Newtonsoft.Json.Linq.JObject.Parse(content);
 
-            // Extract the actual content similar to ChildAuthenticatedClient
-            if (json["UgePlan"] != null && json["UgePlan"]?["UgeBrevContent"] != null)
+            // Check if content is HTML (error page) instead of JSON
+            if (content.TrimStart().StartsWith("<"))
             {
-                return (Newtonsoft.Json.Linq.JObject)(json["UgePlan"] ?? new Newtonsoft.Json.Linq.JObject());
+                _logger.LogWarning("❌ Received HTML instead of JSON for week letter. Might be an authentication or session issue.");
+                _logger.LogDebug("Response content starts with: {Content}", content.Substring(0, Math.Min(100, content.Length)));
+
+                // Return empty week letter with appropriate message
+                return new Newtonsoft.Json.Linq.JObject
+                {
+                    ["errorMessage"] = "No week letter available",
+                    ["ugebreve"] = new Newtonsoft.Json.Linq.JArray()
+                };
             }
-            return json;
+
+            try
+            {
+                var json = Newtonsoft.Json.Linq.JObject.Parse(content);
+
+                // Extract the actual content similar to ChildAuthenticatedClient
+                if (json["UgePlan"] != null && json["UgePlan"]?["UgeBrevContent"] != null)
+                {
+                    return (Newtonsoft.Json.Linq.JObject)(json["UgePlan"] ?? new Newtonsoft.Json.Linq.JObject());
+                }
+                return json;
+            }
+            catch (Newtonsoft.Json.JsonException ex)
+            {
+                _logger.LogError(ex, "Failed to parse JSON response for week letter");
+                _logger.LogDebug("Response content: {Content}", content.Substring(0, Math.Min(500, content.Length)));
+
+                // Return empty week letter
+                return new Newtonsoft.Json.Linq.JObject
+                {
+                    ["errorMessage"] = "Failed to parse week letter response",
+                    ["ugebreve"] = new Newtonsoft.Json.Linq.JArray()
+                };
+            }
         }
 
         _logger.LogError("❌ Failed to fetch week letter. Status: {Status}", response.StatusCode);
