@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Web;
 using HtmlAgilityPack;
@@ -128,6 +129,10 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
                     {
                         _logger.LogInformation("✅ Successfully authenticated {ChildName} with pictograms!", _child.FirstName);
 
+                        // Add Accept header for JSON responses (critical for API calls!)
+                        HttpClient.DefaultRequestHeaders.Accept.Add(
+                            new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+
                         // Set the child ID after successful login
                         await SetChildIdAsync();
                         return true;
@@ -171,6 +176,14 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
                     if (response.RequestMessage?.RequestUri?.ToString().Contains("minuddannelse.net") ?? false)
                     {
                         _logger.LogInformation("✅ Reached MinUddannelse after authentication");
+
+                        // Add Accept header for JSON responses (critical for API calls!)
+                        if (!HttpClient.DefaultRequestHeaders.Accept.Any(h => h.MediaType == "application/json"))
+                        {
+                            HttpClient.DefaultRequestHeaders.Accept.Add(
+                                new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+                        }
+
                         await SetChildIdAsync();
                         return true;
                     }
@@ -340,6 +353,14 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
                     if (response.RequestMessage?.RequestUri?.ToString().Contains("minuddannelse.net") ?? false)
                     {
                         _logger.LogInformation("✅ Successfully reached MinUddannelse!");
+
+                        // Add Accept header for JSON responses (critical for API calls!)
+                        if (!HttpClient.DefaultRequestHeaders.Accept.Any(h => h.MediaType == "application/json"))
+                        {
+                            HttpClient.DefaultRequestHeaders.Accept.Add(
+                                new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+                        }
+
                         return true;
                     }
 
