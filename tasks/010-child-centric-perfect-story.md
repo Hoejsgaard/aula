@@ -734,6 +734,7 @@ Each chapter must pass:
 ### Chapter 5: The Scheduling Layer - ✅ COMPLETE (2025-09-28)
 
 **Status**: Successfully implemented and committed
+**Commit**: 8a7c298 - "feat(scheduling): implement Chapter 5 - child-aware scheduling with isolation"
 
 **Key Design Decisions**:
 1. **In-Memory Task Storage**: Used dictionary with child-prefixed keys for complete isolation
