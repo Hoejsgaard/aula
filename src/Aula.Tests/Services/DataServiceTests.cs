@@ -52,8 +52,8 @@ public class DataServiceTests
         };
 
         // Act
-        _dataManager.CacheWeekLetter(_testChild, weekLetter);
-        var result = _dataManager.GetWeekLetter(_testChild);
+        _dataManager.CacheWeekLetter(_testChild, 42, 2025, weekLetter);
+        var result = _dataManager.GetWeekLetter(_testChild, 42, 2025);
 
         // Assert
         Assert.NotNull(result);
@@ -64,7 +64,7 @@ public class DataServiceTests
     public void GetWeekLetter_ReturnsNull_WhenNotInCache()
     {
         // Act
-        var result = _dataManager.GetWeekLetter(_testChild);
+        var result = _dataManager.GetWeekLetter(_testChild, 10, 2025);
 
         // Assert
         Assert.Null(result);
@@ -94,8 +94,8 @@ public class DataServiceTests
         };
 
         // Act
-        _dataManager.CacheWeekSchedule(_testChild, weekSchedule);
-        var result = _dataManager.GetWeekSchedule(_testChild);
+        _dataManager.CacheWeekSchedule(_testChild, 42, 2025, weekSchedule);
+        var result = _dataManager.GetWeekSchedule(_testChild, 42, 2025);
 
         // Assert
         Assert.NotNull(result);
@@ -106,7 +106,7 @@ public class DataServiceTests
     public void GetWeekSchedule_ReturnsNull_WhenNotInCache()
     {
         // Act
-        var result = _dataManager.GetWeekSchedule(_testChild);
+        var result = _dataManager.GetWeekSchedule(_testChild, 10, 2025);
 
         // Assert
         Assert.Null(result);

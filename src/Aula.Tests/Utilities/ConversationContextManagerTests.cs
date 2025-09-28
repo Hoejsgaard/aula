@@ -28,7 +28,7 @@ public class ConversationContextManagerTests
     {
         // Arrange
         var key = "test-key";
-        var childName = TestChild1;
+        var childName = "Søren Johannes";
 
         // Act
         _manager.UpdateContext(key, childName, isAboutToday: true, isAboutTomorrow: false, isAboutHomework: true);
@@ -48,7 +48,7 @@ public class ConversationContextManagerTests
     {
         // Arrange
         var key = "test-key";
-        var childName = "TestChild2";
+        var childName = "Hans Martin";
 
         // Act
         _manager.UpdateContext(key, childName);
@@ -80,7 +80,7 @@ public class ConversationContextManagerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Updated conversation context for key")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class ConversationContextManagerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Removed expired conversation context for key")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class ConversationContextManagerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Cleared conversation context for key")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -173,7 +173,7 @@ public class ConversationContextManagerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Cleared conversation context for key")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
+            Times.Never());
     }
 
     [Fact]
@@ -199,7 +199,7 @@ public class ConversationContextManagerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Cleared all 3 conversation contexts")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -216,7 +216,7 @@ public class ConversationContextManagerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Cleared all 0 conversation contexts")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]

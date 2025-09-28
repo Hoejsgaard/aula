@@ -351,7 +351,7 @@ public class OpenAiServiceTests
         service.ClearConversationHistory(null);
 
         // Assert
-        mockConversationManager.Verify(cm => cm.ClearConversationHistory(null), Times.Once);
+        mockConversationManager.Verify(cm => cm.ClearConversationHistory(null), Times.Once());
     }
 
     [Fact]
@@ -372,7 +372,7 @@ public class OpenAiServiceTests
         service.ClearConversationHistory(contextKey);
 
         // Assert
-        mockConversationManager.Verify(cm => cm.ClearConversationHistory(contextKey), Times.Once);
+        mockConversationManager.Verify(cm => cm.ClearConversationHistory(contextKey), Times.Once());
     }
 
     [Fact]

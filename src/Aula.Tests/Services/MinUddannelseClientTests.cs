@@ -76,7 +76,7 @@ public class MinUddannelseClientTests
 
         Assert.NotNull(result);
         Assert.Equal("stored data", result["test"]?.ToString());
-        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once);
+        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class MinUddannelseClientTests
 
         Assert.NotNull(result);
         Assert.Equal("data", result["stored"]?.ToString());
-        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once);
+        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public class MinUddannelseClientTests
         var result = await client.GetStoredWeekLetter(_testChild, 25, 2024);
 
         Assert.Null(result);
-        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once);
+        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
     }
 
     [Fact]
@@ -155,7 +155,7 @@ public class MinUddannelseClientTests
         var result = await client.GetStoredWeekLetter(_testChild, 25, 2024);
 
         Assert.Null(result);
-        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once);
+        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
     }
 
     [Fact]
@@ -169,7 +169,7 @@ public class MinUddannelseClientTests
         var testDate = new DateOnly(2024, 6, 17);
 
         await Assert.ThrowsAsync<TimeoutException>(() => client.GetWeekLetter(_testChild, testDate));
-        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once);
+        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
     }
 
     [Fact]
@@ -196,6 +196,6 @@ public class MinUddannelseClientTests
         var client = new MinUddannelseClient(_testConfig, _mockSupabaseService.Object, _mockLoggerFactory.Object);
         
         Assert.NotNull(client);
-        _mockLoggerFactory.Verify(x => x.CreateLogger(typeof(MinUddannelseClient).FullName!), Times.Once);
+        _mockLoggerFactory.Verify(x => x.CreateLogger(typeof(MinUddannelseClient).FullName!), Times.Once());
     }
 }

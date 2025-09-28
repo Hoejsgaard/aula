@@ -116,8 +116,8 @@ public class HistoricalDataSeederTests
         await _seeder.SeedHistoricalWeekLettersAsync();
 
         // Assert
-        _mockAgentService.Verify(s => s.LoginAsync(), Times.Once);
-        _mockAgentService.Verify(s => s.GetAllChildrenAsync(), Times.Never);
+        _mockAgentService.Verify(s => s.LoginAsync(), Times.Once());
+        _mockAgentService.Verify(s => s.GetAllChildrenAsync(), Times.Never());
     }
 
     [Fact]
@@ -131,9 +131,9 @@ public class HistoricalDataSeederTests
         await _seeder.SeedHistoricalWeekLettersAsync();
 
         // Assert
-        _mockAgentService.Verify(s => s.LoginAsync(), Times.Once);
-        _mockAgentService.Verify(s => s.GetAllChildrenAsync(), Times.Once);
-        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+        _mockAgentService.Verify(s => s.LoginAsync(), Times.Once());
+        _mockAgentService.Verify(s => s.GetAllChildrenAsync(), Times.Once());
+        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()), Times.Never());
     }
 
     [Fact]
@@ -154,8 +154,8 @@ public class HistoricalDataSeederTests
         await _seeder.SeedHistoricalWeekLettersAsync();
 
         // Assert
-        _mockAgentService.Verify(s => s.LoginAsync(), Times.Once);
-        _mockAgentService.Verify(s => s.GetAllChildrenAsync(), Times.Once);
+        _mockAgentService.Verify(s => s.LoginAsync(), Times.Once());
+        _mockAgentService.Verify(s => s.GetAllChildrenAsync(), Times.Once());
         // Should check for existing content for 8 weeks * 1 child = 8 times
         _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync("Emma", It.IsAny<int>(), It.IsAny<int>()), Times.Exactly(8));
     }
@@ -184,7 +184,7 @@ public class HistoricalDataSeederTests
         _mockAgentService.Setup(s => s.GetAllChildrenAsync()).ReturnsAsync(children);
         _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync((string)null!); // No existing content
-        _mockAgentService.Setup(s => s.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), false))
+        _mockAgentService.Setup(s => s.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>(), true))
             .ReturnsAsync(weekLetterJson);
         _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
@@ -195,7 +195,7 @@ public class HistoricalDataSeederTests
 
         // Assert
         _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(
-            "Emma", It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), false, false), 
+            "Emma", It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()),
             Times.Exactly(8)); // Should store for all 8 weeks
     }
 
@@ -223,7 +223,7 @@ public class HistoricalDataSeederTests
         _mockAgentService.Setup(s => s.GetAllChildrenAsync()).ReturnsAsync(children);
         _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync((string)null!);
-        _mockAgentService.Setup(s => s.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), false))
+        _mockAgentService.Setup(s => s.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>(), true))
             .ReturnsAsync(emptyWeekLetterJson);
 
         // Act
@@ -231,7 +231,7 @@ public class HistoricalDataSeederTests
 
         // Assert
         _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never);
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never());
     }
 
     [Fact]
@@ -247,7 +247,7 @@ public class HistoricalDataSeederTests
         _mockAgentService.Setup(s => s.GetAllChildrenAsync()).ReturnsAsync(children);
         _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync((string)null!);
-        _mockAgentService.Setup(s => s.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), false))
+        _mockAgentService.Setup(s => s.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>(), true))
             .ReturnsAsync((JObject?)null);
 
         // Act
@@ -255,7 +255,7 @@ public class HistoricalDataSeederTests
 
         // Assert
         _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never);
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never());
     }
 
     [Fact]
@@ -268,7 +268,7 @@ public class HistoricalDataSeederTests
         await _seeder.SeedHistoricalWeekLettersAsync();
 
         // Verify the exception was handled
-        _mockAgentService.Verify(s => s.LoginAsync(), Times.Once);
+        _mockAgentService.Verify(s => s.LoginAsync(), Times.Once());
     }
 
     [Fact]
@@ -285,7 +285,7 @@ public class HistoricalDataSeederTests
         _mockAgentService.Setup(s => s.GetAllChildrenAsync()).ReturnsAsync(children);
         _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync((string)null!);
-        _mockAgentService.Setup(s => s.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), false))
+        _mockAgentService.Setup(s => s.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>(), true))
             .ReturnsAsync((JObject?)null);
 
         // Act

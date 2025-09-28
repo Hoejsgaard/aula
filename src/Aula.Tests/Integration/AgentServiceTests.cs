@@ -168,7 +168,7 @@ public class AgentServiceTests
 
         // Assert
         Assert.True(result);
-        _mockMinUddannelseClient.Verify(x => x.LoginAsync(), Times.Once);
+        _mockMinUddannelseClient.Verify(x => x.LoginAsync(), Times.Once());
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public class AgentServiceTests
         // Arrange
         var cachedData = new JObject { ["cached"] = "data" };
         var child = new Child { FirstName = "Test", LastName = "Child" };
-        _mockDataService.Setup(x => x.GetWeekLetter(It.IsAny<Child>())).Returns(cachedData);
+        _mockDataService.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns(cachedData);
 
         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
             _mockOpenAiService.Object, _mockLoggerFactory.Object);
@@ -188,8 +188,8 @@ public class AgentServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal("data", result["cached"]?.ToString());
-        _mockDataService.Verify(x => x.GetWeekLetter(It.IsAny<Child>()), Times.Once);
-        _mockMinUddannelseClient.Verify(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>()), Times.Never);
+        _mockDataService.Verify(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>()), Times.Once());
+        _mockMinUddannelseClient.Verify(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()), Times.Never());
     }
 
     [Fact]
@@ -198,8 +198,8 @@ public class AgentServiceTests
         // Arrange
         var freshData = new JObject { ["fresh"] = "data" };
         var child = new Child { FirstName = "Test", LastName = "Child" };
-        _mockDataService.Setup(x => x.GetWeekLetter(It.IsAny<Child>())).Returns((JObject?)null);
-        _mockMinUddannelseClient.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>())).ReturnsAsync(freshData);
+        _mockDataService.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns((JObject?)null);
+        _mockMinUddannelseClient.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>())).ReturnsAsync(freshData);
 
         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
             _mockOpenAiService.Object, _mockLoggerFactory.Object);
@@ -211,8 +211,8 @@ public class AgentServiceTests
         Assert.NotNull(result);
         Assert.Equal("data", result["fresh"]?.ToString());
         Assert.Equal("Test", result["child"]?.ToString());
-        _mockMinUddannelseClient.Verify(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>()), Times.Once);
-        _mockDataService.Verify(x => x.CacheWeekLetter(It.IsAny<Child>(), It.IsAny<JObject>()), Times.Once);
+        _mockMinUddannelseClient.Verify(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()), Times.Once());
+        _mockDataService.Verify(x => x.CacheWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<JObject>()), Times.Once());
     }
 
     [Fact]
@@ -220,8 +220,8 @@ public class AgentServiceTests
     {
         // Arrange
         var child = new Child { FirstName = "Test", LastName = "Child" };
-        _mockDataService.Setup(x => x.GetWeekLetter(It.IsAny<Child>())).Returns((JObject?)null);
-        _mockMinUddannelseClient.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>()))
+        _mockDataService.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns((JObject?)null);
+        _mockMinUddannelseClient.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()))
             .ReturnsAsync(new JObject());
 
         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
@@ -231,8 +231,8 @@ public class AgentServiceTests
         await service.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), useCache: false);
 
         // Assert - Should not call LoginAsync internally
-        _mockMinUddannelseClient.Verify(x => x.LoginAsync(), Times.Never);
-        _mockMinUddannelseClient.Verify(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>()), Times.Once);
+        _mockMinUddannelseClient.Verify(x => x.LoginAsync(), Times.Never());
+        _mockMinUddannelseClient.Verify(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()), Times.Once());
     }
 
     [Fact]
@@ -241,7 +241,7 @@ public class AgentServiceTests
         // Arrange
         var cachedSchedule = new JObject { ["schedule"] = "cached" };
         var child = new Child { FirstName = "Test", LastName = "Child" };
-        _mockDataService.Setup(x => x.GetWeekSchedule(It.IsAny<Child>())).Returns(cachedSchedule);
+        _mockDataService.Setup(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns(cachedSchedule);
 
         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
             _mockOpenAiService.Object, _mockLoggerFactory.Object);
@@ -252,8 +252,8 @@ public class AgentServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal("cached", result["schedule"]?.ToString());
-        _mockDataService.Verify(x => x.GetWeekSchedule(It.IsAny<Child>()), Times.Once);
-        _mockMinUddannelseClient.Verify(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<DateOnly>()), Times.Never);
+        _mockDataService.Verify(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>()), Times.Once());
+        _mockMinUddannelseClient.Verify(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<DateOnly>()), Times.Never());
     }
 
     [Fact]
@@ -262,7 +262,7 @@ public class AgentServiceTests
         // Arrange
         var freshSchedule = new JObject { ["schedule"] = "fresh" };
         var child = new Child { FirstName = "Test", LastName = "Child" };
-        _mockDataService.Setup(x => x.GetWeekSchedule(It.IsAny<Child>())).Returns((JObject?)null);
+        _mockDataService.Setup(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns((JObject?)null);
         _mockMinUddannelseClient.Setup(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<DateOnly>())).ReturnsAsync(freshSchedule);
 
         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
@@ -274,7 +274,7 @@ public class AgentServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal("fresh", result["schedule"]?.ToString());
-        _mockMinUddannelseClient.Verify(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<DateOnly>()), Times.Once);
-        _mockDataService.Verify(x => x.CacheWeekSchedule(It.IsAny<Child>(), It.IsAny<JObject>()), Times.Once);
+        _mockMinUddannelseClient.Verify(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<DateOnly>()), Times.Once());
+        _mockDataService.Verify(x => x.CacheWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<JObject>()), Times.Once());
     }
 }

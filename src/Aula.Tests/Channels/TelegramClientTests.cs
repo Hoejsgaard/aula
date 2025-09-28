@@ -160,8 +160,8 @@ public class TelegramClientTests
     [Theory]
     [InlineData("")]
     [InlineData("Alice")]
-    [InlineData(TestChild1)]
-    [InlineData("TestChild2")]
+    [InlineData("Søren Johannes")]
+    [InlineData("Hans Martin")]
     public void PostWeekLetter_WithVariousChildNames_HandlesCorrectly(string firstName)
     {
         // Arrange

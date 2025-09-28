@@ -24,9 +24,11 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
             "https://www.minuddannelse.net/KmdIdentity/Login?domainHint=unilogin-idp-prod&toFa=False",
             "https://www.minuddannelse.net/")
     {
-        _child = child;
+        _child = child ?? throw new ArgumentNullException(nameof(child));
         _username = username;
         _pictogramSequence = pictogramSequence ?? throw new ArgumentNullException(nameof(pictogramSequence));
+        if (pictogramSequence.Length == 0)
+            throw new ArgumentException("Pictogram sequence cannot be empty", nameof(pictogramSequence));
         _logger = logger;
     }
 

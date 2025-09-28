@@ -50,7 +50,7 @@ public class SchedulingServiceIntegrationTests
                 Children = new List<Child>
                 {
                     new Child { FirstName = "Emma", LastName = "Test" },
-                    new Child { FirstName = TestChild1, LastName = "Test" }
+                    new Child { FirstName = "Søren Johannes", LastName = "Test" }
                 }
             }
         };
@@ -160,7 +160,7 @@ public class SchedulingServiceIntegrationTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Starting scheduling service")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -175,7 +175,7 @@ public class SchedulingServiceIntegrationTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Stopping scheduling service")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -225,7 +225,7 @@ public class SchedulingServiceIntegrationTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Stopping scheduling service")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]

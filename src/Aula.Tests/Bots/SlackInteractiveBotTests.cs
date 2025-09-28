@@ -56,7 +56,7 @@ public class SlackInteractiveBotTests : IDisposable
                 Children = new List<Child>
                 {
                     new Child { FirstName = "Emma", LastName = "Test" },
-                    new Child { FirstName = TestChild1, LastName = "Test" }
+                    new Child { FirstName = "Søren Johannes", LastName = "Test" }
                 }
             },
             Timers = new Aula.Configuration.Timers
@@ -131,7 +131,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Cannot start Slack bot: API token is missing")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
 
         bot.Dispose();
     }
@@ -160,7 +160,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Cannot start Slack bot: Channel ID is missing")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
 
         bot.Dispose();
     }
@@ -196,7 +196,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Message truncated due to length")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -227,7 +227,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Cannot post empty week letter")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -254,7 +254,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("already posted, skipping")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -279,7 +279,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to post week letter: HTTP")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -307,7 +307,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to post week letter: channel_not_found")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -322,7 +322,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Slack polling bot stopped")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -369,7 +369,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Starting Slack polling bot")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
 
         _mockLogger.Verify(
             logger => logger.Log(
@@ -378,7 +378,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Slack polling bot started")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
 
         // Verify welcome message was sent
         _mockHttpMessageHandler.Protected().Verify(
@@ -415,7 +415,7 @@ public class SlackInteractiveBotTests : IDisposable
             ItExpr.Is<HttpRequestMessage>(req =>
                 req.Method == HttpMethod.Post &&
                 req.RequestUri!.ToString() == "https://slack.com/api/chat.postMessage" &&
-                req.Content!.ReadAsStringAsync().GetAwaiter().GetResult().Contains("Emma og TestChild1")),
+                req.Content!.ReadAsStringAsync().GetAwaiter().GetResult().Contains("Emma og Søren")),
             ItExpr.IsAny<CancellationToken>());
     }
 
@@ -470,7 +470,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Initial timestamp set to:")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     private void SetupSuccessfulHttpResponse()
@@ -613,7 +613,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Found") && v.ToString()!.Contains("new user messages")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
+            Times.Never());
     }
 
     [Fact]
@@ -657,7 +657,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Found") && v.ToString()!.Contains("new user messages")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
+            Times.Never());
     }
 
     [Fact]
@@ -934,7 +934,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Failed to send message: HTTP")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -961,7 +961,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error sending message to Slack")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -980,7 +980,7 @@ public class SlackInteractiveBotTests : IDisposable
             ItExpr.Is<HttpRequestMessage>(req =>
                 req.Method == HttpMethod.Post &&
                 req.RequestUri!.ToString() == "https://slack.com/api/chat.postMessage" &&
-                req.Content!.ReadAsStringAsync().GetAwaiter().GetResult().Contains("Emma og TestChild1")),
+                req.Content!.ReadAsStringAsync().GetAwaiter().GetResult().Contains("Emma og Søren")),
             ItExpr.IsAny<CancellationToken>());
     }
 
@@ -1034,7 +1034,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Slack cleanup timer started - running every 24 hours")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -1063,7 +1063,7 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Message sent successfully")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
 
         // Verify message ID was stored
         _mockLogger.Verify(
@@ -1073,6 +1073,6 @@ public class SlackInteractiveBotTests : IDisposable
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Stored sent message ID: 1234567890.123456")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 }

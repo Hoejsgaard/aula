@@ -32,14 +32,14 @@ public class ConversationContextTests
         var testTime = DateTime.UtcNow.AddMinutes(-5);
 
         // Act
-        context.LastChildName = TestChild1;
+        context.LastChildName = "Søren Johannes";
         context.WasAboutToday = true;
         context.WasAboutTomorrow = true;
         context.WasAboutHomework = true;
         context.Timestamp = testTime;
 
         // Assert
-        Assert.Equal(TestChild1, context.LastChildName);
+        Assert.Equal("Søren Johannes", context.LastChildName);
         Assert.True(context.WasAboutToday);
         Assert.True(context.WasAboutTomorrow);
         Assert.True(context.WasAboutHomework);
@@ -104,7 +104,7 @@ public class ConversationContextTests
         // Arrange
         var context = new ConversationContext
         {
-            LastChildName = "TestChild2",
+            LastChildName = "Hans Martin",
             WasAboutToday = true,
             WasAboutTomorrow = false,
             WasAboutHomework = true,
@@ -115,7 +115,7 @@ public class ConversationContextTests
         var result = context.ToString();
 
         // Assert
-        Assert.Contains("Child: TestChild2", result);
+        Assert.Contains("Child: Hans Martin", result);
         Assert.Contains("Today: True", result);
         Assert.Contains("Tomorrow: False", result);
         Assert.Contains("Homework: True", result);

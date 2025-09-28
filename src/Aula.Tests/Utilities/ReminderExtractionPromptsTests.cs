@@ -143,7 +143,7 @@ public class ReminderExtractionPromptsTests
     }
 
     [Theory]
-    [InlineData("Remind me about TestChild1's soccer")]
+    [InlineData("Remind me about Søren Johannes's soccer")]
     [InlineData("Call the doctor in 2 hours")]
     [InlineData("Pick up Emma tomorrow at 3 PM")]
     [InlineData("Meeting with teacher next Monday")]
@@ -163,7 +163,7 @@ public class ReminderExtractionPromptsTests
     public void GetExtractionPrompt_WithSpecialCharactersInQuery_HandlesCorrectly()
     {
         // Arrange
-        var query = "Remind me about \"TestChild1's soccer\" & Emma's dance at 8:00 PM";
+        var query = "Remind me about \"Søren Johannes's soccer\" & Emma's dance at 8:00 PM";
         var currentTime = new DateTime(2025, 6, 30, 14, 30, 0);
 
         // Act

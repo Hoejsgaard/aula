@@ -157,7 +157,7 @@ public class IntentAnalysisPromptsTests
     public void GetFormattedPrompt_WithSpecialCharacters_HandlesCorrectly()
     {
         // Arrange
-        var queryWithSpecialChars = "Remind me about \"TestChild1's soccer\" at 8:00 PM";
+        var queryWithSpecialChars = "Remind me about \"Søren Johannes's soccer\" at 8:00 PM";
 
         // Act
         var result = IntentAnalysisPrompts.GetFormattedPrompt(queryWithSpecialChars);

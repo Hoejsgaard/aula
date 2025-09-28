@@ -35,7 +35,7 @@ public class PromptBuilderTests
     {
         // Arrange
         var builder = CreateTestPromptBuilder();
-        var childName = TestChild1;
+        var childName = "Søren Johannes";
         var chatInterface = ChatInterface.Telegram;
 
         // Act
@@ -137,7 +137,7 @@ public class PromptBuilderTests
         var childrenContent = new Dictionary<string, string>
         {
             { "Emma", "Math on Monday for Emma's class" },
-            { TestChild1, "Science on Tuesday for TestChild1's class" }
+            { "Søren Johannes", "Science on Tuesday for Søren Johannes's class" }
         };
         var chatInterface = ChatInterface.Telegram;
 
@@ -157,7 +157,7 @@ public class PromptBuilderTests
         // User message with combined content
         Assert.Equal("user", result[1].Role);
         Assert.Contains("Emma", result[1].Content);
-        Assert.Contains(TestChild1, result[1].Content);
+        Assert.Contains("Søren Johannes", result[1].Content);
         Assert.Contains("Math on Monday", result[1].Content);
         Assert.Contains("Science on Tuesday", result[1].Content);
     }

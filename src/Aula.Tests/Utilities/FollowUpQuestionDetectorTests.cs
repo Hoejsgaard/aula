@@ -18,7 +18,9 @@ public class FollowUpQuestionDetectorTests
         {
             new Child { FirstName = "Emma Rose", LastName = "Wilson" },
             new Child { FirstName = "Liam", LastName = "Johnson" },
-            new Child { FirstName = "TestChild2", LastName = "TestChild1en" }
+            new Child { FirstName = "Hans Martin", LastName = "Hans Martinsen" },
+            new Child { FirstName = "Søren", LastName = "Andersen" },
+            new Child { FirstName = "Johannes", LastName = "Nielsen" }
         };
     }
 
@@ -119,7 +121,7 @@ public class FollowUpQuestionDetectorTests
     [InlineData("emma")]
     [InlineData("Liam")]
     [InlineData("Wilson")]
-    [InlineData("TestChild1en")]
+    [InlineData("Hans Martinsen")]
     public void IsFollowUpQuestion_WithChildNameAndShortMessage_ReturnsTrue(string input)
     {
         // Act
@@ -130,7 +132,7 @@ public class FollowUpQuestionDetectorTests
     }
 
     [Theory]
-    [InlineData("TestChild2")]
+    [InlineData("Hans Martin")]
     [InlineData("Johannes")]
     [InlineData("søren")]
     [InlineData("SØREN")]
@@ -208,9 +210,9 @@ public class FollowUpQuestionDetectorTests
 
     [Theory]
     [InlineData("what about Emma Rose")]
-    [InlineData("hvad med TestChild2")]
+    [InlineData("hvad med Hans Martin")]
     [InlineData("Emma Rose?")]
-    [InlineData("TestChild2")]
+    [InlineData("Hans Martin")]
     public void IsFollowUpQuestion_WithFullChildNames_WorksCorrectly(string input)
     {
         // Act
@@ -234,7 +236,7 @@ public class FollowUpQuestionDetectorTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Detected follow-up question")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -251,7 +253,7 @@ public class FollowUpQuestionDetectorTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Detected likely follow-up based on short message")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Theory]

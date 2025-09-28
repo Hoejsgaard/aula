@@ -11,7 +11,7 @@ public class PictogramConfigurationTests
         // Arrange & Act
         var child = new Child
         {
-            FirstName = TestChild1,
+            FirstName = "Søren Johannes",
             LastName = "Højsgaard",
             Colour = "#b4a7d6",
             GoogleCalendarId = "test@group.calendar.google.com",
@@ -24,7 +24,7 @@ public class PictogramConfigurationTests
         };
 
         // Assert
-        Assert.Equal(TestChild1, child.FirstName);
+        Assert.Equal("Søren Johannes", child.FirstName);
         Assert.Equal("Højsgaard", child.LastName);
         Assert.NotNull(child.UniLogin);
         Assert.Equal(AuthenticationType.Pictogram, child.UniLogin.AuthType);
@@ -38,7 +38,7 @@ public class PictogramConfigurationTests
         // Arrange & Act
         var child = new Child
         {
-            FirstName = "TestChild2",
+            FirstName = "Hans Martin",
             LastName = "Højsgaard",
             Colour = "#377f00",
             GoogleCalendarId = "test@group.calendar.google.com",
@@ -51,7 +51,7 @@ public class PictogramConfigurationTests
         };
 
         // Assert
-        Assert.Equal("TestChild2", child.FirstName);
+        Assert.Equal("Hans Martin", child.FirstName);
         Assert.Equal("Højsgaard", child.LastName);
         Assert.NotNull(child.UniLogin);
         Assert.Equal(AuthenticationType.Standard, child.UniLogin.AuthType);
@@ -67,7 +67,7 @@ public class PictogramConfigurationTests
         {
             MinUddannelse = new MinUddannelse
             {
-                Children = new[]
+                Children = new List<Child>
                 {
                     new Child
                     {
@@ -96,7 +96,7 @@ public class PictogramConfigurationTests
         // Assert
         Assert.NotNull(config.MinUddannelse);
         Assert.NotNull(config.MinUddannelse.Children);
-        Assert.Equal(2, config.MinUddannelse.Children.Length);
+        Assert.Equal(2, config.MinUddannelse.Children.Count);
 
         var olderChild = config.MinUddannelse.Children[0];
         Assert.Equal(AuthenticationType.Standard, olderChild.UniLogin.AuthType);

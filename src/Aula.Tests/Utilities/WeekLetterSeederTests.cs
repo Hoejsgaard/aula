@@ -97,9 +97,9 @@ public class WeekLetterSeederTests
         await _seeder.SeedWeekLetterAsync(childName, weekNumber, year, content, className);
 
         // Assert
-        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(childName, weekNumber, year), Times.Once);
+        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(childName, weekNumber, year), Times.Once());
         _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(
-            childName, weekNumber, year, It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once);
+            childName, weekNumber, year, It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once());
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public class WeekLetterSeederTests
 
         // Assert
         _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(
-            childName, weekNumber, year, It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once);
+            childName, weekNumber, year, It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once());
     }
 
     [Fact]
@@ -142,9 +142,9 @@ public class WeekLetterSeederTests
         await _seeder.SeedWeekLetterAsync(childName, weekNumber, year, content);
 
         // Assert
-        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(childName, weekNumber, year), Times.Once);
+        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(childName, weekNumber, year), Times.Once());
         _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never);
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never());
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public class WeekLetterSeederTests
         await _seeder.SeedWeekLetterAsync(childName, weekNumber, year, content);
 
         // Verify the exception was handled gracefully
-        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(childName, weekNumber, year), Times.Once);
+        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(childName, weekNumber, year), Times.Once());
     }
 
     [Fact]
@@ -185,9 +185,9 @@ public class WeekLetterSeederTests
         await _seeder.SeedWeekLetterAsync(childName, weekNumber, year, content);
 
         // Verify both methods were called despite the exception
-        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(childName, weekNumber, year), Times.Once);
+        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(childName, weekNumber, year), Times.Once());
         _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
-            It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once);
+            It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once());
     }
 
     [Theory]
@@ -212,7 +212,7 @@ public class WeekLetterSeederTests
 
         // Assert
         _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(
-            childName, weekNumber, year, It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once);
+            childName, weekNumber, year, It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once());
     }
 
     [Theory]
@@ -236,7 +236,7 @@ public class WeekLetterSeederTests
 
         // Assert
         _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(
-            childName, weekNumber, year, It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once);
+            childName, weekNumber, year, It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once());
     }
 
     [Fact]
@@ -310,10 +310,10 @@ public class WeekLetterSeederTests
 
         // Assert - Verify specific calls for Emma and Lucas as per the hardcoded test data
         _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(
-            "Emma", 20, 2024, It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once);
+            "Emma", 20, 2024, It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once());
         _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(
-            "Lucas", 21, 2024, It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once);
+            "Lucas", 21, 2024, It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once());
         _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(
-            "Emma", 22, 2024, It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once);
+            "Emma", 22, 2024, It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once());
     }
 }

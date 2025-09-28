@@ -78,7 +78,7 @@ public class PerChildMinUddannelseClientTests
             It.IsAny<EventId>(),
             It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("authentication will happen per-request")),
             It.IsAny<Exception>(),
-            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once());
     }
 
     [Fact]
@@ -100,11 +100,11 @@ public class PerChildMinUddannelseClientTests
         // Assert
         Assert.NotNull(result);
         _mockLogger.Verify(x => x.Log(
-            LogLevel.Error,
+            LogLevel.Information,
             It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("No credentials available")),
+            It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Week letter not in database and live fetch not allowed")),
             It.IsAny<Exception>(),
-            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once());
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public class PerChildMinUddannelseClientTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal("data", result["test"]?.ToString());
-        _mockSupabaseService.Verify(x => x.GetStoredWeekLetterAsync("Test", 10, 2025), Times.Once);
+        _mockSupabaseService.Verify(x => x.GetStoredWeekLetterAsync("Test", 10, 2025), Times.Once());
     }
 
     [Fact]
@@ -154,7 +154,7 @@ public class PerChildMinUddannelseClientTests
             It.IsAny<EventId>(),
             It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("No credentials available")),
             It.IsAny<Exception>(),
-            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once());
     }
 
     [Fact]
@@ -207,8 +207,8 @@ public class PerChildMinUddannelseClientTests
         _mockLogger.Verify(x => x.Log(
             LogLevel.Information,
             It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Creating fresh authenticated session")),
+            It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Week letter not in database and live fetch not allowed")),
             It.IsAny<Exception>(),
-            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once());
     }
 }

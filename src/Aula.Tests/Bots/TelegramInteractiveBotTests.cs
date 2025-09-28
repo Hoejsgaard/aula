@@ -47,7 +47,7 @@ public class TelegramInteractiveBotTests
                 Children = new List<Child>
                 {
                     new Child { FirstName = "Emma", LastName = "Test" },
-                    new Child { FirstName = TestChild1, LastName = "Test" }
+                    new Child { FirstName = "Søren Johannes", LastName = "Test" }
                 }
             }
         };
@@ -165,7 +165,7 @@ public class TelegramInteractiveBotTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Cannot start Telegram bot: Telegram integration is not enabled")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -182,7 +182,7 @@ public class TelegramInteractiveBotTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Stopping Telegram interactive bot")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
 
         _mockLogger.Verify(
             logger => logger.Log(
@@ -191,7 +191,7 @@ public class TelegramInteractiveBotTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Telegram interactive bot stopped")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -231,7 +231,7 @@ public class TelegramInteractiveBotTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Telegram integration is disabled")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -262,7 +262,7 @@ public class TelegramInteractiveBotTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("channel ID is missing")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -280,7 +280,7 @@ public class TelegramInteractiveBotTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Child not found for week letter posting")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]

@@ -221,7 +221,7 @@ public class SlackChannelTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("empty message")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -265,7 +265,7 @@ public class SlackChannelTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("empty message")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
 
@@ -565,7 +565,7 @@ public class SlackChannelTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Initializing Slack channel")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
         
         _mockLogger.Verify(
             x => x.Log(
@@ -574,7 +574,7 @@ public class SlackChannelTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("initialized successfully")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -591,7 +591,7 @@ public class SlackChannelTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Initializing Slack channel")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -609,7 +609,7 @@ public class SlackChannelTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("webhook mode")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -626,7 +626,7 @@ public class SlackChannelTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("webhook mode")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -644,7 +644,7 @@ public class SlackChannelTests
                 It.IsAny<It.IsAnyType>(),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
+            Times.Never());
     }
 
     [Fact]
@@ -662,7 +662,7 @@ public class SlackChannelTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("webhook mode")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -679,7 +679,7 @@ public class SlackChannelTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("webhook mode")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -697,6 +697,6 @@ public class SlackChannelTests
                 It.IsAny<It.IsAnyType>(),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
+            Times.Never());
     }
 }

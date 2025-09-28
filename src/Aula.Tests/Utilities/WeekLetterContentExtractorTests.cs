@@ -149,7 +149,7 @@ public class WeekLetterContentExtractorTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Equals("Week letter content is empty")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -191,7 +191,7 @@ public class WeekLetterContentExtractorTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error extracting week letter content")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -270,7 +270,7 @@ public class WeekLetterContentExtractorTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error extracting week letter content from dynamic object")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]

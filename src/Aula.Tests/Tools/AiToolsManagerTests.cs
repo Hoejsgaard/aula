@@ -57,7 +57,7 @@ public class AiToolsManagerTests
             description,
             It.IsAny<DateOnly>(),
             It.IsAny<TimeOnly>(),
-            childName), Times.Once);
+            childName), Times.Once());
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class AiToolsManagerTests
             It.IsAny<string>(),
             It.IsAny<DateOnly>(),
             It.IsAny<TimeOnly>(),
-            It.IsAny<string>()), Times.Never);
+            It.IsAny<string>()), Times.Never());
     }
 
     [Fact]
@@ -152,7 +152,7 @@ public class AiToolsManagerTests
 
         // Assert
         Assert.Contains("✅ Deleted reminder", result);
-        _mockSupabaseService.Verify(s => s.DeleteReminderAsync(123), Times.Once); // Verify actual ID is used
+        _mockSupabaseService.Verify(s => s.DeleteReminderAsync(123), Times.Once()); // Verify actual ID is used
     }
 
     [Fact]
@@ -168,7 +168,7 @@ public class AiToolsManagerTests
 
         // Assert
         Assert.Contains("❌ Invalid reminder number", result);
-        _mockSupabaseService.Verify(s => s.DeleteReminderAsync(It.IsAny<int>()), Times.Never);
+        _mockSupabaseService.Verify(s => s.DeleteReminderAsync(It.IsAny<int>()), Times.Never());
     }
 
     [Fact]
@@ -188,9 +188,9 @@ public class AiToolsManagerTests
             }
         };
 
-        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice")))
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice"), It.IsAny<int>(), It.IsAny<int>()))
             .Returns(weekLetter);
-        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Bob")))
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Bob"), It.IsAny<int>(), It.IsAny<int>()))
             .Returns((JObject?)null);
 
         // Act
@@ -237,7 +237,7 @@ public class AiToolsManagerTests
             description,
             It.IsAny<DateOnly>(),
             It.IsAny<TimeOnly>(),
-            null), Times.Once);
+            null), Times.Once());
     }
 
     // Phase 1: High-Impact, Low-Effort Tests (+15% coverage)
@@ -595,7 +595,7 @@ public class AiToolsManagerTests
     public void GetWeekLetters_WithDataServiceException_ReturnsError()
     {
         // Arrange
-        _mockDataManager.Setup(d => d.GetWeekLetter(It.IsAny<Child>()))
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>()))
             .Throws(new Exception("Data service error"));
 
         // Act
@@ -654,7 +654,7 @@ public class AiToolsManagerTests
         var dateString = "2024-01-15"; // Monday
         var weekLetter = CreateTestWeekLetterWithActivities();
 
-        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice")))
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice"), It.IsAny<int>(), It.IsAny<int>()))
             .Returns(weekLetter);
 
         // Act
@@ -674,7 +674,7 @@ public class AiToolsManagerTests
         var childName = "Alice";
         var weekLetter = CreateTestWeekLetterWithActivities();
 
-        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice")))
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice"), It.IsAny<int>(), It.IsAny<int>()))
             .Returns(weekLetter);
 
         // Act
@@ -720,7 +720,7 @@ public class AiToolsManagerTests
         var childName = "Alice";
         var dateString = "2024-01-15";
 
-        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice")))
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice"), It.IsAny<int>(), It.IsAny<int>()))
             .Returns((JObject?)null);
 
         // Act
@@ -739,7 +739,7 @@ public class AiToolsManagerTests
         var dateString = "2024-01-15"; // Monday
         var weekLetter = CreateTestWeekLetterWithActivities();
 
-        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice")))
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice"), It.IsAny<int>(), It.IsAny<int>()))
             .Returns(weekLetter);
 
         // Act
@@ -760,7 +760,7 @@ public class AiToolsManagerTests
         var dateString = "2024-01-20"; // Saturday - likely no school activities
         var weekLetter = CreateTestWeekLetterWithActivities();
 
-        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice")))
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice"), It.IsAny<int>(), It.IsAny<int>()))
             .Returns(weekLetter);
 
         // Act
@@ -779,7 +779,7 @@ public class AiToolsManagerTests
         var childName = "Alice";
         var dateString = "2024-01-15";
 
-        _mockDataManager.Setup(d => d.GetWeekLetter(It.IsAny<Child>()))
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>()))
             .Throws(new Exception("Data access error"));
 
         // Act
@@ -821,9 +821,9 @@ public class AiToolsManagerTests
             }
         };
 
-        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice")))
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice"), It.IsAny<int>(), It.IsAny<int>()))
             .Returns(aliceWeekLetter);
-        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Bob")))
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Bob"), It.IsAny<int>(), It.IsAny<int>()))
             .Returns(bobWeekLetter);
 
         // Act - null childName should return all children
@@ -853,9 +853,9 @@ public class AiToolsManagerTests
             }
         };
 
-        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice")))
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Alice"), It.IsAny<int>(), It.IsAny<int>()))
             .Returns(aliceWeekLetter);
-        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Bob")))
+        _mockDataManager.Setup(d => d.GetWeekLetter(It.Is<Child>(c => c.FirstName == "Bob"), It.IsAny<int>(), It.IsAny<int>()))
             .Returns((JObject?)null);
 
         // Act

@@ -196,8 +196,8 @@ public class ChannelManagerTests
         await _channelManager.BroadcastMessageAsync(message);
 
         // Assert
-        _mockChannel1.Verify(c => c.SendMessageAsync(message), Times.Once);
-        _mockChannel2.Verify(c => c.SendMessageAsync(message), Times.Never);
+        _mockChannel1.Verify(c => c.SendMessageAsync(message), Times.Once());
+        _mockChannel2.Verify(c => c.SendMessageAsync(message), Times.Never());
     }
 
     [Fact]
@@ -212,8 +212,8 @@ public class ChannelManagerTests
         await _channelManager.SendToChannelsAsync(message, "slack", "telegram");
 
         // Assert
-        _mockChannel1.Verify(c => c.SendMessageAsync(message), Times.Once);
-        _mockChannel2.Verify(c => c.SendMessageAsync(message), Times.Never); // disabled channel should not receive message
+        _mockChannel1.Verify(c => c.SendMessageAsync(message), Times.Once());
+        _mockChannel2.Verify(c => c.SendMessageAsync(message), Times.Never()); // disabled channel should not receive message
     }
 
     [Fact]
@@ -226,7 +226,7 @@ public class ChannelManagerTests
         await _channelManager.SendToChannelsAsync(null!, "slack");
 
         // Assert - Channel should not be called
-        _mockChannel1.Verify(c => c.SendMessageAsync(It.IsAny<string>()), Times.Never);
+        _mockChannel1.Verify(c => c.SendMessageAsync(It.IsAny<string>()), Times.Never());
     }
 
     [Fact]
@@ -240,7 +240,7 @@ public class ChannelManagerTests
         await _channelManager.SendToChannelsAsync(message, "slack", "nonexistent");
 
         // Assert
-        _mockChannel1.Verify(c => c.SendMessageAsync(message), Times.Once);
+        _mockChannel1.Verify(c => c.SendMessageAsync(message), Times.Once());
     }
 
     [Fact]
@@ -254,8 +254,8 @@ public class ChannelManagerTests
         await _channelManager.InitializeAllChannelsAsync();
 
         // Assert
-        _mockChannel1.Verify(c => c.InitializeAsync(), Times.Once);
-        _mockChannel2.Verify(c => c.InitializeAsync(), Times.Once);
+        _mockChannel1.Verify(c => c.InitializeAsync(), Times.Once());
+        _mockChannel2.Verify(c => c.InitializeAsync(), Times.Once());
     }
 
     [Fact]
@@ -269,8 +269,8 @@ public class ChannelManagerTests
         await _channelManager.StartAllChannelsAsync();
 
         // Assert
-        _mockChannel1.Verify(c => c.StartAsync(), Times.Once);
-        _mockChannel2.Verify(c => c.StartAsync(), Times.Never); // disabled channel should not be started
+        _mockChannel1.Verify(c => c.StartAsync(), Times.Once());
+        _mockChannel2.Verify(c => c.StartAsync(), Times.Never()); // disabled channel should not be started
     }
 
     [Fact]
@@ -284,8 +284,8 @@ public class ChannelManagerTests
         await _channelManager.StopAllChannelsAsync();
 
         // Assert
-        _mockChannel1.Verify(c => c.StopAsync(), Times.Once);
-        _mockChannel2.Verify(c => c.StopAsync(), Times.Once);
+        _mockChannel1.Verify(c => c.StopAsync(), Times.Once());
+        _mockChannel2.Verify(c => c.StopAsync(), Times.Once());
     }
 
     [Fact]
@@ -306,8 +306,8 @@ public class ChannelManagerTests
         Assert.True(results["slack"]);
         Assert.False(results["telegram"]);
         
-        _mockChannel1.Verify(c => c.TestConnectionAsync(), Times.Once);
-        _mockChannel2.Verify(c => c.TestConnectionAsync(), Times.Once);
+        _mockChannel1.Verify(c => c.TestConnectionAsync(), Times.Once());
+        _mockChannel2.Verify(c => c.TestConnectionAsync(), Times.Once());
     }
 
     [Fact]

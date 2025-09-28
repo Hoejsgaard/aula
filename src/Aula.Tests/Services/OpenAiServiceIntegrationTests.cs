@@ -287,11 +287,11 @@ public class OpenAiServiceIntegrationTests
                     new JObject { ["indhold"] = "Emma's week letter content" }
                 }
             },
-            [TestChild1] = new JObject
+            ["Søren Johannes"] = new JObject
             {
                 ["ugebreve"] = new JArray
                 {
-                    new JObject { ["indhold"] = "TestChild1's week letter content" }
+                    new JObject { ["indhold"] = "Søren Johannes's week letter content" }
                 }
             }
         };

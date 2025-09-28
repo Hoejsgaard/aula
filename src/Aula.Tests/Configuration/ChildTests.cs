@@ -85,7 +85,7 @@ public class ChildTests
     [InlineData("Lucas")]
     [InlineData("Marie-Claire")]
     [InlineData("Anne-Sofie")]
-    [InlineData("TestChild2")]
+    [InlineData("Hans Martin")]
     [InlineData("Åse")]
     [InlineData("VeryLongFirstNameWithManyCharacters")]
     public void FirstName_AcceptsVariousFormats(string firstName)
@@ -356,11 +356,11 @@ public class ChildTests
         var child = new Child();
 
         // Act
-        child.FirstName = "TestChild2";
+        child.FirstName = "Søren";
         child.LastName = "Ørsted";
 
         // Assert
-        Assert.Equal("TestChild2", child.FirstName);
+        Assert.Equal("Søren", child.FirstName);
         Assert.Equal("Ørsted", child.LastName);
         Assert.Contains("ø", child.FirstName);
         Assert.Contains("Ø", child.LastName);

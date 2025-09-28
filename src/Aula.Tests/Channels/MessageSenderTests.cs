@@ -125,7 +125,7 @@ public class MessageSenderTests
         await sender.SendMessageAsync("Test message");
 
         // Assert
-        mockSlackBot.Verify(x => x.SendMessage("Test message"), Times.Once);
+        mockSlackBot.Verify(x => x.SendMessage("Test message"), Times.Once());
     }
 
     [Fact]
@@ -143,7 +143,7 @@ public class MessageSenderTests
         await sender.SendMessageAsync("ignored-chat-id", "Test message");
 
         // Assert
-        mockSlackBot.Verify(x => x.SendMessage("Test message"), Times.Once);
+        mockSlackBot.Verify(x => x.SendMessage("Test message"), Times.Once());
     }
 
     [Fact]
@@ -208,7 +208,7 @@ public class MessageSenderTests
         await sender.SendMessageAsync("Test message");
 
         // Assert
-        mockTelegramBot.Verify(x => x.SendMessage("default-chat", "Test message"), Times.Once);
+        mockTelegramBot.Verify(x => x.SendMessage("default-chat", "Test message"), Times.Once());
     }
 
     [Fact]
@@ -226,7 +226,7 @@ public class MessageSenderTests
         await sender.SendMessageAsync("specific-chat", "Test message");
 
         // Assert
-        mockTelegramBot.Verify(x => x.SendMessage("specific-chat", "Test message"), Times.Once);
+        mockTelegramBot.Verify(x => x.SendMessage("specific-chat", "Test message"), Times.Once());
     }
 
     [Fact]
@@ -265,8 +265,8 @@ public class MessageSenderTests
         await telegramSender.SendMessageAsync(testMessage);
 
         // Assert
-        mockSlackBot.Verify(x => x.SendMessage(testMessage), Times.Once);
-        mockTelegramBot.Verify(x => x.SendMessage("default-chat", testMessage), Times.Once);
+        mockSlackBot.Verify(x => x.SendMessage(testMessage), Times.Once());
+        mockTelegramBot.Verify(x => x.SendMessage("default-chat", testMessage), Times.Once());
     }
 
     [Fact]
@@ -287,8 +287,8 @@ public class MessageSenderTests
         await telegramSender.SendMessageAsync(specificChatId, testMessage);  // Should use chatId
 
         // Assert
-        mockSlackBot.Verify(x => x.SendMessage(testMessage), Times.Once);  // ChatId ignored
-        mockTelegramBot.Verify(x => x.SendMessage(specificChatId, testMessage), Times.Once);  // ChatId used
+        mockSlackBot.Verify(x => x.SendMessage(testMessage), Times.Once());  // ChatId ignored
+        mockTelegramBot.Verify(x => x.SendMessage(specificChatId, testMessage), Times.Once());  // ChatId used
     }
 
     [Fact]

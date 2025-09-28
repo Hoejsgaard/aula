@@ -20,7 +20,7 @@ public class ReminderCommandHandlerTests
         _mockSupabaseService = new Mock<ISupabaseService>();
         _childrenByName = new Dictionary<string, Child>
         {
-            { "testchild1", new Child { FirstName = "TestChild1 Jensen", LastName = "TestChild1en" } },
+            { "testchild1", new Child { FirstName = "Søren Johannes Jensen", LastName = "Søren Johannesen" } },
             { "emma", new Child { FirstName = "Emma Marie", LastName = "Nielsen" } },
             { "liam", new Child { FirstName = "Liam", LastName = "Andersen" } }
         };
@@ -53,8 +53,8 @@ public class ReminderCommandHandlerTests
     }
 
     [Theory]
-    [InlineData("remind me tomorrow at 8:00 that TestChild1 has Haver til maver", true, "TestChild1 Jensen")]
-    [InlineData("husk mig i morgen kl 8:00 at TestChild1 har Haver til maver", false, "TestChild1 Jensen")]
+    [InlineData("remind me tomorrow at 8:00 that Søren Johannes has Haver til maver", true, "Søren Johannes Jensen")]
+    [InlineData("husk mig i morgen kl 8:00 at Søren Johannes har Haver til maver", false, "Søren Johannes Jensen")]
     [InlineData("remind me today at 15:30 that Emma has piano lesson", true, "Emma Marie")]
     [InlineData("remind me 2024-12-31 at 10:00 that New Year celebration", true, null)]
     [InlineData("remind me 31/12 at 23:59 that Year end", true, null)]
@@ -86,7 +86,7 @@ public class ReminderCommandHandlerTests
 
         _mockSupabaseService.Verify(
             x => x.AddReminderAsync(It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeOnly>(), expectedChildName),
-            Times.Once);
+            Times.Once());
     }
 
     [Theory]
@@ -159,7 +159,7 @@ public class ReminderCommandHandlerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error adding reminder")),
                 exception,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Theory]
@@ -179,7 +179,7 @@ public class ReminderCommandHandlerTests
                 RemindDate = DateOnly.FromDateTime(DateTime.Today.AddDays(1)),
                 RemindTime = new TimeOnly(8, 0),
                 IsSent = false,
-                ChildName = "TestChild1 Jensen"
+                ChildName = "Søren Johannes Jensen"
             },
             new() {
                 Id = 2,
@@ -219,9 +219,9 @@ public class ReminderCommandHandlerTests
         Assert.Contains("ID 2:", result.response);
         Assert.Contains("Test reminder 1", result.response);
         Assert.Contains("Test reminder 2", result.response);
-        Assert.Contains("(TestChild1 Jensen)", result.response);
+        Assert.Contains("(Søren Johannes Jensen)", result.response);
 
-        _mockSupabaseService.Verify(x => x.GetAllRemindersAsync(), Times.Once);
+        _mockSupabaseService.Verify(x => x.GetAllRemindersAsync(), Times.Once());
     }
 
     [Theory]
@@ -288,7 +288,7 @@ public class ReminderCommandHandlerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error listing reminders")),
                 exception,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Theory]
@@ -319,7 +319,7 @@ public class ReminderCommandHandlerTests
             Assert.Contains($"✅ Påmindelse {expectedId} slettet", result.response);
         }
 
-        _mockSupabaseService.Verify(x => x.DeleteReminderAsync(expectedId), Times.Once);
+        _mockSupabaseService.Verify(x => x.DeleteReminderAsync(expectedId), Times.Once());
     }
 
     [Theory]
@@ -357,7 +357,7 @@ public class ReminderCommandHandlerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error deleting reminder")),
                 exception,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Theory]
@@ -406,11 +406,11 @@ public class ReminderCommandHandlerTests
 
         _mockSupabaseService.Verify(
             x => x.AddReminderAsync("test", tomorrow, new TimeOnly(8, 0), null),
-            Times.Once);
+            Times.Once());
 
         _mockSupabaseService.Verify(
             x => x.AddReminderAsync("test", today, new TimeOnly(8, 0), null),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -437,7 +437,7 @@ public class ReminderCommandHandlerTests
         Assert.True(result.handled);
         _mockSupabaseService.Verify(
             x => x.AddReminderAsync("Christmas", expectedDate, new TimeOnly(10, 0), null),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -449,8 +449,8 @@ public class ReminderCommandHandlerTests
             .Setup(x => x.AddReminderAsync(It.IsAny<string>(), It.IsAny<DateOnly>(), It.IsAny<TimeOnly>(), It.IsAny<string>()))
             .ReturnsAsync(reminderId);
 
-        // Act - Test with first name only (TestChild1 from "TestChild1 Jensen")
-        var testchild1Result = await _handler.TryHandleReminderCommand("remind me tomorrow at 8:00 that TestChild1 has soccer", true);
+        // Act - Test with first name only (Søren Johannes from "Søren Johannes Jensen")
+        var testchild1Result = await _handler.TryHandleReminderCommand("remind me tomorrow at 8:00 that Søren Johannes has soccer", true);
 
         // Act - Test with first name only (Emma from "Emma Marie")  
         var emmaResult = await _handler.TryHandleReminderCommand("remind me tomorrow at 8:00 that Emma has piano", true);
@@ -464,16 +464,16 @@ public class ReminderCommandHandlerTests
         Assert.True(noChildResult.handled);
 
         _mockSupabaseService.Verify(
-            x => x.AddReminderAsync("TestChild1 has soccer", It.IsAny<DateOnly>(), It.IsAny<TimeOnly>(), "TestChild1 Jensen"),
-            Times.Once);
+            x => x.AddReminderAsync("Søren Johannes has soccer", It.IsAny<DateOnly>(), It.IsAny<TimeOnly>(), "Søren Johannes Jensen"),
+            Times.Once());
 
         _mockSupabaseService.Verify(
             x => x.AddReminderAsync("Emma has piano", It.IsAny<DateOnly>(), It.IsAny<TimeOnly>(), "Emma Marie"),
-            Times.Once);
+            Times.Once());
 
         _mockSupabaseService.Verify(
             x => x.AddReminderAsync("general reminder", It.IsAny<DateOnly>(), It.IsAny<TimeOnly>(), null),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]

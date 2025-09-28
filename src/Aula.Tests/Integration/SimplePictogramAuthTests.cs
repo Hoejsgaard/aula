@@ -153,7 +153,7 @@ public class SimplePictogramAuthTests
         // Arrange & Act
         var child = new Child
         {
-            FirstName = TestChild1,
+            FirstName = "Søren Johannes",
             LastName = "Højsgaard",
             UniLogin = new UniLogin
             {

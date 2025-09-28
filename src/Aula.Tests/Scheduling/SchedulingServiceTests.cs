@@ -260,7 +260,7 @@ public class SchedulingServiceTests : IDisposable
         await TestExecuteTask(schedulingService, task);
 
         // Assert
-        _mockSupabaseService.Verify(s => s.GetPendingRemindersAsync(), Times.Once);
+        _mockSupabaseService.Verify(s => s.GetPendingRemindersAsync(), Times.Once());
     }
 
     [Fact]
@@ -277,7 +277,7 @@ public class SchedulingServiceTests : IDisposable
         await TestExecuteTask(schedulingService, task);
 
         // Assert
-        _mockSupabaseService.Verify(s => s.GetPendingRemindersAsync(), Times.Once);
+        _mockSupabaseService.Verify(s => s.GetPendingRemindersAsync(), Times.Once());
     }
 
     [Fact]
@@ -294,7 +294,7 @@ public class SchedulingServiceTests : IDisposable
         await TestExecuteTask(schedulingService, task);
 
         // Assert
-        _mockAgentService.Verify(s => s.GetAllChildrenAsync(), Times.Once);
+        _mockAgentService.Verify(s => s.GetAllChildrenAsync(), Times.Once());
     }
 
     [Fact]
@@ -321,7 +321,7 @@ public class SchedulingServiceTests : IDisposable
         await TestExecutePendingReminders(schedulingService);
 
         // Assert
-        _mockSupabaseService.Verify(s => s.GetPendingRemindersAsync(), Times.Once);
+        _mockSupabaseService.Verify(s => s.GetPendingRemindersAsync(), Times.Once());
     }
 
     [Fact]
@@ -351,8 +351,8 @@ public class SchedulingServiceTests : IDisposable
         await TestExecutePendingReminders(schedulingService);
 
         // Assert
-        _mockSupabaseService.Verify(s => s.GetPendingRemindersAsync(), Times.Once);
-        _mockSupabaseService.Verify(s => s.DeleteReminderAsync(123), Times.Once);
+        _mockSupabaseService.Verify(s => s.GetPendingRemindersAsync(), Times.Once());
+        _mockSupabaseService.Verify(s => s.DeleteReminderAsync(123), Times.Once());
     }
 
     [Fact]
@@ -379,7 +379,7 @@ public class SchedulingServiceTests : IDisposable
         await TestCheckForMissedReminders(schedulingService);
 
         // Assert
-        _mockSupabaseService.Verify(s => s.GetPendingRemindersAsync(), Times.Once);
+        _mockSupabaseService.Verify(s => s.GetPendingRemindersAsync(), Times.Once());
     }
 
     [Fact]
@@ -409,7 +409,7 @@ public class SchedulingServiceTests : IDisposable
         await TestCheckForMissedReminders(schedulingService);
 
         // Assert
-        _mockSupabaseService.Verify(s => s.DeleteReminderAsync(456), Times.Once);
+        _mockSupabaseService.Verify(s => s.DeleteReminderAsync(456), Times.Once());
     }
 
     // Helper methods for testing private methods
@@ -474,8 +474,8 @@ public class SchedulingServiceTests : IDisposable
         await TestExecuteTask(schedulingService, task);
 
         // Assert
-        _mockAgentService.Verify(x => x.GetAllChildrenAsync(), Times.Once);
-        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once);
+        _mockAgentService.Verify(x => x.GetAllChildrenAsync(), Times.Once());
+        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once());
     }
 
     [Fact]
@@ -511,8 +511,8 @@ public class SchedulingServiceTests : IDisposable
         await TestExecuteTask(schedulingService, task);
 
         // Assert
-        _mockSupabaseService.Verify(x => x.GetPendingRemindersAsync(), Times.Once);
-        _mockSupabaseService.Verify(x => x.DeleteReminderAsync(testReminder.Id), Times.Once);
+        _mockSupabaseService.Verify(x => x.GetPendingRemindersAsync(), Times.Once());
+        _mockSupabaseService.Verify(x => x.DeleteReminderAsync(testReminder.Id), Times.Once());
     }
 
 
@@ -538,9 +538,9 @@ public class SchedulingServiceTests : IDisposable
         await TestExecutePendingReminders(schedulingService);
 
         // Assert
-        _mockSupabaseService.Verify(x => x.GetPendingRemindersAsync(), Times.Once);
-        _mockSupabaseService.Verify(x => x.DeleteReminderAsync(1), Times.Once);
-        _mockSupabaseService.Verify(x => x.DeleteReminderAsync(2), Times.Once);
+        _mockSupabaseService.Verify(x => x.GetPendingRemindersAsync(), Times.Once());
+        _mockSupabaseService.Verify(x => x.DeleteReminderAsync(1), Times.Once());
+        _mockSupabaseService.Verify(x => x.DeleteReminderAsync(2), Times.Once());
     }
 
     [Fact]
@@ -562,7 +562,7 @@ public class SchedulingServiceTests : IDisposable
 
         // Act & Assert - Should not throw, errors should be logged
         await TestExecutePendingReminders(schedulingService);
-        _mockSupabaseService.Verify(x => x.GetPendingRemindersAsync(), Times.Once);
+        _mockSupabaseService.Verify(x => x.GetPendingRemindersAsync(), Times.Once());
     }
 
     [Fact]
@@ -582,8 +582,8 @@ public class SchedulingServiceTests : IDisposable
         await (Task)method!.Invoke(schedulingService, new object[] { child, task })!;
 
         // Assert
-        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once);
-        _mockAgentService.Verify(x => x.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()), Times.Never);
+        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once());
+        _mockAgentService.Verify(x => x.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never());
     }
 
     [Fact]
@@ -598,7 +598,7 @@ public class SchedulingServiceTests : IDisposable
         _mockSupabaseService.Setup(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync(false);
 
-        _mockAgentService.Setup(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), true))
+        _mockAgentService.Setup(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), It.IsAny<bool>(), true))
             .ReturnsAsync(default(JObject?));
 
         _mockSupabaseService.Setup(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
@@ -609,9 +609,9 @@ public class SchedulingServiceTests : IDisposable
         await (Task)method!.Invoke(schedulingService, new object[] { child, task })!;
 
         // Assert
-        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once);
-        _mockAgentService.Verify(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), true), Times.Once);
-        _mockSupabaseService.Verify(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once);
+        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once());
+        _mockAgentService.Verify(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), It.IsAny<bool>(), true), Times.Once());
+        _mockSupabaseService.Verify(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once());
     }
 
     [Fact]
@@ -628,7 +628,7 @@ public class SchedulingServiceTests : IDisposable
         _mockSupabaseService.Setup(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync(false);
 
-        _mockAgentService.Setup(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), true))
+        _mockAgentService.Setup(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), It.IsAny<bool>(), true))
             .ReturnsAsync(weekLetter);
 
         _mockSupabaseService.Setup(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
@@ -662,7 +662,7 @@ public class SchedulingServiceTests : IDisposable
         await (Task)method!.Invoke(schedulingService, new object[] { child, task })!;
 
         // Assert
-        _mockSupabaseService.Verify(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once);
+        _mockSupabaseService.Verify(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once());
     }
 
     [Fact]
@@ -750,7 +750,7 @@ public class SchedulingServiceTests : IDisposable
 
         // Assert
         Assert.True(result);
-        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", 42, 2024), Times.Once);
+        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", 42, 2024), Times.Once());
     }
 
     [Fact]
@@ -761,7 +761,7 @@ public class SchedulingServiceTests : IDisposable
 
         var child = new Child { FirstName = "TestChild", LastName = "TestLast" };
 
-        _mockAgentService.Setup(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), true))
+        _mockAgentService.Setup(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), It.IsAny<bool>(), true))
             .ReturnsAsync(default(JObject?));
 
         _mockSupabaseService.Setup(x => x.IncrementRetryAttemptAsync("TestChild", 42, 2024))
@@ -772,7 +772,7 @@ public class SchedulingServiceTests : IDisposable
 
         // Assert
         Assert.Null(result);
-        _mockSupabaseService.Verify(x => x.IncrementRetryAttemptAsync("TestChild", 42, 2024), Times.Once);
+        _mockSupabaseService.Verify(x => x.IncrementRetryAttemptAsync("TestChild", 42, 2024), Times.Once());
     }
 
     // ===========================================
@@ -1135,9 +1135,9 @@ public class SchedulingServiceTests : IDisposable
 
         // Assert - Should detect duplicate and skip
         Assert.True(wasPosted);
-        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", 42, 2024), Times.Once);
+        _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", 42, 2024), Times.Once());
         // GetWeekLetterAsync should not be called if already posted
-        _mockAgentService.Verify(x => x.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()), Times.Never);
+        _mockAgentService.Verify(x => x.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never());
     }
 
     public void Dispose()

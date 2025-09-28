@@ -51,7 +51,7 @@ public class TelegramMessageHandlerTests
                 Children = new List<Child>
                 {
                     new Child { FirstName = "Emma", LastName = "Test" },
-                    new Child { FirstName = TestChild1, LastName = "Test" }
+                    new Child { FirstName = "Søren Johannes", LastName = "Test" }
                 }
             }
         };
@@ -202,7 +202,7 @@ public class TelegramMessageHandlerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -223,7 +223,7 @@ public class TelegramMessageHandlerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
+            Times.Never());
     }
 
     [Fact]
@@ -244,7 +244,7 @@ public class TelegramMessageHandlerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
+            Times.Never());
     }
 
     [Fact]
@@ -265,7 +265,7 @@ public class TelegramMessageHandlerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Never);
+            Times.Never());
     }
 
     [Theory]
@@ -289,7 +289,7 @@ public class TelegramMessageHandlerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Theory]
@@ -310,12 +310,12 @@ public class TelegramMessageHandlerTests
 
     [Theory]
     [InlineData("Hvad skal Emma i dag?")]
-    [InlineData("What is TestChild1 doing tomorrow?")]
+    [InlineData("What is Søren Johannes doing tomorrow?")]
     [InlineData("Vis ugeplanen")]
     public async Task HandleMessageAsync_WithValidQuery_ProcessesSuccessfully(string queryText)
     {
         _mockAgentService
-            .Setup(a => a.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()))
+            .Setup(a => a.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .ReturnsAsync(new JObject());
 
         var message = TelegramTestMessageFactory.CreateTextMessage(
@@ -332,7 +332,7 @@ public class TelegramMessageHandlerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -356,7 +356,7 @@ public class TelegramMessageHandlerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error processing message")),
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -376,7 +376,7 @@ public class TelegramMessageHandlerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -396,7 +396,7 @@ public class TelegramMessageHandlerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]
@@ -416,7 +416,7 @@ public class TelegramMessageHandlerTests
                 It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Processing message from")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+            Times.Once());
     }
 
     [Fact]

@@ -116,7 +116,7 @@ public class TelegramChannelTests
 
         await channel.SendMessageAsync("test message");
 
-        _mockMessenger.Verify(m => m.SendMessageAsync("test message"), Times.Once);
+        _mockMessenger.Verify(m => m.SendMessageAsync("test message"), Times.Once());
     }
 
     [Fact]
@@ -126,7 +126,7 @@ public class TelegramChannelTests
 
         await channel.SendMessageAsync("");
 
-        _mockMessenger.Verify(m => m.SendMessageAsync(It.IsAny<string>()), Times.Never);
+        _mockMessenger.Verify(m => m.SendMessageAsync(It.IsAny<string>()), Times.Never());
     }
 
     [Fact]
@@ -136,7 +136,7 @@ public class TelegramChannelTests
 
         await channel.SendMessageAsync("@channel", "test message");
 
-        _mockMessenger.Verify(m => m.SendMessageAsync("@channel", "test message"), Times.Once);
+        _mockMessenger.Verify(m => m.SendMessageAsync("@channel", "test message"), Times.Once());
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public class TelegramChannelTests
 
         await channel.SendMessageAsync("@channel", "");
 
-        _mockMessenger.Verify(m => m.SendMessageAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+        _mockMessenger.Verify(m => m.SendMessageAsync(It.IsAny<string>(), It.IsAny<string>()), Times.Never());
     }
 
     [Fact]
