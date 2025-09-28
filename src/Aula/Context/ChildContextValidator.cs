@@ -18,12 +18,24 @@ public class ChildContextValidator : IChildContextValidator
         // Define valid operations that children can perform
         _validOperations = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
+            // Data operations
             "read:week_letter",
+            "write:week_letter",
             "read:week_schedule",
+            "write:week_schedule",
+            "read:database",
+            "write:database",
+            "delete:database",
+
+            // Calendar operations
             "read:calendar",
+
+            // Reminder operations
             "write:reminder",
             "read:reminder",
             "delete:reminder",
+
+            // Communication operations
             "send:message",
             "read:conversation"
         };
