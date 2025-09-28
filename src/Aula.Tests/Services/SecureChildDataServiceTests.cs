@@ -238,7 +238,7 @@ public class SecureChildDataServiceTests
     }
 
     [Fact]
-    public async Task Constructor_WithNullDependencies_ThrowsArgumentNullException()
+    public Task Constructor_WithNullDependencies_ThrowsArgumentNullException()
     {
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
@@ -268,6 +268,7 @@ public class SecureChildDataServiceTests
         Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
             _mockContext.Object, _mockContextValidator.Object, _mockAuditService.Object, _mockRateLimiter.Object,
             _mockDataService.Object, _mockSupabaseService.Object, null!));
+        return Task.CompletedTask;
     }
 
     [Fact]

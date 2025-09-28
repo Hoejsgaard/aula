@@ -165,11 +165,11 @@ public class UniLoginTests
         // Assert
         Assert.NotNull(usernameProperty);
         Assert.NotNull(passwordProperty);
-        
+
         Assert.True(usernameProperty.CanRead);
         Assert.True(usernameProperty.CanWrite);
         Assert.Equal(typeof(string), usernameProperty.PropertyType);
-        
+
         Assert.True(passwordProperty.CanRead);
         Assert.True(passwordProperty.CanWrite);
         Assert.Equal(typeof(string), passwordProperty.PropertyType);

@@ -175,7 +175,7 @@ public class ChatInterfaceTests
 #pragma warning restore CS1718
         Assert.False(ChatInterface.Slack == ChatInterface.Telegram);
         Assert.False(ChatInterface.Telegram == ChatInterface.Slack);
-        
+
 #pragma warning disable CS1718 // Comparison made to same variable (intentional for testing equality operators)
         Assert.False(ChatInterface.Slack != ChatInterface.Slack);
         Assert.False(ChatInterface.Telegram != ChatInterface.Telegram);

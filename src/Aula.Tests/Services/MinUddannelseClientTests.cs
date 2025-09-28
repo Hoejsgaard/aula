@@ -23,20 +23,20 @@ public class MinUddannelseClientTests
         _mockSupabaseService = new Mock<ISupabaseService>();
         _mockLoggerFactory = new Mock<ILoggerFactory>();
         _mockLogger = new Mock<ILogger<MinUddannelseClient>>();
-        
+
         _mockLoggerFactory.Setup(x => x.CreateLogger(typeof(MinUddannelseClient).FullName!)).Returns(_mockLogger.Object);
-        
+
         _testConfig = new Config
         {
             UniLogin = new UniLogin { Username = "testuser", Password = "testpass" },
-            Features = new Features 
-            { 
+            Features = new Features
+            {
                 UseMockData = false,
                 MockCurrentWeek = 25,
                 MockCurrentYear = 2024
             }
         };
-        
+
         _testChild = new Child { FirstName = "Emma", LastName = "Test" };
     }
 
@@ -96,7 +96,7 @@ public class MinUddannelseClientTests
         var ugebreve = result["ugebreve"] as JArray;
         Assert.NotNull(ugebreve);
         Assert.Single(ugebreve);
-        
+
         var firstItem = ugebreve[0] as JObject;
         Assert.NotNull(firstItem);
         Assert.Equal("Mock Class", firstItem["klasseNavn"]?.ToString());
@@ -194,7 +194,7 @@ public class MinUddannelseClientTests
     public void Constructor_WithConfigAndServices_VerifyDependencyInjection()
     {
         var client = new MinUddannelseClient(_testConfig, _mockSupabaseService.Object, _mockLoggerFactory.Object);
-        
+
         Assert.NotNull(client);
         _mockLoggerFactory.Verify(x => x.CreateLogger(typeof(MinUddannelseClient).FullName!), Times.Once());
     }

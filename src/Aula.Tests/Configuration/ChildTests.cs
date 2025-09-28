@@ -281,19 +281,19 @@ public class ChildTests
         Assert.NotNull(lastNameProperty);
         Assert.NotNull(colourProperty);
         Assert.NotNull(googleCalendarIdProperty);
-        
+
         Assert.True(firstNameProperty.CanRead);
         Assert.True(firstNameProperty.CanWrite);
         Assert.Equal(typeof(string), firstNameProperty.PropertyType);
-        
+
         Assert.True(lastNameProperty.CanRead);
         Assert.True(lastNameProperty.CanWrite);
         Assert.Equal(typeof(string), lastNameProperty.PropertyType);
-        
+
         Assert.True(colourProperty.CanRead);
         Assert.True(colourProperty.CanWrite);
         Assert.Equal(typeof(string), colourProperty.PropertyType);
-        
+
         Assert.True(googleCalendarIdProperty.CanRead);
         Assert.True(googleCalendarIdProperty.CanWrite);
         Assert.Equal(typeof(string), googleCalendarIdProperty.PropertyType);

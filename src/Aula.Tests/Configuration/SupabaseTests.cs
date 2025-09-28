@@ -213,15 +213,15 @@ public class SupabaseTests
         Assert.NotNull(urlProperty);
         Assert.NotNull(keyProperty);
         Assert.NotNull(serviceRoleKeyProperty);
-        
+
         Assert.True(urlProperty.CanRead);
         Assert.True(urlProperty.CanWrite);
         Assert.Equal(typeof(string), urlProperty.PropertyType);
-        
+
         Assert.True(keyProperty.CanRead);
         Assert.True(keyProperty.CanWrite);
         Assert.Equal(typeof(string), keyProperty.PropertyType);
-        
+
         Assert.True(serviceRoleKeyProperty.CanRead);
         Assert.True(serviceRoleKeyProperty.CanWrite);
         Assert.Equal(typeof(string), serviceRoleKeyProperty.PropertyType);

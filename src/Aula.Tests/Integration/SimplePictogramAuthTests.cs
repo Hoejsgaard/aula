@@ -112,7 +112,7 @@ public class SimplePictogramAuthTests
     }
 
     [Fact]
-    public async Task GetWeekLetter_ReturnsValidJson_NotHtml()
+    public Task GetWeekLetter_ReturnsValidJson_NotHtml()
     {
         // This is a key test that validates the fix
         // It ensures that with proper Accept headers, we get JSON not HTML
@@ -132,6 +132,7 @@ public class SimplePictogramAuthTests
         Assert.True(hasUgebreveProperty);
         Assert.True(isJsonObject);
         Assert.NotEqual(JTokenType.String, testWeekLetter.Type); // Not an HTML string
+        return Task.CompletedTask;
     }
 
     [Fact]

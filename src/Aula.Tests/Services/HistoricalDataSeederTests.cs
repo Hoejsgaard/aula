@@ -63,7 +63,7 @@ public class HistoricalDataSeederTests
     public void Constructor_WithNullLoggerFactory_ThrowsNullReferenceException()
     {
         // Act & Assert
-        Assert.Throws<NullReferenceException>(() => 
+        Assert.Throws<NullReferenceException>(() =>
             new HistoricalDataSeeder(null!, _mockAgentService.Object, _mockSupabaseService.Object, _config));
     }
 
@@ -186,7 +186,7 @@ public class HistoricalDataSeederTests
             .ReturnsAsync((string)null!); // No existing content
         _mockAgentService.Setup(s => s.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>(), true))
             .ReturnsAsync(weekLetterJson);
-        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
+        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .Returns(Task.CompletedTask);
 
@@ -230,7 +230,7 @@ public class HistoricalDataSeederTests
         await _seeder.SeedHistoricalWeekLettersAsync();
 
         // Assert
-        _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
+        _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never());
     }
 
@@ -254,7 +254,7 @@ public class HistoricalDataSeederTests
         await _seeder.SeedHistoricalWeekLettersAsync();
 
         // Assert
-        _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
+        _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never());
     }
 

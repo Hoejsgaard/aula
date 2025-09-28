@@ -29,12 +29,12 @@ public class SlackChannel : IChannel
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _logger = loggerFactory?.CreateLogger<SlackChannel>() ?? throw new ArgumentNullException(nameof(loggerFactory));
         _bot = bot;
-        
+
         if (messenger != null && messenger is not SlackChannelMessenger)
         {
             throw new ArgumentException("Messenger must be a SlackChannelMessenger or null", nameof(messenger));
         }
-        
+
         _messenger = messenger ?? new SlackChannelMessenger(new HttpClient(), config, loggerFactory);
 
         Capabilities = new ChannelCapabilities
@@ -253,10 +253,10 @@ public class SlackChannel : IChannel
         return stripped;
     }
 
-    private static readonly Regex HtmlTagPattern = new(@"<\s*\/?\s*(?:b|strong|i|em|code|pre|br|p|div|span)\s*[^>]*\s*\/?\s*>", 
+    private static readonly Regex HtmlTagPattern = new(@"<\s*\/?\s*(?:b|strong|i|em|code|pre|br|p|div|span)\s*[^>]*\s*\/?\s*>",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
-    
-    private static readonly Regex HtmlEntityPattern = new(@"&(?:amp|lt|gt|quot|apos|nbsp);", 
+
+    private static readonly Regex HtmlEntityPattern = new(@"&(?:amp|lt|gt|quot|apos|nbsp);",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private string DetectAndFormat(string message)

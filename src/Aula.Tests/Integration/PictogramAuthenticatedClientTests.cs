@@ -60,7 +60,7 @@ public class PictogramAuthenticatedClientTests
     }
 
     [Fact]
-    public async Task LoginAsync_WithSuccessfulAuth_ReturnsTrue()
+    public Task LoginAsync_WithSuccessfulAuth_ReturnsTrue()
     {
         // Arrange
         var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
@@ -166,6 +166,7 @@ public class PictogramAuthenticatedClientTests
         // Assert
         // Assert.True(result);
         Assert.True(true); // Placeholder
+        return Task.CompletedTask;
     }
 
     [Fact]

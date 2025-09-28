@@ -301,7 +301,7 @@ public class BotBaseTests
         };
 
         var bot = new TestBot(_mockAgentService.Object, singleChildConfig, _logger, _mockSupabaseService.Object);
-        
+
         // Use reflection to call protected method
         var method = typeof(BotBase).GetMethod("BuildWelcomeMessage", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         var result = (string)method!.Invoke(bot, null)!;
@@ -315,7 +315,7 @@ public class BotBaseTests
     public void BuildWelcomeMessage_WithMultipleChildren_ContainsAllNames()
     {
         var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
-        
+
         // Use reflection to call protected method
         var method = typeof(BotBase).GetMethod("BuildWelcomeMessage", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         var result = (string)method!.Invoke(bot, null)!;
@@ -337,7 +337,7 @@ public class BotBaseTests
         };
 
         var bot = new TestBot(_mockAgentService.Object, configWithComplexName, _logger, _mockSupabaseService.Object);
-        
+
         // Use reflection to call protected method
         var method = typeof(BotBase).GetMethod("BuildWelcomeMessage", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         var result = (string)method!.Invoke(bot, null)!;
@@ -350,10 +350,10 @@ public class BotBaseTests
     public void ComputeWeekLetterHash_WithSameContent_ReturnsSameHash()
     {
         var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
-        
+
         // Use reflection to call protected method
         var method = typeof(BotBase).GetMethod("ComputeWeekLetterHash", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        
+
         var hash1 = (string)method!.Invoke(bot, new object[] { "Same content" })!;
         var hash2 = (string)method!.Invoke(bot, new object[] { "Same content" })!;
 
@@ -365,10 +365,10 @@ public class BotBaseTests
     public void ComputeWeekLetterHash_WithDifferentContent_ReturnsDifferentHash()
     {
         var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
-        
+
         // Use reflection to call protected method
         var method = typeof(BotBase).GetMethod("ComputeWeekLetterHash", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        
+
         var hash1 = (string)method!.Invoke(bot, new object[] { "Content 1" })!;
         var hash2 = (string)method!.Invoke(bot, new object[] { "Content 2" })!;
 
@@ -381,7 +381,7 @@ public class BotBaseTests
     public void ComputeWeekLetterHash_ReturnsHexString()
     {
         var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
-        
+
         // Use reflection to call protected method
         var method = typeof(BotBase).GetMethod("ComputeWeekLetterHash", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         var hash = (string)method!.Invoke(bot, new object[] { "Test content" })!;

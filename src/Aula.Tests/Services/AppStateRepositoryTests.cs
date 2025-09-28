@@ -19,7 +19,7 @@ public class AppStateRepositoryTests
     public void Constructor_WithNullSupabase_ThrowsArgumentNullException()
     {
         // Arrange & Act & Assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new AppStateRepository(null!, _loggerFactory));
     }
 
@@ -27,7 +27,7 @@ public class AppStateRepositoryTests
     public void Constructor_WithNullLoggerFactory_ThrowsArgumentNullException()
     {
         // Arrange & Act & Assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new AppStateRepository(null!, null!));
     }
 

@@ -445,9 +445,9 @@ public class SchedulingService : ISchedulingService
             // TODO: Refactor week letter posting to use channel architecture
             // Week letter posting is complex and platform-specific (Slack uses markdown, Telegram uses JSON)
             // For now, use channels directly until IChannel interface is enhanced with week letter capabilities
-            
+
             var enabledChannels = _channelManager.GetEnabledChannels();
-            
+
             foreach (var channel in enabledChannels)
             {
                 try

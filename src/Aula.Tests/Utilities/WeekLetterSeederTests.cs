@@ -23,7 +23,7 @@ public class WeekLetterSeederTests
 
         // Use real LoggerFactory to avoid extension method mocking issues
         var loggerFactory = new LoggerFactory();
-        
+
         _seeder = new WeekLetterSeeder(_mockSupabaseService.Object, loggerFactory);
     }
 
@@ -47,7 +47,7 @@ public class WeekLetterSeederTests
         var loggerFactory = new LoggerFactory();
 
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new WeekLetterSeeder(null!, loggerFactory));
     }
 
@@ -55,7 +55,7 @@ public class WeekLetterSeederTests
     public void Constructor_WithNullLoggerFactory_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new WeekLetterSeeder(_mockSupabaseService.Object, null!));
     }
 
@@ -65,7 +65,7 @@ public class WeekLetterSeederTests
         // Arrange
         _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync((string)null!); // No existing content
-        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
+        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .Returns(Task.CompletedTask);
 
@@ -73,7 +73,7 @@ public class WeekLetterSeederTests
         await _seeder.SeedTestDataAsync();
 
         // Assert - Should call StoreWeekLetterAsync 3 times (for 3 test data entries)
-        _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
+        _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
             It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Exactly(3));
     }
 
@@ -89,7 +89,7 @@ public class WeekLetterSeederTests
 
         _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(childName, weekNumber, year))
             .ReturnsAsync((string)null!); // No existing content
-        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
+        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .Returns(Task.CompletedTask);
 
@@ -113,7 +113,7 @@ public class WeekLetterSeederTests
 
         _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(childName, weekNumber, year))
             .ReturnsAsync((string)null!);
-        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
+        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .Returns(Task.CompletedTask);
 
@@ -143,7 +143,7 @@ public class WeekLetterSeederTests
 
         // Assert
         _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(childName, weekNumber, year), Times.Once());
-        _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
+        _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never());
     }
 
@@ -177,7 +177,7 @@ public class WeekLetterSeederTests
 
         _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(childName, weekNumber, year))
             .ReturnsAsync((string)null!);
-        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
+        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .ThrowsAsync(new Exception("Store error"));
 
@@ -186,7 +186,7 @@ public class WeekLetterSeederTests
 
         // Verify both methods were called despite the exception
         _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(childName, weekNumber, year), Times.Once());
-        _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
+        _mockSupabaseService.Verify(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
             It.IsAny<string>(), It.IsAny<string>(), false, false), Times.Once());
     }
 
@@ -203,7 +203,7 @@ public class WeekLetterSeederTests
 
         _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(childName, weekNumber, year))
             .ReturnsAsync((string)null!);
-        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
+        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .Returns(Task.CompletedTask);
 
@@ -227,7 +227,7 @@ public class WeekLetterSeederTests
 
         _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(childName, weekNumber, year))
             .ReturnsAsync((string)null!);
-        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
+        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .Returns(Task.CompletedTask);
 
@@ -301,7 +301,7 @@ public class WeekLetterSeederTests
         // Arrange
         _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync((string)null!);
-        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), 
+        _mockSupabaseService.Setup(s => s.StoreWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(),
             It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>()))
             .Returns(Task.CompletedTask);
 

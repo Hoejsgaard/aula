@@ -244,10 +244,10 @@ public class TelegramChannel : IChannel
         return stripped;
     }
 
-    private static readonly Regex MarkdownPattern = new(@"(\*\*.*?\*\*)|(\*.*?\*)|(__.*?__)|(_.*?_)|(`.*?`)|(`{3}.*?`{3})|(\[.*?\]\(.*?\))", 
+    private static readonly Regex MarkdownPattern = new(@"(\*\*.*?\*\*)|(\*.*?\*)|(__.*?__)|(_.*?_)|(`.*?`)|(`{3}.*?`{3})|(\[.*?\]\(.*?\))",
         RegexOptions.Singleline | RegexOptions.Compiled);
-    
-    private static readonly Regex HtmlTagPattern = new(@"<\s*\/?\s*(?:b|strong|i|em|code|pre|a)\s*(?:\s[^>]*)?\s*>", 
+
+    private static readonly Regex HtmlTagPattern = new(@"<\s*\/?\s*(?:b|strong|i|em|code|pre|a)\s*(?:\s[^>]*)?\s*>",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private string DetectAndFormat(string message)

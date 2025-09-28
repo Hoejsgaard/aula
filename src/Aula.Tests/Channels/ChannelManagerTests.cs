@@ -30,7 +30,7 @@ public class ChannelManagerTests
         _mockChannel1.Setup(c => c.PlatformId).Returns("slack");
         _mockChannel1.Setup(c => c.IsEnabled).Returns(true);
         _mockChannel1.Setup(c => c.FormatMessage(It.IsAny<string>(), It.IsAny<MessageFormat>())).Returns<string, MessageFormat>((msg, fmt) => msg);
-        
+
         _mockChannel2.Setup(c => c.PlatformId).Returns("telegram");
         _mockChannel2.Setup(c => c.IsEnabled).Returns(false);
         _mockChannel2.Setup(c => c.FormatMessage(It.IsAny<string>(), It.IsAny<MessageFormat>())).Returns<string, MessageFormat>((msg, fmt) => msg);
@@ -170,7 +170,7 @@ public class ChannelManagerTests
         Assert.Single(channels);
         Assert.Contains(mockNewChannel.Object, channels);
         Assert.DoesNotContain(_mockChannel1.Object, channels);
-        
+
         // Note: Can't verify logging with real LoggerFactory in this test setup
     }
 
@@ -294,7 +294,7 @@ public class ChannelManagerTests
         // Arrange
         _mockChannel1.Setup(c => c.TestConnectionAsync()).ReturnsAsync(true);
         _mockChannel2.Setup(c => c.TestConnectionAsync()).ReturnsAsync(false);
-        
+
         _channelManager.RegisterChannel(_mockChannel1.Object);
         _channelManager.RegisterChannel(_mockChannel2.Object);
 
@@ -305,7 +305,7 @@ public class ChannelManagerTests
         Assert.Equal(2, results.Count);
         Assert.True(results["slack"]);
         Assert.False(results["telegram"]);
-        
+
         _mockChannel1.Verify(c => c.TestConnectionAsync(), Times.Once());
         _mockChannel2.Verify(c => c.TestConnectionAsync(), Times.Once());
     }
@@ -409,7 +409,7 @@ public class ChannelManagerTests
         // Assert
         var allChannels = _channelManager.GetAllChannels();
         Assert.Equal(3, allChannels.Count);
-        
+
         Assert.NotNull(_channelManager.GetChannel("slack"));
         Assert.NotNull(_channelManager.GetChannel("telegram"));
         Assert.NotNull(_channelManager.GetChannel("discord"));
@@ -423,7 +423,7 @@ public class ChannelManagerTests
         await _channelManager.InitializeAllChannelsAsync();
         await _channelManager.StartAllChannelsAsync();
         await _channelManager.StopAllChannelsAsync();
-        
+
         var testResults = await _channelManager.TestAllChannelsAsync();
         Assert.Empty(testResults);
     }

@@ -12,7 +12,7 @@ namespace Aula.Tests.Channels;
 // Helper class to create testable SlackChannelMessenger
 public class TestableSlackChannelMessenger : SlackChannelMessenger
 {
-    public TestableSlackChannelMessenger(Config config, ILoggerFactory loggerFactory) 
+    public TestableSlackChannelMessenger(Config config, ILoggerFactory loggerFactory)
         : base(new System.Net.Http.HttpClient(), config, loggerFactory) { }
 }
 
@@ -29,11 +29,11 @@ public class SlackChannelTests
         _mockLoggerFactory = new Mock<ILoggerFactory>();
         _mockLogger = new Mock<ILogger<SlackChannel>>();
         _mockMessenger = new Mock<IChannelMessenger>();
-        
+
         _mockLoggerFactory.Setup(x => x.CreateLogger(typeof(SlackChannel).FullName!)).Returns(_mockLogger.Object);
         _mockLoggerFactory.Setup(x => x.CreateLogger(typeof(SlackChannelMessenger).FullName!)).Returns(Mock.Of<ILogger<SlackChannelMessenger>>());
         _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
-        
+
         _config = new Config
         {
             Slack = new Aula.Configuration.Slack
@@ -49,7 +49,7 @@ public class SlackChannelTests
     public void Constructor_WithValidConfig_InitializesCorrectly()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         Assert.Equal("slack", channel.PlatformId);
         Assert.Equal("Slack", channel.DisplayName);
         Assert.True(channel.IsEnabled);
@@ -59,14 +59,14 @@ public class SlackChannelTests
     [Fact]
     public void Constructor_WithNullConfig_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new SlackChannel(null!, _mockLoggerFactory.Object));
     }
 
     [Fact]
     public void Constructor_WithNullLoggerFactory_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new SlackChannel(_config, null!));
     }
 
@@ -74,8 +74,8 @@ public class SlackChannelTests
     public void Constructor_WithNonSlackChannelMessenger_ThrowsArgumentException()
     {
         var invalidMessenger = new Mock<IChannelMessenger>();
-        
-        Assert.Throws<ArgumentException>(() => 
+
+        Assert.Throws<ArgumentException>(() =>
             new SlackChannel(_config, _mockLoggerFactory.Object, null, invalidMessenger.Object));
     }
 
@@ -84,7 +84,7 @@ public class SlackChannelTests
     {
         // When messenger is null, constructor should create a default SlackChannelMessenger
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null, null);
-        
+
         Assert.NotNull(channel);
         Assert.Equal("slack", channel.PlatformId);
     }
@@ -93,9 +93,9 @@ public class SlackChannelTests
     public void Constructor_WithValidSlackMessenger_AcceptsMessenger()
     {
         var slackMessenger = new TestableSlackChannelMessenger(_config, _mockLoggerFactory.Object);
-        
+
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null, slackMessenger);
-        
+
         Assert.NotNull(channel);
         Assert.Equal("slack", channel.PlatformId);
     }
@@ -107,9 +107,9 @@ public class SlackChannelTests
         {
             Slack = new Aula.Configuration.Slack { WebhookUrl = "https://hooks.slack.com/test" }
         };
-        
+
         var channel = new SlackChannel(config, _mockLoggerFactory.Object);
-        
+
         Assert.True(channel.IsEnabled);
     }
 
@@ -120,9 +120,9 @@ public class SlackChannelTests
         {
             Slack = new Aula.Configuration.Slack { EnableInteractiveBot = true }
         };
-        
+
         var channel = new SlackChannel(config, _mockLoggerFactory.Object);
-        
+
         Assert.True(channel.IsEnabled);
     }
 
@@ -133,9 +133,9 @@ public class SlackChannelTests
         {
             Slack = new Aula.Configuration.Slack { WebhookUrl = null!, EnableInteractiveBot = false }
         };
-        
+
         var channel = new SlackChannel(config, _mockLoggerFactory.Object);
-        
+
         Assert.False(channel.IsEnabled);
     }
 
@@ -143,7 +143,7 @@ public class SlackChannelTests
     public void SupportsInteractivity_WithBotEnabledAndBotProvided_ReturnsTrue()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null);
-        
+
         Assert.False(channel.SupportsInteractivity);
     }
 
@@ -151,7 +151,7 @@ public class SlackChannelTests
     public void SupportsInteractivity_WithBotEnabledButNoBotProvided_ReturnsFalse()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null);
-        
+
         Assert.False(channel.SupportsInteractivity);
     }
 
@@ -162,9 +162,9 @@ public class SlackChannelTests
         {
             Slack = new Aula.Configuration.Slack { EnableInteractiveBot = false }
         };
-        
+
         var channel = new SlackChannel(config, _mockLoggerFactory.Object, null);
-        
+
         Assert.False(channel.SupportsInteractivity);
     }
 
@@ -172,7 +172,7 @@ public class SlackChannelTests
     public void Capabilities_InitializesWithCorrectValues()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         Assert.True(channel.Capabilities.SupportsBold);
         Assert.True(channel.Capabilities.SupportsItalic);
         Assert.True(channel.Capabilities.SupportsCode);
@@ -196,7 +196,7 @@ public class SlackChannelTests
     {
         var testMessenger = new TestableSlackChannelMessenger(_config, _mockLoggerFactory.Object);
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null, testMessenger);
-        
+
         try
         {
             await channel.SendMessageAsync("test message");
@@ -211,9 +211,9 @@ public class SlackChannelTests
     public async Task SendMessageAsync_WithEmptyMessage_LogsWarningAndReturns()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null, null);
-        
+
         await channel.SendMessageAsync("");
-        
+
         _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Warning,
@@ -228,9 +228,9 @@ public class SlackChannelTests
     public async Task SendMessageAsync_WithNullMessage_LogsWarningAndReturns()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         await channel.SendMessageAsync(null!);
-        
+
         // Should complete without throwing - null/empty check happens before messenger call
         Assert.True(true);
     }
@@ -240,7 +240,7 @@ public class SlackChannelTests
     {
         var testMessenger = new TestableSlackChannelMessenger(_config, _mockLoggerFactory.Object);
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null, testMessenger);
-        
+
         try
         {
             await channel.SendMessageAsync("#custom-channel", "test message");
@@ -255,9 +255,9 @@ public class SlackChannelTests
     public async Task SendMessageAsync_WithChannelIdAndEmptyMessage_LogsWarning()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null, null);
-        
+
         await channel.SendMessageAsync("#custom-channel", "");
-        
+
         _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Warning,
@@ -274,9 +274,9 @@ public class SlackChannelTests
     public void GetDefaultChannelId_ReturnsConfiguredChannelId()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         var result = channel.GetDefaultChannelId();
-        
+
         Assert.Equal("#test-channel", result);
     }
 
@@ -287,11 +287,11 @@ public class SlackChannelTests
         {
             Slack = new Aula.Configuration.Slack { ChannelId = null! }
         };
-        
+
         var channel = new SlackChannel(config, _mockLoggerFactory.Object);
-        
+
         var result = channel.GetDefaultChannelId();
-        
+
         Assert.Null(result);
     }
 
@@ -299,9 +299,9 @@ public class SlackChannelTests
     public void FormatMessage_WithNullMessage_ReturnsNull()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         var result = channel.FormatMessage(null!);
-        
+
         Assert.Null(result);
     }
 
@@ -309,9 +309,9 @@ public class SlackChannelTests
     public void FormatMessage_WithEmptyMessage_ReturnsEmpty()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         var result = channel.FormatMessage("");
-        
+
         Assert.Equal("", result);
     }
 
@@ -319,9 +319,9 @@ public class SlackChannelTests
     public void FormatMessage_WithPlatformFormat_FormatsForSlack()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         var result = channel.FormatMessage("**bold text**", MessageFormat.Platform);
-        
+
         Assert.Equal("*bold text*", result);
     }
 
@@ -329,9 +329,9 @@ public class SlackChannelTests
     public void FormatMessage_WithMarkdownFormat_FormatsForSlack()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         var result = channel.FormatMessage("**bold text**", MessageFormat.Markdown);
-        
+
         Assert.Equal("*bold text*", result);
     }
 
@@ -339,9 +339,9 @@ public class SlackChannelTests
     public void FormatMessage_WithHtmlFormat_ConvertsHtmlToSlack()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         var result = channel.FormatMessage("<b>bold text</b>", MessageFormat.Html);
-        
+
         Assert.Equal("*bold text*", result);
     }
 
@@ -349,9 +349,9 @@ public class SlackChannelTests
     public void FormatMessage_WithPlainFormat_StripsFormatting()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         var result = channel.FormatMessage("*bold text*", MessageFormat.Plain);
-        
+
         Assert.Equal("bold text", result);
     }
 
@@ -359,9 +359,9 @@ public class SlackChannelTests
     public void FormatMessage_WithAutoFormatHtml_DetectsAndConvertsHtml()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         var result = channel.FormatMessage("<b>bold text</b>", MessageFormat.Auto);
-        
+
         Assert.Equal("*bold text*", result);
     }
 
@@ -369,9 +369,9 @@ public class SlackChannelTests
     public void FormatMessage_WithAutoFormatMarkdown_FormatsForSlack()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         var result = channel.FormatMessage("**bold text**", MessageFormat.Auto);
-        
+
         Assert.Equal("*bold text*", result);
     }
 
@@ -379,9 +379,9 @@ public class SlackChannelTests
     public void FormatMessage_WithUnknownFormat_ReturnsOriginal()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         var result = channel.FormatMessage("test", (MessageFormat)999);
-        
+
         Assert.Equal("test", result);
     }
 
@@ -393,9 +393,9 @@ public class SlackChannelTests
     public void FormatMessage_SlackFormatting_ConvertsCorrectly(string input, string expected)
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         var result = channel.FormatMessage(input, MessageFormat.Platform);
-        
+
         Assert.Equal(expected, result);
     }
 
@@ -412,9 +412,9 @@ public class SlackChannelTests
     public void FormatMessage_HtmlToSlack_ConvertsCorrectly(string input, string expected)
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         var result = channel.FormatMessage(input, MessageFormat.Html);
-        
+
         Assert.Equal(expected, result);
     }
 
@@ -426,9 +426,9 @@ public class SlackChannelTests
     public void FormatMessage_PlainFormat_StripsFormatting(string input, string expected)
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         var result = channel.FormatMessage(input, MessageFormat.Plain);
-        
+
         Assert.Equal(expected, result);
     }
 
@@ -452,9 +452,9 @@ public class SlackChannelTests
     public void FormatMessage_AutoDetection_DetectsHtmlCorrectly(string input, bool shouldDetectHtml)
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         var result = channel.FormatMessage(input, MessageFormat.Auto);
-        
+
         if (shouldDetectHtml)
         {
             // HTML should be converted (e.g., <b>bold</b> becomes *bold*)
@@ -475,9 +475,9 @@ public class SlackChannelTests
     public async Task TestConnectionAsync_WithBotAndInteractivity_ReturnsTrue()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null);
-        
+
         var result = await channel.TestConnectionAsync();
-        
+
         Assert.True(result);
     }
 
@@ -486,17 +486,17 @@ public class SlackChannelTests
     {
         var config = new Config
         {
-            Slack = new Aula.Configuration.Slack 
-            { 
+            Slack = new Aula.Configuration.Slack
+            {
                 WebhookUrl = "https://hooks.slack.com/test",
                 EnableInteractiveBot = false
             }
         };
-        
+
         var channel = new SlackChannel(config, _mockLoggerFactory.Object);
-        
+
         var result = await channel.TestConnectionAsync();
-        
+
         Assert.True(result);
     }
 
@@ -505,17 +505,17 @@ public class SlackChannelTests
     {
         var config = new Config
         {
-            Slack = new Aula.Configuration.Slack 
-            { 
+            Slack = new Aula.Configuration.Slack
+            {
                 WebhookUrl = null!,
                 EnableInteractiveBot = false
             }
         };
-        
+
         var channel = new SlackChannel(config, _mockLoggerFactory.Object);
-        
+
         var result = await channel.TestConnectionAsync();
-        
+
         Assert.False(result);
     }
 
@@ -524,17 +524,17 @@ public class SlackChannelTests
     {
         var config = new Config
         {
-            Slack = new Aula.Configuration.Slack 
-            { 
+            Slack = new Aula.Configuration.Slack
+            {
                 WebhookUrl = "",
                 EnableInteractiveBot = false
             }
         };
-        
+
         var channel = new SlackChannel(config, _mockLoggerFactory.Object);
-        
+
         var result = await channel.TestConnectionAsync();
-        
+
         Assert.False(result);
     }
 
@@ -543,10 +543,10 @@ public class SlackChannelTests
     {
         // Create a channel with valid configuration
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null);
-        
+
         // Test connection with valid setup
         var result = await channel.TestConnectionAsync();
-        
+
         // With valid configuration, connection test should succeed
         Assert.True(result);
     }
@@ -555,9 +555,9 @@ public class SlackChannelTests
     public async Task InitializeAsync_WithBot_LogsCorrectly()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null);
-        
+
         await channel.InitializeAsync();
-        
+
         _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Information,
@@ -566,7 +566,7 @@ public class SlackChannelTests
                 It.IsAny<Exception>(),
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once());
-        
+
         _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Information,
@@ -581,9 +581,9 @@ public class SlackChannelTests
     public async Task InitializeAsync_WithoutBot_LogsCorrectly()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         await channel.InitializeAsync();
-        
+
         _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Information,
@@ -598,9 +598,9 @@ public class SlackChannelTests
     public async Task StartAsync_WithBot_CallsBotStart()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null);
-        
+
         await channel.StartAsync();
-        
+
         // Without a real bot, should log webhook mode message
         _mockLogger.Verify(
             x => x.Log(
@@ -616,9 +616,9 @@ public class SlackChannelTests
     public async Task StartAsync_WithoutBot_LogsWebhookMode()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         await channel.StartAsync();
-        
+
         _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Information,
@@ -633,9 +633,9 @@ public class SlackChannelTests
     public async Task StartAsync_WhenBotStartThrows_LogsErrorAndRethrows()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null);
-        
+
         await channel.StartAsync(); // Should complete successfully without bot
-        
+
         // Without a real bot, no error should be logged
         _mockLogger.Verify(
             x => x.Log(
@@ -651,9 +651,9 @@ public class SlackChannelTests
     public async Task StopAsync_WithBot_CallsBotStop()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null);
-        
+
         await channel.StopAsync();
-        
+
         // Without a real bot, should log webhook mode message
         _mockLogger.Verify(
             x => x.Log(
@@ -669,9 +669,9 @@ public class SlackChannelTests
     public async Task StopAsync_WithoutBot_LogsWebhookMode()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object);
-        
+
         await channel.StopAsync();
-        
+
         _mockLogger.Verify(
             x => x.Log(
                 LogLevel.Information,
@@ -686,9 +686,9 @@ public class SlackChannelTests
     public async Task StopAsync_WhenBotStopThrows_LogsErrorAndRethrows()
     {
         var channel = new SlackChannel(_config, _mockLoggerFactory.Object, null);
-        
+
         await channel.StopAsync(); // Should complete successfully without bot
-        
+
         // Without a real bot, no error should be logged
         _mockLogger.Verify(
             x => x.Log(

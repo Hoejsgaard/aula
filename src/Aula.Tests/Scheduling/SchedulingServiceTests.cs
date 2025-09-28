@@ -28,7 +28,7 @@ public class SchedulingServiceTests : IDisposable
         _mockSupabaseService = new Mock<ISupabaseService>();
         _mockAgentService = new Mock<IAgentService>();
         _mockChannelManager = new Mock<IChannelManager>();
-        
+
         // Setup mock channel manager to return empty channels list by default
         _mockChannelManager.Setup(m => m.GetEnabledChannels()).Returns(new List<IChannel>());
 

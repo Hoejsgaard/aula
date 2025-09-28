@@ -33,7 +33,7 @@ public class Program
             // Validate configuration at startup
             var configValidator = serviceProvider.GetRequiredService<IConfigurationValidator>();
             var validationResult = await configValidator.ValidateConfigurationAsync(config);
-            
+
             if (!validationResult.IsValid)
             {
                 foreach (var error in validationResult.Errors)
@@ -43,7 +43,7 @@ public class Program
                 logger.LogError("Application startup failed due to configuration errors");
                 return;
             }
-            
+
             foreach (var warning in validationResult.Warnings)
             {
                 logger.LogWarning("Configuration warning: {Warning}", warning);
@@ -246,14 +246,14 @@ public class Program
         services.AddSingleton<IWeekLetterSeeder, WeekLetterSeeder>();
         services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
         services.AddSingleton<IHistoricalDataSeeder, HistoricalDataSeeder>();
-        
+
         // Channel Manager and Channel Registration
         services.AddSingleton<IChannelManager>(provider =>
         {
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
             var config = provider.GetRequiredService<Config>();
             var channelManager = new ChannelManager(loggerFactory);
-            
+
             // Register Slack channel if enabled
             if (config.Slack.Enabled)
             {
@@ -261,7 +261,7 @@ public class Program
                 var slackChannel = new SlackChannel(config, loggerFactory, slackBot);
                 channelManager.RegisterChannel(slackChannel);
             }
-            
+
             // Register Telegram channel if enabled
             if (config.Telegram.Enabled)
             {
@@ -270,7 +270,7 @@ public class Program
                 var telegramChannel = new TelegramChannel(config, loggerFactory, telegramMessenger!, telegramBot);
                 channelManager.RegisterChannel(telegramChannel);
             }
-            
+
             return channelManager;
         });
         services.AddSingleton<ISchedulingService>(provider =>

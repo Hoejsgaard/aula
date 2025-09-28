@@ -312,7 +312,7 @@ public class OpenAiServiceTests
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
         // Act
-        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(), 
+        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(),
             Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>(), customModel);
 
         // Assert
@@ -328,7 +328,7 @@ public class OpenAiServiceTests
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
         // Act
-        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(), 
+        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(),
             Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>(), null);
 
         // Assert
@@ -344,7 +344,7 @@ public class OpenAiServiceTests
         var mockLogger = new Mock<ILogger>();
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
-        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(), 
+        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(),
             mockConversationManager.Object, Mock.Of<IPromptBuilder>());
 
         // Act
@@ -363,7 +363,7 @@ public class OpenAiServiceTests
         var mockLogger = new Mock<ILogger>();
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
-        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(), 
+        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(),
             mockConversationManager.Object, Mock.Of<IPromptBuilder>());
 
         var contextKey = "test-context";

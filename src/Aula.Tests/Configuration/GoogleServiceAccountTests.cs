@@ -23,7 +23,7 @@ public class GoogleServiceAccountTests
         Assert.NotNull(account.AuthProviderX509CertUrl);
         Assert.NotNull(account.ClientX509CertUrl);
         Assert.NotNull(account.UniverseDomain);
-        
+
         Assert.Equal(string.Empty, account.Type);
         Assert.Equal(string.Empty, account.ProjectId);
         Assert.Equal(string.Empty, account.PrivateKeyId);

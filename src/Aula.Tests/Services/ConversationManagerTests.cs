@@ -354,7 +354,7 @@ public class ConversationManagerTests
 
         // Initialize with original content
         manager.EnsureConversationHistory(contextKey, childName, originalContent, ChatInterface.Slack);
-        
+
         // Add some conversation history
         manager.AddUserQuestionToHistory(contextKey, "Test question");
         manager.AddAssistantResponseToHistory(contextKey, "Test response");
@@ -440,11 +440,11 @@ public class ConversationManagerTests
 
         // Act
         manager.EnsureContextKey(contextKey, childName);
-        
+
         // Verify by switching to different child - should reset conversation
         manager.EnsureConversationHistory(contextKey, childName, "content1", ChatInterface.Slack);
         manager.AddUserQuestionToHistory(contextKey, "Question 1");
-        
+
         manager.EnsureConversationHistory(contextKey, "DifferentChild", "content2", ChatInterface.Slack);
         var history = manager.GetConversationHistory(contextKey);
 
@@ -484,7 +484,7 @@ public class ConversationManagerTests
 
         // Act - Simulate concurrent access
         manager.EnsureConversationHistory(contextKey, childName, weekLetterContent, ChatInterface.Slack);
-        
+
         // Multiple operations on same context
         manager.AddUserQuestionToHistory(contextKey, "Question 1");
         manager.AddAssistantResponseToHistory(contextKey, "Response 1");

@@ -54,21 +54,21 @@ public class TelegramChannelTests
     [Fact]
     public void Constructor_WithNullConfig_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new TelegramChannel(null!, _loggerFactory, _mockMessenger.Object));
     }
 
     [Fact]
     public void Constructor_WithNullLoggerFactory_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new TelegramChannel(_testConfig, null!, _mockMessenger.Object));
     }
 
     [Fact]
     public void Constructor_WithNullMessenger_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             new TelegramChannel(_testConfig, _loggerFactory, null!));
     }
 

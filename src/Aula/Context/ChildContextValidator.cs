@@ -37,7 +37,13 @@ public class ChildContextValidator : IChildContextValidator
 
             // Communication operations
             "send:message",
-            "read:conversation"
+            "read:conversation",
+
+            // AI operations
+            "ai:summarize",
+            "ai:query",
+            "ai:extract",
+            "ai:tools"
         };
     }
 

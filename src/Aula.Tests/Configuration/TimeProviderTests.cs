@@ -281,7 +281,7 @@ public class TimeProviderTests
 
         // Assert
         Assert.NotSame(provider1, provider2);
-        
+
         var time1 = provider1.Now;
         var time2 = provider2.Now;
         var year1 = provider1.CurrentYear;
