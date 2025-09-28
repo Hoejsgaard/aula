@@ -730,3 +730,46 @@ Each chapter must pass:
 - ✅ Security: Prompt injection prevention verified
 - ✅ Performance: Rate limiting enforced
 - ✅ Isolation: AI operations completely isolated per child
+
+### Chapter 5: The Scheduling Layer - ✅ COMPLETE (2025-09-28)
+
+**Status**: Successfully implemented and committed
+
+**Key Design Decisions**:
+1. **In-Memory Task Storage**: Used dictionary with child-prefixed keys for complete isolation
+2. **Resource Exhaustion Prevention**: Multi-level rate limiting (tasks per child, executions per hour, operations per day)
+3. **Context Preservation**: Ensured child context flows through background task execution
+4. **Permission Model**: Extended validator with 5 scheduling permissions (create, read, update, delete, execute)
+5. **Sliding Window Rate Limiting**: Implemented for accurate time-based rate limiting
+6. **Task Isolation**: Each child's tasks are completely independent with no interference
+
+**Deliverables Completed**:
+- ✅ `IChildScheduler` interface for context-aware scheduling
+- ✅ `IChildSchedulingRateLimiter` interface for resource protection
+- ✅ `SecureChildScheduler` with comprehensive security layers
+- ✅ `ChildSchedulingRateLimiter` with sliding window algorithm
+- ✅ Extended `ChildContextValidator` with scheduling permissions
+- ✅ 25 comprehensive tests across 2 test files
+
+**Security Layers Implemented**:
+1. **Context Validation**: Ensures child context is valid
+2. **Permission Validation**: Checks scheduling permissions
+3. **Input Validation**: Validates cron expressions
+4. **Rate Limiting**: Prevents resource exhaustion
+5. **Task Ownership**: Ensures children can only manage their own tasks
+6. **Audit Logging**: Tracks all scheduling operations
+
+**Rate Limiting Features**:
+- Max 10 scheduled tasks per child
+- Max 60 task executions per hour
+- Max 20 schedule operations per day
+- 1-minute cooldown between same task executions
+- Sliding window algorithm for accurate time tracking
+
+**Quality Gates Passed**:
+- ✅ Build: 0 errors, 10 warnings (existing code)
+- ✅ Tests: 1747/1747 passing (1722 existing + 25 new)
+- ✅ Runtime: Application runs with scheduling isolation
+- ✅ Security: Rate limiting and permissions enforced
+- ✅ Performance: Resource exhaustion prevented
+- ✅ Isolation: Scheduling operations completely isolated per child

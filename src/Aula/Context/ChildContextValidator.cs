@@ -43,7 +43,14 @@ public class ChildContextValidator : IChildContextValidator
             "ai:summarize",
             "ai:query",
             "ai:extract",
-            "ai:tools"
+            "ai:tools",
+
+            // Scheduling operations
+            "schedule:create",
+            "schedule:read",
+            "schedule:update",
+            "schedule:delete",
+            "schedule:execute"
         };
     }
 
