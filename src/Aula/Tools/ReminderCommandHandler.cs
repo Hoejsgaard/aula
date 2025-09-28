@@ -41,8 +41,8 @@ public class ReminderCommandHandler
 
     private async Task<(bool handled, string? response)> TryHandleAddReminder(string text, bool isEnglish)
     {
-        // Patterns: "remind me tomorrow at 8:00 that TestChild1 has Haver til maver"
-        //           "husk mig i morgen kl 8:00 at TestChild1 har Haver til maver"
+        // Patterns: "remind me tomorrow at 8:00 that Søren Johannes has Haver til maver"
+        //           "husk mig i morgen kl 8:00 at Søren Johannes har Haver til maver"
 
         var reminderPatterns = new[]
         {

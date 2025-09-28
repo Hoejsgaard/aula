@@ -220,7 +220,7 @@ public class AiToolsManager : IAiToolsManager
 • Get current date and time
 
 **Natural Language Examples:**
-• ""Remind me tomorrow at 8 AM that TestChild1 has soccer practice""
+• ""Remind me tomorrow at 8 AM that Søren Johannes has soccer practice""
 • ""What activities does Emma have on Friday?""
 • ""Show me this week's letter for all children""
 • ""List my reminders and delete the second one""
