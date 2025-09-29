@@ -10,7 +10,7 @@ namespace Aula.Channels;
 /// <summary>
 /// Telegram channel implementation with support for HTML formatting and Telegram-specific features.
 /// </summary>
-public class TelegramChannel : IChannel
+public partial class TelegramChannel : IChannel
 {
     private readonly ILogger _logger;
     private readonly Config _config;
@@ -244,23 +244,23 @@ public class TelegramChannel : IChannel
         return stripped;
     }
 
-    private static readonly Regex MarkdownPattern = new(@"(\*\*.*?\*\*)|(\*.*?\*)|(__.*?__)|(_.*?_)|(`.*?`)|(`{3}.*?`{3})|(\[.*?\]\(.*?\))",
-        RegexOptions.Singleline | RegexOptions.Compiled);
+    [GeneratedRegex(@"(\*\*.*?\*\*)|(\*.*?\*)|(__.*?__)|(_.*?_)|(`.*?`)|(`{3}.*?`{3})|(\[.*?\]\(.*?\))", RegexOptions.Singleline)]
+    private static partial Regex MarkdownPattern();
 
-    private static readonly Regex HtmlTagPattern = new(@"<\s*\/?\s*(?:b|strong|i|em|code|pre|a)\s*(?:\s[^>]*)?\s*>",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    [GeneratedRegex(@"<\s*\/?\s*(?:b|strong|i|em|code|pre|a)\s*(?:\s[^>]*)?\s*>", RegexOptions.IgnoreCase)]
+    private static partial Regex HtmlTagPattern();
 
     private string DetectAndFormat(string message)
     {
         // Enhanced markdown detection using regex patterns
         // Check for common markdown patterns: **bold**, *italic*, `code`, ```blocks```, [links](url)
-        if (MarkdownPattern.IsMatch(message))
+        if (MarkdownPattern().IsMatch(message))
         {
             return ConvertMarkdownToHtml(message);
         }
 
         // Enhanced HTML detection using regex patterns
-        if (HtmlTagPattern.IsMatch(message))
+        if (HtmlTagPattern().IsMatch(message))
         {
             return FormatForTelegram(message);
         }

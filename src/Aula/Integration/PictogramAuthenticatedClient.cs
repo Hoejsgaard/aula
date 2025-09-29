@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Web;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
@@ -11,7 +12,7 @@ namespace Aula.Integration;
 /// <summary>
 /// Handles authentication for children using pictogram-based login instead of passwords
 /// </summary>
-public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthenticatedClient
+public partial class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthenticatedClient
 {
     private readonly Child _child;
     private readonly ILogger _logger;
@@ -24,9 +25,12 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
             "https://www.minuddannelse.net/KmdIdentity/Login?domainHint=unilogin-idp-prod&toFa=False",
             "https://www.minuddannelse.net/")
     {
-        _child = child ?? throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(child);
+        ArgumentNullException.ThrowIfNull(pictogramSequence);
+
+        _child = child;
         _username = username;
-        _pictogramSequence = pictogramSequence ?? throw new ArgumentNullException(nameof(pictogramSequence));
+        _pictogramSequence = pictogramSequence;
         if (pictogramSequence.Length == 0)
             throw new ArgumentException("Pictogram sequence cannot be empty", nameof(pictogramSequence));
         _logger = logger;
@@ -437,7 +441,7 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
         if (url.StartsWith("http://") || url.StartsWith("https://")) return url;
 
         var baseUri = new Uri(baseUrl);
-        if (url.StartsWith("/"))
+        if (url.StartsWith('/'))
         {
             return $"{baseUri.Scheme}://{baseUri.Host}{url}";
         }
@@ -466,15 +470,14 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
 
             // Look for personid in the __tempcontext__ object
             // Format: "personid":2643430
-            var personIdMatch = System.Text.RegularExpressions.Regex.Match(content, @"""personid"":(\d+)");
+            var personIdMatch = PersonIdRegex().Match(content);
             if (personIdMatch.Success)
             {
                 _childId = personIdMatch.Groups[1].Value;
                 _logger.LogInformation("✅ Extracted child ID from page context: {ChildId}", _childId);
 
                 // Verify the user name matches what we expect
-                var nameMatch = System.Text.RegularExpressions.Regex.Match(content,
-                    @"""fornavn"":""([^""]*)"",""efternavn"":""([^""]*)""");
+                var nameMatch = NameRegex().Match(content);
                 if (nameMatch.Success)
                 {
                     var firstName = nameMatch.Groups[1].Value;
@@ -494,7 +497,7 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
             if (apiResponse.IsSuccessStatusCode)
             {
                 var apiContent = await apiResponse.Content.ReadAsStringAsync();
-                if (apiContent.StartsWith("{") || apiContent.StartsWith("["))
+                if (apiContent.StartsWith('{') || apiContent.StartsWith('['))
                 {
                     var studentData = Newtonsoft.Json.Linq.JObject.Parse(apiContent);
                     _childId = studentData["id"]?.ToString() ??
@@ -536,7 +539,7 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
             var content = await response.Content.ReadAsStringAsync();
 
             // Check if content is HTML (error page) instead of JSON
-            if (content.TrimStart().StartsWith("<"))
+            if (content.TrimStart().StartsWith('<'))
             {
                 _logger.LogWarning("❌ Received HTML instead of JSON for week letter. Might be an authentication or session issue.");
                 _logger.LogDebug("Response content starts with: {Content}", content.Substring(0, Math.Min(100, content.Length)));
@@ -608,4 +611,10 @@ public class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthentic
         var dateTime = date.ToDateTime(TimeOnly.MinValue);
         return cal.GetWeekOfYear(dateTime, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
     }
+
+    [GeneratedRegex(@"""personid"":(\d+)")]
+    private static partial Regex PersonIdRegex();
+
+    [GeneratedRegex(@"""fornavn"":""([^""]*)"",""efternavn"":""([^""]*)""")]
+    private static partial Regex NameRegex();
 }

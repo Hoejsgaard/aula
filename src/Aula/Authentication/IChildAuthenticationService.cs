@@ -24,17 +24,17 @@ public interface IChildAuthenticationService
     /// <summary>
     /// Gets the week letter for the current child context.
     /// </summary>
-    /// <param name="date">The date to get the week letter for</param>
+    /// <param name="targetDate">The date to get the week letter for</param>
     /// <param name="allowLiveFetch">Whether to allow fetching from the live service</param>
     /// <returns>The week letter data, or null if not found</returns>
-    Task<JObject?> GetWeekLetterAsync(DateOnly date, bool allowLiveFetch = false);
+    Task<JObject?> GetWeekLetterAsync(DateOnly targetDate, bool allowLiveFetch = false);
 
     /// <summary>
     /// Gets the week schedule for the current child context.
     /// </summary>
-    /// <param name="date">The date to get the schedule for</param>
+    /// <param name="targetDate">The date to get the schedule for</param>
     /// <returns>The schedule data, or null if not found</returns>
-    Task<JObject?> GetWeekScheduleAsync(DateOnly date);
+    Task<JObject?> GetWeekScheduleAsync(DateOnly targetDate);
 
     /// <summary>
     /// Gets stored week letter for the current child context.

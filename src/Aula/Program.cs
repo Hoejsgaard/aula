@@ -15,6 +15,8 @@ using Aula.Repositories;
 using Aula.Utilities;
 using Aula.Context;
 using Aula.Authentication;
+using Aula.Events;
+using Newtonsoft.Json.Linq;
 
 namespace Aula;
 
@@ -51,8 +53,8 @@ public class Program
                 logger.LogWarning("Configuration warning: {Warning}", warning);
             }
 
-            var slackBot = serviceProvider.GetRequiredService<SlackBot>();
-            var telegramClient = serviceProvider.GetRequiredService<TelegramClient>();
+            // Child-aware architecture: Services are now accessed through child context scopes
+            // Legacy SlackBot and TelegramClient removed in favor of child-aware implementations
 
             // Initialize Supabase
             var supabaseService = serviceProvider.GetRequiredService<ISupabaseService>();
@@ -96,47 +98,190 @@ public class Program
             await schedulingService.StartAsync();
             logger.LogInformation("🚀 SchedulingService.StartAsync completed");
 
-            // Start Slack interactive bot if enabled
-            SlackInteractiveBot? slackInteractiveBot = null;
-            if (config.Slack.EnableInteractiveBot)
-            {
-                slackInteractiveBot = serviceProvider.GetRequiredService<SlackInteractiveBot>();
-                await slackInteractiveBot.Start();
-            }
+            // Create list to hold child-specific bots (will be populated later)
+            var childSlackBots = new List<ChildAwareSlackInteractiveBot>();
 
-            // Start Telegram interactive bot if enabled
-            TelegramInteractiveBot? telegramInteractiveBot = null;
-            if (config.Telegram.Enabled && !string.IsNullOrEmpty(config.Telegram.Token))
+            // Wire up child-specific event handlers for each configured child
+            if (schedulingService is SchedulingService schedService)
             {
-                telegramInteractiveBot = serviceProvider.GetRequiredService<TelegramInteractiveBot>();
-                await telegramInteractiveBot.Start();
-            }
+                // Subscribe to week letter events for each child
+                schedService.ChildWeekLetterReady += async (sender, args) =>
+                {
+                    logger.LogInformation("Received week letter event for child: {ChildName}", args.ChildFirstName);
 
-            // Check if we need to post week letters on startup
-            if (config.Features?.PostWeekLettersOnStartup == true)
-            {
-                await coordinator.PostWeekLettersForAllChildrenAsync(
-                    DateOnly.FromDateTime(DateTime.Today),
-                    async (child, weekLetter) =>
+                    // Find the child configuration
+                    var childConfig = config.MinUddannelse?.Children?.FirstOrDefault(c =>
+                        c.FirstName.Equals(args.ChildFirstName, StringComparison.OrdinalIgnoreCase));
+
+                    if (childConfig == null)
                     {
-                        if (weekLetter != null)
-                        {
-                            // Post to Slack if enabled
-                            if (config.Slack.Enabled)
-                            {
-                                await slackBot.PostWeekLetter(weekLetter, child);
-                            }
+                        logger.LogWarning("No configuration found for child: {ChildName}", args.ChildFirstName);
+                        return;
+                    }
 
-                            // Post to Telegram if enabled
-                            if (config.Telegram.Enabled && telegramInteractiveBot != null)
+                    // Process within a child context scope
+                    using (var scope = new ChildContextScope(serviceProvider, childConfig))
+                    {
+                        try
+                        {
+                            // Find the bot for this child and post the week letter
+                            var childBot = childSlackBots.FirstOrDefault(b =>
+                                b.AssignedChildName?.Equals(args.ChildFirstName, StringComparison.OrdinalIgnoreCase) == true);
+
+                            if (childBot != null && args.WeekLetter != null)
                             {
-                                await telegramInteractiveBot.PostWeekLetter(child.FirstName, weekLetter);
+                                // Extract week letter content
+                                var ugebreve = args.WeekLetter["ugebreve"];
+                                if (ugebreve is JArray ugebreveArray && ugebreveArray.Count > 0)
+                                {
+                                    var content = ugebreveArray[0]?["indhold"]?.ToString() ?? "";
+                                    var uge = ugebreveArray[0]?["uge"]?.ToString() ?? "";
+                                    var klasseNavn = ugebreveArray[0]?["klasseNavn"]?.ToString() ?? "";
+
+                                    if (!string.IsNullOrEmpty(content))
+                                    {
+                                        // Convert HTML to Slack markdown
+                                        var html2MarkdownConverter = new Html2SlackMarkdownConverter();
+                                        var markdownContent = html2MarkdownConverter.Convert(content).Replace("**", "*");
+
+                                        var message = $"📅 *Ugbrev for uge {uge} - {klasseNavn}*\n\n{markdownContent}";
+                                        await childBot.SendMessageToSlack(message);
+
+                                        logger.LogInformation("Posted week letter for {ChildName}", args.ChildFirstName);
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                logger.LogWarning("No bot found for child {ChildName} or week letter is null", args.ChildFirstName);
                             }
                         }
-                    });
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Error processing week letter event for child: {ChildName}", args.ChildFirstName);
+                        }
+                    }
+                };
+
+                // Subscribe to schedule events for each child
+                schedService.ChildScheduleReady += async (sender, args) =>
+                {
+                    logger.LogInformation("Received schedule event for child: {ChildName}", args.ChildFirstName);
+
+                    // Find the child configuration
+                    var childConfig = config.MinUddannelse?.Children?.FirstOrDefault(c =>
+                        c.FirstName.Equals(args.ChildFirstName, StringComparison.OrdinalIgnoreCase));
+
+                    if (childConfig == null)
+                    {
+                        logger.LogWarning("No configuration found for child: {ChildName}", args.ChildFirstName);
+                        return;
+                    }
+
+                    // Process within a child context scope
+                    using (var scope = new ChildContextScope(serviceProvider, childConfig))
+                    {
+                        try
+                        {
+                            // Process the schedule for this specific child
+                            logger.LogInformation("Processing schedule for {ChildName} in isolated context", args.ChildFirstName);
+
+                            // TODO: Add specific schedule processing logic here if needed
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Error processing schedule event for child: {ChildName}", args.ChildFirstName);
+                        }
+                    }
+                };
             }
 
-            // Scheduling service already started above - removed duplicate
+            // Start a separate Slack bot for each child with Slack enabled
+            foreach (var child in config.MinUddannelse?.Children ?? new List<Child>())
+            {
+                if (child.Channels?.Slack?.EnableInteractiveBot == true &&
+                    !string.IsNullOrEmpty(child.Channels?.Slack?.ApiToken) &&
+                    !string.IsNullOrEmpty(child.Channels?.Slack?.ChannelId))
+                {
+                    logger.LogInformation("Starting Slack bot for child: {ChildName}", child.FirstName);
+
+                    // Create a child-specific bot instance
+                    var childBot = new ChildAwareSlackInteractiveBot(
+                        serviceProvider,
+                        coordinator,
+                        config,
+                        loggerFactory,
+                        httpClient: null);
+
+                    await childBot.StartForChild(child);
+                    childSlackBots.Add(childBot);
+
+                    logger.LogInformation("Slack bot started for {ChildName} on channel {ChannelId}",
+                        child.FirstName, child.Channels.Slack.ChannelId);
+                }
+            }
+
+            // Start Telegram interactive bot if enabled for any child
+            TelegramInteractiveBot? telegramInteractiveBot = null;
+            if (config.MinUddannelse?.Children?.Any(c => c.Channels?.Telegram?.Enabled == true && !string.IsNullOrEmpty(c.Channels?.Telegram?.Token)) == true)
+            {
+                telegramInteractiveBot = serviceProvider.GetService<TelegramInteractiveBot>();
+                if (telegramInteractiveBot != null)
+                {
+                    await telegramInteractiveBot.Start();
+                }
+            }
+
+            // Post week letters on startup if configured
+            if (config.Features?.PostWeekLettersOnStartup == true && schedulingService is SchedulingService schedSvc)
+            {
+                logger.LogInformation("📬 Posting current week letters on startup");
+
+                // Get current week and year
+                var now = DateTime.Now;
+                var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(now);
+                var year = now.Year;
+
+                // Post week letters for each child
+                foreach (var child in config.MinUddannelse?.Children ?? new List<Child>())
+                {
+                    try
+                    {
+                        // Get the week letter from cache
+                        var dataService = serviceProvider.GetRequiredService<IDataService>();
+                        var weekLetter = dataService.GetWeekLetter(child, weekNumber, year);
+
+                        if (weekLetter != null)
+                        {
+                            logger.LogInformation("📨 Emitting week letter event for {ChildName} (week {WeekNumber}/{Year})",
+                                child.FirstName, weekNumber, year);
+
+                            // Emit the ChildWeekLetterReady event
+                            var childId = child.FirstName.ToLowerInvariant().Replace(" ", "_");
+                            var eventArgs = new ChildWeekLetterEventArgs(
+                                childId,
+                                child.FirstName,
+                                weekNumber,
+                                year,
+                                weekLetter);
+
+                            // Fire the event - the event handlers in Program.cs will post to Slack
+                            schedSvc.TriggerChildWeekLetterReady(eventArgs);
+                        }
+                        else
+                        {
+                            logger.LogWarning("No week letter found for {ChildName} (week {WeekNumber}/{Year})",
+                                child.FirstName, weekNumber, year);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Error posting week letter for {ChildName} on startup", child.FirstName);
+                    }
+                }
+
+                logger.LogInformation("✅ Week letter startup posting complete");
+            }
 
             logger.LogInformation("Aula started");
 
@@ -201,12 +346,12 @@ public class Program
 
         // Child-aware architecture services
         services.AddScoped<IChildContext, ChildContext>();
+        services.AddScoped<IChildAuditService, ChildAuditService>();
+        services.AddScoped<IChildRateLimiter, ChildRateLimiter>();
         services.AddScoped<IChildDataService, SecureChildDataService>();
         services.AddScoped<IChildAgentService, SecureChildAgentService>();
         services.AddScoped<IChildAuthenticationService, SecureChildAuthenticationService>();
         services.AddScoped<IChildAwareOpenAiService, SecureChildAwareOpenAiService>();
-        services.AddScoped<IChildAuditService, ChildAuditService>();
-        services.AddScoped<IChildRateLimiter, ChildRateLimiter>();
         services.AddSingleton<IChildContextValidator, ChildContextValidator>();
         services.AddSingleton<IChildOperationExecutor, ChildOperationExecutor>();
         services.AddSingleton<IChildServiceCoordinator, ChildServiceCoordinator>();
@@ -225,7 +370,34 @@ public class Program
         services.AddSingleton<IAgentService, AgentService>();
 
         // Other singleton services
-        services.AddSingleton<SlackBot>();
+        // Only register SlackBot if we have a root-level Slack config (which we don't anymore)
+        // Or if any child has Slack configured
+        var hasSlackConfig = configuration.GetSection("Slack").Exists() ||
+                            configuration.GetSection("MinUddannelse:Children")
+                                .GetChildren()
+                                .Any(c => c.GetValue<bool>("Channels:Slack:Enabled"));
+
+        if (hasSlackConfig)
+        {
+            // For now, create a dummy SlackBot that doesn't require webhook URL
+            services.AddSingleton<SlackBot>(provider =>
+            {
+                // Use the first child's webhook URL if available
+                var config = provider.GetRequiredService<Config>();
+                var firstChildWithSlack = config.MinUddannelse?.Children?
+                    .FirstOrDefault(c => c.Channels?.Slack?.Enabled == true &&
+                                       !string.IsNullOrEmpty(c.Channels?.Slack?.WebhookUrl));
+
+                if (firstChildWithSlack?.Channels?.Slack?.WebhookUrl != null)
+                {
+                    return new SlackBot(firstChildWithSlack.Channels.Slack.WebhookUrl);
+                }
+
+                // Return null if no valid Slack config found
+                return null!;
+            });
+        }
+
         services.AddSingleton<TelegramClient>();
         services.AddSingleton<IGoogleCalendarService, GoogleCalendarService>();
         services.AddSingleton<IConversationManager, ConversationManager>();
@@ -239,7 +411,13 @@ public class Program
             var promptBuilder = provider.GetRequiredService<IPromptBuilder>();
             return new OpenAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager, conversationManager, promptBuilder);
         });
-        services.AddSingleton<SlackInteractiveBot>();
+        // Register child-aware Slack interactive bot if any child has it enabled
+        if (hasSlackConfig)
+        {
+            services.AddSingleton<ChildAwareSlackInteractiveBot>();
+            // Keep legacy SlackInteractiveBot for transition period
+            services.AddSingleton<SlackInteractiveBot>();
+        }
 
         // Only register TelegramInteractiveBot if enabled
         var telegramEnabled = configuration.GetValue<bool>("Telegram:Enabled");

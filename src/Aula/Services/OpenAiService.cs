@@ -33,14 +33,10 @@ public class OpenAiService : IOpenAiService
     {
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new ArgumentException("API key cannot be null or empty", nameof(apiKey));
-        if (loggerFactory == null)
-            throw new ArgumentNullException(nameof(loggerFactory));
-        if (aiToolsManager == null)
-            throw new ArgumentNullException(nameof(aiToolsManager));
-        if (conversationManager == null)
-            throw new ArgumentNullException(nameof(conversationManager));
-        if (promptBuilder == null)
-            throw new ArgumentNullException(nameof(promptBuilder));
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        ArgumentNullException.ThrowIfNull(aiToolsManager);
+        ArgumentNullException.ThrowIfNull(conversationManager);
+        ArgumentNullException.ThrowIfNull(promptBuilder);
 
         _aiModel = model ?? Models.Gpt_4;
         _openAiClient = new OpenAIService(new OpenAiOptions()
@@ -55,16 +51,11 @@ public class OpenAiService : IOpenAiService
 
     internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, IConversationManager conversationManager, IPromptBuilder promptBuilder, string? model = null)
     {
-        if (openAiClient == null)
-            throw new ArgumentNullException(nameof(openAiClient));
-        if (loggerFactory == null)
-            throw new ArgumentNullException(nameof(loggerFactory));
-        if (aiToolsManager == null)
-            throw new ArgumentNullException(nameof(aiToolsManager));
-        if (conversationManager == null)
-            throw new ArgumentNullException(nameof(conversationManager));
-        if (promptBuilder == null)
-            throw new ArgumentNullException(nameof(promptBuilder));
+        ArgumentNullException.ThrowIfNull(openAiClient);
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        ArgumentNullException.ThrowIfNull(aiToolsManager);
+        ArgumentNullException.ThrowIfNull(conversationManager);
+        ArgumentNullException.ThrowIfNull(promptBuilder);
 
         _openAiClient = openAiClient;
         _logger = loggerFactory.CreateLogger(nameof(OpenAiService));

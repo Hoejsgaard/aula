@@ -55,7 +55,7 @@ public class AiToolsManager : IAiToolsManager
                 reminders = reminders.Where(r => string.Equals(r.ChildName, childName, StringComparison.OrdinalIgnoreCase)).ToList();
             }
 
-            if (!reminders.Any())
+            if (reminders.Count == 0)
             {
                 var filterInfo = string.IsNullOrEmpty(childName) ? "" : $" for {childName}";
                 return $"No active reminders found{filterInfo}.";
@@ -110,10 +110,10 @@ public class AiToolsManager : IAiToolsManager
         {
             var allChildren = _dataService.GetChildren();
             var children = string.IsNullOrEmpty(childName)
-                ? allChildren
+                ? allChildren.ToList()
                 : allChildren.Where(c => $"{c.FirstName} {c.LastName}".Contains(childName, StringComparison.OrdinalIgnoreCase)).ToList();
 
-            if (!children.Any())
+            if (children.Count == 0)
             {
                 return $"❌ No children found matching '{childName}'.";
             }
@@ -184,7 +184,7 @@ public class AiToolsManager : IAiToolsManager
                               line.Contains(targetDate.ToString("dd/MM"), StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            if (lines.Any())
+            if (lines.Count > 0)
             {
                 return $"📅 **{child.FirstName} {child.LastName}** activities for {targetDate:yyyy-MM-dd} ({dayName}):\n" +
                        string.Join("\n", lines.Select(l => $"• {l.Trim()}"));

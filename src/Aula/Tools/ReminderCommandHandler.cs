@@ -155,7 +155,7 @@ public class ReminderCommandHandler
                 {
                     var reminders = await _supabaseService.GetAllRemindersAsync();
 
-                    if (!reminders.Any())
+                    if (reminders.Count == 0)
                     {
                         string noRemindersMessage = isEnglish
                             ? "📝 No reminders found."

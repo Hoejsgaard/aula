@@ -69,7 +69,7 @@ public class SecureChildChannelManager : IChildChannelManager
 
         // Layer 4: Get child's channels
         var childChannels = await GetChildChannelsAsync();
-        if (!childChannels.Any())
+        if (childChannels.Count == 0)
         {
             _logger.LogWarning("No channels configured for {ChildName}", child.FirstName);
             return false;
@@ -256,7 +256,7 @@ public class SecureChildChannelManager : IChildChannelManager
         var alertChannels = childChannels.Where(c =>
             c.IsEnabled && c.Permissions.CanReceiveAlerts).ToList();
 
-        if (!alertChannels.Any())
+        if (alertChannels.Count == 0)
         {
             _logger.LogWarning("No alert-enabled channels for {ChildName}", child.FirstName);
             return false;
@@ -292,7 +292,7 @@ public class SecureChildChannelManager : IChildChannelManager
         var reminderChannels = childChannels.Where(c =>
             c.IsEnabled && c.Permissions.CanReceiveReminders).ToList();
 
-        if (!reminderChannels.Any())
+        if (reminderChannels.Count == 0)
         {
             _logger.LogWarning("No reminder-enabled channels for {ChildName}", child.FirstName);
             return false;

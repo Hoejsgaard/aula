@@ -32,7 +32,7 @@ public class SlackInteractiveBot : IDisposable
     private Timer? _cleanupTimer;
     private string _lastTimestamp = "0"; // Start from the beginning of time
     private readonly object _lockObject = new object();
-    private int _pollingInProgress = 0;
+    private int _pollingInProgress;
     private readonly ConcurrentDictionary<string, byte> _postedWeekLetterHashes = new ConcurrentDictionary<string, byte>();
     // Track our own message IDs to avoid processing them
     private readonly ConcurrentDictionary<string, byte> _sentMessageIds = new ConcurrentDictionary<string, byte>();
@@ -165,7 +165,7 @@ public class SlackInteractiveBot : IDisposable
                 {
                     // Slack timestamps are in the format "1234567890.123456"
                     // We need to ensure we're handling them correctly
-                    if (_lastTimestamp.Contains("."))
+                    if (_lastTimestamp.Contains('.'))
                     {
                         // Already in correct format, add a tiny fraction to avoid duplicates
                         adjustedTimestamp = _lastTimestamp;
@@ -210,7 +210,7 @@ public class SlackInteractiveBot : IDisposable
 
                 // Get the messages
                 var messages = data["messages"] as JArray;
-                if (messages == null || !messages.Any())
+                if (messages == null || messages.Count == 0)
                 {
                     return;
                 }
@@ -238,7 +238,7 @@ public class SlackInteractiveBot : IDisposable
                     return !string.IsNullOrEmpty(m["user"]?.ToString());
                 }).ToList();
 
-                if (!userMessages.Any())
+                if (userMessages.Count() == 0)
                 {
                     return;
                 }

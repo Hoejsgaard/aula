@@ -53,7 +53,7 @@ public class GoogleCalendarService : IGoogleCalendarService
         return JsonConvert.SerializeObject(credentialObject);
     }
 
-    private async Task<Events> GetEventsForCurrentWeek(string calendarId)
+    private async Task<Google.Apis.Calendar.v3.Data.Events> GetEventsForCurrentWeek(string calendarId)
     {
         // Calculate the start and end dates of the current week
         var currentDate = DateTime.UtcNow;

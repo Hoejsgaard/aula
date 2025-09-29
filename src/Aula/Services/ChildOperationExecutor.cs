@@ -23,9 +23,13 @@ public class ChildOperationExecutor : IChildOperationExecutor
         ILogger<ChildOperationExecutor> logger,
         IChildAuditService auditService)
     {
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(auditService);
+
+        _serviceProvider = serviceProvider;
+        _logger = logger;
+        _auditService = auditService;
     }
 
     public async Task<TResult> ExecuteInChildContextAsync<TResult>(
@@ -33,10 +37,8 @@ public class ChildOperationExecutor : IChildOperationExecutor
         Func<IServiceProvider, Task<TResult>> operation,
         string operationName)
     {
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
-        if (operation == null)
-            throw new ArgumentNullException(nameof(operation));
+        ArgumentNullException.ThrowIfNull(child);
+        ArgumentNullException.ThrowIfNull(operation);
 
         _logger.LogInformation("Starting operation {OperationName} for child {ChildName}",
             operationName, child.FirstName);
@@ -79,10 +81,8 @@ public class ChildOperationExecutor : IChildOperationExecutor
         Func<IServiceProvider, Task> operation,
         string operationName)
     {
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
-        if (operation == null)
-            throw new ArgumentNullException(nameof(operation));
+        ArgumentNullException.ThrowIfNull(child);
+        ArgumentNullException.ThrowIfNull(operation);
 
         _logger.LogInformation("Starting operation {OperationName} for child {ChildName}",
             operationName, child.FirstName);
@@ -123,10 +123,8 @@ public class ChildOperationExecutor : IChildOperationExecutor
         Func<IServiceProvider, Task<TResult>> operation,
         string operationName)
     {
-        if (children == null)
-            throw new ArgumentNullException(nameof(children));
-        if (operation == null)
-            throw new ArgumentNullException(nameof(operation));
+        ArgumentNullException.ThrowIfNull(children);
+        ArgumentNullException.ThrowIfNull(operation);
 
         var results = new Dictionary<Child, TResult>();
         var tasks = new List<Task>();
@@ -165,8 +163,7 @@ public class ChildOperationExecutor : IChildOperationExecutor
 
     public async Task<string> ExportChildDataAsync(Child child)
     {
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(child);
 
         _logger.LogInformation("Starting GDPR data export for child {ChildName}", child.FirstName);
 
@@ -211,8 +208,7 @@ public class ChildOperationExecutor : IChildOperationExecutor
 
     public async Task<bool> DeleteChildDataAsync(Child child)
     {
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(child);
 
         _logger.LogWarning("Starting GDPR data deletion for child {ChildName}", child.FirstName);
 
@@ -251,8 +247,7 @@ public class ChildOperationExecutor : IChildOperationExecutor
 
     public async Task RecordConsentAsync(Child child, string consentType, bool granted)
     {
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(child);
         if (string.IsNullOrWhiteSpace(consentType))
             throw new ArgumentException("Consent type must be specified", nameof(consentType));
 

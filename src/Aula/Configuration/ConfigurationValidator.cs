@@ -56,7 +56,7 @@ public class ConfigurationValidator : IConfigurationValidator
             return;
         }
 
-        if (minUddannelse.Children == null || !minUddannelse.Children.Any())
+        if (minUddannelse.Children == null || minUddannelse.Children.Count == 0)
         {
             errors.Add("At least one child must be configured in MinUddannelse.Children section");
             return;

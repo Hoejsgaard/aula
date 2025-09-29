@@ -17,7 +17,8 @@ public class ChildContext : IChildContext
 
     public ChildContext(ILogger<ChildContext> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
         _contextId = Guid.NewGuid();
         _createdAt = DateTimeOffset.UtcNow;
         _isChildSet = false;
@@ -31,7 +32,7 @@ public class ChildContext : IChildContext
 
     public void SetChild(Child child)
     {
-        if (child == null) throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(child);
 
         if (_isChildSet)
         {

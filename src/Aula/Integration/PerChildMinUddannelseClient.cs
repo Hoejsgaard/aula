@@ -12,7 +12,7 @@ namespace Aula.Integration;
 /// MinUddannelse client that authenticates per-child instead of using a parent account
 /// Each child has their own UniLogin credentials
 /// </summary>
-public class PerChildMinUddannelseClient : IMinUddannelseClient
+public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 {
     private readonly ISupabaseService? _supabaseService;
     private readonly ILogger _logger;
@@ -227,19 +227,18 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
         }
     }
 
-    private int GetIsoWeekNumber(DateOnly date)
+    private static int GetIsoWeekNumber(DateOnly date)
     {
         return System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
     }
 
-    private string ComputeContentHash(string content)
+    private static string ComputeContentHash(string content)
     {
-        using var sha256 = System.Security.Cryptography.SHA256.Create();
-        var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(content));
+        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content));
         return Convert.ToHexString(hash);
     }
 
-    private JObject CreateEmptyWeekLetter(int weekNumber)
+    private static JObject CreateEmptyWeekLetter(int weekNumber)
     {
         return new JObject
         {
@@ -257,7 +256,7 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
     /// <summary>
     /// Inner class that handles authentication for a specific child
     /// </summary>
-    private class ChildAuthenticatedClient : UniLoginDebugClient, IChildAuthenticatedClient
+    private sealed partial class ChildAuthenticatedClient : UniLoginDebugClient, IChildAuthenticatedClient
     {
         private readonly Child _child;
         private readonly ILogger _logger;
@@ -318,15 +317,14 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
 
                 // Look for personid in the __tempcontext__ object
                 // Format: "personid":2643430
-                var personIdMatch = Regex.Match(content, @"""personid"":(\d+)");
+                var personIdMatch = PersonIdRegex().Match(content);
                 if (personIdMatch.Success)
                 {
                     var childId = personIdMatch.Groups[1].Value;
                     _logger.LogInformation("✅ Extracted child ID from page context: {ChildId}", childId);
 
                     // Verify the user name matches what we expect
-                    var nameMatch = Regex.Match(content,
-                        @"""fornavn"":""([^""]*)"",""efternavn"":""([^""]*)""");
+                    var nameMatch = NameRegex().Match(content);
                     if (nameMatch.Success)
                     {
                         var firstName = nameMatch.Groups[1].Value;
@@ -346,7 +344,7 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
                 if (apiResponse.IsSuccessStatusCode)
                 {
                     var apiContent = await apiResponse.Content.ReadAsStringAsync();
-                    if (apiContent.StartsWith("{") || apiContent.StartsWith("["))
+                    if (apiContent.StartsWith('{') || apiContent.StartsWith('['))
                     {
                         var studentData = JObject.Parse(apiContent);
                         var childId = studentData["id"]?.ToString() ??
@@ -389,7 +387,7 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
             var weekLetter = JObject.Parse(json);
             var weekLetterArray = weekLetter["ugebreve"] as JArray;
 
-            if (weekLetterArray == null || !weekLetterArray.Any())
+            if (weekLetterArray == null || weekLetterArray.Count == 0)
             {
                 var nullObject = new JObject
                 {
@@ -420,9 +418,14 @@ public class PerChildMinUddannelseClient : IMinUddannelseClient
             return JObject.Parse(json);
         }
 
-        private int GetIsoWeekNumber(DateOnly date)
+        private static int GetIsoWeekNumber(DateOnly date)
         {
             return System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
         }
+        [GeneratedRegex(@"""personid"":(\d+)")]
+        private static partial Regex PersonIdRegex();
+
+        [GeneratedRegex(@"""fornavn"":""([^""]*)"",""efternavn"":""([^""]*)""")]
+        private static partial Regex NameRegex();
     }
 }

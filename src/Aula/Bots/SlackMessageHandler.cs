@@ -31,13 +31,21 @@ public class SlackMessageHandler
         ConversationContext conversationContext,
         ReminderCommandHandler reminderHandler)
     {
-        _agentService = agentService ?? throw new ArgumentNullException(nameof(agentService));
-        _config = config ?? throw new ArgumentNullException(nameof(config));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        _childrenByName = childrenByName ?? throw new ArgumentNullException(nameof(childrenByName));
-        _conversationContext = conversationContext ?? throw new ArgumentNullException(nameof(conversationContext));
-        _reminderHandler = reminderHandler ?? throw new ArgumentNullException(nameof(reminderHandler));
+        ArgumentNullException.ThrowIfNull(agentService);
+        ArgumentNullException.ThrowIfNull(config);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(httpClient);
+        ArgumentNullException.ThrowIfNull(childrenByName);
+        ArgumentNullException.ThrowIfNull(conversationContext);
+        ArgumentNullException.ThrowIfNull(reminderHandler);
+
+        _agentService = agentService;
+        _config = config;
+        _logger = logger;
+        _httpClient = httpClient;
+        _childrenByName = childrenByName;
+        _conversationContext = conversationContext;
+        _reminderHandler = reminderHandler;
     }
 
     public async Task<bool> HandleMessageAsync(JObject eventData)
@@ -60,9 +68,20 @@ public class SlackMessageHandler
             // Extract child name from the message
             var childName = ExtractChildName(text);
 
-            // Use the tool-based processing that can handle both tools and regular questions
+            // Get the specific child object if a name was extracted
+            Child? specificChild = null;
+            if (!string.IsNullOrEmpty(childName))
+            {
+                specificChild = await _agentService.GetChildByNameAsync(childName);
+                if (specificChild != null)
+                {
+                    _logger.LogInformation("Processing message for specific child: {ChildName}", specificChild.FirstName);
+                }
+            }
+
+            // Use the tool-based processing with specific child isolation
             string contextKey = $"slack-{channel}";
-            string response = await _agentService.ProcessQueryWithToolsAsync(text, contextKey, ChatInterface.Slack);
+            string response = await _agentService.ProcessQueryWithToolsAsync(text, contextKey, specificChild, ChatInterface.Slack);
 
             // Update conversation context
             var (isAboutToday, isAboutTomorrow, isAboutHomework) = ExtractContextFlags(text);

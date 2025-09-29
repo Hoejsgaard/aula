@@ -39,7 +39,7 @@ public class AppStateRepository : IAppStateRepository
             .Where(a => a.Key == key)
             .Get();
 
-        if (existing.Models.Any())
+        if (existing.Models.Count > 0)
         {
             // Update existing value
             await _supabase

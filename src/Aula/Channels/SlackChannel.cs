@@ -10,7 +10,7 @@ namespace Aula.Channels;
 /// <summary>
 /// Slack channel implementation with support for Slack-specific formatting and features.
 /// </summary>
-public class SlackChannel : IChannel
+public partial class SlackChannel : IChannel
 {
     private readonly ILogger _logger;
     private readonly Config _config;
@@ -210,14 +210,14 @@ public class SlackChannel : IChannel
 
         // Process in order to avoid conflicts:
         // 1. First convert double asterisks (bold) and double underscores (bold) to single asterisks
-        formatted = Regex.Replace(formatted, @"\*\*(.*?)\*\*", "BOLD_PLACEHOLDER_$1_PLACEHOLDER", RegexOptions.Singleline);
-        formatted = Regex.Replace(formatted, @"__(.*?)__", "BOLD_PLACEHOLDER_$1_PLACEHOLDER", RegexOptions.Singleline);
+        formatted = DoubleBoldPattern().Replace(formatted, "BOLD_PLACEHOLDER_$1_PLACEHOLDER");
+        formatted = DoubleUnderscorePattern().Replace(formatted, "BOLD_PLACEHOLDER_$1_PLACEHOLDER");
 
         // 2. Then convert remaining single asterisks to underscores (italic)
-        formatted = Regex.Replace(formatted, @"\*([^*]+?)\*", "_$1_", RegexOptions.Singleline);
+        formatted = SingleAsteriskPattern().Replace(formatted, "_$1_");
 
         // 3. Finally replace placeholders with actual Slack bold format
-        formatted = Regex.Replace(formatted, @"BOLD_PLACEHOLDER_(.*?)_PLACEHOLDER", "*$1*", RegexOptions.Singleline);
+        formatted = BoldPlaceholderPattern().Replace(formatted, "*$1*");
 
         return formatted;
     }
@@ -227,16 +227,16 @@ public class SlackChannel : IChannel
         var converted = htmlMessage;
 
         // Convert common HTML tags to Slack format
-        converted = Regex.Replace(converted, @"<b>(.*?)</b>", "*$1*", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        converted = Regex.Replace(converted, @"<strong>(.*?)</strong>", "*$1*", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        converted = Regex.Replace(converted, @"<i>(.*?)</i>", "_$1_", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        converted = Regex.Replace(converted, @"<em>(.*?)</em>", "_$1_", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        converted = Regex.Replace(converted, @"<code>(.*?)</code>", "`$1`", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        converted = Regex.Replace(converted, @"<pre>(.*?)</pre>", "```$1```", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-        converted = Regex.Replace(converted, @"<br\s*/?>\s*", "\n", RegexOptions.IgnoreCase);
+        converted = HtmlBoldPattern().Replace(converted, "*$1*");
+        converted = HtmlStrongPattern().Replace(converted, "*$1*");
+        converted = HtmlItalicPattern().Replace(converted, "_$1_");
+        converted = HtmlEmphasisPattern().Replace(converted, "_$1_");
+        converted = HtmlCodePattern().Replace(converted, "`$1`");
+        converted = HtmlPrePattern().Replace(converted, "```$1```");
+        converted = HtmlBreakPattern().Replace(converted, "\n");
 
         // Remove any remaining HTML tags
-        converted = Regex.Replace(converted, @"<[^>]+>", "", RegexOptions.Singleline);
+        converted = AnyHtmlTagPattern().Replace(converted, "");
 
         return converted;
     }
@@ -245,25 +245,73 @@ public class SlackChannel : IChannel
     {
         // Remove Slack formatting - process longer patterns first
         var stripped = message;
-        stripped = Regex.Replace(stripped, @"```(.*?)```", "$1", RegexOptions.Singleline); // Code block (3 backticks)
-        stripped = Regex.Replace(stripped, @"`([^`]+?)`", "$1", RegexOptions.Singleline);   // Code (1 backtick)
-        stripped = Regex.Replace(stripped, @"\*([^*]+?)\*", "$1", RegexOptions.Singleline); // Bold
-        stripped = Regex.Replace(stripped, @"_([^_]+?)_", "$1", RegexOptions.Singleline);   // Italic
+        stripped = CodeBlockPattern().Replace(stripped, "$1"); // Code block (3 backticks)
+        stripped = CodeSpanPattern().Replace(stripped, "$1");   // Code (1 backtick)
+        stripped = SingleAsteriskPattern().Replace(stripped, "$1"); // Bold
+        stripped = UnderscoreItalicPattern().Replace(stripped, "$1");   // Italic
 
         return stripped;
     }
 
-    private static readonly Regex HtmlTagPattern = new(@"<\s*\/?\s*(?:b|strong|i|em|code|pre|br|p|div|span)\s*[^>]*\s*\/?\s*>",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    [GeneratedRegex(@"<\s*\/?\s*(?:b|strong|i|em|code|pre|br|p|div|span)\s*[^>]*\s*\/?\s*>", RegexOptions.IgnoreCase)]
+    private static partial Regex HtmlTagPattern();
 
-    private static readonly Regex HtmlEntityPattern = new(@"&(?:amp|lt|gt|quot|apos|nbsp);",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    [GeneratedRegex(@"&(?:amp|lt|gt|quot|apos|nbsp);", RegexOptions.IgnoreCase)]
+    private static partial Regex HtmlEntityPattern();
+
+    // Slack formatting patterns
+    [GeneratedRegex(@"\*\*(.*?)\*\*", RegexOptions.Singleline)]
+    private static partial Regex DoubleBoldPattern();
+
+    [GeneratedRegex(@"__(.*?)__", RegexOptions.Singleline)]
+    private static partial Regex DoubleUnderscorePattern();
+
+    [GeneratedRegex(@"\*([^*]+?)\*", RegexOptions.Singleline)]
+    private static partial Regex SingleAsteriskPattern();
+
+    [GeneratedRegex(@"BOLD_PLACEHOLDER_(.*?)_PLACEHOLDER", RegexOptions.Singleline)]
+    private static partial Regex BoldPlaceholderPattern();
+
+    // HTML conversion patterns
+    [GeneratedRegex(@"<b>(.*?)</b>", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+    private static partial Regex HtmlBoldPattern();
+
+    [GeneratedRegex(@"<strong>(.*?)</strong>", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+    private static partial Regex HtmlStrongPattern();
+
+    [GeneratedRegex(@"<i>(.*?)</i>", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+    private static partial Regex HtmlItalicPattern();
+
+    [GeneratedRegex(@"<em>(.*?)</em>", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+    private static partial Regex HtmlEmphasisPattern();
+
+    [GeneratedRegex(@"<code>(.*?)</code>", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+    private static partial Regex HtmlCodePattern();
+
+    [GeneratedRegex(@"<pre>(.*?)</pre>", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+    private static partial Regex HtmlPrePattern();
+
+    [GeneratedRegex(@"<br\s*/?>\s*", RegexOptions.IgnoreCase)]
+    private static partial Regex HtmlBreakPattern();
+
+    [GeneratedRegex(@"<[^>]+>", RegexOptions.Singleline)]
+    private static partial Regex AnyHtmlTagPattern();
+
+    // Strip formatting patterns
+    [GeneratedRegex(@"```(.*?)```", RegexOptions.Singleline)]
+    private static partial Regex CodeBlockPattern();
+
+    [GeneratedRegex(@"`([^`]+?)`", RegexOptions.Singleline)]
+    private static partial Regex CodeSpanPattern();
+
+    [GeneratedRegex(@"_([^_]+?)_", RegexOptions.Singleline)]
+    private static partial Regex UnderscoreItalicPattern();
 
     private string DetectAndFormat(string message)
     {
         // Enhanced HTML detection using regex patterns
         // Check for HTML tags or entities that indicate HTML content
-        if (HtmlTagPattern.IsMatch(message) || HtmlEntityPattern.IsMatch(message))
+        if (HtmlTagPattern().IsMatch(message) || HtmlEntityPattern().IsMatch(message))
         {
             return ConvertHtmlToSlack(message);
         }

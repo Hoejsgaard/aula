@@ -40,8 +40,7 @@ public class ChildRateLimiter : IChildRateLimiter
 
     public Task<bool> IsAllowedAsync(Child child, string operation)
     {
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(child);
 
         var key = GetRateLimitKey(child, operation);
         var config = GetOperationConfig(operation);
@@ -70,8 +69,7 @@ public class ChildRateLimiter : IChildRateLimiter
 
     public Task RecordOperationAsync(Child child, string operation)
     {
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(child);
 
         var key = GetRateLimitKey(child, operation);
         var config = GetOperationConfig(operation);
@@ -93,8 +91,7 @@ public class ChildRateLimiter : IChildRateLimiter
 
     public Task<int> GetRemainingOperationsAsync(Child child, string operation)
     {
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(child);
 
         var key = GetRateLimitKey(child, operation);
         var config = GetOperationConfig(operation);
@@ -115,8 +112,7 @@ public class ChildRateLimiter : IChildRateLimiter
 
     public Task ResetLimitsAsync(Child child)
     {
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(child);
 
         var keysToRemove = _limitStates.Keys
             .Where(k => k.StartsWith($"{child.FirstName}_{child.LastName}_", StringComparison.OrdinalIgnoreCase))
@@ -148,7 +144,7 @@ public class ChildRateLimiter : IChildRateLimiter
     /// <summary>
     /// Configuration for a rate limit.
     /// </summary>
-    private class RateLimitConfig
+    private sealed class RateLimitConfig
     {
         public int LimitPerWindow { get; }
         public TimeSpan WindowDuration { get; }
@@ -163,7 +159,7 @@ public class ChildRateLimiter : IChildRateLimiter
     /// <summary>
     /// State tracking for rate limiting using sliding window algorithm.
     /// </summary>
-    private class RateLimitState
+    private sealed class RateLimitState
     {
         private readonly TimeSpan _windowDuration;
         private readonly Queue<DateTimeOffset> _operationTimestamps;

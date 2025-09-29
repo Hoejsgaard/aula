@@ -23,10 +23,8 @@ public class ChildContextScope : IDisposable
     /// <exception cref="ArgumentNullException">If serviceProvider or child is null</exception>
     public ChildContextScope(IServiceProvider serviceProvider, Child child)
     {
-        if (serviceProvider == null)
-            throw new ArgumentNullException(nameof(serviceProvider));
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+        ArgumentNullException.ThrowIfNull(child);
 
         _scope = serviceProvider.CreateScope();
         _context = _scope.ServiceProvider.GetRequiredService<IChildContext>();
@@ -71,8 +69,7 @@ public class ChildContextScope : IDisposable
     /// <returns>The result of the operation</returns>
     public async Task<T> ExecuteAsync<T>(Func<IServiceProvider, Task<T>> operation)
     {
-        if (operation == null)
-            throw new ArgumentNullException(nameof(operation));
+        ArgumentNullException.ThrowIfNull(operation);
 
         ThrowIfDisposed();
         _context.ValidateContext();

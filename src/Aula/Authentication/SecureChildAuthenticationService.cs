@@ -22,7 +22,7 @@ public class SecureChildAuthenticationService : IChildAuthenticationService
     private readonly ILogger<SecureChildAuthenticationService> _logger;
     private readonly Dictionary<string, AuthenticationSession> _sessions = new();
 
-    private class AuthenticationSession
+    private sealed class AuthenticationSession
     {
         public string SessionId { get; set; } = Guid.NewGuid().ToString();
         public bool IsAuthenticated { get; set; }
@@ -37,11 +37,17 @@ public class SecureChildAuthenticationService : IChildAuthenticationService
         IChildAuditService auditService,
         ILogger<SecureChildAuthenticationService> logger)
     {
-        _childContext = childContext ?? throw new ArgumentNullException(nameof(childContext));
-        _minUddannelseClient = minUddannelseClient ?? throw new ArgumentNullException(nameof(minUddannelseClient));
-        _childDataService = childDataService ?? throw new ArgumentNullException(nameof(childDataService));
-        _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(childContext);
+        ArgumentNullException.ThrowIfNull(minUddannelseClient);
+        ArgumentNullException.ThrowIfNull(childDataService);
+        ArgumentNullException.ThrowIfNull(auditService);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        _childContext = childContext;
+        _minUddannelseClient = minUddannelseClient;
+        _childDataService = childDataService;
+        _auditService = auditService;
+        _logger = logger;
     }
 
     public async Task<bool> AuthenticateAsync()
@@ -99,7 +105,7 @@ public class SecureChildAuthenticationService : IChildAuthenticationService
         return Task.FromResult(false);
     }
 
-    public async Task<JObject?> GetWeekLetterAsync(DateOnly date, bool allowLiveFetch = false)
+    public async Task<JObject?> GetWeekLetterAsync(DateOnly targetDate, bool allowLiveFetch = false)
     {
         if (_childContext.CurrentChild == null)
         {
@@ -108,16 +114,16 @@ public class SecureChildAuthenticationService : IChildAuthenticationService
 
         var child = _childContext.CurrentChild;
         _logger.LogInformation("Getting week letter for child {ChildName}, date {Date}",
-            child.FirstName, date);
+            child.FirstName, targetDate);
 
         try
         {
             // Use the child data service which has caching and database support
-            var letter = await _childDataService.GetOrFetchWeekLetterAsync(date, allowLiveFetch);
+            var letter = await _childDataService.GetOrFetchWeekLetterAsync(targetDate, allowLiveFetch);
 
             if (letter != null)
             {
-                await _auditService.LogDataAccessAsync(child, "GetWeekLetter", date.ToString(), true);
+                await _auditService.LogDataAccessAsync(child, "GetWeekLetter", targetDate.ToString(), true);
             }
 
             return letter;
@@ -125,12 +131,12 @@ public class SecureChildAuthenticationService : IChildAuthenticationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get week letter for child {ChildName}", child.FirstName);
-            await _auditService.LogDataAccessAsync(child, "GetWeekLetter", date.ToString(), false);
+            await _auditService.LogDataAccessAsync(child, "GetWeekLetter", targetDate.ToString(), false);
             throw;
         }
     }
 
-    public async Task<JObject?> GetWeekScheduleAsync(DateOnly date)
+    public async Task<JObject?> GetWeekScheduleAsync(DateOnly targetDate)
     {
         if (_childContext.CurrentChild == null)
         {
@@ -139,21 +145,21 @@ public class SecureChildAuthenticationService : IChildAuthenticationService
 
         var child = _childContext.CurrentChild;
         _logger.LogInformation("Getting week schedule for child {ChildName}, date {Date}",
-            child.FirstName, date);
+            child.FirstName, targetDate);
 
         try
         {
             // Calculate week number
             var calendar = System.Globalization.CultureInfo.InvariantCulture.Calendar;
-            var weekNumber = calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue),
+            var weekNumber = calendar.GetWeekOfYear(targetDate.ToDateTime(TimeOnly.MinValue),
                 System.Globalization.CalendarWeekRule.FirstFourDayWeek,
                 DayOfWeek.Monday);
 
-            var schedule = await _childDataService.GetWeekScheduleAsync(weekNumber, date.Year);
+            var schedule = await _childDataService.GetWeekScheduleAsync(weekNumber, targetDate.Year);
 
             if (schedule != null)
             {
-                await _auditService.LogDataAccessAsync(child, "GetWeekSchedule", date.ToString(), true);
+                await _auditService.LogDataAccessAsync(child, "GetWeekSchedule", targetDate.ToString(), true);
             }
 
             return schedule;
@@ -161,7 +167,7 @@ public class SecureChildAuthenticationService : IChildAuthenticationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get week schedule for child {ChildName}", child.FirstName);
-            await _auditService.LogDataAccessAsync(child, "GetWeekSchedule", date.ToString(), false);
+            await _auditService.LogDataAccessAsync(child, "GetWeekSchedule", targetDate.ToString(), false);
             throw;
         }
     }

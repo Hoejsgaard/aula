@@ -8,7 +8,7 @@ namespace Aula.Channels;
 /// Filters message content to prevent information leakage between children.
 /// Ensures that messages only contain information appropriate for the target child.
 /// </summary>
-public class MessageContentFilter : IMessageContentFilter
+public partial class MessageContentFilter : IMessageContentFilter
 {
     private readonly ILogger<MessageContentFilter> _logger;
 
@@ -57,8 +57,7 @@ public class MessageContentFilter : IMessageContentFilter
             return false;
 
         // Check for any name patterns in the message
-        var namePattern = @"\b[A-Z][a-zæøåÆØÅ]+\s+[A-Z][a-zæøåÆØÅ]+\b";
-        var matches = Regex.Matches(message, namePattern);
+        var matches = NamePatternRegex().Matches(message);
 
         foreach (Match match in matches)
         {
@@ -91,7 +90,7 @@ public class MessageContentFilter : IMessageContentFilter
         }
 
         // Check for multiple distinct class references (might indicate cross-child data)
-        var classReferences = Regex.Matches(message, @"\d+\.\s*klasse", RegexOptions.IgnoreCase);
+        var classReferences = ClassReferenceRegex().Matches(message);
         var distinctClasses = classReferences.Cast<Match>()
             .Select(m => m.Value)
             .Distinct()
@@ -203,8 +202,7 @@ public class MessageContentFilter : IMessageContentFilter
             return false;
 
         // Check if line mentions a child's name that isn't the current child
-        var namePattern = @"\b[A-Z][a-zæøåÆØÅ]+\s+[A-Z][a-zæøåÆØÅ]+\b";
-        var matches = Regex.Matches(line, namePattern);
+        var matches = NamePatternRegex().Matches(line);
 
         foreach (Match match in matches)
         {
@@ -325,4 +323,10 @@ public class MessageContentFilter : IMessageContentFilter
 
         return message;
     }
+
+    [GeneratedRegex(@"\b[A-Z][a-zæøåÆØÅ]+\s+[A-Z][a-zæøåÆØÅ]+\b")]
+    private static partial Regex NamePatternRegex();
+
+    [GeneratedRegex(@"\d+\.\s*klasse", RegexOptions.IgnoreCase)]
+    private static partial Regex ClassReferenceRegex();
 }

@@ -23,10 +23,8 @@ public class ConversationManager : IConversationManager
 
     public ConversationManager(ILoggerFactory loggerFactory, IPromptBuilder promptBuilder)
     {
-        if (loggerFactory == null)
-            throw new ArgumentNullException(nameof(loggerFactory));
-        if (promptBuilder == null)
-            throw new ArgumentNullException(nameof(promptBuilder));
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        ArgumentNullException.ThrowIfNull(promptBuilder);
 
         _logger = loggerFactory.CreateLogger(nameof(ConversationManager));
         _promptBuilder = promptBuilder;

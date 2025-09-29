@@ -123,7 +123,7 @@ public class ChildAwareMinUddannelseClient : IChildAuthenticationService
         return Task.FromResult(false);
     }
 
-    public async Task<JObject?> GetWeekLetterAsync(DateOnly date, bool allowLiveFetch = false)
+    public async Task<JObject?> GetWeekLetterAsync(DateOnly targetDate, bool allowLiveFetch = false)
     {
         _context.ValidateContext();
         var child = _context.CurrentChild!;
@@ -149,12 +149,12 @@ public class ChildAwareMinUddannelseClient : IChildAuthenticationService
 
         try
         {
-            var result = await _innerClient.GetWeekLetter(child, date, allowLiveFetch);
+            var result = await _innerClient.GetWeekLetter(child, targetDate, allowLiveFetch);
 
             await _auditService.LogDataAccessAsync(
                 child,
                 "GetWeekLetter",
-                $"week_{date:yyyy-MM-dd}",
+                $"week_{targetDate:yyyy-MM-dd}",
                 result != null);
 
             UpdateSessionActivity(child);
@@ -163,12 +163,12 @@ public class ChildAwareMinUddannelseClient : IChildAuthenticationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching week letter for {ChildName}", child.FirstName);
-            await _auditService.LogDataAccessAsync(child, "GetWeekLetter", $"week_{date:yyyy-MM-dd}", false);
+            await _auditService.LogDataAccessAsync(child, "GetWeekLetter", $"week_{targetDate:yyyy-MM-dd}", false);
             throw;
         }
     }
 
-    public async Task<JObject?> GetWeekScheduleAsync(DateOnly date)
+    public async Task<JObject?> GetWeekScheduleAsync(DateOnly targetDate)
     {
         _context.ValidateContext();
         var child = _context.CurrentChild!;
@@ -194,12 +194,12 @@ public class ChildAwareMinUddannelseClient : IChildAuthenticationService
 
         try
         {
-            var result = await _innerClient.GetWeekSchedule(child, date);
+            var result = await _innerClient.GetWeekSchedule(child, targetDate);
 
             await _auditService.LogDataAccessAsync(
                 child,
                 "GetWeekSchedule",
-                $"schedule_{date:yyyy-MM-dd}",
+                $"schedule_{targetDate:yyyy-MM-dd}",
                 result != null);
 
             UpdateSessionActivity(child);
@@ -208,7 +208,7 @@ public class ChildAwareMinUddannelseClient : IChildAuthenticationService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching week schedule for {ChildName}", child.FirstName);
-            await _auditService.LogDataAccessAsync(child, "GetWeekSchedule", $"schedule_{date:yyyy-MM-dd}", false);
+            await _auditService.LogDataAccessAsync(child, "GetWeekSchedule", $"schedule_{targetDate:yyyy-MM-dd}", false);
             throw;
         }
     }
@@ -288,7 +288,7 @@ public class ChildAwareMinUddannelseClient : IChildAuthenticationService
         return null;
     }
 
-    private string GetSessionKey(Child child)
+    private static string GetSessionKey(Child child)
     {
         // Create a unique key based on child's first and last name
         return $"{child.FirstName}_{child.LastName}".ToLowerInvariant();
@@ -311,7 +311,7 @@ public class ChildAwareMinUddannelseClient : IChildAuthenticationService
     /// <summary>
     /// Internal class to track session state for each child.
     /// </summary>
-    private class ChildSessionState
+    private sealed class ChildSessionState
     {
         public string SessionId { get; }
         public Child Child { get; }

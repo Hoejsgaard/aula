@@ -8,6 +8,7 @@ using Aula.Integration;
 using Aula.Configuration;
 using Aula.Services;
 using Aula.Utilities;
+using Aula.Events;
 
 namespace Aula.Scheduling;
 
@@ -21,6 +22,16 @@ public class SchedulingService : ISchedulingService
     private Timer? _schedulingTimer;
     private readonly object _lockObject = new object();
     private bool _isRunning;
+
+    // Child-specific events
+    public event EventHandler<ChildScheduleEventArgs>? ChildScheduleReady;
+    public event EventHandler<ChildWeekLetterEventArgs>? ChildWeekLetterReady;
+
+    // Public method to trigger week letter event (used for startup posting)
+    public void TriggerChildWeekLetterReady(ChildWeekLetterEventArgs args)
+    {
+        ChildWeekLetterReady?.Invoke(this, args);
+    }
 
     public SchedulingService(
         ILoggerFactory loggerFactory,
@@ -235,7 +246,7 @@ public class SchedulingService : ISchedulingService
 
             var pendingReminders = await _supabaseService.GetPendingRemindersAsync();
 
-            if (!pendingReminders.Any())
+            if (pendingReminders.Count == 0)
             {
                 _logger.LogInformation("No pending reminders found");
                 return;
@@ -335,9 +346,21 @@ public class SchedulingService : ISchedulingService
             if (await IsContentAlreadyPosted(child.FirstName, result.contentHash!, weekNumber, year))
                 return;
 
-            await PostAndMarkWeekLetter(child, weekLetter, result.content, result.contentHash!, weekNumber, year);
+            // Emit child-specific event instead of directly posting
+            var childId = child.FirstName.ToLowerInvariant().Replace(" ", "_");
+            var eventArgs = new ChildWeekLetterEventArgs(
+                childId,
+                child.FirstName,
+                weekNumber,
+                year,
+                weekLetter);
 
-            _logger.LogInformation("Successfully posted week letter for {ChildName}", child.FirstName);
+            ChildWeekLetterReady?.Invoke(this, eventArgs);
+
+            // Mark as posted after emitting event (subscribers will handle the actual posting)
+            await _supabaseService.MarkWeekLetterAsPostedAsync(child.FirstName, weekNumber, year, result.contentHash!);
+
+            _logger.LogInformation("Emitted week letter event for {ChildName}", child.FirstName);
         }
         catch (Exception ex)
         {
@@ -491,7 +514,7 @@ public class SchedulingService : ISchedulingService
 
             var pendingReminders = await _supabaseService.GetPendingRemindersAsync();
 
-            if (pendingReminders.Any())
+            if (pendingReminders.Count > 0)
             {
                 _logger.LogWarning("Found {Count} missed reminders on startup", pendingReminders.Count);
 

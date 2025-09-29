@@ -103,7 +103,7 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
         var weekLetter = JObject.Parse(json);
         var weekLetterArray = weekLetter["ugebreve"] as JArray;
 
-        if (weekLetterArray == null || !weekLetterArray.Any())
+        if (weekLetterArray == null || weekLetterArray.Count == 0)
         {
             var nullObject = new JObject
             {
@@ -162,7 +162,7 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
         return id;
     }
 
-    private int GetIsoWeekNumber(DateOnly date)
+    private static int GetIsoWeekNumber(DateOnly date)
     {
         return System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
     }
@@ -205,7 +205,7 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
             throw new InvalidDataException("UserProfile context not found in script");
 
         startIndex += contextStart.Length;
-        var endIndex = scriptText.IndexOf(";", startIndex);
+        var endIndex = scriptText.IndexOf(';', startIndex);
         if (endIndex == -1 || endIndex <= startIndex)
             throw new InvalidDataException("Invalid UserProfile context format");
 
@@ -273,14 +273,13 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
         }
     }
 
-    private string ComputeContentHash(string content)
+    private static string ComputeContentHash(string content)
     {
-        using var sha256 = System.Security.Cryptography.SHA256.Create();
-        var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(content));
+        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content));
         return Convert.ToHexString(hash);
     }
 
-    private JObject CreateEmptyWeekLetter(int weekNumber)
+    private static JObject CreateEmptyWeekLetter(int weekNumber)
     {
         return new JObject
         {

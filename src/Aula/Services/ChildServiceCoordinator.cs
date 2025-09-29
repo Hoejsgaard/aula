@@ -402,7 +402,7 @@ public class ChildServiceCoordinator : IChildServiceCoordinator
 
     public async Task PostWeekLettersForAllChildrenAsync(DateOnly date, Func<Child, JObject?, Task> postAction)
     {
-        if (postAction == null) throw new ArgumentNullException(nameof(postAction));
+        ArgumentNullException.ThrowIfNull(postAction);
 
         var allChildren = await _agentService.GetAllChildrenAsync();
 

@@ -487,7 +487,7 @@ public abstract class UniLoginDebugClient
                     Console.WriteLine($"[DEBUG]   Content length: {content.Length} chars");
 
                     // Check if we got actual JSON data (not error page)
-                    if (content.StartsWith("{") || content.StartsWith("["))
+                    if (content.StartsWith('{') || content.StartsWith('['))
                     {
                         Console.WriteLine($"[DEBUG]   ✅ Valid JSON response received");
                         return true;

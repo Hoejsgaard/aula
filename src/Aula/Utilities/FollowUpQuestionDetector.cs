@@ -77,7 +77,7 @@ public static class FollowUpQuestionDetector
     private static bool IsShortFollowUp(string normalizedText)
     {
         return normalizedText.Length < 15 &&
-               (normalizedText.Contains("?") || ShortFollowUps.Contains(normalizedText));
+               (normalizedText.Contains('?') || ShortFollowUps.Contains(normalizedText));
     }
 
     private static bool ContainsChildName(string normalizedText, List<Child> children)

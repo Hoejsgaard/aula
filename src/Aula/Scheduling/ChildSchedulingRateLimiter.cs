@@ -158,7 +158,7 @@ public class ChildSchedulingRateLimiter : IChildSchedulingRateLimiter
     }
 
     // Internal state class
-    private class SchedulingRateLimitState
+    private sealed class SchedulingRateLimitState
     {
         public int TotalScheduledTasks { get; set; }
         public ConcurrentQueue<DateTime> ScheduleOperations { get; } = new();

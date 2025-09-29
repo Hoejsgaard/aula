@@ -30,13 +30,21 @@ public class TelegramMessageHandler
         ConversationContextManager<long> conversationContextManager,
         ReminderCommandHandler reminderHandler)
     {
-        _agentService = agentService ?? throw new ArgumentNullException(nameof(agentService));
-        _config = config ?? throw new ArgumentNullException(nameof(config));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
-        _childrenByName = childrenByName ?? throw new ArgumentNullException(nameof(childrenByName));
-        _conversationContextManager = conversationContextManager ?? throw new ArgumentNullException(nameof(conversationContextManager));
-        _reminderHandler = reminderHandler ?? throw new ArgumentNullException(nameof(reminderHandler));
+        ArgumentNullException.ThrowIfNull(agentService);
+        ArgumentNullException.ThrowIfNull(config);
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(supabaseService);
+        ArgumentNullException.ThrowIfNull(childrenByName);
+        ArgumentNullException.ThrowIfNull(conversationContextManager);
+        ArgumentNullException.ThrowIfNull(reminderHandler);
+
+        _agentService = agentService;
+        _config = config;
+        _logger = logger;
+        _supabaseService = supabaseService;
+        _childrenByName = childrenByName;
+        _conversationContextManager = conversationContextManager;
+        _reminderHandler = reminderHandler;
     }
 
     public async Task HandleMessageAsync(ITelegramBotClient botClient, Message message, CancellationToken cancellationToken)
@@ -57,9 +65,26 @@ public class TelegramMessageHandler
                 return;
             }
 
+            // Extract child from the message or use the first configured child for this telegram bot
+            Child? specificChild = null;
+            foreach (var kvp in _childrenByName)
+            {
+                if (messageText.ToLowerInvariant().Contains(kvp.Key.ToLowerInvariant()))
+                {
+                    specificChild = kvp.Value;
+                    break;
+                }
+            }
+
+            // If no child mentioned, use the first one configured for Telegram
+            if (specificChild == null)
+            {
+                specificChild = _childrenByName.Values.FirstOrDefault();
+            }
+
             // Use the new tool-based processing that can handle both tools and regular questions
             string contextKey = $"telegram-{chatId}";
-            string response = await _agentService.ProcessQueryWithToolsAsync(messageText, contextKey, ChatInterface.Telegram);
+            string response = await _agentService.ProcessQueryWithToolsAsync(messageText, contextKey, specificChild, ChatInterface.Telegram);
 
             await botClient.SendTextMessageAsync(
                 chatId: chatId,

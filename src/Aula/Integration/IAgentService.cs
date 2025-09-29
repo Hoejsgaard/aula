@@ -21,7 +21,13 @@ public interface IAgentService
 
     // Child management methods
     ValueTask<Child?> GetChildByNameAsync(string childName);
+
+    [Obsolete("SECURITY VIOLATION: This method provides access to all children's data. Use IChildServiceCoordinator for administrative tasks only.")]
     ValueTask<IEnumerable<Child>> GetAllChildrenAsync();
+
+    [Obsolete("SECURITY VIOLATION: This method processes multiple children's data simultaneously. Process each child in isolation instead.")]
     Task<string> AskQuestionAboutChildrenAsync(Dictionary<string, JObject> childrenWeekLetters, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack);
-    Task<string> ProcessQueryWithToolsAsync(string query, string contextKey, ChatInterface chatInterface = ChatInterface.Slack);
+
+    // Process query for a specific child only - pass null to indicate no child context
+    Task<string> ProcessQueryWithToolsAsync(string query, string contextKey, Child? specificChild, ChatInterface chatInterface = ChatInterface.Slack);
 }

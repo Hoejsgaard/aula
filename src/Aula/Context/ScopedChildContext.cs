@@ -16,7 +16,8 @@ public class ScopedChildContext : IChildContext, IDisposable
 
     public ScopedChildContext(ILogger<ScopedChildContext> logger)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
         ContextId = Guid.NewGuid();
         CreatedAt = DateTimeOffset.UtcNow;
 
@@ -42,8 +43,7 @@ public class ScopedChildContext : IChildContext, IDisposable
 
     public void SetChild(Child child)
     {
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(child);
 
         lock (_lock)
         {

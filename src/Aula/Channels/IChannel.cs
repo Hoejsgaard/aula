@@ -81,16 +81,16 @@ public interface IChannel
 /// </summary>
 public class ChannelCapabilities
 {
-    public bool SupportsBold { get; set; } = false;
-    public bool SupportsItalic { get; set; } = false;
-    public bool SupportsCode { get; set; } = false;
-    public bool SupportsCodeBlocks { get; set; } = false;
-    public bool SupportsLinks { get; set; } = false;
-    public bool SupportsButtons { get; set; } = false;
-    public bool SupportsImages { get; set; } = false;
-    public bool SupportsFiles { get; set; } = false;
-    public bool SupportsThreads { get; set; } = false;
-    public bool SupportsEmojis { get; set; } = false;
+    public bool SupportsBold { get; set; }
+    public bool SupportsItalic { get; set; }
+    public bool SupportsCode { get; set; }
+    public bool SupportsCodeBlocks { get; set; }
+    public bool SupportsLinks { get; set; }
+    public bool SupportsButtons { get; set; }
+    public bool SupportsImages { get; set; }
+    public bool SupportsFiles { get; set; }
+    public bool SupportsThreads { get; set; }
+    public bool SupportsEmojis { get; set; }
     public int MaxMessageLength { get; set; } = 4000;
     public string[] SupportedFormatTags { get; set; } = Array.Empty<string>();
 }

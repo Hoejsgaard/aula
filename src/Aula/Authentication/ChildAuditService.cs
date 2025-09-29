@@ -21,8 +21,7 @@ public class ChildAuditService : IChildAuditService
 
     public Task LogAuthenticationAttemptAsync(Child child, bool success, string reason, string sessionId)
     {
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(child);
 
         var entry = new AuditEntry
         {
@@ -56,8 +55,7 @@ public class ChildAuditService : IChildAuditService
 
     public Task LogDataAccessAsync(Child child, string operation, string resource, bool success)
     {
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(child);
 
         var entry = new AuditEntry
         {
@@ -80,8 +78,7 @@ public class ChildAuditService : IChildAuditService
 
     public Task LogSessionInvalidationAsync(Child child, string sessionId, string reason)
     {
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(child);
 
         var entry = new AuditEntry
         {
@@ -106,8 +103,7 @@ public class ChildAuditService : IChildAuditService
 
     public Task LogSessionTimeoutAsync(Child child, string sessionId, DateTimeOffset lastActivity)
     {
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(child);
 
         var entry = new AuditEntry
         {
@@ -162,8 +158,7 @@ public class ChildAuditService : IChildAuditService
 
     public Task<List<AuditEntry>> GetAuditTrailAsync(Child child, DateTimeOffset startDate, DateTimeOffset endDate)
     {
-        if (child == null)
-            throw new ArgumentNullException(nameof(child));
+        ArgumentNullException.ThrowIfNull(child);
 
         var entries = _auditTrail
             .Where(e => e.ChildName == child.FirstName

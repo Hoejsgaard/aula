@@ -15,7 +15,10 @@ public class ScheduledTaskRepository : IScheduledTaskRepository
 
     public ScheduledTaskRepository(Client supabase, ILoggerFactory loggerFactory)
     {
-        _supabase = supabase ?? throw new ArgumentNullException(nameof(supabase));
+        ArgumentNullException.ThrowIfNull(supabase);
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+
+        _supabase = supabase;
         _logger = loggerFactory.CreateLogger<ScheduledTaskRepository>();
     }
 

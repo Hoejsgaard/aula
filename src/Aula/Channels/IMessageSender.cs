@@ -12,11 +12,11 @@ public interface IMessageSender
 /// </summary>
 public abstract class MessageSenderBase : IMessageSender
 {
-    protected readonly IChannelMessenger _messenger;
+    protected IChannelMessenger Messenger { get; }
 
     protected MessageSenderBase(IChannelMessenger messenger, string expectedPlatformType)
     {
-        _messenger = messenger ?? throw new ArgumentNullException(nameof(messenger));
+        Messenger = messenger ?? throw new ArgumentNullException(nameof(messenger));
 
         if (messenger.PlatformType != expectedPlatformType)
         {
@@ -26,12 +26,12 @@ public abstract class MessageSenderBase : IMessageSender
 
     public virtual async Task SendMessageAsync(string message)
     {
-        await _messenger.SendMessageAsync(message);
+        await Messenger.SendMessageAsync(message);
     }
 
     public virtual async Task SendMessageAsync(string chatId, string message)
     {
-        await _messenger.SendMessageAsync(chatId, message);
+        await Messenger.SendMessageAsync(chatId, message);
     }
 }
 

@@ -42,7 +42,7 @@ public class RetryTrackingRepository : IRetryTrackingRepository
             .Where(ra => ra.ChildName == childName && ra.WeekNumber == weekNumber && ra.Year == year)
             .Get();
 
-        if (existing.Models.Any())
+        if (existing.Models.Count > 0)
         {
             // Increment existing attempt count
             var retryAttempt = existing.Models.First();

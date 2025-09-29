@@ -39,8 +39,7 @@ public class ChannelManager : IChannelManager
 
     public void RegisterChannel(IChannel channel)
     {
-        if (channel == null)
-            throw new ArgumentNullException(nameof(channel));
+        ArgumentNullException.ThrowIfNull(channel);
 
         _channels.AddOrUpdate(channel.PlatformId, channel, (key, existing) =>
         {
@@ -76,7 +75,7 @@ public class ChannelManager : IChannelManager
         }
 
         var enabledChannels = GetEnabledChannels();
-        if (!enabledChannels.Any())
+        if (enabledChannels.Count == 0)
         {
             _logger.LogWarning("No enabled channels available for broadcast");
             return;
@@ -109,7 +108,7 @@ public class ChannelManager : IChannelManager
             return;
         }
 
-        if (platformIds == null || !platformIds.Any())
+        if (platformIds == null || platformIds.Length == 0)
         {
             _logger.LogWarning("No platform IDs specified for targeted send");
             return;
@@ -154,7 +153,7 @@ public class ChannelManager : IChannelManager
         }
 
         var enabledChannels = GetEnabledChannels();
-        if (!enabledChannels.Any())
+        if (enabledChannels.Count == 0)
         {
             _logger.LogWarning("No enabled channels available for formatted message");
             return;

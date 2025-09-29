@@ -14,7 +14,10 @@ public class WeekLetterRepository : IWeekLetterRepository
 
     public WeekLetterRepository(Client supabase, ILoggerFactory loggerFactory)
     {
-        _supabase = supabase ?? throw new ArgumentNullException(nameof(supabase));
+        ArgumentNullException.ThrowIfNull(supabase);
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+
+        _supabase = supabase;
         _logger = loggerFactory.CreateLogger<WeekLetterRepository>();
     }
 
@@ -26,7 +29,7 @@ public class WeekLetterRepository : IWeekLetterRepository
             .Where(pl => pl.ChildName == childName && pl.WeekNumber == weekNumber && pl.Year == year)
             .Get();
 
-        return result.Models.Any();
+        return result.Models.Count > 0;
     }
 
     public async Task MarkWeekLetterAsPostedAsync(string childName, int weekNumber, int year, string contentHash, bool postedToSlack = false, bool postedToTelegram = false)

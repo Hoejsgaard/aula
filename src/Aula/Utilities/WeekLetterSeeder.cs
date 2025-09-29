@@ -11,7 +11,10 @@ public class WeekLetterSeeder : IWeekLetterSeeder
 
     public WeekLetterSeeder(ISupabaseService supabaseService, ILoggerFactory loggerFactory)
     {
-        _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
+        ArgumentNullException.ThrowIfNull(supabaseService);
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+
+        _supabaseService = supabaseService;
         _logger = loggerFactory.CreateLogger<WeekLetterSeeder>();
     }
 
@@ -98,10 +101,9 @@ public class WeekLetterSeeder : IWeekLetterSeeder
         }
     }
 
-    private string ComputeContentHash(string content)
+    private static string ComputeContentHash(string content)
     {
-        using var sha256 = System.Security.Cryptography.SHA256.Create();
-        var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(content));
+        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content));
         return Convert.ToHexString(hash);
     }
 }

@@ -18,10 +18,15 @@ public class AgentService : IAgentService
         IOpenAiService openAiService,
         ILoggerFactory loggerFactory)
     {
-        _minUddannelseClient = minUddannelseClient ?? throw new ArgumentNullException(nameof(minUddannelseClient));
-        _dataManager = dataManager ?? throw new ArgumentNullException(nameof(dataManager));
-        _openAiService = openAiService ?? throw new ArgumentNullException(nameof(openAiService));
-        _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger(nameof(AgentService));
+        ArgumentNullException.ThrowIfNull(minUddannelseClient);
+        ArgumentNullException.ThrowIfNull(dataManager);
+        ArgumentNullException.ThrowIfNull(openAiService);
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+
+        _minUddannelseClient = minUddannelseClient;
+        _dataManager = dataManager;
+        _openAiService = openAiService;
+        _logger = loggerFactory.CreateLogger(nameof(AgentService));
     }
 
     public async Task<bool> LoginAsync()
@@ -230,9 +235,10 @@ public class AgentService : IAgentService
         return await _openAiService.AskQuestionAboutChildrenAsync(childrenWeekLetters, question, contextKey, chatInterface);
     }
 
-    public async Task<string> ProcessQueryWithToolsAsync(string query, string contextKey, ChatInterface chatInterface = ChatInterface.Slack)
+
+    public async Task<string> ProcessQueryWithToolsAsync(string query, string contextKey, Child? specificChild, ChatInterface chatInterface = ChatInterface.Slack)
     {
-        _logger.LogInformation("Processing query with tools: {Query}", query);
+        _logger.LogInformation("Processing query with tools: {Query}, SpecificChild: {ChildName}", query, specificChild?.FirstName ?? "None");
 
         // Let the OpenAI service analyze intent first
         var response = await _openAiService.ProcessQueryWithToolsAsync(query, contextKey, chatInterface);
@@ -242,16 +248,19 @@ public class AgentService : IAgentService
         {
             _logger.LogInformation("Falling back to existing week letter system for query: {Query}", query);
 
-            // Get all children and their week letters
-            var allChildren = await GetAllChildrenAsync();
-            if (!allChildren.Any())
+            // SECURITY: Require a specific child to be provided
+            if (specificChild == null)
             {
-                return "I don't have any children configured.";
+                _logger.LogWarning("No specific child provided for query processing - this is a security violation");
+                return "Please specify which child you're asking about.";
             }
 
-            // Collect week letters for all children
+            _logger.LogInformation("Using specific child data for: {ChildName}", specificChild.FirstName);
+            var childrenToProcess = new[] { specificChild };
+
+            // Collect week letters for the selected children
             var childrenWeekLetters = new Dictionary<string, JObject>();
-            foreach (var child in allChildren)
+            foreach (var child in childrenToProcess)
             {
                 var weekLetter = await GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true);
                 if (weekLetter != null)
@@ -260,9 +269,11 @@ public class AgentService : IAgentService
                 }
             }
 
-            if (!childrenWeekLetters.Any())
+            if (childrenWeekLetters.Count == 0)
             {
-                return "I don't have any week letters available at the moment.";
+                return specificChild != null
+                    ? $"I don't have any week letters available for {specificChild.FirstName} at the moment."
+                    : "I don't have any week letters available at the moment.";
             }
 
             // Add day context if needed
