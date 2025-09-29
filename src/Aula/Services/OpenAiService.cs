@@ -49,21 +49,7 @@ public class OpenAiService : IOpenAiService
         _promptBuilder = promptBuilder;
     }
 
-    internal OpenAiService(OpenAIService openAiClient, ILoggerFactory loggerFactory, AiToolsManager aiToolsManager, IConversationManager conversationManager, IPromptBuilder promptBuilder, string? model = null)
-    {
-        ArgumentNullException.ThrowIfNull(openAiClient);
-        ArgumentNullException.ThrowIfNull(loggerFactory);
-        ArgumentNullException.ThrowIfNull(aiToolsManager);
-        ArgumentNullException.ThrowIfNull(conversationManager);
-        ArgumentNullException.ThrowIfNull(promptBuilder);
-
-        _openAiClient = openAiClient;
-        _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
-        _aiToolsManager = aiToolsManager;
-        _conversationManager = conversationManager;
-        _promptBuilder = promptBuilder;
-        _aiModel = model ?? Models.Gpt_4;
-    }
+    // Legacy internal constructor removed
 
     private static (string childName, string className, string weekNumber) ExtractWeekLetterMetadata(JObject weekLetter)
     {

@@ -16,8 +16,7 @@ public class SchedulingService : ISchedulingService
 {
     private readonly ILogger _logger;
     private readonly ISupabaseService _supabaseService;
-    private readonly IChildServiceCoordinator _coordinator;
-    private readonly IChannelManager _channelManager;
+    // Legacy coordinator and channel manager removed
     private readonly Config _config;
     private Timer? _schedulingTimer;
     private readonly object _lockObject = new object();
@@ -36,14 +35,10 @@ public class SchedulingService : ISchedulingService
     public SchedulingService(
         ILoggerFactory loggerFactory,
         ISupabaseService supabaseService,
-        IChildServiceCoordinator coordinator,
-        IChannelManager channelManager,
         Config config)
     {
         _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<SchedulingService>();
         _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
-        _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
-        _channelManager = channelManager ?? throw new ArgumentNullException(nameof(channelManager));
         _config = config ?? throw new ArgumentNullException(nameof(config));
     }
 

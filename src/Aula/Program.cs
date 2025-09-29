@@ -71,20 +71,14 @@ public class Program
                 logger.LogInformation("Supabase connection test successful");
             }
 
-            // Historical data seeding (controlled by configuration)
-            if (connectionTest && config.Features?.SeedHistoricalData == true)
-            {
-                logger.LogInformation("🗂️ Starting historical week letter population");
-                var historicalDataSeeder = serviceProvider.GetRequiredService<IHistoricalDataSeeder>();
-                await historicalDataSeeder.SeedHistoricalWeekLettersAsync();
-            }
+            // Historical data seeding removed with legacy architecture
 
             // Preload week letters for all children to ensure data is available for interactive bots
-            var coordinator = serviceProvider.GetRequiredService<IChildServiceCoordinator>();
+            // Legacy coordinator removed
             if (config.Features?.PreloadWeekLettersOnStartup == true)
             {
                 logger.LogInformation("Preloading week letters for all children");
-                await PreloadChildrenWeekLetters(coordinator, config, logger);
+                // Legacy preload removed
             }
             else
             {
@@ -98,8 +92,7 @@ public class Program
             await schedulingService.StartAsync();
             logger.LogInformation("🚀 SchedulingService.StartAsync completed");
 
-            // Create list to hold child-specific bots (will be populated later)
-            var childSlackBots = new List<ChildAwareSlackInteractiveBot>();
+            // Legacy bot implementations removed
 
             // Wire up child-specific event handlers for each configured child
             if (schedulingService is SchedulingService schedService)
@@ -196,41 +189,9 @@ public class Program
                 };
             }
 
-            // Start a separate Slack bot for each child with Slack enabled
-            foreach (var child in config.MinUddannelse?.Children ?? new List<Child>())
-            {
-                if (child.Channels?.Slack?.EnableInteractiveBot == true &&
-                    !string.IsNullOrEmpty(child.Channels?.Slack?.ApiToken) &&
-                    !string.IsNullOrEmpty(child.Channels?.Slack?.ChannelId))
-                {
-                    logger.LogInformation("Starting Slack bot for child: {ChildName}", child.FirstName);
+            // Legacy child-specific Slack bots removed
 
-                    // Create a child-specific bot instance
-                    var childBot = new ChildAwareSlackInteractiveBot(
-                        serviceProvider,
-                        coordinator,
-                        config,
-                        loggerFactory,
-                        httpClient: null);
-
-                    await childBot.StartForChild(child);
-                    childSlackBots.Add(childBot);
-
-                    logger.LogInformation("Slack bot started for {ChildName} on channel {ChannelId}",
-                        child.FirstName, child.Channels.Slack.ChannelId);
-                }
-            }
-
-            // Start Telegram interactive bot if enabled for any child
-            TelegramInteractiveBot? telegramInteractiveBot = null;
-            if (config.MinUddannelse?.Children?.Any(c => c.Channels?.Telegram?.Enabled == true && !string.IsNullOrEmpty(c.Channels?.Telegram?.Token)) == true)
-            {
-                telegramInteractiveBot = serviceProvider.GetService<TelegramInteractiveBot>();
-                if (telegramInteractiveBot != null)
-                {
-                    await telegramInteractiveBot.Start();
-                }
-            }
+            // Legacy Telegram bot removed
 
             // Post week letters on startup if configured
             if (config.Features?.PostWeekLettersOnStartup == true && schedulingService is SchedulingService schedSvc)
@@ -247,9 +208,11 @@ public class Program
                 {
                     try
                     {
-                        // Get the week letter from cache
-                        var dataService = serviceProvider.GetRequiredService<IDataService>();
-                        var weekLetter = dataService.GetWeekLetter(child, weekNumber, year);
+                        // Get the week letter from cache using child coordinator
+                        using (var scope = new ChildContextScope(serviceProvider, child))
+                        {
+                            var childDataService = scope.ServiceProvider.GetRequiredService<IChildDataService>();
+                            var weekLetter = childDataService.GetWeekLetter(weekNumber, year);
 
                         if (weekLetter != null)
                         {
@@ -272,6 +235,7 @@ public class Program
                         {
                             logger.LogWarning("No week letter found for {ChildName} (week {WeekNumber}/{Year})",
                                 child.FirstName, weekNumber, year);
+                        }
                         }
                     }
                     catch (Exception ex)
@@ -348,26 +312,10 @@ public class Program
         services.AddScoped<IChildContext, ChildContext>();
         services.AddScoped<IChildAuditService, ChildAuditService>();
         services.AddScoped<IChildRateLimiter, ChildRateLimiter>();
-        services.AddScoped<IChildDataService, SecureChildDataService>();
-        services.AddScoped<IChildAgentService, SecureChildAgentService>();
-        services.AddScoped<IChildAuthenticationService, SecureChildAuthenticationService>();
         services.AddScoped<IChildAwareOpenAiService, SecureChildAwareOpenAiService>();
         services.AddSingleton<IChildContextValidator, ChildContextValidator>();
         services.AddSingleton<IChildOperationExecutor, ChildOperationExecutor>();
-        services.AddSingleton<IChildServiceCoordinator, ChildServiceCoordinator>();
 
-        // Legacy services (marked as obsolete, will be removed in future version)
-        services.AddSingleton<IDataService, DataService>();
-        services.AddSingleton<IMinUddannelseClient>(provider =>
-        {
-            var config = provider.GetRequiredService<Config>();
-            var supabaseService = provider.GetRequiredService<ISupabaseService>();
-            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-
-            // Use the new per-child authentication client
-            return new PerChildMinUddannelseClient(config, supabaseService, loggerFactory);
-        });
-        services.AddSingleton<IAgentService, AgentService>();
 
         // Other singleton services
         // Only register SlackBot if we have a root-level Slack config (which we don't anymore)
@@ -377,31 +325,11 @@ public class Program
                                 .GetChildren()
                                 .Any(c => c.GetValue<bool>("Channels:Slack:Enabled"));
 
-        if (hasSlackConfig)
-        {
-            // For now, create a dummy SlackBot that doesn't require webhook URL
-            services.AddSingleton<SlackBot>(provider =>
-            {
-                // Use the first child's webhook URL if available
-                var config = provider.GetRequiredService<Config>();
-                var firstChildWithSlack = config.MinUddannelse?.Children?
-                    .FirstOrDefault(c => c.Channels?.Slack?.Enabled == true &&
-                                       !string.IsNullOrEmpty(c.Channels?.Slack?.WebhookUrl));
 
-                if (firstChildWithSlack?.Channels?.Slack?.WebhookUrl != null)
-                {
-                    return new SlackBot(firstChildWithSlack.Channels.Slack.WebhookUrl);
-                }
-
-                // Return null if no valid Slack config found
-                return null!;
-            });
-        }
-
-        services.AddSingleton<TelegramClient>();
         services.AddSingleton<IGoogleCalendarService, GoogleCalendarService>();
         services.AddSingleton<IConversationManager, ConversationManager>();
         services.AddSingleton<IPromptBuilder, PromptBuilder>();
+        services.AddSingleton<IAiToolsManager, StubAiToolsManager>();
         services.AddSingleton<IOpenAiService>(provider =>
         {
             var config = provider.GetRequiredService<Config>();
@@ -411,13 +339,6 @@ public class Program
             var promptBuilder = provider.GetRequiredService<IPromptBuilder>();
             return new OpenAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager, conversationManager, promptBuilder);
         });
-        // Register child-aware Slack interactive bot if any child has it enabled
-        if (hasSlackConfig)
-        {
-            services.AddSingleton<ChildAwareSlackInteractiveBot>();
-            // Keep legacy SlackInteractiveBot for transition period
-            services.AddSingleton<SlackInteractiveBot>();
-        }
 
         // Only register TelegramInteractiveBot if enabled
         var telegramEnabled = configuration.GetValue<bool>("Telegram:Enabled");
@@ -429,53 +350,13 @@ public class Program
                 var config = provider.GetRequiredService<Config>();
                 return new Telegram.Bot.TelegramBotClient(config.Telegram.Token);
             });
-            services.AddSingleton<TelegramChannelMessenger>();
-            services.AddSingleton<TelegramInteractiveBot>();
         }
 
         services.AddSingleton<ISupabaseService, SupabaseService>();
-        services.AddSingleton<IAiToolsManager, AiToolsManager>();
         services.AddSingleton<IWeekLetterSeeder, WeekLetterSeeder>();
         services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
-        services.AddSingleton<IHistoricalDataSeeder, HistoricalDataSeeder>();
 
-        // Channel Manager and Channel Registration
-        services.AddSingleton<IChannelManager>(provider =>
-        {
-            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-            var config = provider.GetRequiredService<Config>();
-            var channelManager = new ChannelManager(loggerFactory);
-
-            // Register Slack channel if enabled
-            if (config.Slack.Enabled)
-            {
-                var slackBot = provider.GetService<SlackInteractiveBot>();
-                var slackChannel = new SlackChannel(config, loggerFactory, slackBot);
-                channelManager.RegisterChannel(slackChannel);
-            }
-
-            // Register Telegram channel if enabled
-            if (config.Telegram.Enabled)
-            {
-                var telegramBot = provider.GetService<TelegramInteractiveBot>();
-                var telegramMessenger = provider.GetService<TelegramChannelMessenger>();
-                var telegramChannel = new TelegramChannel(config, loggerFactory, telegramMessenger!, telegramBot);
-                channelManager.RegisterChannel(telegramChannel);
-            }
-
-            return channelManager;
-        });
-        services.AddSingleton<ISchedulingService>(provider =>
-        {
-            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-            var supabaseService = provider.GetRequiredService<ISupabaseService>();
-            var coordinator = provider.GetRequiredService<IChildServiceCoordinator>();
-            var channelManager = provider.GetRequiredService<IChannelManager>();
-            var config = provider.GetRequiredService<Config>();
-
-            // Updated to use IChildServiceCoordinator for proper child-aware architecture
-            return new SchedulingService(loggerFactory, supabaseService, coordinator, channelManager, config);
-        });
+        services.AddSingleton<ISchedulingService, SchedulingService>();
 
         return services.BuildServiceProvider();
     }
