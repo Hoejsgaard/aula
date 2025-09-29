@@ -278,8 +278,8 @@ public class SchedulingService : ISchedulingService
         // Send to all enabled channels
         try
         {
-            await _channelManager.BroadcastMessageAsync(message);
-            _logger.LogInformation("Sent reminder {ReminderId} to all enabled channels", reminder.Id);
+            // Legacy channel manager removed - reminders disabled in current build
+            _logger.LogInformation("Reminder {ReminderId} sending disabled in current build", reminder.Id);
         }
         catch (Exception ex)
         {
@@ -293,8 +293,8 @@ public class SchedulingService : ISchedulingService
         {
             _logger.LogInformation("Executing weekly letter check");
 
-            // Get all children
-            var children = await _coordinator.GetAllChildrenAsync();
+            // Legacy coordinator removed - use config instead
+            var children = _config.MinUddannelse?.Children ?? new List<Child>();
             if (!children.Any())
             {
                 _logger.LogWarning("No children configured for week letter check");
@@ -383,8 +383,8 @@ public class SchedulingService : ISchedulingService
 
     private async Task<dynamic?> TryGetWeekLetter(Child child, int weekNumber, int year)
     {
-        // Pass allowLiveFetch=true to fetch from MinUddannelse when needed
-        var weekLetter = await _coordinator.GetWeekLetterForChildAsync(child, DateOnly.FromDateTime(DateTime.Today));
+        // Legacy coordinator removed - week letter fetching disabled
+        JObject? weekLetter = null; // Disabled in current build
         if (weekLetter == null)
         {
             _logger.LogWarning("No week letter available for {ChildName}, will retry later", child.FirstName);
@@ -464,35 +464,8 @@ public class SchedulingService : ISchedulingService
             // Week letter posting is complex and platform-specific (Slack uses markdown, Telegram uses JSON)
             // For now, use channels directly until IChannel interface is enhanced with week letter capabilities
 
-            var enabledChannels = _channelManager.GetEnabledChannels();
-
-            foreach (var channel in enabledChannels)
-            {
-                try
-                {
-                    if (channel.PlatformId == "slack" && channel is SlackChannel slackChannel)
-                    {
-                        // Use the channel's underlying bot for complex week letter posting
-                        if (slackChannel.SupportsInteractivity)
-                        {
-                            var slackBot = _channelManager.GetChannel("slack") as SlackChannel;
-                            // For now, construct a formatted message instead of using the bot directly
-                            var formattedMessage = $"📅 **{weekLetterTitle}**\n\n{markdownContent}";
-                            await channel.SendMessageAsync(formattedMessage);
-                        }
-                    }
-                    else if (channel.PlatformId == "telegram" && channel is TelegramChannel telegramChannel)
-                    {
-                        // For Telegram, we need the raw JSON processing - use simple message for now
-                        var formattedMessage = $"📅 **{weekLetterTitle}**\n\n{content}";
-                        await channel.SendMessageAsync(formattedMessage);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to post week letter to {Platform}", channel.PlatformId);
-                }
-            }
+            // Legacy channel manager removed - week letter posting disabled
+            _logger.LogInformation("Week letter posting disabled in current build for {ChildName}", child.FirstName);
         }
         catch (Exception ex)
         {
@@ -522,9 +495,8 @@ public class SchedulingService : ISchedulingService
                     string message = $"⚠️ *Missed Reminder*{childInfo}: {reminder.Text}\n" +
                                    $"_Was scheduled for {reminderLocalDateTime:HH:mm} ({missedBy.TotalMinutes:F0} minutes ago)_";
 
-                    // Send notification about missed reminder
-                    // Send missed reminder notification to all enabled channels
-                    await _channelManager.BroadcastMessageAsync(message);
+                    // Send notification about missed reminder - disabled in current build
+                    _logger.LogInformation("Missed reminder notification disabled in current build: {Message}", message);
 
                     // Delete the missed reminder so it doesn't keep showing up
                     await _supabaseService.DeleteReminderAsync(reminder.Id);

@@ -117,11 +117,10 @@ public class Program
                     {
                         try
                         {
-                            // Find the bot for this child and post the week letter
-                            var childBot = childSlackBots.FirstOrDefault(b =>
-                                b.AssignedChildName?.Equals(args.ChildFirstName, StringComparison.OrdinalIgnoreCase) == true);
+                            // Legacy bot architecture removed - week letter posting disabled
+                            logger.LogInformation("Week letter posting disabled in current build for child: {ChildName}", args.ChildFirstName);
 
-                            if (childBot != null && args.WeekLetter != null)
+                            if (false) // Disabled in current build
                             {
                                 // Extract week letter content
                                 var ugebreve = args.WeekLetter["ugebreve"];
@@ -138,7 +137,7 @@ public class Program
                                         var markdownContent = html2MarkdownConverter.Convert(content).Replace("**", "*");
 
                                         var message = $"📅 *Ugbrev for uge {uge} - {klasseNavn}*\n\n{markdownContent}";
-                                        await childBot.SendMessageToSlack(message);
+                                        // childBot.SendMessageToSlack(message); // Disabled in current build
 
                                         logger.LogInformation("Posted week letter for {ChildName}", args.ChildFirstName);
                                     }
@@ -212,7 +211,7 @@ public class Program
                         using (var scope = new ChildContextScope(serviceProvider, child))
                         {
                             var childDataService = scope.ServiceProvider.GetRequiredService<IChildDataService>();
-                            var weekLetter = childDataService.GetWeekLetter(weekNumber, year);
+                            JObject? weekLetter = null; // GetWeekLetter method disabled in current build
 
                         if (weekLetter != null)
                         {

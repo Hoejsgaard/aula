@@ -202,14 +202,13 @@ public class ChildAwareSlackInteractiveBot : IDisposable
         {
             try
             {
-                // Get agent service from the scoped provider
-                var agentService = scope.ServiceProvider.GetRequiredService<IAgentService>();
+                // Get child agent service from the scoped provider
+                var agentService = scope.ServiceProvider.GetRequiredService<IChildAgentService>();
 
                 // Process the query using agent service (it will use the child from context)
                 var response = await agentService.ProcessQueryWithToolsAsync(
                     text,
                     $"slack-{_config.Slack.ChannelId}",
-                    child,
                     ChatInterface.Slack);
 
                 await SendMessageToSlack(response);
