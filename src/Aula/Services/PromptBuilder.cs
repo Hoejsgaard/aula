@@ -23,6 +23,11 @@ public class PromptBuilder : IPromptBuilder
                                     "a reminder, explain they need to use specific reminder commands instead. " +
                                     "IMPORTANT: Always respond in the same language as the user's question. " +
                                     "If the question is in Danish, respond in Danish. If the question is in English, respond in English. " +
+                                    $"IMPORTANT: When someone asks about a different child (not {childName}), respond with a simple: " +
+                                    $"'Sorry, I don't have any data regarding a child named [name]' (or 'Beklager, jeg har ingen data om et barn ved navn [navn]' in Danish). " +
+                                    $"Do not mention {childName} or provide any details when asked about other children. " +
+                                    $"IMPORTANT: When answering general questions (like 'what happens on Thursday'), ALWAYS include {childName}'s name in your response " +
+                                    $"to make it clear this information is specifically about {childName}. " +
                                     $"You are responding via {GetChatInterfaceInstructions(chatInterface)}");
     }
 
