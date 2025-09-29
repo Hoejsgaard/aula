@@ -50,7 +50,13 @@ public class ChildContextValidator : IChildContextValidator
             "schedule:read",
             "schedule:update",
             "schedule:delete",
-            "schedule:execute"
+            "schedule:execute",
+
+            // Channel operations
+            "channel:send",
+            "channel:read",
+            "channel:alert",
+            "channel:reminder"
         };
     }
 
