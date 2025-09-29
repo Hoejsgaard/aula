@@ -210,7 +210,6 @@ public class Program
                         // Get the week letter from cache using child coordinator
                         using (var scope = new ChildContextScope(serviceProvider, child))
                         {
-                            var childDataService = scope.ServiceProvider.GetRequiredService<IChildDataService>();
                             JObject? weekLetter = null; // GetWeekLetter method disabled in current build
 
                         if (weekLetter != null)
@@ -312,6 +311,7 @@ public class Program
         services.AddScoped<IChildAuditService, ChildAuditService>();
         services.AddScoped<IChildRateLimiter, ChildRateLimiter>();
         services.AddScoped<IChildAwareOpenAiService, SecureChildAwareOpenAiService>();
+        services.AddScoped<IChildAgentService, SecureChildAgentService>();
         services.AddSingleton<IChildContextValidator, ChildContextValidator>();
         services.AddSingleton<IChildOperationExecutor, ChildOperationExecutor>();
 
@@ -328,15 +328,13 @@ public class Program
         services.AddSingleton<IGoogleCalendarService, GoogleCalendarService>();
         services.AddSingleton<IConversationManager, ConversationManager>();
         services.AddSingleton<IPromptBuilder, PromptBuilder>();
-        services.AddSingleton<IAiToolsManager, StubAiToolsManager>();
         services.AddSingleton<IOpenAiService>(provider =>
         {
             var config = provider.GetRequiredService<Config>();
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-            var aiToolsManager = provider.GetRequiredService<IAiToolsManager>();
             var conversationManager = provider.GetRequiredService<IConversationManager>();
             var promptBuilder = provider.GetRequiredService<IPromptBuilder>();
-            return new OpenAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager, conversationManager, promptBuilder);
+            return new OpenAiService(config.OpenAi.ApiKey, loggerFactory, conversationManager, promptBuilder);
         });
 
         // Only register TelegramInteractiveBot if enabled
