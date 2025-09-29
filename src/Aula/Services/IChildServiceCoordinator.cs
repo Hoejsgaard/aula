@@ -1,4 +1,5 @@
 using Aula.Configuration;
+using Newtonsoft.Json.Linq;
 
 namespace Aula.Services;
 
@@ -24,9 +25,15 @@ public interface IChildServiceCoordinator
     Task<bool> FetchWeekLetterForChildAsync(Child child, DateOnly date);
 
     /// <summary>
-    /// Fetches and stores week letters for all children.
+    /// Gets the week letter for a specific child.
     /// </summary>
-    Task FetchWeekLettersForAllChildrenAsync(DateOnly date);
+    Task<JObject?> GetWeekLetterForChildAsync(Child child, DateOnly date);
+
+    /// <summary>
+    /// Fetches and stores week letters for all children.
+    /// Returns a collection of child and their week letters.
+    /// </summary>
+    Task<IEnumerable<(Child child, JObject? weekLetter)>> FetchWeekLettersForAllChildrenAsync(DateOnly date);
 
     /// <summary>
     /// Processes scheduled tasks for a specific child.
@@ -72,4 +79,14 @@ public interface IChildServiceCoordinator
     /// Gets health status for all child-aware services.
     /// </summary>
     Task<Dictionary<string, bool>> GetChildServicesHealthAsync();
+
+    /// <summary>
+    /// Gets all configured children from the configuration.
+    /// </summary>
+    Task<IEnumerable<Child>> GetAllChildrenAsync();
+
+    /// <summary>
+    /// Posts week letters for all children using the provided action.
+    /// </summary>
+    Task PostWeekLettersForAllChildrenAsync(DateOnly date, Func<Child, JObject?, Task> postAction);
 }

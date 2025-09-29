@@ -1,6 +1,7 @@
 using Aula.Authentication;
 using Aula.Configuration;
 using Aula.Context;
+using Aula.Integration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
@@ -18,6 +19,7 @@ public class SecureChildDataService : IChildDataService
     private readonly IChildRateLimiter _rateLimiter;
     private readonly IDataService _dataService;
     private readonly ISupabaseService _supabaseService;
+    private readonly IMinUddannelseClient _minUddannelseClient;
     private readonly ILogger<SecureChildDataService> _logger;
 
     public SecureChildDataService(
@@ -27,6 +29,7 @@ public class SecureChildDataService : IChildDataService
         IChildRateLimiter rateLimiter,
         IDataService dataService,
         ISupabaseService supabaseService,
+        IMinUddannelseClient minUddannelseClient,
         ILogger<SecureChildDataService> logger)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -35,6 +38,7 @@ public class SecureChildDataService : IChildDataService
         _rateLimiter = rateLimiter ?? throw new ArgumentNullException(nameof(rateLimiter));
         _dataService = dataService ?? throw new ArgumentNullException(nameof(dataService));
         _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
+        _minUddannelseClient = minUddannelseClient ?? throw new ArgumentNullException(nameof(minUddannelseClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -433,9 +437,29 @@ public class SecureChildDataService : IChildDataService
             {
                 _logger.LogInformation("Fetching week letter from MinUddannelse for {ChildName}", child.FirstName);
 
-                // Note: In a real implementation, this would call MinUddannelse client
-                // For now, return null as the fetch functionality is not implemented here
-                _logger.LogWarning("Live fetch requested but not implemented in SecureChildDataService");
+                try
+                {
+                    // Use the MinUddannelse client directly to fetch the week letter
+                    var fetchedLetter = await _minUddannelseClient.GetWeekLetter(child, date, true);
+
+                    if (fetchedLetter != null)
+                    {
+                        _logger.LogInformation("Successfully fetched week letter for {ChildName} week {WeekNumber}/{Year}",
+                            child.FirstName, weekNumber, year);
+
+                        // Cache the fetched letter for future use
+                        await CacheWeekLetterAsync(weekNumber, year, fetchedLetter);
+
+                        await _rateLimiter.RecordOperationAsync(child, "GetOrFetchWeekLetter");
+                        await _auditService.LogDataAccessAsync(child, "GetOrFetchWeekLetter", $"letter_{weekNumber}_{year}", true);
+
+                        return fetchedLetter;
+                    }
+                }
+                catch (Exception fetchEx)
+                {
+                    _logger.LogError(fetchEx, "Failed to fetch week letter from MinUddannelse for {ChildName}", child.FirstName);
+                }
             }
 
             await _rateLimiter.RecordOperationAsync(child, "GetOrFetchWeekLetter");

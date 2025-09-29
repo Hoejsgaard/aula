@@ -18,7 +18,7 @@ public class SchedulingServiceIntegrationTests
     private readonly Mock<ILoggerFactory> _mockLoggerFactory;
     private readonly Mock<ILogger> _mockLogger;
     private readonly Mock<ISupabaseService> _mockSupabaseService;
-    private readonly Mock<IAgentService> _mockAgentService;
+    private readonly Mock<IChildServiceCoordinator> _mockCoordinator;
     private readonly Mock<IChannelManager> _mockChannelManager;
     private readonly Config _testConfig;
     private readonly SchedulingService _schedulingService;
@@ -28,7 +28,7 @@ public class SchedulingServiceIntegrationTests
         _mockLoggerFactory = new Mock<ILoggerFactory>();
         _mockLogger = new Mock<ILogger>();
         _mockSupabaseService = new Mock<ISupabaseService>();
-        _mockAgentService = new Mock<IAgentService>();
+        _mockCoordinator = new Mock<IChildServiceCoordinator>();
         _mockChannelManager = new Mock<IChannelManager>();
 
         _mockLoggerFactory.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
@@ -58,7 +58,7 @@ public class SchedulingServiceIntegrationTests
         _schedulingService = new SchedulingService(
             _mockLoggerFactory.Object,
             _mockSupabaseService.Object,
-            _mockAgentService.Object,
+            _mockCoordinator.Object,
             _mockChannelManager.Object,
             _testConfig);
     }
@@ -76,7 +76,7 @@ public class SchedulingServiceIntegrationTests
             new SchedulingService(
                 null!,
                 _mockSupabaseService.Object,
-                _mockAgentService.Object,
+                _mockCoordinator.Object,
                 _mockChannelManager.Object,
                 _testConfig));
         Assert.Equal("loggerFactory", exception.ParamName);
@@ -89,14 +89,14 @@ public class SchedulingServiceIntegrationTests
             new SchedulingService(
                 _mockLoggerFactory.Object,
                 null!,
-                _mockAgentService.Object,
+                _mockCoordinator.Object,
                 _mockChannelManager.Object,
                 _testConfig));
         Assert.Equal("supabaseService", exception.ParamName);
     }
 
     [Fact]
-    public void Constructor_WithNullAgentService_ThrowsArgumentNullException()
+    public void Constructor_WithNullCoordinator_ThrowsArgumentNullException()
     {
         var exception = Assert.Throws<ArgumentNullException>(() =>
             new SchedulingService(
@@ -105,7 +105,7 @@ public class SchedulingServiceIntegrationTests
                 null!,
                 _mockChannelManager.Object,
                 _testConfig));
-        Assert.Equal("agentService", exception.ParamName);
+        Assert.Equal("coordinator", exception.ParamName);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class SchedulingServiceIntegrationTests
             new SchedulingService(
                 _mockLoggerFactory.Object,
                 _mockSupabaseService.Object,
-                _mockAgentService.Object,
+                _mockCoordinator.Object,
                 null!,
                 _testConfig));
         Assert.Equal("channelManager", exception.ParamName);
@@ -128,7 +128,7 @@ public class SchedulingServiceIntegrationTests
             new SchedulingService(
                 _mockLoggerFactory.Object,
                 _mockSupabaseService.Object,
-                _mockAgentService.Object,
+                _mockCoordinator.Object,
                 _mockChannelManager.Object,
                 null!));
         Assert.Equal("config", exception.ParamName);
@@ -141,7 +141,7 @@ public class SchedulingServiceIntegrationTests
         var service = new SchedulingService(
             _mockLoggerFactory.Object,
             _mockSupabaseService.Object,
-            _mockAgentService.Object,
+            _mockCoordinator.Object,
             mockChannelManager.Object,
             _testConfig);
 
@@ -280,7 +280,7 @@ public class SchedulingServiceIntegrationTests
         var service = new SchedulingService(
             _mockLoggerFactory.Object,
             _mockSupabaseService.Object,
-            _mockAgentService.Object,
+            _mockCoordinator.Object,
             mockChannelManager.Object,
             config);
 

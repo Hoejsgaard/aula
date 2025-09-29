@@ -1,9 +1,12 @@
+using System;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 using Aula.Services;
 
 namespace Aula.Integration;
 
+[Obsolete("Use IChildAuthenticationService with IChildContext instead. This interface will be removed in the next major version. " +
+          "Authentication and data fetching should be done through child-aware services for proper isolation.")]
 public interface IMinUddannelseClient
 {
     Task<bool> LoginAsync();

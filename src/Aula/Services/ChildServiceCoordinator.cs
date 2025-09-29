@@ -111,18 +111,36 @@ public class ChildServiceCoordinator : IChildServiceCoordinator
             "FetchWeekLetter");
     }
 
-    public async Task FetchWeekLettersForAllChildrenAsync(DateOnly date)
+    public async Task<JObject?> GetWeekLetterForChildAsync(Child child, DateOnly date)
     {
-        var allChildren = await _agentService.GetAllChildrenAsync();
-
-        await _executor.ExecuteForAllChildrenAsync<object>(allChildren,
+        return await _executor.ExecuteInChildContextAsync(child,
             async (serviceProvider) =>
             {
                 var dataService = serviceProvider.GetRequiredService<IChildDataService>();
-                var letter = await dataService.GetOrFetchWeekLetterAsync(date, true);
-                return (object?)letter ?? new { };
+                return await dataService.GetOrFetchWeekLetterAsync(date, true);
             },
-            "FetchWeekLettersForAll");
+            $"GetWeekLetter_{child.FirstName}");
+    }
+
+    public async Task<IEnumerable<(Child child, JObject? weekLetter)>> FetchWeekLettersForAllChildrenAsync(DateOnly date)
+    {
+        var allChildren = await _agentService.GetAllChildrenAsync();
+        var results = new List<(Child child, JObject? weekLetter)>();
+
+        foreach (var child in allChildren)
+        {
+            var weekLetter = await _executor.ExecuteInChildContextAsync(child,
+                async (serviceProvider) =>
+                {
+                    var dataService = serviceProvider.GetRequiredService<IChildDataService>();
+                    return await dataService.GetOrFetchWeekLetterAsync(date, true);
+                },
+                $"FetchWeekLetter_{child.FirstName}");
+
+            results.Add((child, weekLetter));
+        }
+
+        return results;
     }
 
     public async Task ProcessScheduledTasksForChildAsync(Child child)
@@ -375,5 +393,30 @@ public class ChildServiceCoordinator : IChildServiceCoordinator
         }
 
         return health;
+    }
+
+    public async Task<IEnumerable<Child>> GetAllChildrenAsync()
+    {
+        return await _agentService.GetAllChildrenAsync();
+    }
+
+    public async Task PostWeekLettersForAllChildrenAsync(DateOnly date, Func<Child, JObject?, Task> postAction)
+    {
+        if (postAction == null) throw new ArgumentNullException(nameof(postAction));
+
+        var allChildren = await _agentService.GetAllChildrenAsync();
+
+        foreach (var child in allChildren)
+        {
+            var weekLetter = await _executor.ExecuteInChildContextAsync(child,
+                async (serviceProvider) =>
+                {
+                    var dataService = serviceProvider.GetRequiredService<IChildDataService>();
+                    return await dataService.GetOrFetchWeekLetterAsync(date, true);
+                },
+                $"GetWeekLetter_{child.FirstName}");
+
+            await postAction(child, weekLetter);
+        }
     }
 }

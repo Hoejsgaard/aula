@@ -57,11 +57,26 @@ public class ConversationManager : IConversationManager
     public void AddUserQuestionToHistory(string contextKey, string question)
     {
         _logger.LogInformation("🔎 TRACE: Adding user question to conversation history: {Question}", question);
+
+        // Ensure conversation history exists for this context
+        if (!_conversationHistory.ContainsKey(contextKey))
+        {
+            _logger.LogWarning("Conversation history not found for context {ContextKey}, initializing empty history", contextKey);
+            _conversationHistory[contextKey] = new List<ChatMessage>();
+        }
+
         _conversationHistory[contextKey].Add(ChatMessage.FromUser(question));
     }
 
     public void AddAssistantResponseToHistory(string contextKey, string response)
     {
+        // Ensure conversation history exists for this context
+        if (!_conversationHistory.ContainsKey(contextKey))
+        {
+            _logger.LogWarning("Conversation history not found for context {ContextKey}, initializing empty history", contextKey);
+            _conversationHistory[contextKey] = new List<ChatMessage>();
+        }
+
         _conversationHistory[contextKey].Add(ChatMessage.FromAssistant(response));
     }
 

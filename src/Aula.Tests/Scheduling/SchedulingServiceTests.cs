@@ -17,7 +17,7 @@ public class SchedulingServiceTests : IDisposable
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly Mock<ISupabaseService> _mockSupabaseService;
-    private readonly Mock<IAgentService> _mockAgentService;
+    private readonly Mock<IChildServiceCoordinator> _mockCoordinator;
     private readonly Mock<IChannelManager> _mockChannelManager;
     private readonly Config _testConfig;
     private readonly List<IDisposable> _disposables = new List<IDisposable>();
@@ -26,7 +26,7 @@ public class SchedulingServiceTests : IDisposable
     {
         _loggerFactory = new LoggerFactory();
         _mockSupabaseService = new Mock<ISupabaseService>();
-        _mockAgentService = new Mock<IAgentService>();
+        _mockCoordinator = new Mock<IChildServiceCoordinator>();
         _mockChannelManager = new Mock<IChannelManager>();
 
         // Setup mock channel manager to return empty channels list by default
@@ -51,7 +51,7 @@ public class SchedulingServiceTests : IDisposable
         return new SchedulingService(
             _loggerFactory,
             _mockSupabaseService.Object,
-            _mockAgentService.Object,
+            _mockCoordinator.Object,
             _mockChannelManager.Object,
             _testConfig);
     }
@@ -284,7 +284,7 @@ public class SchedulingServiceTests : IDisposable
     public async Task ExecuteTask_WithWeeklyLetterCheck_CallsAgentService()
     {
         // Arrange
-        _mockAgentService.Setup(s => s.GetAllChildrenAsync())
+        _mockCoordinator.Setup(s => s.GetAllChildrenAsync())
             .ReturnsAsync(new List<Child>());
 
         var schedulingService = CreateSchedulingService();
@@ -294,7 +294,7 @@ public class SchedulingServiceTests : IDisposable
         await TestExecuteTask(schedulingService, task);
 
         // Assert
-        _mockAgentService.Verify(s => s.GetAllChildrenAsync(), Times.Once());
+        _mockCoordinator.Verify(s => s.GetAllChildrenAsync(), Times.Once());
     }
 
     [Fact]
@@ -464,7 +464,7 @@ public class SchedulingServiceTests : IDisposable
         };
 
         // Setup mocks
-        _mockAgentService.Setup(x => x.GetAllChildrenAsync())
+        _mockCoordinator.Setup(x => x.GetAllChildrenAsync())
             .ReturnsAsync(new List<Child> { new Child { FirstName = "TestChild", LastName = "TestLast" } });
 
         _mockSupabaseService.Setup(x => x.HasWeekLetterBeenPostedAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
@@ -474,7 +474,7 @@ public class SchedulingServiceTests : IDisposable
         await TestExecuteTask(schedulingService, task);
 
         // Assert
-        _mockAgentService.Verify(x => x.GetAllChildrenAsync(), Times.Once());
+        _mockCoordinator.Verify(x => x.GetAllChildrenAsync(), Times.Once());
         _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once());
     }
 
@@ -583,7 +583,7 @@ public class SchedulingServiceTests : IDisposable
 
         // Assert
         _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once());
-        _mockAgentService.Verify(x => x.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never());
+        _mockCoordinator.Verify(x => x.GetWeekLetterForChildAsync(It.IsAny<Child>(), It.IsAny<DateOnly>()), Times.Never());
     }
 
     [Fact]
@@ -598,7 +598,7 @@ public class SchedulingServiceTests : IDisposable
         _mockSupabaseService.Setup(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync(false);
 
-        _mockAgentService.Setup(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), It.IsAny<bool>(), true))
+        _mockCoordinator.Setup(x => x.GetWeekLetterForChildAsync(child, It.IsAny<DateOnly>()))
             .ReturnsAsync(default(JObject?));
 
         _mockSupabaseService.Setup(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
@@ -610,7 +610,7 @@ public class SchedulingServiceTests : IDisposable
 
         // Assert
         _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once());
-        _mockAgentService.Verify(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), It.IsAny<bool>(), true), Times.Once());
+        _mockCoordinator.Verify(x => x.GetWeekLetterForChildAsync(child, It.IsAny<DateOnly>()), Times.Once());
         _mockSupabaseService.Verify(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()), Times.Once());
     }
 
@@ -628,7 +628,7 @@ public class SchedulingServiceTests : IDisposable
         _mockSupabaseService.Setup(x => x.HasWeekLetterBeenPostedAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync(false);
 
-        _mockAgentService.Setup(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), It.IsAny<bool>(), true))
+        _mockCoordinator.Setup(x => x.GetWeekLetterForChildAsync(child, It.IsAny<DateOnly>()))
             .ReturnsAsync(weekLetter);
 
         _mockSupabaseService.Setup(x => x.IncrementRetryAttemptAsync("TestChild", It.IsAny<int>(), It.IsAny<int>()))
@@ -761,7 +761,7 @@ public class SchedulingServiceTests : IDisposable
 
         var child = new Child { FirstName = "TestChild", LastName = "TestLast" };
 
-        _mockAgentService.Setup(x => x.GetWeekLetterAsync(child, It.IsAny<DateOnly>(), It.IsAny<bool>(), true))
+        _mockCoordinator.Setup(x => x.GetWeekLetterForChildAsync(child, It.IsAny<DateOnly>()))
             .ReturnsAsync(default(JObject?));
 
         _mockSupabaseService.Setup(x => x.IncrementRetryAttemptAsync("TestChild", 42, 2024))
@@ -1103,7 +1103,7 @@ public class SchedulingServiceTests : IDisposable
                 var service = new SchedulingService(
                     _loggerFactory,
                     _mockSupabaseService.Object,
-                    _mockAgentService.Object,
+                    _mockCoordinator.Object,
                     _mockChannelManager.Object,
                     testConfig);
 
@@ -1137,7 +1137,7 @@ public class SchedulingServiceTests : IDisposable
         Assert.True(wasPosted);
         _mockSupabaseService.Verify(x => x.HasWeekLetterBeenPostedAsync("TestChild", 42, 2024), Times.Once());
         // GetWeekLetterAsync should not be called if already posted
-        _mockAgentService.Verify(x => x.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>(), It.IsAny<bool>()), Times.Never());
+        _mockCoordinator.Verify(x => x.GetWeekLetterForChildAsync(It.IsAny<Child>(), It.IsAny<DateOnly>()), Times.Never());
     }
 
     public void Dispose()

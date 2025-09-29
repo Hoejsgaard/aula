@@ -1,9 +1,12 @@
+using System;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 using Aula.Services;
 
 namespace Aula.Integration;
 
+[Obsolete("Use IChildAgentService with IChildContext instead. This interface will be removed in the next major version. " +
+          "For child management, use IChildServiceCoordinator. For child-specific operations, use child-aware services.")]
 public interface IAgentService
 {
     Task<bool> LoginAsync();

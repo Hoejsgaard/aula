@@ -13,6 +13,8 @@ using Aula.Configuration;
 using Aula.Services;
 using Aula.Repositories;
 using Aula.Utilities;
+using Aula.Context;
+using Aula.Authentication;
 
 namespace Aula;
 
@@ -76,12 +78,11 @@ public class Program
             }
 
             // Preload week letters for all children to ensure data is available for interactive bots
-            var agentService = serviceProvider.GetRequiredService<IAgentService>();
+            var coordinator = serviceProvider.GetRequiredService<IChildServiceCoordinator>();
             if (config.Features?.PreloadWeekLettersOnStartup == true)
             {
                 logger.LogInformation("Preloading week letters for all children");
-                await agentService.LoginAsync();
-                await PreloadChildrenWeekLetters(agentService, config, logger);
+                await PreloadChildrenWeekLetters(coordinator, config, logger);
             }
             else
             {
@@ -114,26 +115,25 @@ public class Program
             // Check if we need to post week letters on startup
             if (config.Features?.PostWeekLettersOnStartup == true)
             {
-                var allChildren = await agentService.GetAllChildrenAsync();
-                foreach (var child in allChildren)
-                {
-                    // Don't allow live fetch here since we already preloaded
-                    var weekLetter = await agentService.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), true, false);
-                    if (weekLetter != null)
+                await coordinator.PostWeekLettersForAllChildrenAsync(
+                    DateOnly.FromDateTime(DateTime.Today),
+                    async (child, weekLetter) =>
                     {
-                        // Post to Slack if enabled
-                        if (config.Slack.Enabled)
+                        if (weekLetter != null)
                         {
-                            await slackBot.PostWeekLetter(weekLetter, child);
-                        }
+                            // Post to Slack if enabled
+                            if (config.Slack.Enabled)
+                            {
+                                await slackBot.PostWeekLetter(weekLetter, child);
+                            }
 
-                        // Post to Telegram if enabled
-                        if (config.Telegram.Enabled && telegramInteractiveBot != null)
-                        {
-                            await telegramInteractiveBot.PostWeekLetter(child.FirstName, weekLetter);
+                            // Post to Telegram if enabled
+                            if (config.Telegram.Enabled && telegramInteractiveBot != null)
+                            {
+                                await telegramInteractiveBot.PostWeekLetter(child.FirstName, weekLetter);
+                            }
                         }
-                    }
-                }
+                    });
             }
 
             // Scheduling service already started above - removed duplicate
@@ -199,7 +199,19 @@ public class Program
         // Memory cache
         services.AddMemoryCache();
 
-        // Services
+        // Child-aware architecture services
+        services.AddScoped<IChildContext, ChildContext>();
+        services.AddScoped<IChildDataService, SecureChildDataService>();
+        services.AddScoped<IChildAgentService, SecureChildAgentService>();
+        services.AddScoped<IChildAuthenticationService, SecureChildAuthenticationService>();
+        services.AddScoped<IChildAwareOpenAiService, SecureChildAwareOpenAiService>();
+        services.AddScoped<IChildAuditService, ChildAuditService>();
+        services.AddScoped<IChildRateLimiter, ChildRateLimiter>();
+        services.AddSingleton<IChildContextValidator, ChildContextValidator>();
+        services.AddSingleton<IChildOperationExecutor, ChildOperationExecutor>();
+        services.AddSingleton<IChildServiceCoordinator, ChildServiceCoordinator>();
+
+        // Legacy services (marked as obsolete, will be removed in future version)
         services.AddSingleton<IDataService, DataService>();
         services.AddSingleton<IMinUddannelseClient>(provider =>
         {
@@ -210,6 +222,9 @@ public class Program
             // Use the new per-child authentication client
             return new PerChildMinUddannelseClient(config, supabaseService, loggerFactory);
         });
+        services.AddSingleton<IAgentService, AgentService>();
+
+        // Other singleton services
         services.AddSingleton<SlackBot>();
         services.AddSingleton<TelegramClient>();
         services.AddSingleton<IGoogleCalendarService, GoogleCalendarService>();
@@ -224,7 +239,6 @@ public class Program
             var promptBuilder = provider.GetRequiredService<IPromptBuilder>();
             return new OpenAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager, conversationManager, promptBuilder);
         });
-        services.AddSingleton<IAgentService, AgentService>();
         services.AddSingleton<SlackInteractiveBot>();
 
         // Only register TelegramInteractiveBot if enabled
@@ -277,11 +291,12 @@ public class Program
         {
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
             var supabaseService = provider.GetRequiredService<ISupabaseService>();
-            var agentService = provider.GetRequiredService<IAgentService>();
+            var coordinator = provider.GetRequiredService<IChildServiceCoordinator>();
             var channelManager = provider.GetRequiredService<IChannelManager>();
             var config = provider.GetRequiredService<Config>();
 
-            return new SchedulingService(loggerFactory, supabaseService, agentService, channelManager, config);
+            // Updated to use IChildServiceCoordinator for proper child-aware architecture
+            return new SchedulingService(loggerFactory, supabaseService, coordinator, channelManager, config);
         });
 
         return services.BuildServiceProvider();
@@ -291,12 +306,12 @@ public class Program
     /// Preloads week letters for all children to ensure data is available for interactive bots.
     /// Fetches current week and past 2 weeks to ensure we have recent data.
     /// This improves response times and provides better user experience.
+    /// Uses the new child-aware architecture for proper isolation.
     /// </summary>
-    private static async Task PreloadChildrenWeekLetters(IAgentService agentService, Config config, ILogger logger)
+    private static async Task PreloadChildrenWeekLetters(IChildServiceCoordinator coordinator, Config config, ILogger logger)
     {
         logger.LogInformation("📚 Starting week letter preload for current and recent weeks");
 
-        var allChildren = await agentService.GetAllChildrenAsync();
         var today = DateOnly.FromDateTime(DateTime.Today);
         var weeksToCheck = config.Features?.WeeksToPreload ?? 3; // Use configured value or default to 3
         var successCount = 0;
@@ -310,30 +325,21 @@ public class Program
 
             logger.LogInformation("📅 Checking week {WeekNumber}/{Year} (date: {Date})", weekNumber, year, targetDate);
 
-            foreach (var child in allChildren)
+            // Use the coordinator to fetch week letters for all children
+            var results = await coordinator.FetchWeekLettersForAllChildrenAsync(targetDate);
+
+            foreach (var (child, weekLetter) in results)
             {
                 totalAttempts++;
-                try
+                if (weekLetter != null && weekLetter["ugebreve"] != null)
                 {
-                    // Use allowLiveFetch: true on startup to ensure we fetch from MinUddannelse if needed
-                    // This will check: cache → database → MinUddannelse (and store to DB)
-                    var weekLetter = await agentService.GetWeekLetterAsync(child, targetDate, true, true);
-
-                    if (weekLetter != null && weekLetter["ugebreve"] != null)
-                    {
-                        logger.LogInformation("✅ Preloaded week letter for {ChildName} week {WeekNumber}/{Year}",
-                            child.FirstName, weekNumber, year);
-                        successCount++;
-                    }
-                    else
-                    {
-                        logger.LogInformation("📭 No week letter available for {ChildName} week {WeekNumber}/{Year}",
-                            child.FirstName, weekNumber, year);
-                    }
+                    logger.LogInformation("✅ Preloaded week letter for {ChildName} week {WeekNumber}/{Year}",
+                        child.FirstName, weekNumber, year);
+                    successCount++;
                 }
-                catch (Exception ex)
+                else
                 {
-                    logger.LogError(ex, "Failed to preload week letter for {ChildName} week {WeekNumber}/{Year}",
+                    logger.LogInformation("📭 No week letter available for {ChildName} week {WeekNumber}/{Year}",
                         child.FirstName, weekNumber, year);
                 }
             }
