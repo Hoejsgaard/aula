@@ -42,4 +42,15 @@ public interface IChildDataService
     /// Retrieves stored week letters from the database for the current child.
     /// </summary>
     Task<List<JObject>> GetStoredWeekLettersAsync(int? year = null);
+
+    /// <summary>
+    /// Gets or fetches a week letter for the specified date.
+    /// Will check cache first, then database, then fetch from MinUddannelse if allowed.
+    /// </summary>
+    Task<JObject?> GetOrFetchWeekLetterAsync(DateOnly date, bool allowLiveFetch = false);
+
+    /// <summary>
+    /// Gets all available week letters for the current child.
+    /// </summary>
+    Task<List<JObject>> GetAllWeekLettersAsync();
 }

@@ -1,0 +1,362 @@
+using System.Reflection;
+using System.Text;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Aula.Authentication;
+using Aula.Bots;
+using Aula.Channels;
+using Aula.Configuration;
+using Aula.Context;
+using Aula.Integration;
+using Aula.Repositories;
+using Aula.Scheduling;
+using Aula.Services;
+using Aula.Tools;
+using Aula.Utilities;
+
+namespace Aula;
+
+/// <summary>
+/// Child-aware version of Program.cs that uses scoped services and child context isolation.
+/// This is Chapter 7 of the child-centric architecture migration.
+/// </summary>
+public class ProgramChildAware
+{
+    public static async Task Main()
+    {
+        var serviceProvider = ConfigureServices();
+        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+        var logger = loggerFactory.CreateLogger(nameof(ProgramChildAware));
+
+        try
+        {
+            logger.LogInformation("🚀 Starting Aula with child-aware architecture");
+
+            var config = serviceProvider.GetRequiredService<Config>();
+
+            // Validate configuration at startup
+            var configValidator = serviceProvider.GetRequiredService<IConfigurationValidator>();
+            var validationResult = await configValidator.ValidateConfigurationAsync(config);
+
+            if (!validationResult.IsValid)
+            {
+                foreach (var error in validationResult.Errors)
+                {
+                    logger.LogError("Configuration error: {Error}", error);
+                }
+                logger.LogError("Application startup failed due to configuration errors");
+                return;
+            }
+
+            foreach (var warning in validationResult.Warnings)
+            {
+                logger.LogWarning("Configuration warning: {Warning}", warning);
+            }
+
+            // Initialize Supabase
+            var supabaseService = serviceProvider.GetRequiredService<ISupabaseService>();
+            await supabaseService.InitializeAsync();
+
+            // Test Supabase connection
+            var connectionTest = await supabaseService.TestConnectionAsync();
+            if (!connectionTest)
+            {
+                logger.LogWarning("Supabase connection test failed - continuing without database features");
+            }
+            else
+            {
+                logger.LogInformation("✅ Supabase connection test successful");
+            }
+
+            // Get the child service coordinator
+            var coordinator = serviceProvider.GetRequiredService<IChildServiceCoordinator>();
+
+            // Validate child-aware services
+            logger.LogInformation("🔍 Validating child-aware services");
+            var servicesValid = await coordinator.ValidateChildServicesAsync();
+            if (!servicesValid)
+            {
+                logger.LogError("Child-aware services validation failed");
+                return;
+            }
+            logger.LogInformation("✅ Child-aware services validated successfully");
+
+            // Get service health
+            var health = await coordinator.GetChildServicesHealthAsync();
+            foreach (var (service, isHealthy) in health)
+            {
+                if (isHealthy)
+                {
+                    logger.LogInformation("✅ {Service}: Healthy", service);
+                }
+                else
+                {
+                    logger.LogWarning("❌ {Service}: Unhealthy", service);
+                }
+            }
+
+            // Historical data seeding (controlled by configuration)
+            if (connectionTest && config.Features?.SeedHistoricalData == true)
+            {
+                logger.LogInformation("🗂️ Starting historical week letter population");
+                await coordinator.SeedHistoricalDataForAllChildrenAsync(12);
+            }
+
+            // Preload week letters for all children
+            if (config.Features?.PreloadWeekLettersOnStartup == true)
+            {
+                logger.LogInformation("📚 Preloading week letters for all children");
+                await coordinator.PreloadWeekLettersForAllChildrenAsync();
+            }
+            else
+            {
+                logger.LogInformation("Week letter preloading disabled in configuration");
+            }
+
+            // Start scheduling service
+            logger.LogInformation("⏰ Starting scheduling service");
+            var schedulingService = serviceProvider.GetRequiredService<ISchedulingService>();
+            await schedulingService.StartAsync();
+            logger.LogInformation("✅ Scheduling service started");
+
+            // Start interactive bots if enabled
+            SlackInteractiveBot? slackInteractiveBot = null;
+            if (config.Slack.EnableInteractiveBot)
+            {
+                slackInteractiveBot = serviceProvider.GetRequiredService<SlackInteractiveBot>();
+                await slackInteractiveBot.Start();
+                logger.LogInformation("✅ Slack interactive bot started");
+            }
+
+            TelegramInteractiveBot? telegramInteractiveBot = null;
+            if (config.Telegram.Enabled && !string.IsNullOrEmpty(config.Telegram.Token))
+            {
+                telegramInteractiveBot = serviceProvider.GetRequiredService<TelegramInteractiveBot>();
+                await telegramInteractiveBot.Start();
+                logger.LogInformation("✅ Telegram interactive bot started");
+            }
+
+            // Post week letters on startup if configured
+            if (config.Features?.PostWeekLettersOnStartup == true)
+            {
+                logger.LogInformation("📮 Posting week letters to channels");
+                await coordinator.PostWeekLettersToChannelsAsync();
+            }
+
+            logger.LogInformation("🎉 Aula started successfully with child-aware architecture");
+
+            // Keep the application running with cancellation support
+            var cancellationTokenSource = new CancellationTokenSource();
+            Console.CancelKeyPress += (_, e) =>
+            {
+                e.Cancel = true;
+                cancellationTokenSource.Cancel();
+                logger.LogInformation("🛑 Shutdown requested");
+            };
+
+            try
+            {
+                // Process scheduled tasks periodically
+                var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
+                while (!cancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    await timer.WaitForNextTickAsync(cancellationTokenSource.Token);
+
+                    try
+                    {
+                        await coordinator.ProcessScheduledTasksForAllChildrenAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Error processing scheduled tasks");
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancellation is requested
+            }
+
+            // Graceful shutdown
+            logger.LogInformation("🛑 Stopping scheduling service");
+            await schedulingService.StopAsync();
+
+            if (slackInteractiveBot != null)
+            {
+                logger.LogInformation("🛑 Stopping Slack bot");
+                slackInteractiveBot.Stop();
+            }
+
+            if (telegramInteractiveBot != null)
+            {
+                logger.LogInformation("🛑 Stopping Telegram bot");
+                await telegramInteractiveBot.Stop();
+            }
+
+            logger.LogInformation("👋 Aula stopped gracefully");
+        }
+        catch (Exception ex)
+        {
+            logger.LogCritical(ex, "Aula startup failed with critical error");
+        }
+    }
+
+    public static ServiceProvider ConfigureServices()
+    {
+        var services = new ServiceCollection();
+
+        // Configuration
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!)
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .Build();
+
+        services.AddSingleton<IConfiguration>(configuration);
+        services.AddSingleton<Config>(provider =>
+        {
+            var config = new Config();
+            configuration.Bind(config);
+            return config;
+        });
+
+        // Logging
+        services.AddLogging(builder =>
+        {
+            builder.ClearProviders();
+            builder.AddSimpleConsole(options =>
+            {
+                options.TimestampFormat = "HH:mm:ss ";
+                options.IncludeScopes = true; // Enable scopes for child context
+            });
+            builder.SetMinimumLevel(LogLevel.Information);
+        });
+
+        // Memory cache
+        services.AddMemoryCache();
+
+        // === SINGLETON SERVICES (shared across all children) ===
+
+        // Core infrastructure services
+        services.AddSingleton<ISupabaseService, SupabaseService>();
+        services.AddSingleton<IAgentService, AgentService>();
+        services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
+        services.AddSingleton<IChannelManager, ChannelManager>();
+
+        // Authentication and audit services
+        services.AddSingleton<IChildAuditService, ChildAuditService>();
+
+        // Child operation executor (bridges singleton and scoped worlds)
+        services.AddSingleton<IChildOperationExecutor, ChildOperationExecutor>();
+        services.AddSingleton<IChildServiceCoordinator, ChildServiceCoordinator>();
+
+        // Legacy services (will be migrated in Chapter 8)
+        services.AddSingleton<IDataService, DataService>();
+        services.AddSingleton<SlackBot>();
+        services.AddSingleton<TelegramClient>();
+        services.AddSingleton<IGoogleCalendarService, GoogleCalendarService>();
+        services.AddSingleton<IConversationManager, ConversationManager>();
+        services.AddSingleton<IPromptBuilder, PromptBuilder>();
+        services.AddSingleton<IOpenAiService>(provider =>
+        {
+            var config = provider.GetRequiredService<Config>();
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var aiToolsManager = provider.GetRequiredService<IAiToolsManager>();
+            var conversationManager = provider.GetRequiredService<IConversationManager>();
+            var promptBuilder = provider.GetRequiredService<IPromptBuilder>();
+            return new OpenAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager, conversationManager, promptBuilder);
+        });
+
+        services.AddSingleton<IMinUddannelseClient>(provider =>
+        {
+            var config = provider.GetRequiredService<Config>();
+            var supabaseService = provider.GetRequiredService<ISupabaseService>();
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            return new PerChildMinUddannelseClient(config, supabaseService, loggerFactory);
+        });
+
+        services.AddSingleton<SlackInteractiveBot>();
+        services.AddSingleton<IAiToolsManager, AiToolsManager>();
+        services.AddSingleton<IWeekLetterSeeder, WeekLetterSeeder>();
+        services.AddSingleton<IHistoricalDataSeeder, HistoricalDataSeeder>();
+
+        // Telegram services if enabled
+        var telegramEnabled = configuration.GetValue<bool>("Telegram:Enabled");
+        var telegramToken = configuration.GetValue<string>("Telegram:Token");
+        if (telegramEnabled && !string.IsNullOrEmpty(telegramToken))
+        {
+            services.AddSingleton<Telegram.Bot.ITelegramBotClient>(provider =>
+            {
+                var config = provider.GetRequiredService<Config>();
+                return new Telegram.Bot.TelegramBotClient(config.Telegram.Token);
+            });
+            services.AddSingleton<TelegramChannelMessenger>();
+            services.AddSingleton<TelegramInteractiveBot>();
+        }
+
+        // Scheduling service (singleton but will use child contexts internally)
+        services.AddSingleton<ISchedulingService>(provider =>
+        {
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var supabaseService = provider.GetRequiredService<ISupabaseService>();
+            var agentService = provider.GetRequiredService<IAgentService>();
+            var channelManager = provider.GetRequiredService<IChannelManager>();
+            var config = provider.GetRequiredService<Config>();
+
+            return new SchedulingService(loggerFactory, supabaseService, agentService, channelManager, config);
+        });
+
+        // === SCOPED SERVICES (per-child isolation) ===
+
+        // Child context (scoped to ensure isolation)
+        services.AddScoped<IChildContext, ChildContext>();
+        services.AddScoped<IChildContextValidator, ChildContextValidator>();
+
+        // Child-aware data services
+        services.AddScoped<IChildDataService, SecureChildDataService>();
+        services.AddScoped<IChildAuthenticationService, SecureChildAuthenticationService>();
+
+        // Child-aware AI services
+        services.AddScoped<IChildAwareOpenAiService, SecureChildAwareOpenAiService>();
+
+        // Child-aware scheduling
+        services.AddScoped<IChildScheduler, SecureChildScheduler>();
+        services.AddScoped<IChildSchedulingRateLimiter, ChildSchedulingRateLimiter>();
+
+        // Child-aware channels
+        services.AddScoped<IChildChannelManager, SecureChildChannelManager>();
+        services.AddScoped<IMessageContentFilter, MessageContentFilter>();
+
+        // Child-aware rate limiting
+        services.AddScoped<IChildRateLimiter, ChildRateLimiter>();
+
+        // Register channel implementations with ChannelManager
+        var serviceProvider = services.BuildServiceProvider();
+        var channelManager = serviceProvider.GetRequiredService<IChannelManager>();
+        var config = serviceProvider.GetRequiredService<Config>();
+        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+
+        // Register Slack channel if enabled
+        if (config.Slack.Enabled)
+        {
+            var slackBot = serviceProvider.GetService<SlackInteractiveBot>();
+            var slackChannel = new SlackChannel(config, loggerFactory, slackBot);
+            channelManager.RegisterChannel(slackChannel);
+        }
+
+        // Register Telegram channel if enabled
+        if (config.Telegram.Enabled)
+        {
+            var telegramBot = serviceProvider.GetService<TelegramInteractiveBot>();
+            var telegramMessenger = serviceProvider.GetService<TelegramChannelMessenger>();
+            if (telegramMessenger != null)
+            {
+                var telegramChannel = new TelegramChannel(config, loggerFactory, telegramMessenger, telegramBot);
+                channelManager.RegisterChannel(telegramChannel);
+            }
+        }
+
+        return serviceProvider;
+    }
+}

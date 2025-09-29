@@ -368,6 +368,131 @@ public class SecureChildDataService : IChildDataService
         }
     }
 
+    public async Task<JObject?> GetOrFetchWeekLetterAsync(DateOnly date, bool allowLiveFetch = false)
+    {
+        // Layer 1: Context validation
+        _context.ValidateContext();
+        var child = _context.CurrentChild!;
+
+        // Calculate week number for the given date
+        var calendar = System.Globalization.CultureInfo.InvariantCulture.Calendar;
+        var weekNumber = calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue),
+            System.Globalization.CalendarWeekRule.FirstFourDayWeek,
+            DayOfWeek.Monday);
+        var year = date.Year;
+
+        // Layer 2: Permission validation
+        if (!await _contextValidator.ValidateChildPermissionsAsync(child, "read:week_letter"))
+        {
+            _logger.LogWarning("Permission denied for {ChildName} to get or fetch week letter", child.FirstName);
+            await _auditService.LogSecurityEventAsync(child, "PermissionDenied", "read:week_letter", SecuritySeverity.Warning);
+            return null;
+        }
+
+        // Layer 3: Rate limiting
+        if (!await _rateLimiter.IsAllowedAsync(child, "GetOrFetchWeekLetter"))
+        {
+            _logger.LogWarning("Rate limit exceeded for {ChildName} getting week letter", child.FirstName);
+            await _auditService.LogSecurityEventAsync(child, "RateLimitExceeded", "GetOrFetchWeekLetter", SecuritySeverity.Warning);
+            throw new RateLimitExceededException("GetOrFetchWeekLetter", child.FirstName, 50, TimeSpan.FromMinutes(1));
+        }
+
+        try
+        {
+            _logger.LogInformation("Getting or fetching week letter for {ChildName} date {Date} (week {WeekNumber}/{Year})",
+                child.FirstName, date, weekNumber, year);
+
+            // Check cache first
+            var cached = _dataService.GetWeekLetter(child, weekNumber, year);
+            if (cached != null)
+            {
+                _logger.LogDebug("Week letter found in cache for {ChildName}", child.FirstName);
+                return cached;
+            }
+
+            // Check database
+            var storedContent = await _supabaseService.GetStoredWeekLetterAsync(child.FirstName, weekNumber, year);
+            if (!string.IsNullOrEmpty(storedContent))
+            {
+                try
+                {
+                    var json = JObject.Parse(storedContent);
+                    // Cache it for future use
+                    _dataService.CacheWeekLetter(child, weekNumber, year, json);
+                    _logger.LogDebug("Week letter found in database for {ChildName}", child.FirstName);
+                    return json;
+                }
+                catch (Exception parseEx)
+                {
+                    _logger.LogWarning(parseEx, "Failed to parse stored week letter for {ChildName}", child.FirstName);
+                }
+            }
+
+            // Fetch from MinUddannelse if allowed
+            if (allowLiveFetch)
+            {
+                _logger.LogInformation("Fetching week letter from MinUddannelse for {ChildName}", child.FirstName);
+
+                // Note: In a real implementation, this would call MinUddannelse client
+                // For now, return null as the fetch functionality is not implemented here
+                _logger.LogWarning("Live fetch requested but not implemented in SecureChildDataService");
+            }
+
+            await _rateLimiter.RecordOperationAsync(child, "GetOrFetchWeekLetter");
+            await _auditService.LogDataAccessAsync(child, "GetOrFetchWeekLetter", $"letter_{weekNumber}_{year}", false);
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get or fetch week letter for {ChildName}", child.FirstName);
+            await _auditService.LogDataAccessAsync(child, "GetOrFetchWeekLetter", $"letter_{weekNumber}_{year}", false);
+            throw;
+        }
+    }
+
+    public async Task<List<JObject>> GetAllWeekLettersAsync()
+    {
+        // Layer 1: Context validation
+        _context.ValidateContext();
+        var child = _context.CurrentChild!;
+
+        // Layer 2: Permission validation
+        if (!await _contextValidator.ValidateChildPermissionsAsync(child, "read:all_week_letters"))
+        {
+            _logger.LogWarning("Permission denied for {ChildName} to get all week letters", child.FirstName);
+            await _auditService.LogSecurityEventAsync(child, "PermissionDenied", "read:all_week_letters", SecuritySeverity.Warning);
+            return new List<JObject>();
+        }
+
+        // Layer 3: Rate limiting
+        if (!await _rateLimiter.IsAllowedAsync(child, "GetAllWeekLetters"))
+        {
+            _logger.LogWarning("Rate limit exceeded for {ChildName} getting all week letters", child.FirstName);
+            await _auditService.LogSecurityEventAsync(child, "RateLimitExceeded", "GetAllWeekLetters", SecuritySeverity.Warning);
+            throw new RateLimitExceededException("GetAllWeekLetters", child.FirstName, 10, TimeSpan.FromMinutes(5));
+        }
+
+        try
+        {
+            _logger.LogInformation("Getting all week letters for {ChildName}", child.FirstName);
+
+            // Get all stored week letters from database
+            var letters = await GetStoredWeekLettersAsync();
+
+            await _rateLimiter.RecordOperationAsync(child, "GetAllWeekLetters");
+            await _auditService.LogDataAccessAsync(child, "GetAllWeekLetters", "all_letters", true);
+
+            return letters;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get all week letters for {ChildName}", child.FirstName);
+            await _auditService.LogDataAccessAsync(child, "GetAllWeekLetters", "all_letters", false);
+            return new List<JObject>();
+        }
+    }
+
     private static string ComputeHash(string content)
     {
         using var sha256 = System.Security.Cryptography.SHA256.Create();
