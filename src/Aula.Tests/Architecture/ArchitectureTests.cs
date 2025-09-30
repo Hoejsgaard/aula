@@ -81,7 +81,7 @@ public class ArchitectureTests
                          string.Join("\n", violations) +
                          "\n\nChild parameters should only exist in the allowed executor types. " +
                          "Use IChildContext for child-aware services.";
-            Assert.True(false, message);
+            Assert.Fail(message);
         }
     }
 
@@ -114,7 +114,7 @@ public class ArchitectureTests
             var message = "Architecture violation: Legacy interfaces not marked obsolete:\n" +
                          string.Join("\n", violations) +
                          "\n\nLegacy interfaces must be marked with [Obsolete] attribute.";
-            Assert.True(false, message);
+            Assert.Fail(message);
         }
     }
 
@@ -161,7 +161,7 @@ public class ArchitectureTests
             var message = "Architecture violation: Services operating on multiple children:\n" +
                          string.Join("\n", violations) +
                          "\n\nServices should operate on single child context only.";
-            Assert.True(false, message);
+            Assert.Fail(message);
         }
     }
 
@@ -204,7 +204,7 @@ public class ArchitectureTests
             var message = "Architecture violation: Child-aware services not using IChildContext:\n" +
                          string.Join("\n", violations) +
                          "\n\nChild-aware services must inject IChildContext for child isolation.";
-            Assert.True(false, message);
+            Assert.Fail(message);
         }
     }
 

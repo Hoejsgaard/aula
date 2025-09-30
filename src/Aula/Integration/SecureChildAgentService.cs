@@ -380,9 +380,8 @@ public class SecureChildAgentService : IChildAgentService
 
         foreach (var field in sensitiveFields)
         {
-            if (data.ContainsKey(field))
+            if (data.Remove(field))
             {
-                data.Remove(field);
                 _logger.LogInformation("Removed sensitive field {Field} from extracted data for {ChildName}",
                     field, child.FirstName);
             }

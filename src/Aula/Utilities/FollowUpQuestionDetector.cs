@@ -33,8 +33,7 @@ public static class FollowUpQuestionDetector
 
     public static bool IsFollowUpQuestion(string text, List<Child> children, ILogger logger)
     {
-        if (logger == null)
-            throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
 
         if (string.IsNullOrWhiteSpace(text))
             return false;

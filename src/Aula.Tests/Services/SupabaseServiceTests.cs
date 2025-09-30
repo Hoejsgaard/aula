@@ -391,7 +391,7 @@ public class SupabaseServiceTests
     [Theory]
     [InlineData("")]
     [InlineData(null)]
-    public async Task AddReminderAsync_WithoutInitialization_ThrowsInvalidOperationException(string text)
+    public async Task AddReminderAsync_WithNullText_ThrowsArgumentException(string text)
     {
         // Arrange
         var date = DateOnly.FromDateTime(DateTime.Today.AddDays(1));

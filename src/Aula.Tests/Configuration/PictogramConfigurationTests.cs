@@ -99,14 +99,16 @@ public class PictogramConfigurationTests
         Assert.Equal(2, config.MinUddannelse.Children.Count);
 
         var olderChild = config.MinUddannelse.Children[0];
-        Assert.Equal(AuthenticationType.Standard, olderChild.UniLogin.AuthType);
+        Assert.NotNull(olderChild.UniLogin);
+        Assert.Equal(AuthenticationType.Standard, olderChild.UniLogin!.AuthType);
         Assert.NotEmpty(olderChild.UniLogin.Password);
         Assert.Null(olderChild.UniLogin.PictogramSequence);
 
         var youngerChild = config.MinUddannelse.Children[1];
-        Assert.Equal(AuthenticationType.Pictogram, youngerChild.UniLogin.AuthType);
+        Assert.NotNull(youngerChild.UniLogin);
+        Assert.Equal(AuthenticationType.Pictogram, youngerChild.UniLogin!.AuthType);
         Assert.NotNull(youngerChild.UniLogin.PictogramSequence);
-        Assert.Equal(2, youngerChild.UniLogin.PictogramSequence.Length);
+        Assert.Equal(2, youngerChild.UniLogin.PictogramSequence!.Length);
     }
 
     [Fact]

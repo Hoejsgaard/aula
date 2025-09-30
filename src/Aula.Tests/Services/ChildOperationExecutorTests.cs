@@ -255,7 +255,7 @@ public class ChildOperationExecutorTests
                 await Task.CompletedTask;
                 // Fail for Child2
                 var context = provider.GetRequiredService<IChildContext>();
-                if (context.CurrentChild.FirstName == "Child2")
+                if (context.CurrentChild?.FirstName == "Child2")
                 {
                     throw new InvalidOperationException("Simulated failure");
                 }

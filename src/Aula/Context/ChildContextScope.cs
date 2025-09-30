@@ -97,8 +97,7 @@ public class ChildContextScope : IDisposable
     /// <param name="operation">The operation to execute</param>
     public async Task ExecuteAsync(Func<IServiceProvider, Task> operation)
     {
-        if (operation == null)
-            throw new ArgumentNullException(nameof(operation));
+        ArgumentNullException.ThrowIfNull(operation);
 
         await ExecuteAsync(async provider =>
         {

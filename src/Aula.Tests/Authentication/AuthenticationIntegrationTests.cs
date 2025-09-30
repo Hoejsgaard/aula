@@ -322,8 +322,17 @@ public class AuthenticationIntegrationTests
         });
     }
 
+    protected virtual void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _serviceProvider?.Dispose();
+        }
+    }
+
     public void Dispose()
     {
-        _serviceProvider?.Dispose();
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
 }

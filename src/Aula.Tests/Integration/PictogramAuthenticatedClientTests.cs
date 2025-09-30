@@ -39,7 +39,7 @@ public class PictogramAuthenticatedClientTests
         // Act
         var client = new PictogramAuthenticatedClient(
             _testChild,
-            _testChild.UniLogin.Username,
+            _testChild.UniLogin!.Username,
             _pictogramSequence,
             _mockLogger.Object);
 
@@ -54,7 +54,7 @@ public class PictogramAuthenticatedClientTests
         Assert.Throws<ArgumentNullException>(() =>
             new PictogramAuthenticatedClient(
                 _testChild,
-                _testChild.UniLogin.Username,
+                _testChild.UniLogin!.Username,
                 null!,
                 _mockLogger.Object));
     }
@@ -154,7 +154,7 @@ public class PictogramAuthenticatedClientTests
         // For now, this test demonstrates the structure
         var client = new PictogramAuthenticatedClient(
             _testChild,
-            _testChild.UniLogin.Username,
+            _testChild.UniLogin!.Username,
             _pictogramSequence,
             _mockLogger.Object);
 
@@ -177,7 +177,7 @@ public class PictogramAuthenticatedClientTests
         // Or test it indirectly through the public LoginAsync method
 
         // Arrange
-        var html = @"
+        _ = @"
             <div class='password mb-4'>
                 <div class='js-icon' title='Hus' data-passw='8'></div>
                 <div class='js-icon' title='Is' data-passw='9'></div>
@@ -224,7 +224,7 @@ public class PictogramAuthenticatedClientTests
         // Arrange
         var client = new PictogramAuthenticatedClient(
             _testChild,
-            _testChild.UniLogin.Username,
+            _testChild.UniLogin!.Username,
             _pictogramSequence,
             _mockLogger.Object);
 
@@ -242,7 +242,7 @@ public class PictogramAuthenticatedClientTests
         // Arrange
         var client = new PictogramAuthenticatedClient(
             _testChild,
-            _testChild.UniLogin.Username,
+            _testChild.UniLogin!.Username,
             _pictogramSequence,
             _mockLogger.Object);
 

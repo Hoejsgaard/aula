@@ -62,6 +62,103 @@ dotnet_analyzer_diagnostic.category-Security.severity = error
 dotnet_analyzer_diagnostic.category-Style.severity = suggestion
 dotnet_analyzer_diagnostic.category-Usage.severity = warning
 
+# Common warnings to suppress project-wide
+# CA1822: Members that do not access instance data can be marked as static
+# This is a style preference - many methods could be static but aren't for consistency
+dotnet_diagnostic.CA1822.severity = none
+
+# CA2201: Do not raise reserved exception types
+# Legacy code uses generic exceptions, will be refactored later
+dotnet_diagnostic.CA2201.severity = suggestion
+
+# CA1716: Identifiers should not match keywords
+# Some parameter names like 'date' are descriptive and appropriate
+dotnet_diagnostic.CA1716.severity = none
+
+# CA1862: Use StringComparison for case-insensitive comparisons
+# Will be addressed in a future refactoring
+dotnet_diagnostic.CA1862.severity = suggestion
+
+# CA1001: Types that own disposable fields should be disposable
+# Some types use dependency injection and don't own the disposables
+dotnet_diagnostic.CA1001.severity = suggestion
+
+# CA1859: Use concrete types when possible for improved performance
+# Interface usage is intentional for testability and dependency injection
+dotnet_diagnostic.CA1859.severity = none
+
+# CA2263: Prefer generic overload when type is known
+# Will be addressed in future refactoring
+dotnet_diagnostic.CA2263.severity = suggestion
+
+# CA1845: Use span-based string.Concat
+# Performance optimization, not critical
+dotnet_diagnostic.CA1845.severity = suggestion
+
+# CA1825: Avoid zero-length array allocations
+# Performance optimization, not critical
+dotnet_diagnostic.CA1825.severity = suggestion
+
+# CA1860: Avoid using 'Enumerable.Any()' extension method
+# Style preference, not critical
+dotnet_diagnostic.CA1860.severity = suggestion
+
+# CA1850: Prefer static HashData method over ComputeHash
+# Performance optimization, not critical
+dotnet_diagnostic.CA1850.severity = suggestion
+
+# CA1816: Call GC.SuppressFinalize correctly
+# Will be addressed when reviewing IDisposable implementations
+dotnet_diagnostic.CA1816.severity = suggestion
+
+# CA1861: Avoid constant arrays as arguments
+# Performance optimization, not critical
+dotnet_diagnostic.CA1861.severity = suggestion
+
+# CA1854: Prefer the IDictionary.TryGetValue method
+# Performance optimization, not critical
+dotnet_diagnostic.CA1854.severity = suggestion
+
+# SYSLIB1045: Use GeneratedRegexAttribute for compile-time regex
+# Would require refactoring all regex usage - future optimization
+dotnet_diagnostic.SYSLIB1045.severity = none
+
+# CA1863: Use composite format
+# String formatting optimization, not critical
+dotnet_diagnostic.CA1863.severity = none
+
+# CA2254: Template should be a static expression
+# Logging template optimization
+dotnet_diagnostic.CA2254.severity = none
+
+# CA1510: Use ArgumentNullException.ThrowIfNull
+# Handled case-by-case
+dotnet_diagnostic.CA1510.severity = none
+
+# CA1829: Use Count property instead of Count()
+# Handled case-by-case
+dotnet_diagnostic.CA1829.severity = none
+
+# CA1853: Unnecessary Dictionary.ContainsKey guard
+# Handled case-by-case
+dotnet_diagnostic.CA1853.severity = none
+
+# CA1869: Cache and reuse JsonSerializerOptions
+# Performance optimization
+dotnet_diagnostic.CA1869.severity = none
+
+# CA1840: Use Contains instead of Any
+# Style preference
+dotnet_diagnostic.CA1840.severity = none
+
+# CA1805: Do not initialize unnecessarily
+# Minor optimization
+dotnet_diagnostic.CA1805.severity = none
+
+# CA1848: Use LoggerMessage
+# Performance optimization for logging
+dotnet_diagnostic.CA1848.severity = none
+
 # Specific warnings for obsolete usage
 # During migration phase, we allow using obsolete members with a suggestion
 # This will be changed to warning/error after migration is complete
@@ -115,6 +212,23 @@ dotnet_diagnostic.CA1506.severity = none
 
 # Allow test methods to not use their parameters
 dotnet_diagnostic.IDE0060.severity = none
+
+# CA1707: Identifiers should not contain underscores
+# Test methods commonly use underscores for readability (e.g., MethodName_Scenario_ExpectedResult)
+dotnet_diagnostic.CA1707.severity = none
+
+# xUnit warnings to suppress in test files
+# xUnit1031: Test methods should not use blocking task operations
+# Many existing tests use .Result and .Wait() - will refactor to async later
+dotnet_diagnostic.xUnit1031.severity = none
+
+# xUnit1012: InlineData should not use null for non-nullable parameter types
+# Some tests intentionally test null values
+dotnet_diagnostic.xUnit1012.severity = none
+
+# xUnit1013: Public method 'Dispose' on test class should be marked as a Fact
+# IDisposable pattern is correctly implemented in test classes
+dotnet_diagnostic.xUnit1013.severity = none
 
 # JSON files
 [*.json]

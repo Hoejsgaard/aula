@@ -51,9 +51,8 @@ public class ConversationContextManager<TKey> where TKey : notnull
         }
 
         // Remove expired context
-        if (_conversationContexts.ContainsKey(key))
+        if (_conversationContexts.Remove(key))
         {
-            _conversationContexts.Remove(key);
             _logger.LogInformation("Removed expired conversation context for key {Key}", key);
         }
 

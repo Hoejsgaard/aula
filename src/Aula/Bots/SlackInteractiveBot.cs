@@ -238,7 +238,7 @@ public class SlackInteractiveBot : IDisposable
                     return !string.IsNullOrEmpty(m["user"]?.ToString());
                 }).ToList();
 
-                if (userMessages.Count() == 0)
+                if (userMessages.Count == 0)
                 {
                     return;
                 }
