@@ -390,8 +390,8 @@ public class OpenAiServiceTests
 
         // Act & Assert
         Assert.NotNull(serviceType.GetMethod("SummarizeWeekLetterAsync"));
-        Assert.NotNull(serviceType.GetMethod("AskQuestionAboutWeekLetterAsync", new[] { typeof(JObject), typeof(string), typeof(ChatInterface) }));
         Assert.NotNull(serviceType.GetMethod("AskQuestionAboutWeekLetterAsync", new[] { typeof(JObject), typeof(string), typeof(string), typeof(ChatInterface) }));
+        Assert.NotNull(serviceType.GetMethod("AskQuestionAboutWeekLetterAsync", new[] { typeof(JObject), typeof(string), typeof(string), typeof(string), typeof(ChatInterface) }));
         Assert.NotNull(serviceType.GetMethod("ExtractKeyInformationAsync"));
         Assert.NotNull(serviceType.GetMethod("AskQuestionAboutChildrenAsync"));
         Assert.NotNull(serviceType.GetMethod("ClearConversationHistory"));

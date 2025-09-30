@@ -114,7 +114,7 @@ public class SecureChildAgentServiceTests
         _mockDataService.Setup(d => d.GetWeekLetterAsync(It.IsAny<int>(), It.IsAny<int>()))
             .ReturnsAsync(weekLetter);
         _mockOpenAiService.Setup(o => o.AskQuestionAboutWeekLetterAsync(
-            weekLetter, sanitizedQuestion, It.IsAny<string>(), ChatInterface.Slack))
+            weekLetter, sanitizedQuestion, It.IsAny<string>(), It.IsAny<string>(), ChatInterface.Slack))
             .ReturnsAsync(expectedAnswer);
         _mockPromptSanitizer.Setup(s => s.FilterResponse(expectedAnswer, _testChild))
             .Returns(expectedAnswer);

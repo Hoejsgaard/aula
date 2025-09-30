@@ -124,7 +124,7 @@ public class OpenAiServiceIntegrationTests
         var service = new OpenAiService("test-api-key", _mockLoggerFactory.Object, _aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
 
         await Assert.ThrowsAsync<NullReferenceException>(() =>
-            service.AskQuestionAboutWeekLetterAsync(null!, "What is happening today?", chatInterface));
+            service.AskQuestionAboutWeekLetterAsync(null!, "What is happening today?", "TestChild", chatInterface));
     }
 
     [Theory]
@@ -237,7 +237,7 @@ public class OpenAiServiceIntegrationTests
 
         try
         {
-            var result = await service.AskQuestionAboutWeekLetterAsync(weekLetter, "What activities are planned?", ChatInterface.Telegram);
+            var result = await service.AskQuestionAboutWeekLetterAsync(weekLetter, "What activities are planned?", "TestChild", ChatInterface.Telegram);
             Assert.NotNull(result);
         }
         catch (Exception ex)
