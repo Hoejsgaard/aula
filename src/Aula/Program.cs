@@ -30,14 +30,14 @@ public class Program
 			if (!await ValidateConfigurationAsync(serviceProvider, logger))
 				return;
 
-			await InitializeInfrastructureAsync(serviceProvider, logger);
+			await InitializeSupabaseAsync(serviceProvider, logger);
 
 			var childAgents = await StartChildAgentsAsync(serviceProvider, logger);
 
 			logger.LogInformation("Aula started");
 
 			var cancellationTokenSource = new CancellationTokenSource();
-			SetupGracefulShutdown(childAgents, cancellationTokenSource, logger);
+			ConfigureGracefulShutdown(childAgents, cancellationTokenSource, logger);
 
 			await RunApplicationAsync(logger, cancellationTokenSource.Token);
 		}
@@ -71,7 +71,7 @@ public class Program
 		return true;
 	}
 
-	private static async Task InitializeInfrastructureAsync(IServiceProvider serviceProvider, ILogger logger)
+	private static async Task InitializeSupabaseAsync(IServiceProvider serviceProvider, ILogger logger)
 	{
 		var supabaseService = serviceProvider.GetRequiredService<ISupabaseService>();
 		await supabaseService.InitializeAsync();
@@ -109,7 +109,7 @@ public class Program
 		return childAgents;
 	}
 
-	private static void SetupGracefulShutdown(List<IChildAgent> childAgents, CancellationTokenSource cancellationTokenSource, ILogger logger)
+	private static void ConfigureGracefulShutdown(List<IChildAgent> childAgents, CancellationTokenSource cancellationTokenSource, ILogger logger)
 	{
 		Console.CancelKeyPress += (_, e) =>
 		{
