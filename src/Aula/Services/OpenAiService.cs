@@ -99,15 +99,15 @@ public class OpenAiService : IOpenAiService
         }
     }
 
-    public async Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, ChatInterface chatInterface = ChatInterface.Slack)
+    public async Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, string childName, ChatInterface chatInterface = ChatInterface.Slack)
     {
-        return await AskQuestionAboutWeekLetterAsync(weekLetter, question, null, chatInterface);
+        return await AskQuestionAboutWeekLetterAsync(weekLetter, question, childName, null, chatInterface);
     }
 
-    public async Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack)
+    public async Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, string childName, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack)
     {
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
-        string childName = weekLetter["child"]?.ToString() ?? "unknown";
+        // Use the passed childName parameter instead of trying to extract from weekLetter
         contextKey = _conversationManager.EnsureContextKey(contextKey, childName);
 
         _conversationManager.EnsureConversationHistory(contextKey, childName, weekLetterContent, chatInterface);

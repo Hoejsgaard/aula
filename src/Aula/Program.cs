@@ -153,71 +153,43 @@ public class Program
                     }
                 };
 
-                // Subscribe to schedule events for each child
-                schedService.ChildScheduleReady += async (sender, args) =>
-                {
-                    logger.LogInformation("Received schedule event for child: {ChildName}", args.ChildFirstName);
-
-                    // Find the child configuration
-                    var childConfig = config.MinUddannelse?.Children?.FirstOrDefault(c =>
-                        c.FirstName.Equals(args.ChildFirstName, StringComparison.OrdinalIgnoreCase));
-
-                    if (childConfig == null)
-                    {
-                        logger.LogWarning("No configuration found for child: {ChildName}", args.ChildFirstName);
-                        return;
-                    }
-
-                    // Process within a child context scope
-                    using (var scope = new ChildContextScope(serviceProvider, childConfig))
-                    {
-                        try
-                        {
-                            // Process the schedule for this specific child
-                            logger.LogInformation("Processing schedule for {ChildName} in isolated context", args.ChildFirstName);
-
-                            // TODO: Add specific schedule processing logic here if needed
-                        }
-                        catch (Exception ex)
-                        {
-                            logger.LogError(ex, "Error processing schedule event for child: {ChildName}", args.ChildFirstName);
-                        }
-                    }
-                };
+                // ChildScheduleReady event subscription removed - event not currently used
             }
 
-            // Start Slack Interactive Bot if configured
-            // Check if any child has Slack interactive bot enabled
-            var slackEnabledChild = config.MinUddannelse?.Children?
-                .FirstOrDefault(c => c.Channels?.Slack?.Enabled == true &&
-                                   c.Channels?.Slack?.EnableInteractiveBot == true &&
-                                   !string.IsNullOrEmpty(c.Channels?.Slack?.ApiToken));
+            // Start ChildAwareSlackInteractiveBot for EACH child with Slack enabled
+            // This ensures complete isolation per child as per Task 010's child-centric architecture
+            var slackBots = new List<ChildAwareSlackInteractiveBot>();
 
-            if (slackEnabledChild != null)
+            var slackEnabledChildren = config.MinUddannelse?.Children?
+                .Where(c => c.Channels?.Slack?.Enabled == true &&
+                           c.Channels?.Slack?.EnableInteractiveBot == true &&
+                           !string.IsNullOrEmpty(c.Channels?.Slack?.ApiToken))
+                .ToList() ?? new List<Child>();
+
+            if (slackEnabledChildren.Any())
             {
-                // Update config.Slack properties with the child configuration
-                // This is needed because SlackInteractiveBot expects config.Slack to be populated
-                config.Slack.ApiToken = slackEnabledChild.Channels.Slack.ApiToken;
-                config.Slack.ChannelId = slackEnabledChild.Channels.Slack.ChannelId;
-                config.Slack.WebhookUrl = slackEnabledChild.Channels.Slack.WebhookUrl;
-                config.Slack.EnableInteractiveBot = slackEnabledChild.Channels.Slack.EnableInteractiveBot;
-                config.Slack.Enabled = slackEnabledChild.Channels.Slack.Enabled;
+                foreach (var child in slackEnabledChildren)
+                {
+                    logger.LogInformation("Starting ChildAwareSlackInteractiveBot for {ChildName} on channel {ChannelId}",
+                        child.FirstName, child.Channels!.Slack!.ChannelId);
 
-                logger.LogInformation("Starting Slack interactive bot for channel {ChannelId}",
-                    slackEnabledChild.Channels.Slack.ChannelId);
+                    var childBot = new ChildAwareSlackInteractiveBot(
+                        serviceProvider,
+                        serviceProvider.GetRequiredService<IChildServiceCoordinator>(),
+                        config,
+                        loggerFactory);
 
-                var slackBot = new SlackInteractiveBot(
-                    serviceProvider.GetRequiredService<IAgentService>(),
-                    config,
-                    loggerFactory,
-                    serviceProvider.GetRequiredService<ISupabaseService>());
+                    await childBot.StartForChild(child);
+                    slackBots.Add(childBot);
 
-                await slackBot.Start();
-                logger.LogInformation("Slack interactive bot started successfully");
+                    logger.LogInformation("ChildAwareSlackInteractiveBot started successfully for {ChildName}", child.FirstName);
+                }
+
+                logger.LogInformation("Started {Count} child-aware Slack bots for complete isolation", slackBots.Count);
             }
             else
             {
-                logger.LogInformation("No Slack interactive bot configured");
+                logger.LogInformation("No children have Slack interactive bot configured");
             }
 
             // Legacy Telegram bot removed
@@ -290,6 +262,13 @@ public class Program
                 e.Cancel = true;
                 cancellationTokenSource.Cancel();
                 logger.LogInformation("Shutdown requested");
+
+                // Dispose all child-aware Slack bots
+                foreach (var bot in slackBots)
+                {
+                    bot?.Dispose();
+                }
+                logger.LogInformation("Disposed {Count} Slack bots", slackBots.Count);
             };
 
             try

@@ -163,7 +163,7 @@ public class AgentService : IAgentService
         {
             return "No week letter available for the specified date.";
         }
-        return await _openAiService.AskQuestionAboutWeekLetterAsync(weekLetter, question, chatInterface);
+        return await _openAiService.AskQuestionAboutWeekLetterAsync(weekLetter, question, child.FirstName, chatInterface);
     }
 
     public async Task<string> AskQuestionAboutWeekLetterAsync(Child child, DateOnly date, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack)
@@ -187,7 +187,7 @@ public class AgentService : IAgentService
             _logger.LogInformation("📌 MONITOR: Week letter content preview: {Preview}", contentPreview);
         }
 
-        return await _openAiService.AskQuestionAboutWeekLetterAsync(weekLetter, question, contextKey, chatInterface);
+        return await _openAiService.AskQuestionAboutWeekLetterAsync(weekLetter, question, child.FirstName, contextKey, chatInterface);
     }
 
     public async Task<JObject> ExtractKeyInformationFromWeekLetterAsync(Child child, DateOnly date, ChatInterface chatInterface = ChatInterface.Slack)

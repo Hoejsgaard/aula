@@ -24,7 +24,7 @@ public class SchedulingService : ISchedulingService
     private bool _isRunning;
 
     // Child-specific events
-    public event EventHandler<ChildScheduleEventArgs>? ChildScheduleReady;
+    // ChildScheduleReady event removed - not currently used
     public event EventHandler<ChildWeekLetterEventArgs>? ChildWeekLetterReady;
 
     // Public method to trigger week letter event (used for startup posting)
@@ -275,7 +275,7 @@ public class SchedulingService : ISchedulingService
         }
     }
 
-    private async Task SendReminderNotification(Reminder reminder)
+    private Task SendReminderNotification(Reminder reminder)
     {
         string childInfo = !string.IsNullOrEmpty(reminder.ChildName) ? $" ({reminder.ChildName})" : "";
         string message = $"🔔 *Reminder*{childInfo}: {reminder.Text}";
@@ -290,6 +290,8 @@ public class SchedulingService : ISchedulingService
         {
             _logger.LogError(ex, "Failed to send reminder {ReminderId} to channels", reminder.Id);
         }
+
+        return Task.CompletedTask;
     }
 
     private async Task ExecuteWeeklyLetterCheck(ScheduledTask task)
@@ -447,7 +449,7 @@ public class SchedulingService : ISchedulingService
         return Convert.ToBase64String(hash);
     }
 
-    private async Task PostWeekLetter(Child child, dynamic weekLetter, string content)
+    private Task PostWeekLetter(Child child, dynamic weekLetter, string content)
     {
         try
         {
@@ -477,6 +479,8 @@ public class SchedulingService : ISchedulingService
             _logger.LogError(ex, "Error posting week letter for {ChildName}", child.FirstName);
             throw;
         }
+
+        return Task.CompletedTask;
     }
 
     private async Task CheckForMissedReminders()

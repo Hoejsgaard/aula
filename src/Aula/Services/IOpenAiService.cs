@@ -13,9 +13,9 @@ public interface IOpenAiService
 {
     Task<string> SummarizeWeekLetterAsync(JObject weekLetter, ChatInterface chatInterface = ChatInterface.Slack);
 
-    Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, ChatInterface chatInterface = ChatInterface.Slack);
+    Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, string childName, ChatInterface chatInterface = ChatInterface.Slack);
 
-    Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack);
+    Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, string childName, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack);
 
     Task<JObject> ExtractKeyInformationAsync(JObject weekLetter, ChatInterface chatInterface = ChatInterface.Slack);
 

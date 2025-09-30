@@ -132,7 +132,7 @@ public class ChildServiceCoordinator : IChildServiceCoordinator
                 var dataService = serviceProvider.GetRequiredService<IChildDataService>();
                 var letter = await dataService.GetOrFetchWeekLetterAsync(date, true);
                 var context = serviceProvider.GetRequiredService<IChildContext>();
-                return (child: context.CurrentChild, weekLetter: letter);
+                return (child: context.CurrentChild!, weekLetter: letter);
             },
             "FetchWeekLettersForAll");
 

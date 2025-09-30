@@ -71,7 +71,8 @@ public class SecureChildAgentService : IChildAgentService
                 child.FirstName, date);
 
             // Get the week letter
-            var weekLetter = await _dataService.GetWeekLetterAsync(date.DayNumber / 7, date.Year);
+            var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
+            var weekLetter = await _dataService.GetWeekLetterAsync(weekNumber, date.Year);
             if (weekLetter == null)
             {
                 _logger.LogInformation("No week letter found for {ChildName} date {Date}",
@@ -145,7 +146,8 @@ public class SecureChildAgentService : IChildAgentService
                 child.FirstName, date);
 
             // Get the week letter
-            var weekLetter = await _dataService.GetWeekLetterAsync(date.DayNumber / 7, date.Year);
+            var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
+            var weekLetter = await _dataService.GetWeekLetterAsync(weekNumber, date.Year);
             if (weekLetter == null)
             {
                 _logger.LogInformation("No week letter found for {ChildName} date {Date}",
@@ -158,7 +160,7 @@ public class SecureChildAgentService : IChildAgentService
 
             // Layer 6: AI operation with sanitized input
             var answer = await _openAiService.AskQuestionAboutWeekLetterAsync(
-                weekLetter, sanitizedQuestion, childContextKey, chatInterface);
+                weekLetter, sanitizedQuestion, child.FirstName, childContextKey, chatInterface);
 
             // Layer 7: Response filtering
             var filteredAnswer = _promptSanitizer.FilterResponse(answer, child);
@@ -205,7 +207,8 @@ public class SecureChildAgentService : IChildAgentService
                 child.FirstName, date);
 
             // Get the week letter
-            var weekLetter = await _dataService.GetWeekLetterAsync(date.DayNumber / 7, date.Year);
+            var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
+            var weekLetter = await _dataService.GetWeekLetterAsync(weekNumber, date.Year);
             if (weekLetter == null)
             {
                 _logger.LogInformation("No week letter found for {ChildName} date {Date}",
@@ -279,6 +282,28 @@ public class SecureChildAgentService : IChildAgentService
             var result = await _openAiService.ProcessQueryWithToolsAsync(
                 sanitizedQuery, childContextKey, chatInterface);
 
+            // Check for fallback signal and handle properly
+            if (result == "FALLBACK_TO_EXISTING_SYSTEM")
+            {
+                _logger.LogInformation("Falling back to week letter system for {ChildName}", child.FirstName);
+
+                // Try to answer using week letter data
+                var today = DateOnly.FromDateTime(DateTime.Today);
+                var weekLetter = await _dataService.GetOrFetchWeekLetterAsync(today, true);
+
+                if (weekLetter != null)
+                {
+                    // Ask the question about the week letter - this calls our own method which has child context
+                    result = await AskQuestionAboutWeekLetterAsync(today, sanitizedQuery, contextKey, chatInterface);
+                }
+                else
+                {
+                    result = chatInterface == ChatInterface.Telegram
+                        ? "Beklager, jeg kunne ikke finde ugebrevet for denne uge."
+                        : "Beklager, jeg kunne ikke finde ugebrevet for denne uge. Prøv igen senere.";
+                }
+            }
+
             // Layer 7: Response filtering
             var filteredResult = _promptSanitizer.FilterResponse(result, child);
 
@@ -291,7 +316,13 @@ public class SecureChildAgentService : IChildAgentService
         {
             _logger.LogError(ex, "Failed to process tool query for {ChildName}", child.FirstName);
             await _auditService.LogDataAccessAsync(child, "ProcessWithTools", contextKey, false);
-            throw;
+
+            // Return a user-friendly error message instead of throwing
+            var errorMessage = chatInterface == ChatInterface.Telegram
+                ? "Beklager, der opstod en fejl. Prøv venligst igen."
+                : "Beklager, jeg kan ikke behandle din forespørgsel lige nu. Prøv venligst igen om et øjeblik.";
+
+            return errorMessage;
         }
     }
 

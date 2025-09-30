@@ -32,7 +32,7 @@ public class ChildAwareSlackInteractiveBot : IDisposable
     private Child? _assignedChild;
     public string? AssignedChildName => _assignedChild?.FirstName;
 
-    private bool _isRunning;
+    // _isRunning field removed - value never read
     private Timer? _pollingTimer;
     private Timer? _cleanupTimer;
     private string _lastTimestamp = "0";
@@ -89,8 +89,6 @@ public class ChildAwareSlackInteractiveBot : IDisposable
         _lastTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
 
         _logger.LogInformation("Initial timestamp set to: {Timestamp}", _lastTimestamp + ".000000");
-
-        _isRunning = true;
 
         // Start polling timer
         int pollingInterval = _config.Timers.SlackPollingIntervalSeconds * 1000;
@@ -208,7 +206,7 @@ public class ChildAwareSlackInteractiveBot : IDisposable
                 // Process the query using agent service (it will use the child from context)
                 var response = await agentService.ProcessQueryWithToolsAsync(
                     text,
-                    $"slack-{_config.Slack.ChannelId}",
+                    $"slack-{child.Channels?.Slack?.ChannelId}",
                     ChatInterface.Slack);
 
                 await SendMessageToSlack(response);
@@ -292,7 +290,6 @@ public class ChildAwareSlackInteractiveBot : IDisposable
 
     public void Stop()
     {
-        _isRunning = false;
         _pollingTimer?.Change(Timeout.Infinite, Timeout.Infinite);
         _cleanupTimer?.Change(Timeout.Infinite, Timeout.Infinite);
         _logger.LogInformation("Slack bot stopped");
