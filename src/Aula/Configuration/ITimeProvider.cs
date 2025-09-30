@@ -5,15 +5,15 @@ namespace Aula.Configuration;
 /// </summary>
 public interface ITimeProvider
 {
-    /// <summary>
-    /// Gets the current date and time.
-    /// </summary>
-    DateTime Now { get; }
+	/// <summary>
+	/// Gets the current date and time.
+	/// </summary>
+	DateTime Now { get; }
 
-    /// <summary>
-    /// Gets the current year.
-    /// </summary>
-    int CurrentYear { get; }
+	/// <summary>
+	/// Gets the current year.
+	/// </summary>
+	int CurrentYear { get; }
 }
 
 /// <summary>
@@ -21,9 +21,9 @@ public interface ITimeProvider
 /// </summary>
 public class SystemTimeProvider : ITimeProvider
 {
-    /// <inheritdoc />
-    public DateTime Now => DateTime.Now;
+	/// <inheritdoc />
+	public DateTime Now => DateTime.Now;
 
-    /// <inheritdoc />
-    public int CurrentYear => DateTime.Now.Year;
+	/// <inheritdoc />
+	public int CurrentYear => DateTime.Now.Year;
 }

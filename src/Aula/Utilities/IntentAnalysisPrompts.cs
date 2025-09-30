@@ -2,7 +2,7 @@ namespace Aula.Utilities;
 
 public static class IntentAnalysisPrompts
 {
-    public const string AnalysisTemplate = @"Analyze this user query and determine what they want to do:
+	public const string AnalysisTemplate = @"Analyze this user query and determine what they want to do:
 
 Query: ""{0}""
 
@@ -20,23 +20,23 @@ If it's a question about children's school activities, week letters, or schedule
 
 Analyze the query and respond accordingly:";
 
-    public static readonly Dictionary<string, string> ToolExamples = new()
-    {
-        { "CREATE_REMINDER", "\"Remind me tomorrow at 8 AM about Søren Johannes's soccer\" → TOOL_CALL: CREATE_REMINDER" },
-        { "CREATE_REMINDER_DANISH", "\"Kan du minde mig om at hente øl om 2 timer?\" → TOOL_CALL: CREATE_REMINDER" },
-        { "LIST_REMINDERS", "\"What are my reminders?\" → TOOL_CALL: LIST_REMINDERS" },
-        { "LIST_REMINDERS_DANISH", "\"Vis mine påmindelser\" → TOOL_CALL: LIST_REMINDERS" },
-        { "DELETE_REMINDER", "\"Delete reminder 2\" → TOOL_CALL: DELETE_REMINDER" },
-        { "GET_CURRENT_TIME", "\"What time is it?\" → TOOL_CALL: GET_CURRENT_TIME" },
-        { "GET_CURRENT_TIME_DANISH", "\"Hvad er klokken?\" → TOOL_CALL: GET_CURRENT_TIME" },
-        { "INFORMATION_QUERY", "\"What does Emma have today?\" → INFORMATION_QUERY" },
-        { "INFORMATION_QUERY_DANISH", "\"Hvad skal Hans Martin i dag?\" → INFORMATION_QUERY" },
-        { "WEEK_LETTER_QUERY", "\"Show me this week's letter\" → INFORMATION_QUERY" }
-    };
+	public static readonly Dictionary<string, string> ToolExamples = new()
+	{
+		{ "CREATE_REMINDER", "\"Remind me tomorrow at 8 AM about Søren Johannes's soccer\" → TOOL_CALL: CREATE_REMINDER" },
+		{ "CREATE_REMINDER_DANISH", "\"Kan du minde mig om at hente øl om 2 timer?\" → TOOL_CALL: CREATE_REMINDER" },
+		{ "LIST_REMINDERS", "\"What are my reminders?\" → TOOL_CALL: LIST_REMINDERS" },
+		{ "LIST_REMINDERS_DANISH", "\"Vis mine påmindelser\" → TOOL_CALL: LIST_REMINDERS" },
+		{ "DELETE_REMINDER", "\"Delete reminder 2\" → TOOL_CALL: DELETE_REMINDER" },
+		{ "GET_CURRENT_TIME", "\"What time is it?\" → TOOL_CALL: GET_CURRENT_TIME" },
+		{ "GET_CURRENT_TIME_DANISH", "\"Hvad er klokken?\" → TOOL_CALL: GET_CURRENT_TIME" },
+		{ "INFORMATION_QUERY", "\"What does Emma have today?\" → INFORMATION_QUERY" },
+		{ "INFORMATION_QUERY_DANISH", "\"Hvad skal Hans Martin i dag?\" → INFORMATION_QUERY" },
+		{ "WEEK_LETTER_QUERY", "\"Show me this week's letter\" → INFORMATION_QUERY" }
+	};
 
-    public static string GetFormattedPrompt(string query)
-    {
-        var examples = string.Join("\n- ", ToolExamples.Values.Prepend("Examples:"));
-        return string.Format(AnalysisTemplate, query, examples);
-    }
+	public static string GetFormattedPrompt(string query)
+	{
+		var examples = string.Join("\n- ", ToolExamples.Values.Prepend("Examples:"));
+		return string.Format(AnalysisTemplate, query, examples);
+	}
 }

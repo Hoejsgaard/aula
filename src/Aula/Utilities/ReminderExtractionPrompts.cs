@@ -2,9 +2,9 @@ namespace Aula.Utilities;
 
 public static class ReminderExtractionPrompts
 {
-    public static string GetExtractionPrompt(string query, DateTime currentTime)
-    {
-        return $@"Extract reminder details from this natural language request:
+	public static string GetExtractionPrompt(string query, DateTime currentTime)
+	{
+		return $@"Extract reminder details from this natural language request:
 
 Query: ""{query}""
 
@@ -25,5 +25,5 @@ Respond in this exact format:
 DESCRIPTION: [extracted description]
 DATETIME: [yyyy-MM-dd HH:mm]
 CHILD: [child name or NONE]";
-    }
+	}
 }

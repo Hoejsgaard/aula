@@ -136,12 +136,23 @@ Six MCP servers configured in `.mcp.json`:
 ## Documentation Standards
 
 ### Emoji Usage Rules
-- **ONLY ❌, ✅, and ⚠️ emojis** allowed in .md files
+- **ONLY ❌, ✅, and ⚠️ emojis** allowed in ANY files (code, markdown, config, etc.)
 - **Purpose**: Clear visual indicators for do/don't patterns
 - **Usage**:
   - ❌ for prohibited actions, errors, incorrect patterns
   - ✅ for required actions, success states, correct patterns
   - ⚠️ for warnings, cautions, important notices
+- **NO decorative emojis** in code, commit messages, or documentation
+
+### Code Comment Rules
+- **MINIMIZE COMMENTS**: Code should be self-explanatory through clear naming and structure
+- **NO redundant comments**: Don't state what the code obviously does
+- **ACCEPTABLE comments**:
+  - Document non-obvious side effects
+  - Explain complex business logic or intent when not clear from code
+  - TODO markers for future work (sparingly)
+  - License headers or regulatory compliance notes
+- **PREFER**: Refactoring code to be clearer over adding explanatory comments
 
 ## Configuration
 

@@ -1,6 +1,21 @@
 root = true
 
+# Global settings for all files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Indentation settings - TABS for efficiency!
+indent_style = tab
+indent_size = 4
+
 [*.cs]
+# C# specific - enforce tabs
+indent_style = tab
+indent_size = 4
+tab_width = 4
 # Disable problematic rules entirely
 dotnet_diagnostic.IDE0051.severity = suggestion    # Remove unused private members
 dotnet_diagnostic.IDE0052.severity = suggestion    # Remove unread private members

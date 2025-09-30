@@ -11,72 +11,72 @@ namespace Aula.Services;
 /// </summary>
 public class SecureChildAwareOpenAiService : IChildAwareOpenAiService
 {
-    private readonly IChildContext _childContext;
-    private readonly IOpenAiService _openAiService;
-    private readonly ILogger<SecureChildAwareOpenAiService> _logger;
+	private readonly IChildContext _childContext;
+	private readonly IOpenAiService _openAiService;
+	private readonly ILogger<SecureChildAwareOpenAiService> _logger;
 
-    public SecureChildAwareOpenAiService(
-        IChildContext childContext,
-        IOpenAiService openAiService,
-        ILogger<SecureChildAwareOpenAiService> logger)
-    {
-        _childContext = childContext ?? throw new ArgumentNullException(nameof(childContext));
-        _openAiService = openAiService ?? throw new ArgumentNullException(nameof(openAiService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-    }
+	public SecureChildAwareOpenAiService(
+		IChildContext childContext,
+		IOpenAiService openAiService,
+		ILogger<SecureChildAwareOpenAiService> logger)
+	{
+		_childContext = childContext ?? throw new ArgumentNullException(nameof(childContext));
+		_openAiService = openAiService ?? throw new ArgumentNullException(nameof(openAiService));
+		_logger = logger ?? throw new ArgumentNullException(nameof(logger));
+	}
 
-    public async Task<string?> GetResponseAsync(string query)
-    {
-        if (_childContext.CurrentChild == null)
-        {
-            throw new InvalidOperationException("Cannot get AI response without child context");
-        }
+	public async Task<string?> GetResponseAsync(string query)
+	{
+		if (_childContext.CurrentChild == null)
+		{
+			throw new InvalidOperationException("Cannot get AI response without child context");
+		}
 
-        _logger.LogInformation("Getting AI response for child {ChildName}",
-            _childContext.CurrentChild.FirstName);
+		_logger.LogInformation("Getting AI response for child {ChildName}",
+			_childContext.CurrentChild.FirstName);
 
-        // Add child context to the query
-        var contextualQuery = $"[Context: Child {_childContext.CurrentChild.FirstName}] {query}";
+		// Add child context to the query
+		var contextualQuery = $"[Context: Child {_childContext.CurrentChild.FirstName}] {query}";
 
-        // Use the ProcessQueryWithToolsAsync method which exists in IOpenAiService
-        return await _openAiService.ProcessQueryWithToolsAsync(contextualQuery,
-            $"child_{_childContext.CurrentChild.FirstName}",
-            ChatInterface.Slack);
-    }
+		// Use the ProcessQueryWithToolsAsync method which exists in IOpenAiService
+		return await _openAiService.ProcessQueryWithToolsAsync(contextualQuery,
+			$"child_{_childContext.CurrentChild.FirstName}",
+			ChatInterface.Slack);
+	}
 
-    public async Task<string?> GetResponseWithContextAsync(string query, string conversationId)
-    {
-        if (_childContext.CurrentChild == null)
-        {
-            throw new InvalidOperationException("Cannot get AI response without child context");
-        }
+	public async Task<string?> GetResponseWithContextAsync(string query, string conversationId)
+	{
+		if (_childContext.CurrentChild == null)
+		{
+			throw new InvalidOperationException("Cannot get AI response without child context");
+		}
 
-        _logger.LogInformation("Getting AI response with context for child {ChildName}, conversation {ConversationId}",
-            _childContext.CurrentChild.FirstName, conversationId);
+		_logger.LogInformation("Getting AI response with context for child {ChildName}, conversation {ConversationId}",
+			_childContext.CurrentChild.FirstName, conversationId);
 
-        // Create child-specific conversation ID
-        var childConversationId = $"{_childContext.CurrentChild.FirstName}_{conversationId}";
+		// Create child-specific conversation ID
+		var childConversationId = $"{_childContext.CurrentChild.FirstName}_{conversationId}";
 
-        return await _openAiService.ProcessQueryWithToolsAsync(query,
-            childConversationId,
-            ChatInterface.Slack);
-    }
+		return await _openAiService.ProcessQueryWithToolsAsync(query,
+			childConversationId,
+			ChatInterface.Slack);
+	}
 
-    public async Task ClearConversationHistoryAsync(string conversationId)
-    {
-        if (_childContext.CurrentChild == null)
-        {
-            throw new InvalidOperationException("Cannot clear conversation without child context");
-        }
+	public async Task ClearConversationHistoryAsync(string conversationId)
+	{
+		if (_childContext.CurrentChild == null)
+		{
+			throw new InvalidOperationException("Cannot clear conversation without child context");
+		}
 
-        _logger.LogInformation("Clearing conversation history for child {ChildName}, conversation {ConversationId}",
-            _childContext.CurrentChild.FirstName, conversationId);
+		_logger.LogInformation("Clearing conversation history for child {ChildName}, conversation {ConversationId}",
+			_childContext.CurrentChild.FirstName, conversationId);
 
-        // Create child-specific conversation ID
-        var childConversationId = $"{_childContext.CurrentChild.FirstName}_{conversationId}";
+		// Create child-specific conversation ID
+		var childConversationId = $"{_childContext.CurrentChild.FirstName}_{conversationId}";
 
-        // Use the ClearConversationHistory method from IOpenAiService
-        _openAiService.ClearConversationHistory(childConversationId);
-        await Task.CompletedTask;
-    }
+		// Use the ClearConversationHistory method from IOpenAiService
+		_openAiService.ClearConversationHistory(childConversationId);
+		await Task.CompletedTask;
+	}
 }
