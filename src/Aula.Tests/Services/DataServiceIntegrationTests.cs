@@ -52,6 +52,10 @@ public class DataServiceIntegrationTests
         _mockSupabaseService = new Mock<ISupabaseService>();
         services.AddSingleton<ISupabaseService>(_ => _mockSupabaseService.Object);
 
+        // Mock MinUddannelseClient
+        var mockMinUddannelseClient = new Mock<Aula.Integration.IMinUddannelseClient>();
+        services.AddSingleton<Aula.Integration.IMinUddannelseClient>(_ => mockMinUddannelseClient.Object);
+
         // Register secure service
         services.AddScoped<IChildDataService, SecureChildDataService>();
 

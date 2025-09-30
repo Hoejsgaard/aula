@@ -3,6 +3,7 @@ using Aula.Integration;
 using Aula.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace Aula.Tests.Services;
@@ -305,15 +306,15 @@ public class ChildServiceCoordinatorTests
     {
         // Arrange
         var testDate = DateOnly.FromDateTime(DateTime.Today);
-        var results = new Dictionary<Child, object>();
+        var results = new Dictionary<Child, (Child child, JObject? weekLetter)>();
         foreach (var child in _testChildren)
         {
-            results[child] = new { };
+            results[child] = (child, new JObject());
         }
 
         _mockExecutor.Setup(e => e.ExecuteForAllChildrenAsync(
             It.IsAny<IEnumerable<Child>>(),
-            It.IsAny<Func<IServiceProvider, Task<object>>>(),
+            It.IsAny<Func<IServiceProvider, Task<(Child child, JObject? weekLetter)>>>(),
             "FetchWeekLettersForAll"))
             .ReturnsAsync(results);
 
@@ -323,7 +324,7 @@ public class ChildServiceCoordinatorTests
         // Assert
         _mockExecutor.Verify(e => e.ExecuteForAllChildrenAsync(
             It.Is<IEnumerable<Child>>(c => c.Count() == 2),
-            It.IsAny<Func<IServiceProvider, Task<object>>>(),
+            It.IsAny<Func<IServiceProvider, Task<(Child child, JObject? weekLetter)>>>(),
             "FetchWeekLettersForAll"), Times.Once);
     }
 }

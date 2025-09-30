@@ -19,6 +19,7 @@ public class OpenAiService : IOpenAiService
 {
     private readonly OpenAIService _openAiClient;
     private readonly ILogger _logger;
+    private readonly IAiToolsManager _aiToolsManager;
     private readonly IConversationManager _conversationManager;
     private readonly IPromptBuilder _promptBuilder;
     private readonly string _aiModel;
@@ -28,11 +29,12 @@ public class OpenAiService : IOpenAiService
     private const int ConversationTrimAmount = 4;
     private const string FallbackToExistingSystem = "FALLBACK_TO_EXISTING_SYSTEM";
 
-    public OpenAiService(string apiKey, ILoggerFactory loggerFactory, IConversationManager conversationManager, IPromptBuilder promptBuilder, string? model = null)
+    public OpenAiService(string apiKey, ILoggerFactory loggerFactory, IAiToolsManager aiToolsManager, IConversationManager conversationManager, IPromptBuilder promptBuilder, string? model = null)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new ArgumentException("API key cannot be null or empty", nameof(apiKey));
         ArgumentNullException.ThrowIfNull(loggerFactory);
+        ArgumentNullException.ThrowIfNull(aiToolsManager);
         ArgumentNullException.ThrowIfNull(conversationManager);
         ArgumentNullException.ThrowIfNull(promptBuilder);
 
@@ -42,6 +44,7 @@ public class OpenAiService : IOpenAiService
             ApiKey = apiKey
         });
         _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
+        _aiToolsManager = aiToolsManager;
         _conversationManager = conversationManager;
         _promptBuilder = promptBuilder;
     }
@@ -292,7 +295,7 @@ public class OpenAiService : IOpenAiService
         {
             _logger.LogInformation("Starting intent analysis for query: {Query}", query);
 
-            var analysisPrompt = $"Analyze this query and determine if it's a tool request or information query: \"{query}\"";
+            var analysisPrompt = IntentAnalysisPrompts.GetFormattedPrompt(query);
 
             var chatRequest = new ChatCompletionCreateRequest
             {
@@ -337,11 +340,11 @@ public class OpenAiService : IOpenAiService
 
             return toolType switch
             {
-                "CREATE_REMINDER" => "⚠️ Reminder functionality has been removed from this build.",
-                "LIST_REMINDERS" => "⚠️ Reminder functionality has been removed from this build.",
-                "DELETE_REMINDER" => "⚠️ Reminder functionality has been removed from this build.",
-                "GET_CURRENT_TIME" => $"🕐 Current time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}",
-                "HELP" => "ℹ️ Available commands: Ask questions about week letters and schedules.",
+                "CREATE_REMINDER" => await HandleCreateReminderQuery(query),
+                "LIST_REMINDERS" => await _aiToolsManager.ListRemindersAsync(),
+                "DELETE_REMINDER" => await HandleDeleteReminderQuery(query),
+                "GET_CURRENT_TIME" => _aiToolsManager.GetCurrentDateTime(),
+                "HELP" => _aiToolsManager.GetHelp(),
                 _ => await HandleRegularAulaQuery(query, contextKey, chatInterface)
             };
         }
@@ -352,6 +355,75 @@ public class OpenAiService : IOpenAiService
         }
     }
 
+    private async Task<string> HandleCreateReminderQuery(string query)
+    {
+        // Use LLM to extract reminder details from natural language
+        var extractionPrompt = ReminderExtractionPrompts.GetExtractionPrompt(query, DateTime.Now);
+
+        var chatRequest = new ChatCompletionCreateRequest
+        {
+            Model = _aiModel,
+            Messages = new List<ChatMessage>
+            {
+                ChatMessage.FromSystem(extractionPrompt)
+            },
+            Temperature = 0.1f
+        };
+
+        try
+        {
+            _logger.LogInformation("Sending reminder extraction request to OpenAI");
+            var response = await _openAiClient.ChatCompletion.CreateCompletion(chatRequest);
+
+            if (response.Successful)
+            {
+                var content = response.Choices.First().Message.Content ?? "";
+                _logger.LogInformation("Reminder extraction completed successfully");
+
+                // Parse the structured response with validation
+                var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                var description = ExtractValue(lines, "DESCRIPTION") ?? "Reminder";
+                var dateTimeStr = ExtractValue(lines, "DATETIME") ?? DateTime.Now.AddHours(1).ToString("yyyy-MM-dd HH:mm");
+                var childName = ExtractValue(lines, "CHILD");
+
+                // Validate datetime format
+                if (!DateTime.TryParseExact(dateTimeStr, "yyyy-MM-dd HH:mm", null, System.Globalization.DateTimeStyles.None, out _))
+                {
+                    _logger.LogWarning("Invalid datetime format from AI: {DateTime}", dateTimeStr);
+                    dateTimeStr = DateTime.Now.AddHours(1).ToString("yyyy-MM-dd HH:mm");
+                }
+
+                if (childName == "NONE") childName = null;
+
+                return await _aiToolsManager.CreateReminderAsync(description, dateTimeStr, childName);
+            }
+            else
+            {
+                _logger.LogError("Error extracting reminder details: {Error}", response.Error?.Message);
+                return "❌ I couldn't understand the reminder details. Please try again with a clearer format.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception during reminder extraction");
+            return "❌ I couldn't understand the reminder details. Please try again with a clearer format.";
+        }
+    }
+
+    private async Task<string> HandleDeleteReminderQuery(string query)
+    {
+        // Extract reminder number from query
+        var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var word in words)
+        {
+            if (int.TryParse(word, out var reminderNumber))
+            {
+                return await _aiToolsManager.DeleteReminderAsync(reminderNumber);
+            }
+        }
+
+        return "❌ Please specify which reminder number to delete (e.g., 'delete reminder 2').";
+    }
 
     private Task<string> HandleRegularAulaQuery(string query, string contextKey, ChatInterface chatInterface)
     {

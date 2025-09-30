@@ -1,6 +1,7 @@
 using Aula.Authentication;
 using Aula.Configuration;
 using Aula.Context;
+using Aula.Integration;
 using Aula.Services;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -17,6 +18,7 @@ public class SecureChildDataServiceTests
     private readonly Mock<IChildRateLimiter> _mockRateLimiter;
     private readonly Mock<IDataService> _mockDataService;
     private readonly Mock<ISupabaseService> _mockSupabaseService;
+    private readonly Mock<IMinUddannelseClient> _mockMinUddannelseClient;
     private readonly Mock<ILogger<SecureChildDataService>> _mockLogger;
     private readonly SecureChildDataService _service;
     private readonly Child _testChild;
@@ -29,6 +31,7 @@ public class SecureChildDataServiceTests
         _mockRateLimiter = new Mock<IChildRateLimiter>();
         _mockDataService = new Mock<IDataService>();
         _mockSupabaseService = new Mock<ISupabaseService>();
+        _mockMinUddannelseClient = new Mock<IMinUddannelseClient>();
         _mockLogger = new Mock<ILogger<SecureChildDataService>>();
 
         _testChild = new Child { FirstName = "Test", LastName = "Child" };
@@ -41,6 +44,7 @@ public class SecureChildDataServiceTests
             _mockRateLimiter.Object,
             _mockDataService.Object,
             _mockSupabaseService.Object,
+            _mockMinUddannelseClient.Object,
             _mockLogger.Object);
     }
 
@@ -243,31 +247,36 @@ public class SecureChildDataServiceTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
             null!, _mockContextValidator.Object, _mockAuditService.Object, _mockRateLimiter.Object,
-            _mockDataService.Object, _mockSupabaseService.Object, _mockLogger.Object));
+            _mockDataService.Object, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, _mockLogger.Object));
 
         Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
             _mockContext.Object, null!, _mockAuditService.Object, _mockRateLimiter.Object,
-            _mockDataService.Object, _mockSupabaseService.Object, _mockLogger.Object));
+            _mockDataService.Object, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, _mockLogger.Object));
 
         Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
             _mockContext.Object, _mockContextValidator.Object, null!, _mockRateLimiter.Object,
-            _mockDataService.Object, _mockSupabaseService.Object, _mockLogger.Object));
+            _mockDataService.Object, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, _mockLogger.Object));
 
         Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
             _mockContext.Object, _mockContextValidator.Object, _mockAuditService.Object, null!,
-            _mockDataService.Object, _mockSupabaseService.Object, _mockLogger.Object));
+            _mockDataService.Object, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, _mockLogger.Object));
 
         Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
             _mockContext.Object, _mockContextValidator.Object, _mockAuditService.Object, _mockRateLimiter.Object,
-            null!, _mockSupabaseService.Object, _mockLogger.Object));
+            null!, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, _mockLogger.Object));
 
         Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
             _mockContext.Object, _mockContextValidator.Object, _mockAuditService.Object, _mockRateLimiter.Object,
-            _mockDataService.Object, null!, _mockLogger.Object));
+            _mockDataService.Object, null!, _mockMinUddannelseClient.Object, _mockLogger.Object));
 
         Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
             _mockContext.Object, _mockContextValidator.Object, _mockAuditService.Object, _mockRateLimiter.Object,
-            _mockDataService.Object, _mockSupabaseService.Object, null!));
+            _mockDataService.Object, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, null!));
+
+        Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
+            _mockContext.Object, _mockContextValidator.Object, _mockAuditService.Object, _mockRateLimiter.Object,
+            _mockDataService.Object, _mockSupabaseService.Object, null!, _mockLogger.Object));
+
         return Task.CompletedTask;
     }
 

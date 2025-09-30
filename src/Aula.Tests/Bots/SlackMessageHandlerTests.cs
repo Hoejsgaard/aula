@@ -313,7 +313,7 @@ public class SlackMessageHandlerTests
     public async Task HandleMessageAsync_WithException_LogsErrorAndReturnsFalse()
     {
         _mockAgentService
-            .Setup(a => a.ProcessQueryWithToolsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ChatInterface>()))
+            .Setup(a => a.ProcessQueryWithToolsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Child?>(), It.IsAny<ChatInterface>()))
             .ThrowsAsync(new Exception("Test exception"));
 
         var eventData = new JObject

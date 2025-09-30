@@ -117,35 +117,33 @@ public class Program
                     {
                         try
                         {
-                            // Legacy bot architecture removed - week letter posting disabled
-                            logger.LogInformation("Week letter posting disabled in current build for child: {ChildName}", args.ChildFirstName);
+                            // Check if this child has Slack configured
+                            var slackWebhook = childConfig.Channels?.Slack?.WebhookUrl;
 
-                            if (false) // Disabled in current build
+                            if (!string.IsNullOrEmpty(slackWebhook) && args.WeekLetter != null)
                             {
-                                // Extract week letter content
-                                var ugebreve = args.WeekLetter["ugebreve"];
-                                if (ugebreve is JArray ugebreveArray && ugebreveArray.Count > 0)
+                                // Create a SlackBot instance with the child's webhook
+                                var slackBot = new SlackBot(slackWebhook);
+
+                                // Post week letter to Slack
+                                var success = await slackBot.PostWeekLetter(args.WeekLetter, childConfig);
+
+                                if (success)
                                 {
-                                    var content = ugebreveArray[0]?["indhold"]?.ToString() ?? "";
-                                    var uge = ugebreveArray[0]?["uge"]?.ToString() ?? "";
-                                    var klasseNavn = ugebreveArray[0]?["klasseNavn"]?.ToString() ?? "";
-
-                                    if (!string.IsNullOrEmpty(content))
-                                    {
-                                        // Convert HTML to Slack markdown
-                                        var html2MarkdownConverter = new Html2SlackMarkdownConverter();
-                                        var markdownContent = html2MarkdownConverter.Convert(content).Replace("**", "*");
-
-                                        var message = $"📅 *Ugbrev for uge {uge} - {klasseNavn}*\n\n{markdownContent}";
-                                        // childBot.SendMessageToSlack(message); // Disabled in current build
-
-                                        logger.LogInformation("Posted week letter for {ChildName}", args.ChildFirstName);
-                                    }
+                                    logger.LogInformation("Posted week letter to Slack for {ChildName}", args.ChildFirstName);
                                 }
+                                else
+                                {
+                                    logger.LogError("Failed to post week letter to Slack for {ChildName}", args.ChildFirstName);
+                                }
+                            }
+                            else if (args.WeekLetter != null)
+                            {
+                                logger.LogWarning("Slack not configured for {ChildName} - no webhook URL", args.ChildFirstName);
                             }
                             else
                             {
-                                logger.LogWarning("No bot found for child {ChildName} or week letter is null", args.ChildFirstName);
+                                logger.LogWarning("No week letter to post for {ChildName}", args.ChildFirstName);
                             }
                         }
                         catch (Exception ex)
@@ -188,7 +186,39 @@ public class Program
                 };
             }
 
-            // Legacy child-specific Slack bots removed
+            // Start Slack Interactive Bot if configured
+            // Check if any child has Slack interactive bot enabled
+            var slackEnabledChild = config.MinUddannelse?.Children?
+                .FirstOrDefault(c => c.Channels?.Slack?.Enabled == true &&
+                                   c.Channels?.Slack?.EnableInteractiveBot == true &&
+                                   !string.IsNullOrEmpty(c.Channels?.Slack?.ApiToken));
+
+            if (slackEnabledChild != null)
+            {
+                // Update config.Slack properties with the child configuration
+                // This is needed because SlackInteractiveBot expects config.Slack to be populated
+                config.Slack.ApiToken = slackEnabledChild.Channels.Slack.ApiToken;
+                config.Slack.ChannelId = slackEnabledChild.Channels.Slack.ChannelId;
+                config.Slack.WebhookUrl = slackEnabledChild.Channels.Slack.WebhookUrl;
+                config.Slack.EnableInteractiveBot = slackEnabledChild.Channels.Slack.EnableInteractiveBot;
+                config.Slack.Enabled = slackEnabledChild.Channels.Slack.Enabled;
+
+                logger.LogInformation("Starting Slack interactive bot for channel {ChannelId}",
+                    slackEnabledChild.Channels.Slack.ChannelId);
+
+                var slackBot = new SlackInteractiveBot(
+                    serviceProvider.GetRequiredService<IAgentService>(),
+                    config,
+                    loggerFactory,
+                    serviceProvider.GetRequiredService<ISupabaseService>());
+
+                await slackBot.Start();
+                logger.LogInformation("Slack interactive bot started successfully");
+            }
+            else
+            {
+                logger.LogInformation("No Slack interactive bot configured");
+            }
 
             // Legacy Telegram bot removed
 
@@ -207,10 +237,17 @@ public class Program
                 {
                     try
                     {
-                        // Get the week letter from cache using child coordinator
+                        // Get the week letter from cache/database/API using child coordinator
+                        JObject? weekLetter = null;
                         using (var scope = new ChildContextScope(serviceProvider, child))
                         {
-                            JObject? weekLetter = null; // GetWeekLetter method disabled in current build
+                            await scope.ExecuteAsync(async provider =>
+                            {
+                                var dataService = provider.GetRequiredService<IChildDataService>();
+                                var date = DateOnly.FromDateTime(now.AddDays(-7 * (System.Globalization.ISOWeek.GetWeekOfYear(now) - weekNumber)));
+                                weekLetter = await dataService.GetOrFetchWeekLetterAsync(date, true);
+                            });
+                        }
 
                         if (weekLetter != null)
                         {
@@ -233,7 +270,6 @@ public class Program
                         {
                             logger.LogWarning("No week letter found for {ChildName} (week {WeekNumber}/{Year})",
                                 child.FirstName, weekNumber, year);
-                        }
                         }
                     }
                     catch (Exception ex)
@@ -310,11 +346,21 @@ public class Program
         services.AddScoped<IChildContext, ChildContext>();
         services.AddScoped<IChildAuditService, ChildAuditService>();
         services.AddScoped<IChildRateLimiter, ChildRateLimiter>();
+        services.AddScoped<IChildDataService, SecureChildDataService>();
+        services.AddScoped<IChildChannelManager, SecureChildChannelManager>();
+        services.AddScoped<IChildScheduler, SecureChildScheduler>();
         services.AddScoped<IChildAwareOpenAiService, SecureChildAwareOpenAiService>();
         services.AddScoped<IChildAgentService, SecureChildAgentService>();
         services.AddSingleton<IChildContextValidator, ChildContextValidator>();
         services.AddSingleton<IChildOperationExecutor, ChildOperationExecutor>();
 
+        // Legacy interfaces still needed
+        services.AddScoped<IDataService, DataService>();
+        services.AddScoped<IMinUddannelseClient, MinUddannelseClient>();
+        services.AddScoped<IAgentService, AgentService>();
+        services.AddSingleton<IChildServiceCoordinator, ChildServiceCoordinator>();
+        services.AddSingleton<IPromptSanitizer, PromptSanitizer>();
+        services.AddSingleton<IMessageContentFilter, MessageContentFilter>();
 
         // Other singleton services
         // Only register SlackBot if we have a root-level Slack config (which we don't anymore)
@@ -324,17 +370,20 @@ public class Program
                                 .GetChildren()
                                 .Any(c => c.GetValue<bool>("Channels:Slack:Enabled"));
 
+        services.AddSingleton<IChannelManager, ChannelManager>();
 
         services.AddSingleton<IGoogleCalendarService, GoogleCalendarService>();
         services.AddSingleton<IConversationManager, ConversationManager>();
         services.AddSingleton<IPromptBuilder, PromptBuilder>();
+        services.AddSingleton<IAiToolsManager, AiToolsManager>();
         services.AddSingleton<IOpenAiService>(provider =>
         {
             var config = provider.GetRequiredService<Config>();
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var aiToolsManager = provider.GetRequiredService<IAiToolsManager>();
             var conversationManager = provider.GetRequiredService<IConversationManager>();
             var promptBuilder = provider.GetRequiredService<IPromptBuilder>();
-            return new OpenAiService(config.OpenAi.ApiKey, loggerFactory, conversationManager, promptBuilder);
+            return new OpenAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager, conversationManager, promptBuilder);
         });
 
         // Only register TelegramInteractiveBot if enabled

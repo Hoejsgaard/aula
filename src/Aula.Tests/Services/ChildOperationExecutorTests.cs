@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Aula.Authentication;
 using Aula.Configuration;
 using Aula.Context;
@@ -225,17 +226,27 @@ public class ChildOperationExecutorTests
             .Returns(mockScopeFactory.Object);
 
         // Setup scopes for each child
+        var scopes = new List<Mock<IServiceScope>>();
         foreach (var child in children)
         {
             var mockScope = new Mock<IServiceScope>();
             var mockScopeProvider = new Mock<IServiceProvider>();
             var mockContext = new Mock<IChildContext>();
 
+            // Setup the context to return the current child
+            mockContext.Setup(c => c.CurrentChild).Returns(child);
+
             mockScope.Setup(s => s.ServiceProvider).Returns(mockScopeProvider.Object);
             mockScopeProvider.Setup(p => p.GetService(typeof(IChildContext)))
                 .Returns(mockContext.Object);
-            mockScopeFactory.Setup(f => f.CreateScope()).Returns(mockScope.Object);
+
+            scopes.Add(mockScope);
         }
+
+        // Setup factory to return scopes in sequence
+        var scopeIndex = 0;
+        mockScopeFactory.Setup(f => f.CreateScope())
+            .Returns(() => scopes[scopeIndex++ % scopes.Count].Object);
 
         // Act
         var results = await _executor.ExecuteForAllChildrenAsync(children,
@@ -243,7 +254,8 @@ public class ChildOperationExecutorTests
             {
                 await Task.CompletedTask;
                 // Fail for Child2
-                if (Thread.CurrentThread.ManagedThreadId % 2 == 0)
+                var context = provider.GetRequiredService<IChildContext>();
+                if (context.CurrentChild.FirstName == "Child2")
                 {
                     throw new InvalidOperationException("Simulated failure");
                 }

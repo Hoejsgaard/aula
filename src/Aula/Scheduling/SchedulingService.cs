@@ -16,7 +16,8 @@ public class SchedulingService : ISchedulingService
 {
     private readonly ILogger _logger;
     private readonly ISupabaseService _supabaseService;
-    // Legacy coordinator and channel manager removed
+    private readonly IChildServiceCoordinator _coordinator;
+    private readonly IChannelManager _channelManager;
     private readonly Config _config;
     private Timer? _schedulingTimer;
     private readonly object _lockObject = new object();
@@ -35,10 +36,14 @@ public class SchedulingService : ISchedulingService
     public SchedulingService(
         ILoggerFactory loggerFactory,
         ISupabaseService supabaseService,
+        IChildServiceCoordinator coordinator,
+        IChannelManager channelManager,
         Config config)
     {
         _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<SchedulingService>();
         _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
+        _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
+        _channelManager = channelManager ?? throw new ArgumentNullException(nameof(channelManager));
         _config = config ?? throw new ArgumentNullException(nameof(config));
     }
 
@@ -293,8 +298,8 @@ public class SchedulingService : ISchedulingService
         {
             _logger.LogInformation("Executing weekly letter check");
 
-            // Legacy coordinator removed - use config instead
-            var children = _config.MinUddannelse?.Children ?? new List<Child>();
+            // Get all children from coordinator
+            var children = await _coordinator.GetAllChildrenAsync();
             if (!children.Any())
             {
                 _logger.LogWarning("No children configured for week letter check");
@@ -383,8 +388,8 @@ public class SchedulingService : ISchedulingService
 
     private async Task<dynamic?> TryGetWeekLetter(Child child, int weekNumber, int year)
     {
-        // Legacy coordinator removed - week letter fetching disabled
-        JObject? weekLetter = null; // Disabled in current build
+        var date = DateOnly.FromDateTime(DateTime.Now);
+        var weekLetter = await _coordinator.GetWeekLetterForChildAsync(child, date);
         if (weekLetter == null)
         {
             _logger.LogWarning("No week letter available for {ChildName}, will retry later", child.FirstName);
