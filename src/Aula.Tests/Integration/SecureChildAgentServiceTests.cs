@@ -61,7 +61,7 @@ public class SecureChildAgentServiceTests
 			.ReturnsAsync(true);
 		_mockRateLimiter.Setup(r => r.IsAllowedAsync(_testChild, "SummarizeWeekLetter"))
 			.ReturnsAsync(true);
-		_mockDataService.Setup(d => d.GetWeekLetterAsync(It.IsAny<int>(), It.IsAny<int>()))
+		_mockDataService.Setup(d => d.GetWeekLetterAsync(_testChild, It.IsAny<int>(), It.IsAny<int>()))
 			.ReturnsAsync(weekLetter);
 		_mockOpenAiService.Setup(o => o.SummarizeWeekLetterAsync(weekLetter, ChatInterface.Slack))
 			.ReturnsAsync(expectedSummary);
@@ -111,7 +111,7 @@ public class SecureChildAgentServiceTests
 			.Returns(sanitizedQuestion);
 		_mockRateLimiter.Setup(r => r.IsAllowedAsync(_testChild, "AskQuestion"))
 			.ReturnsAsync(true);
-		_mockDataService.Setup(d => d.GetWeekLetterAsync(It.IsAny<int>(), It.IsAny<int>()))
+		_mockDataService.Setup(d => d.GetWeekLetterAsync(_testChild, It.IsAny<int>(), It.IsAny<int>()))
 			.ReturnsAsync(weekLetter);
 		_mockOpenAiService.Setup(o => o.AskQuestionAboutWeekLetterAsync(
 			weekLetter, sanitizedQuestion, It.IsAny<string>(), It.IsAny<string>(), ChatInterface.Slack))
@@ -188,7 +188,7 @@ public class SecureChildAgentServiceTests
 			.ReturnsAsync(true);
 		_mockRateLimiter.Setup(r => r.IsAllowedAsync(_testChild, "ExtractInformation"))
 			.ReturnsAsync(true);
-		_mockDataService.Setup(d => d.GetWeekLetterAsync(It.IsAny<int>(), It.IsAny<int>()))
+		_mockDataService.Setup(d => d.GetWeekLetterAsync(_testChild, It.IsAny<int>(), It.IsAny<int>()))
 			.ReturnsAsync(weekLetter);
 		_mockOpenAiService.Setup(o => o.ExtractKeyInformationAsync(weekLetter, ChatInterface.Slack))
 			.ReturnsAsync(extractedData);

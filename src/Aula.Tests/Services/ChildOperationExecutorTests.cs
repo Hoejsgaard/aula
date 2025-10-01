@@ -190,7 +190,7 @@ public class ChildOperationExecutorTests
 
 		// Act
 		var results = await _executor.ExecuteForAllChildrenAsync(children,
-			async (provider) =>
+			async (child, provider) =>
 			{
 				await Task.Delay(10); // Simulate some work
 				lock (executionOrder)
@@ -250,12 +250,11 @@ public class ChildOperationExecutorTests
 
 		// Act
 		var results = await _executor.ExecuteForAllChildrenAsync(children,
-			async (provider) =>
+			async (child, provider) =>
 			{
 				await Task.CompletedTask;
 				// Fail for Child2
-				var context = provider.GetRequiredService<IChildContext>();
-				if (context.CurrentChild?.FirstName == "Child2")
+				if (child.FirstName == "Child2")
 				{
 					throw new InvalidOperationException("Simulated failure");
 				}

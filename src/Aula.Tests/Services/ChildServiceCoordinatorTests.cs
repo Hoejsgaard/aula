@@ -2,6 +2,7 @@ using Aula.Configuration;
 using Aula.Integration;
 using Aula.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Newtonsoft.Json.Linq;
 using Xunit;
@@ -10,19 +11,21 @@ namespace Aula.Tests.Services;
 
 public class ChildServiceCoordinatorTests
 {
-	private readonly Mock<IChildOperationExecutor> _mockExecutor;
+	private readonly Mock<IChildDataService> _mockDataService;
 	private readonly Mock<IAgentService> _mockAgentService;
 	private readonly Config _config;
 	private readonly Mock<ILogger<ChildServiceCoordinator>> _mockLogger;
+	private readonly Mock<IServiceProvider> _mockServiceProvider;
 	private readonly ChildServiceCoordinator _coordinator;
 	private readonly List<Child> _testChildren;
 
 	public ChildServiceCoordinatorTests()
 	{
-		_mockExecutor = new Mock<IChildOperationExecutor>();
+		_mockDataService = new Mock<IChildDataService>();
 		_mockAgentService = new Mock<IAgentService>();
 		_config = new Config();
 		_mockLogger = new Mock<ILogger<ChildServiceCoordinator>>();
+		_mockServiceProvider = new Mock<IServiceProvider>();
 
 		_testChildren = new List<Child>
 		{
@@ -34,205 +37,144 @@ public class ChildServiceCoordinatorTests
 			.ReturnsAsync(_testChildren);
 
 		_coordinator = new ChildServiceCoordinator(
-			_mockExecutor.Object,
+			_mockDataService.Object,
 			_mockAgentService.Object,
 			_config,
-			_mockLogger.Object);
+			_mockLogger.Object,
+			_mockServiceProvider.Object);
 	}
 
 	[Fact]
-	public async Task PreloadWeekLettersForAllChildrenAsync_ExecutesForEachChild()
+	public async Task PreloadWeekLettersForAllChildrenAsync_CallsDataServiceForEachChild()
 	{
 		// Arrange
-		var results = new Dictionary<Child, object>();
-		foreach (var child in _testChildren)
-		{
-			results[child] = new { CurrentWeek = "week1", LastWeek = "week2", TwoWeeksAgo = "week3" };
-		}
+		var today = DateOnly.FromDateTime(DateTime.Today);
+		var weekLetter = new JObject();
 
-		_mockExecutor.Setup(e => e.ExecuteForAllChildrenAsync(
-			It.IsAny<IEnumerable<Child>>(),
-			It.IsAny<Func<IServiceProvider, Task<object>>>(),
-			"PreloadWeekLetters"))
-			.ReturnsAsync(results);
+		_mockDataService.Setup(d => d.GetOrFetchWeekLetterAsync(
+			It.IsAny<Child>(),
+			It.IsAny<DateOnly>(),
+			true))
+			.ReturnsAsync(weekLetter);
 
 		// Act
 		await _coordinator.PreloadWeekLettersForAllChildrenAsync();
 
 		// Assert
-		_mockExecutor.Verify(e => e.ExecuteForAllChildrenAsync(
-			It.Is<IEnumerable<Child>>(c => c.Count() == 2),
-			It.IsAny<Func<IServiceProvider, Task<object>>>(),
-			"PreloadWeekLetters"), Times.Once);
+		_mockDataService.Verify(d => d.GetOrFetchWeekLetterAsync(
+			It.IsAny<Child>(),
+			today,
+			true), Times.Exactly(2)); // Current week for each child
+
+		_mockDataService.Verify(d => d.GetOrFetchWeekLetterAsync(
+			It.IsAny<Child>(),
+			today.AddDays(-7),
+			true), Times.Exactly(2)); // Last week for each child
+
+		_mockDataService.Verify(d => d.GetOrFetchWeekLetterAsync(
+			It.IsAny<Child>(),
+			today.AddDays(-14),
+			true), Times.Exactly(2)); // Two weeks ago for each child
 	}
 
 	[Fact]
-	public async Task PostWeekLettersToChannelsAsync_ExecutesForEachChild()
+	public async Task PostWeekLettersToChannelsAsync_CallsDataServiceForEachChild()
 	{
 		// Arrange
-		var results = new Dictionary<Child, bool>();
-		foreach (var child in _testChildren)
-		{
-			results[child] = true;
-		}
+		var today = DateOnly.FromDateTime(DateTime.Today);
+		var calendar = System.Globalization.CultureInfo.InvariantCulture.Calendar;
+		var weekNumber = calendar.GetWeekOfYear(today.ToDateTime(TimeOnly.MinValue),
+			System.Globalization.CalendarWeekRule.FirstFourDayWeek,
+			DayOfWeek.Monday);
 
-		_mockExecutor.Setup(e => e.ExecuteForAllChildrenAsync(
-			It.IsAny<IEnumerable<Child>>(),
-			It.IsAny<Func<IServiceProvider, Task<bool>>>(),
-			"PostWeekLetters"))
-			.ReturnsAsync(results);
+		var weekLetter = new JObject();
+		_mockDataService.Setup(d => d.GetWeekLetterAsync(
+			It.IsAny<Child>(),
+			weekNumber,
+			today.Year))
+			.ReturnsAsync(weekLetter);
 
 		// Act
 		await _coordinator.PostWeekLettersToChannelsAsync();
 
 		// Assert
-		_mockExecutor.Verify(e => e.ExecuteForAllChildrenAsync(
-			It.Is<IEnumerable<Child>>(c => c.Count() == 2),
-			It.IsAny<Func<IServiceProvider, Task<bool>>>(),
-			"PostWeekLetters"), Times.Once);
+		_mockDataService.Verify(d => d.GetWeekLetterAsync(
+			It.IsAny<Child>(),
+			weekNumber,
+			today.Year), Times.Exactly(2)); // Once for each child
 	}
 
 	[Fact]
-	public async Task FetchWeekLetterForChildAsync_ExecutesInChildContext()
+	public async Task FetchWeekLetterForChildAsync_CallsDataService()
 	{
 		// Arrange
 		var testChild = _testChildren.First();
 		var testDate = DateOnly.FromDateTime(DateTime.Today);
+		var weekLetter = new JObject();
 
-		_mockExecutor.Setup(e => e.ExecuteInChildContextAsync(
+		_mockDataService.Setup(d => d.GetOrFetchWeekLetterAsync(
 			testChild,
-			It.IsAny<Func<IServiceProvider, Task<bool>>>(),
-			"FetchWeekLetter"))
-			.ReturnsAsync(true);
+			testDate,
+			true))
+			.ReturnsAsync(weekLetter);
 
 		// Act
 		var result = await _coordinator.FetchWeekLetterForChildAsync(testChild, testDate);
 
 		// Assert
 		Assert.True(result);
-		_mockExecutor.Verify(e => e.ExecuteInChildContextAsync(
+		_mockDataService.Verify(d => d.GetOrFetchWeekLetterAsync(
 			testChild,
-			It.IsAny<Func<IServiceProvider, Task<bool>>>(),
-			"FetchWeekLetter"), Times.Once);
+			testDate,
+			true), Times.Once);
 	}
 
 	[Fact]
-	public async Task ProcessScheduledTasksForChildAsync_ExecutesInChildContext()
+	public async Task GetWeekLetterForChildAsync_CallsDataService()
 	{
 		// Arrange
 		var testChild = _testChildren.First();
+		var testDate = DateOnly.FromDateTime(DateTime.Today);
+		var weekLetter = new JObject();
+
+		_mockDataService.Setup(d => d.GetOrFetchWeekLetterAsync(
+			testChild,
+			testDate,
+			true))
+			.ReturnsAsync(weekLetter);
 
 		// Act
-		await _coordinator.ProcessScheduledTasksForChildAsync(testChild);
+		var result = await _coordinator.GetWeekLetterForChildAsync(testChild, testDate);
 
 		// Assert
-		_mockExecutor.Verify(e => e.ExecuteInChildContextAsync(
+		Assert.NotNull(result);
+		_mockDataService.Verify(d => d.GetOrFetchWeekLetterAsync(
 			testChild,
-			It.IsAny<Func<IServiceProvider, Task>>(),
-			"ProcessScheduledTasks"), Times.Once);
+			testDate,
+			true), Times.Once);
 	}
 
 	[Fact]
-	public async Task SendReminderToChildAsync_ReturnsResult()
+	public async Task SeedHistoricalDataForChildAsync_CallsDataServiceForEachWeek()
 	{
 		// Arrange
 		var testChild = _testChildren.First();
-		var reminderMessage = "Test reminder";
+		var weeksBack = 3;
 
-		_mockExecutor.Setup(e => e.ExecuteInChildContextAsync(
+		_mockDataService.Setup(d => d.GetOrFetchWeekLetterAsync(
 			testChild,
-			It.IsAny<Func<IServiceProvider, Task<bool>>>(),
-			"SendReminder"))
-			.ReturnsAsync(true);
-
-		// Act
-		var result = await _coordinator.SendReminderToChildAsync(testChild, reminderMessage);
-
-		// Assert
-		Assert.True(result);
-		_mockExecutor.Verify(e => e.ExecuteInChildContextAsync(
-			testChild,
-			It.IsAny<Func<IServiceProvider, Task<bool>>>(),
-			"SendReminder"), Times.Once);
-	}
-
-	[Fact]
-	public async Task ProcessAiQueryForChildAsync_ReturnsResponse()
-	{
-		// Arrange
-		var testChild = _testChildren.First();
-		var query = "Test query";
-		var expectedResponse = "AI response";
-
-		_mockExecutor.Setup(e => e.ExecuteInChildContextAsync(
-			testChild,
-			It.IsAny<Func<IServiceProvider, Task<string>>>(),
-			"ProcessAiQuery"))
-			.ReturnsAsync(expectedResponse);
-
-		// Act
-		var result = await _coordinator.ProcessAiQueryForChildAsync(testChild, query);
-
-		// Assert
-		Assert.Equal(expectedResponse, result);
-		_mockExecutor.Verify(e => e.ExecuteInChildContextAsync(
-			testChild,
-			It.IsAny<Func<IServiceProvider, Task<string>>>(),
-			"ProcessAiQuery"), Times.Once);
-	}
-
-	[Fact]
-	public async Task SeedHistoricalDataForChildAsync_ExecutesCorrectly()
-	{
-		// Arrange
-		var testChild = _testChildren.First();
-		var weeksBack = 8;
+			It.IsAny<DateOnly>(),
+			false))
+			.ReturnsAsync((JObject?)null);
 
 		// Act
 		await _coordinator.SeedHistoricalDataForChildAsync(testChild, weeksBack);
 
 		// Assert
-		_mockExecutor.Verify(e => e.ExecuteInChildContextAsync(
+		_mockDataService.Verify(d => d.GetOrFetchWeekLetterAsync(
 			testChild,
-			It.IsAny<Func<IServiceProvider, Task>>(),
-			"SeedHistoricalData"), Times.Once);
-	}
-
-	[Fact]
-	public async Task GetNextScheduledTaskTimeForChildAsync_ReturnsDateTime()
-	{
-		// Arrange
-		var testChild = _testChildren.First();
-		var expectedTime = DateTime.UtcNow.AddHours(1);
-
-		_mockExecutor.Setup(e => e.ExecuteInChildContextAsync(
-			testChild,
-			It.IsAny<Func<IServiceProvider, Task<DateTime?>>>(),
-			"GetNextScheduledTaskTime"))
-			.ReturnsAsync(expectedTime);
-
-		// Act
-		var result = await _coordinator.GetNextScheduledTaskTimeForChildAsync(testChild);
-
-		// Assert
-		Assert.Equal(expectedTime, result);
-	}
-
-	[Fact]
-	public async Task ValidateChildServicesAsync_ReturnsTrueWhenValid()
-	{
-		// Arrange
-		_mockExecutor.Setup(e => e.ExecuteInChildContextAsync(
-			It.IsAny<Child>(),
-			It.IsAny<Func<IServiceProvider, Task<bool>>>(),
-			"ValidateServices"))
-			.ReturnsAsync(true);
-
-		// Act
-		var result = await _coordinator.ValidateChildServicesAsync();
-
-		// Assert
-		Assert.True(result);
+			It.IsAny<DateOnly>(),
+			false), Times.Exactly(weeksBack));
 	}
 
 	[Fact]
@@ -250,81 +192,37 @@ public class ChildServiceCoordinatorTests
 	}
 
 	[Fact]
-	public async Task GetChildServicesHealthAsync_ReturnsHealthStatus()
-	{
-		// Arrange
-		var healthStatus = new Dictionary<string, bool>
-		{
-			{ "ChildContext", true },
-			{ "ChildDataService", true },
-			{ "ChildChannelManager", false }
-		};
-
-		_mockExecutor.Setup(e => e.ExecuteInChildContextAsync(
-			It.IsAny<Child>(),
-			It.IsAny<Func<IServiceProvider, Task<Dictionary<string, bool>>>>(),
-			"HealthCheck"))
-			.ReturnsAsync(healthStatus);
-
-		// Act
-		var result = await _coordinator.GetChildServicesHealthAsync();
-
-		// Assert
-		Assert.NotEmpty(result);
-		Assert.Contains("AgentService", result.Keys);
-		Assert.True(result["AgentService"]); // Has children
-	}
-
-	[Fact]
-	public async Task ProcessScheduledTasksForAllChildrenAsync_ExecutesForAllChildren()
-	{
-		// Arrange
-		var results = new Dictionary<Child, bool>();
-		foreach (var child in _testChildren)
-		{
-			results[child] = true;
-		}
-
-		_mockExecutor.Setup(e => e.ExecuteForAllChildrenAsync(
-			It.IsAny<IEnumerable<Child>>(),
-			It.IsAny<Func<IServiceProvider, Task<bool>>>(),
-			"ProcessScheduledTasksForAll"))
-			.ReturnsAsync(results);
-
-		// Act
-		await _coordinator.ProcessScheduledTasksForAllChildrenAsync();
-
-		// Assert
-		_mockExecutor.Verify(e => e.ExecuteForAllChildrenAsync(
-			It.Is<IEnumerable<Child>>(c => c.Count() == 2),
-			It.IsAny<Func<IServiceProvider, Task<bool>>>(),
-			"ProcessScheduledTasksForAll"), Times.Once);
-	}
-
-	[Fact]
-	public async Task FetchWeekLettersForAllChildrenAsync_ExecutesForAllChildren()
+	public async Task FetchWeekLettersForAllChildrenAsync_CallsDataServiceForAllChildren()
 	{
 		// Arrange
 		var testDate = DateOnly.FromDateTime(DateTime.Today);
-		var results = new Dictionary<Child, (Child child, JObject? weekLetter)>();
-		foreach (var child in _testChildren)
-		{
-			results[child] = (child, new JObject());
-		}
+		var weekLetter = new JObject();
 
-		_mockExecutor.Setup(e => e.ExecuteForAllChildrenAsync(
-			It.IsAny<IEnumerable<Child>>(),
-			It.IsAny<Func<IServiceProvider, Task<(Child child, JObject? weekLetter)>>>(),
-			"FetchWeekLettersForAll"))
-			.ReturnsAsync(results);
+		_mockDataService.Setup(d => d.GetOrFetchWeekLetterAsync(
+			It.IsAny<Child>(),
+			testDate,
+			true))
+			.ReturnsAsync(weekLetter);
 
 		// Act
-		await _coordinator.FetchWeekLettersForAllChildrenAsync(testDate);
+		var results = await _coordinator.FetchWeekLettersForAllChildrenAsync(testDate);
 
 		// Assert
-		_mockExecutor.Verify(e => e.ExecuteForAllChildrenAsync(
-			It.Is<IEnumerable<Child>>(c => c.Count() == 2),
-			It.IsAny<Func<IServiceProvider, Task<(Child child, JObject? weekLetter)>>>(),
-			"FetchWeekLettersForAll"), Times.Once);
+		Assert.Equal(2, results.Count());
+		_mockDataService.Verify(d => d.GetOrFetchWeekLetterAsync(
+			It.IsAny<Child>(),
+			testDate,
+			true), Times.Exactly(2));
+	}
+
+	[Fact]
+	public async Task GetAllChildrenAsync_ReturnsChildrenFromAgentService()
+	{
+		// Act
+		var result = await _coordinator.GetAllChildrenAsync();
+
+		// Assert
+		Assert.Equal(_testChildren, result);
+		_mockAgentService.Verify(a => a.GetAllChildrenAsync(), Times.Once);
 	}
 }

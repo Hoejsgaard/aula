@@ -81,20 +81,20 @@ public class DataServiceIntegrationTests
 		await scope1.ExecuteAsync(async provider =>
 		{
 			var dataService = provider.GetRequiredService<IChildDataService>();
-			await dataService.CacheWeekLetterAsync(10, 2025, letter1);
+			await dataService.CacheWeekLetterAsync(child1, 10, 2025, letter1);
 		});
 
 		await scope2.ExecuteAsync(async provider =>
 		{
 			var dataService = provider.GetRequiredService<IChildDataService>();
-			await dataService.CacheWeekLetterAsync(10, 2025, letter2);
+			await dataService.CacheWeekLetterAsync(child2, 10, 2025, letter2);
 		});
 
 		// Verify each child retrieves their own letter
 		await scope1.ExecuteAsync(async provider =>
 		{
 			var dataService = provider.GetRequiredService<IChildDataService>();
-			var retrieved = await dataService.GetWeekLetterAsync(10, 2025);
+			var retrieved = await dataService.GetWeekLetterAsync(child1, 10, 2025);
 			Assert.NotNull(retrieved);
 			Assert.Equal("Letter for Charlie", retrieved["content"]?.ToString());
 		});
@@ -102,7 +102,7 @@ public class DataServiceIntegrationTests
 		await scope2.ExecuteAsync(async provider =>
 		{
 			var dataService = provider.GetRequiredService<IChildDataService>();
-			var retrieved = await dataService.GetWeekLetterAsync(10, 2025);
+			var retrieved = await dataService.GetWeekLetterAsync(child2, 10, 2025);
 			Assert.NotNull(retrieved);
 			Assert.Equal("Letter for Diana", retrieved["content"]?.ToString());
 		});
@@ -120,7 +120,7 @@ public class DataServiceIntegrationTests
 		await scope.ExecuteAsync(async provider =>
 		{
 			var dataService = provider.GetRequiredService<IChildDataService>();
-			await dataService.CacheWeekLetterAsync(15, 2025, letter);
+			await dataService.CacheWeekLetterAsync(child, 15, 2025, letter);
 		});
 
 		// Verify cache key is child-prefixed
@@ -159,13 +159,13 @@ public class DataServiceIntegrationTests
 			for (int i = 0; i < 10; i++)
 			{
 				var letter = JObject.Parse($"{{\"week\": {i}}}");
-				await dataService.StoreWeekLetterAsync(i, 2025, letter);
+				await dataService.StoreWeekLetterAsync(child1, i, 2025, letter);
 			}
 
 			// 11th attempt should fail with rate limit
 			var extraLetter = JObject.Parse("{\"week\": 11}");
 			await Assert.ThrowsAsync<RateLimitExceededException>(async () =>
-				await dataService.StoreWeekLetterAsync(11, 2025, extraLetter));
+				await dataService.StoreWeekLetterAsync(child1, 11, 2025, extraLetter));
 		});
 
 		// Child2 should still be able to store (separate rate limit)
@@ -173,7 +173,7 @@ public class DataServiceIntegrationTests
 		{
 			var dataService = provider.GetRequiredService<IChildDataService>();
 			var letter = JObject.Parse("{\"content\": \"Child2 letter\"}");
-			var result = await dataService.StoreWeekLetterAsync(1, 2025, letter);
+			var result = await dataService.StoreWeekLetterAsync(child2, 1, 2025, letter);
 			Assert.True(result);
 		});
 	}
@@ -192,7 +192,7 @@ public class DataServiceIntegrationTests
 			var auditService = provider.GetRequiredService<IChildAuditService>();
 
 			// Attempt to delete (requires delete:database permission)
-			var result = await dataService.DeleteWeekLetterAsync(10, 2025);
+			var result = await dataService.DeleteWeekLetterAsync(child, 10, 2025);
 
 			// Default implementation grants permission, but audit trail records attempt
 			var auditTrail = await auditService.GetAuditTrailAsync(
@@ -220,10 +220,10 @@ public class DataServiceIntegrationTests
 			var auditService = provider.GetRequiredService<IChildAuditService>();
 
 			// Perform various data operations
-			await dataService.CacheWeekLetterAsync(20, 2025, letter);
-			await dataService.GetWeekLetterAsync(20, 2025);
-			await dataService.CacheWeekScheduleAsync(20, 2025, letter);
-			await dataService.GetWeekScheduleAsync(20, 2025);
+			await dataService.CacheWeekLetterAsync(child, 20, 2025, letter);
+			await dataService.GetWeekLetterAsync(child, 20, 2025);
+			await dataService.CacheWeekScheduleAsync(child, 20, 2025, letter);
+			await dataService.GetWeekScheduleAsync(child, 20, 2025);
 
 			// Check audit trail
 			var auditTrail = await auditService.GetAuditTrailAsync(
@@ -259,10 +259,10 @@ public class DataServiceIntegrationTests
 
 				// Each child caches their own letter
 				var letter = JObject.Parse($"{{\"child\": \"{child.FirstName}\", \"index\": {index}}}");
-				await dataService.CacheWeekLetterAsync(index, 2025, letter);
+				await dataService.CacheWeekLetterAsync(child, index, 2025, letter);
 
 				// Retrieve and verify
-				var retrieved = await dataService.GetWeekLetterAsync(index, 2025);
+				var retrieved = await dataService.GetWeekLetterAsync(child, index, 2025);
 				Assert.NotNull(retrieved);
 				Assert.Equal(child.FirstName, retrieved["child"]?.ToString());
 				Assert.Equal(index, retrieved["index"]?.Value<int>());
@@ -301,7 +301,7 @@ public class DataServiceIntegrationTests
 
 			// Can only operate on current child from context
 			var letter = JObject.Parse("{\"test\": true}");
-			await dataService.CacheWeekLetterAsync(25, 2025, letter);
+			await dataService.CacheWeekLetterAsync(child, 25, 2025, letter);
 		});
 	}
 
