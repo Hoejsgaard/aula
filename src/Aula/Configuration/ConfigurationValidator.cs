@@ -27,7 +27,6 @@ public class ConfigurationValidator : IConfigurationValidator
         ValidateSupabase(config.Supabase, errors);
 
         // Optional features - validate if enabled
-        ValidateSlack(config.Slack, errors, warnings);
         ValidateGoogleServiceAccount(config.GoogleServiceAccount, errors, warnings);
         ValidateFeatures(config.Features, errors, warnings);
         ValidateTimers(config.Timers, errors, warnings);
@@ -133,50 +132,6 @@ public class ConfigurationValidator : IConfigurationValidator
         }
     }
 
-    private void ValidateSlack(Slack slack, List<string> errors, List<string> warnings)
-    {
-        if (slack == null)
-        {
-            warnings.Add("Slack configuration section is missing - Slack features will be disabled");
-            return;
-        }
-
-        if (slack.EnableInteractiveBot || !string.IsNullOrWhiteSpace(slack.WebhookUrl))
-        {
-            if (slack.EnableInteractiveBot)
-            {
-                if (string.IsNullOrWhiteSpace(slack.ApiToken))
-                {
-                    errors.Add("Slack.ApiToken is required when EnableInteractiveBot is true");
-                }
-            }
-
-            if (!string.IsNullOrWhiteSpace(slack.WebhookUrl))
-            {
-                if (!Uri.TryCreate(slack.WebhookUrl, UriKind.Absolute, out var uri) ||
-                    (uri.Scheme != "https" && uri.Scheme != "http"))
-                {
-                    errors.Add("Slack.WebhookUrl must be a valid HTTP/HTTPS URL");
-                }
-            }
-
-            // Validate API base URL
-            if (!string.IsNullOrWhiteSpace(slack.ApiBaseUrl))
-            {
-                if (!Uri.TryCreate(slack.ApiBaseUrl, UriKind.Absolute, out var apiUri) ||
-                    (apiUri.Scheme != "https" && apiUri.Scheme != "http"))
-                {
-                    errors.Add("Slack.ApiBaseUrl must be a valid HTTP/HTTPS URL");
-                }
-            }
-        }
-        else
-        {
-            warnings.Add("Slack features are disabled - no webhook URL or interactive bot configured");
-        }
-    }
-
-
     private void ValidateGoogleServiceAccount(GoogleServiceAccount googleServiceAccount, List<string> errors, List<string> warnings)
     {
         if (googleServiceAccount == null)
@@ -256,10 +211,6 @@ public class ConfigurationValidator : IConfigurationValidator
         if (timers.SchedulingIntervalSeconds <= 0)
         {
             errors.Add("Timers.SchedulingIntervalSeconds must be greater than 0");
-        }
-        if (timers.SlackPollingIntervalSeconds <= 0)
-        {
-            errors.Add("Timers.SlackPollingIntervalSeconds must be greater than 0");
         }
 
         if (timers.CleanupIntervalHours <= 0)

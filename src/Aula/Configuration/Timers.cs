@@ -4,7 +4,6 @@ public class Timers
 {
     // Polling intervals
     public int SchedulingIntervalSeconds { get; set; } = 10;
-    public int SlackPollingIntervalSeconds { get; set; } = 5;
 
     // Adaptive polling
     public bool AdaptivePolling { get; set; } = true;

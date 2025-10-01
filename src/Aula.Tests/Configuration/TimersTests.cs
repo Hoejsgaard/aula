@@ -13,7 +13,6 @@ public class TimersTests
 
         // Assert
         Assert.Equal(10, timers.SchedulingIntervalSeconds);
-        Assert.Equal(5, timers.SlackPollingIntervalSeconds);
         Assert.Equal(1, timers.CleanupIntervalHours);
         Assert.True(timers.AdaptivePolling);
         Assert.Equal(30, timers.MaxPollingIntervalSeconds);
@@ -32,20 +31,6 @@ public class TimersTests
 
         // Assert
         Assert.Equal(testValue, timers.SchedulingIntervalSeconds);
-    }
-
-    [Fact]
-    public void SlackPollingIntervalSeconds_CanSetAndGetValue()
-    {
-        // Arrange
-        var timers = new Timers();
-        var testValue = 10;
-
-        // Act
-        timers.SlackPollingIntervalSeconds = testValue;
-
-        // Assert
-        Assert.Equal(testValue, timers.SlackPollingIntervalSeconds);
     }
 
     [Fact]
@@ -126,25 +111,6 @@ public class TimersTests
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
-    [InlineData(5)]
-    [InlineData(10)]
-    [InlineData(15)]
-    [InlineData(30)]
-    public void SlackPollingIntervalSeconds_AcceptsVariousValues(int seconds)
-    {
-        // Arrange
-        var timers = new Timers();
-
-        // Act
-        timers.SlackPollingIntervalSeconds = seconds;
-
-        // Assert
-        Assert.Equal(seconds, timers.SlackPollingIntervalSeconds);
-    }
-
-    [Theory]
-    [InlineData(1)]
-    [InlineData(2)]
     [InlineData(4)]
     [InlineData(6)]
     [InlineData(12)]
@@ -205,7 +171,6 @@ public class TimersTests
         // Arrange
         var timers = new Timers();
         var schedulingInterval = 20;
-        var slackPollingInterval = 8;
         var cleanupInterval = 3;
         var adaptivePolling = false;
         var maxPollingInterval = 45;
@@ -213,7 +178,6 @@ public class TimersTests
 
         // Act
         timers.SchedulingIntervalSeconds = schedulingInterval;
-        timers.SlackPollingIntervalSeconds = slackPollingInterval;
         timers.CleanupIntervalHours = cleanupInterval;
         timers.AdaptivePolling = adaptivePolling;
         timers.MaxPollingIntervalSeconds = maxPollingInterval;
@@ -221,7 +185,6 @@ public class TimersTests
 
         // Assert
         Assert.Equal(schedulingInterval, timers.SchedulingIntervalSeconds);
-        Assert.Equal(slackPollingInterval, timers.SlackPollingIntervalSeconds);
         Assert.Equal(cleanupInterval, timers.CleanupIntervalHours);
         Assert.Equal(adaptivePolling, timers.AdaptivePolling);
         Assert.Equal(maxPollingInterval, timers.MaxPollingIntervalSeconds);
@@ -235,7 +198,6 @@ public class TimersTests
         var timers = new Timers
         {
             SchedulingIntervalSeconds = 25,
-            SlackPollingIntervalSeconds = 12,
             CleanupIntervalHours = 4,
             AdaptivePolling = false,
             MaxPollingIntervalSeconds = 90,
@@ -244,7 +206,6 @@ public class TimersTests
 
         // Assert
         Assert.Equal(25, timers.SchedulingIntervalSeconds);
-        Assert.Equal(12, timers.SlackPollingIntervalSeconds);
         Assert.Equal(4, timers.CleanupIntervalHours);
         Assert.False(timers.AdaptivePolling);
         Assert.Equal(90, timers.MaxPollingIntervalSeconds);
@@ -299,7 +260,6 @@ public class TimersTests
 
         // Assert
         Assert.Equal(99, timers.SchedulingIntervalSeconds);
-        Assert.Equal(5, timers.SlackPollingIntervalSeconds); // Should remain default
         Assert.Equal(1, timers.CleanupIntervalHours); // Should remain default
         Assert.True(timers.AdaptivePolling); // Should remain default
         Assert.Equal(30, timers.MaxPollingIntervalSeconds); // Should remain default
@@ -332,18 +292,14 @@ public class TimersTests
 
         // Act & Assert - Very short intervals
         timers.SchedulingIntervalSeconds = 1;
-        timers.SlackPollingIntervalSeconds = 1;
         timers.MinPollingIntervalSeconds = 1;
         Assert.Equal(1, timers.SchedulingIntervalSeconds);
-        Assert.Equal(1, timers.SlackPollingIntervalSeconds);
         Assert.Equal(1, timers.MinPollingIntervalSeconds);
 
         // Act & Assert - Medium intervals
         timers.SchedulingIntervalSeconds = 30;
-        timers.SlackPollingIntervalSeconds = 15;
         timers.MaxPollingIntervalSeconds = 60;
         Assert.Equal(30, timers.SchedulingIntervalSeconds);
-        Assert.Equal(15, timers.SlackPollingIntervalSeconds);
         Assert.Equal(60, timers.MaxPollingIntervalSeconds);
 
         // Act & Assert - Longer intervals
@@ -381,14 +337,12 @@ public class TimersTests
 
         // Act
         timers.SchedulingIntervalSeconds = 0;
-        timers.SlackPollingIntervalSeconds = 0;
         timers.CleanupIntervalHours = 0;
         timers.MaxPollingIntervalSeconds = 0;
         timers.MinPollingIntervalSeconds = 0;
 
         // Assert
         Assert.Equal(0, timers.SchedulingIntervalSeconds);
-        Assert.Equal(0, timers.SlackPollingIntervalSeconds);
         Assert.Equal(0, timers.CleanupIntervalHours);
         Assert.Equal(0, timers.MaxPollingIntervalSeconds);
         Assert.Equal(0, timers.MinPollingIntervalSeconds);
@@ -402,14 +356,12 @@ public class TimersTests
 
         // Act
         timers.SchedulingIntervalSeconds = -1;
-        timers.SlackPollingIntervalSeconds = -5;
         timers.CleanupIntervalHours = -2;
         timers.MaxPollingIntervalSeconds = -10;
         timers.MinPollingIntervalSeconds = -3;
 
         // Assert
         Assert.Equal(-1, timers.SchedulingIntervalSeconds);
-        Assert.Equal(-5, timers.SlackPollingIntervalSeconds);
         Assert.Equal(-2, timers.CleanupIntervalHours);
         Assert.Equal(-10, timers.MaxPollingIntervalSeconds);
         Assert.Equal(-3, timers.MinPollingIntervalSeconds);
@@ -423,7 +375,6 @@ public class TimersTests
 
         // Assert - Check that defaults make sense
         Assert.True(timers.SchedulingIntervalSeconds > 0);
-        Assert.True(timers.SlackPollingIntervalSeconds > 0);
         Assert.True(timers.CleanupIntervalHours > 0);
         Assert.True(timers.MaxPollingIntervalSeconds > 0);
         Assert.True(timers.MinPollingIntervalSeconds > 0);
