@@ -63,7 +63,6 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
     private async Task<bool> ProcessLoginResponseAsync(string content, HttpResponseMessage initialResponse)
     {
         var maxSteps = 10;
-        var success = false;
         var currentUrl = initialResponse.RequestMessage?.RequestUri?.ToString() ?? _loginUrl;
         var hasSubmittedCredentials = false;
 
@@ -80,27 +79,14 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
                 _logger.LogDebug("Credentials form detected");
             }
 
-            // After submitting credentials and returning to MinUddannelse, we should be authenticated
-            if (hasSubmittedCredentials && currentUrl.Contains("minuddannelse.net") && !currentUrl.Contains("Login"))
+            // Check if we're authenticated after returning from credential submission
+            if (await TryVerifyAuthenticationAfterCredentials(currentUrl, hasSubmittedCredentials))
             {
-                _logger.LogDebug("Back at MinUddannelse after credential submission");
-
-                // Verify authentication by testing multiple endpoints
-                var authenticated = await VerifyAuthentication();
-                if (authenticated)
-                {
-                    _logger.LogInformation("Authentication confirmed via API access");
-                    return true;
-                }
-                else
-                {
-                    _logger.LogWarning("At MinUddannelse but API access failed - may need another redirect");
-                }
+                return true;
             }
 
             try
             {
-                // Parse the HTML
                 var doc = new HtmlDocument();
                 doc.LoadHtml(content);
 
@@ -108,223 +94,44 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
                 var title = doc.DocumentNode.SelectSingleNode("//title")?.InnerText?.Trim();
                 _logger.LogDebug("Page title: {Title}", title ?? "No title found");
 
-                // Look for different types of forms
-                var forms = doc.DocumentNode.SelectNodes("//form");
-                if (forms != null)
+                // Log form structure for debugging
+                LogFormStructure(doc);
+
+                // Check for authentication success indicators
+                if (CheckForAuthenticationSuccess(doc, currentUrl, stepCounter))
                 {
-                    _logger.LogDebug("Found {FormCount} form(s) on page", forms.Count);
-                    foreach (var form in forms)
-                    {
-                        var formAction = form.Attributes["action"]?.Value;
-                        var formMethod = form.Attributes["method"]?.Value;
-                        var formId = form.Attributes["id"]?.Value;
-                        var formName = form.Attributes["name"]?.Value;
-                        _logger.LogDebug("Form: action='{FormAction}', method='{FormMethod}', id='{FormId}', name='{FormName}'",
-                            formAction, formMethod, formId, formName);
-
-                        // Log input fields in the form
-                        var inputs = form.SelectNodes(".//input");
-                        if (inputs != null)
-                        {
-                            foreach (var input in inputs)
-                            {
-                                var inputName = input.Attributes["name"]?.Value;
-                                var inputType = input.Attributes["type"]?.Value;
-                                var inputId = input.Attributes["id"]?.Value;
-                                if (inputType != "hidden")
-                                {
-                                    _logger.LogDebug("Input: name='{InputName}', type='{InputType}', id='{InputId}'",
-                                        inputName, inputType, inputId);
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    _logger.LogDebug("No forms found on this page");
-
-                    // Look for JavaScript redirects or other navigation elements
-                    var scripts = doc.DocumentNode.SelectNodes("//script");
-                    if (scripts != null)
-                    {
-                        foreach (var script in scripts)
-                        {
-                            if (script.InnerText.Contains("window.location") ||
-                                script.InnerText.Contains("redirect") ||
-                                script.InnerText.Contains("submit"))
-                            {
-                                _logger.LogDebug("Found potential JavaScript redirect/submit");
-                                var scriptPreview = script.InnerText.Length > 200
-                                    ? script.InnerText.Substring(0, 200) + "..."
-                                    : script.InnerText;
-                                _logger.LogDebug("Script preview: {ScriptPreview}", scriptPreview);
-                            }
-                        }
-                    }
-
-                    // Look for links that might be login-related
-                    var links = doc.DocumentNode.SelectNodes("//a[contains(@href, 'login') or contains(@href, 'Login') or contains(@href, 'auth')]");
-                    if (links != null)
-                    {
-                        _logger.LogDebug("Found {LinkCount} login-related link(s)", links.Count);
-                        foreach (var link in links)
-                        {
-                            var href = link.Attributes["href"]?.Value;
-                            var text = link.InnerText?.Trim();
-                            _logger.LogDebug("Link: href='{Href}', text='{Text}'", href, text);
-                        }
-                    }
-
-                    // Check for meta refresh
-                    var metaRefresh = doc.DocumentNode.SelectSingleNode("//meta[@http-equiv='refresh']");
-                    if (metaRefresh != null)
-                    {
-                        var refreshContent = metaRefresh.Attributes["content"]?.Value;
-                        _logger.LogDebug("Meta refresh found: {RefreshContent}", refreshContent);
-                    }
+                    return true;
                 }
 
-                // Check if we're at various success pages
-                if (currentUrl.Contains("/Node/") ||
-                    currentUrl.Contains("/portal/") ||
-                    currentUrl.Contains("minuddannelse.net") && !currentUrl.Contains("Login") && !currentUrl.Contains("Forside"))
+                // Try to submit form if found
+                var (authenticated, newHasSubmittedCredentials, newContent, newUrl) =
+                    await TrySubmitForm(content, currentUrl, hasSubmittedCredentials);
+
+                if (authenticated)
                 {
-                    _logger.LogDebug("Possible success - URL indicates we're back at MinUddannelse");
-                    _logger.LogDebug("Checking for user profile");
-
-                    // Look for user info on the page
-                    var userInfo = doc.DocumentNode.SelectSingleNode("//*[contains(@class, 'user') or contains(@class, 'profile')]");
-                    if (userInfo != null)
-                    {
-                        _logger.LogDebug("Found user info element");
-                    }
-
-                    // Check if we have user context in scripts
-                    var scripts = doc.DocumentNode.SelectNodes("//script");
-                    if (scripts != null)
-                    {
-                        foreach (var script in scripts)
-                        {
-                            if (script.InnerText.Contains("currentUser") ||
-                                script.InnerText.Contains("bruger") ||
-                                script.InnerText.Contains("elev"))
-                            {
-                                _logger.LogInformation("Found user context in script - authentication successful");
-                                return true;
-                            }
-                        }
-                    }
-
-                    // If we're at MinUddannelse after all those redirects, we're likely authenticated
-                    if (stepCounter > 5 && currentUrl.Contains("minuddannelse.net"))
-                    {
-                        _logger.LogInformation("After multiple redirects, back at MinUddannelse - assuming success");
-                        return true;
-                    }
+                    return true;
                 }
 
-                // Try to extract and submit form if found
-                var formData = ExtractFormData(content);
-                if (formData != null)
+                if (newContent != content || newUrl != currentUrl)
                 {
-                    _logger.LogDebug("Submitting form to: {FormUrl}", formData.Item1);
-                    _logger.LogDebug("Form data fields: {FormFields}", string.Join(", ", formData.Item2.Keys));
-
-                    // Check if this is a credential submission form
-                    var isCredentialForm = formData.Item2.ContainsKey("username") ||
-                                          formData.Item2.ContainsKey("Username") ||
-                                          formData.Item2.ContainsKey("j_username");
-
-                    if (isCredentialForm)
-                    {
-                        _logger.LogDebug("Submitting credentials for user: {Username}", _username);
-                        hasSubmittedCredentials = true;
-                    }
-
-                    var response = await HttpClient.PostAsync(formData.Item1, new FormUrlEncodedContent(formData.Item2));
-                    content = await response.Content.ReadAsStringAsync();
-                    currentUrl = response.RequestMessage?.RequestUri?.ToString() ?? currentUrl;
-
-                    _logger.LogDebug("Response status: {StatusCode}", response.StatusCode);
-                    _logger.LogDebug("New URL: {CurrentUrl}", currentUrl);
-
-                    // After form submission, check if we're authenticated
-                    if (hasSubmittedCredentials && currentUrl.Contains("minuddannelse.net"))
-                    {
-                        _logger.LogDebug("Returned to MinUddannelse after credentials, verifying");
-                        var authenticated = await VerifyAuthentication();
-                        if (authenticated)
-                        {
-                            _logger.LogInformation("Login successful");
-                            HttpClient.DefaultRequestHeaders.Accept.Add(
-                                new MediaTypeWithQualityHeaderValue("application/json"));
-                            return true;
-                        }
-                    }
-
-                    success = CheckIfLoginSuccessful(response);
-                    if (success)
-                    {
-                        _logger.LogInformation("Login successful (URL match)");
-                        HttpClient.DefaultRequestHeaders.Accept.Add(
-                            new MediaTypeWithQualityHeaderValue("application/json"));
-                        return true;
-                    }
+                    content = newContent;
+                    currentUrl = newUrl;
+                    hasSubmittedCredentials = newHasSubmittedCredentials;
+                    continue;
                 }
-                else
+
+                // Try alternative navigation (UniLogin link)
+                var (navigated, navContent, navUrl) = await TryAlternativeNavigation(doc, currentUrl);
+                if (navigated)
                 {
-                    _logger.LogDebug("Could not extract form data from current page");
-
-                    // Check if we need to click a login link
-                    var uniLoginLink = doc.DocumentNode.SelectSingleNode("//a[contains(@href, 'unilogin-idp-prod')]");
-                    if (uniLoginLink != null)
-                    {
-                        var href = uniLoginLink.Attributes["href"]?.Value;
-                        _logger.LogDebug("Found UniLogin link, navigating to: {Href}", href);
-
-                        // Make the URL absolute if needed
-                        if (!string.IsNullOrEmpty(href))
-                        {
-                            if (!href.StartsWith("http"))
-                            {
-                                var baseUri = new Uri(currentUrl);
-                                var absoluteUri = new Uri(baseUri, href);
-                                href = absoluteUri.ToString();
-                            }
-
-                            _logger.LogDebug("Following UniLogin link to: {Href}", href);
-                            var response = await HttpClient.GetAsync(href);
-                            content = await response.Content.ReadAsStringAsync();
-                            currentUrl = response.RequestMessage?.RequestUri?.ToString() ?? href;
-
-                            _logger.LogDebug("After following link - Status: {StatusCode}", response.StatusCode);
-                            _logger.LogDebug("New URL: {CurrentUrl}", currentUrl);
-
-                            // Continue to next iteration with new content
-                            continue;
-                        }
-                    }
-
-                    // If no form, check if we need to follow a redirect or click something
-                    var loginButton = doc.DocumentNode.SelectSingleNode("//button[contains(text(), 'Log') or contains(text(), 'Uni')]");
-                    if (loginButton != null)
-                    {
-                        _logger.LogDebug("Found login button: {ButtonText}", loginButton.InnerText);
-                    }
-
-                    // Check if page has any error messages
-                    var errorElements = doc.DocumentNode.SelectNodes("//*[contains(@class, 'error') or contains(@class, 'alert')]");
-                    if (errorElements != null)
-                    {
-                        foreach (var error in errorElements)
-                        {
-                            _logger.LogWarning("Possible error message: {ErrorMessage}", error.InnerText?.Trim());
-                        }
-                    }
-
-                    break; // Can't proceed without a form or link
+                    content = navContent;
+                    currentUrl = navUrl;
+                    continue;
                 }
+
+                // Check for errors and exit if no progress possible
+                LogErrorMessages(doc);
+                break;
             }
             catch (Exception ex)
             {
@@ -333,7 +140,112 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
         }
 
         _logger.LogWarning("Login failed after {MaxSteps} steps", maxSteps);
-        return success;
+        return false;
+    }
+
+    private void LogFormStructure(HtmlDocument doc)
+    {
+        var forms = doc.DocumentNode.SelectNodes("//form");
+        if (forms != null)
+        {
+            _logger.LogDebug("Found {FormCount} form(s) on page", forms.Count);
+            foreach (var form in forms)
+            {
+                var formAction = form.Attributes["action"]?.Value;
+                var formMethod = form.Attributes["method"]?.Value;
+                var formId = form.Attributes["id"]?.Value;
+                var formName = form.Attributes["name"]?.Value;
+                _logger.LogDebug("Form: action='{FormAction}', method='{FormMethod}', id='{FormId}', name='{FormName}'",
+                    formAction, formMethod, formId, formName);
+
+                var inputs = form.SelectNodes(".//input");
+                if (inputs != null)
+                {
+                    foreach (var input in inputs)
+                    {
+                        var inputName = input.Attributes["name"]?.Value;
+                        var inputType = input.Attributes["type"]?.Value;
+                        var inputId = input.Attributes["id"]?.Value;
+                        if (inputType != "hidden")
+                        {
+                            _logger.LogDebug("Input: name='{InputName}', type='{InputType}', id='{InputId}'",
+                                inputName, inputType, inputId);
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            _logger.LogDebug("No forms found on this page");
+            LogJavaScriptRedirects(doc);
+            LogLoginLinks(doc);
+            LogMetaRefresh(doc);
+        }
+    }
+
+    private void LogJavaScriptRedirects(HtmlDocument doc)
+    {
+        var scripts = doc.DocumentNode.SelectNodes("//script");
+        if (scripts != null)
+        {
+            foreach (var script in scripts)
+            {
+                if (script.InnerText.Contains("window.location") ||
+                    script.InnerText.Contains("redirect") ||
+                    script.InnerText.Contains("submit"))
+                {
+                    _logger.LogDebug("Found potential JavaScript redirect/submit");
+                    var scriptPreview = script.InnerText.Length > 200
+                        ? script.InnerText.Substring(0, 200) + "..."
+                        : script.InnerText;
+                    _logger.LogDebug("Script preview: {ScriptPreview}", scriptPreview);
+                }
+            }
+        }
+    }
+
+    private void LogLoginLinks(HtmlDocument doc)
+    {
+        var links = doc.DocumentNode.SelectNodes("//a[contains(@href, 'login') or contains(@href, 'Login') or contains(@href, 'auth')]");
+        if (links != null)
+        {
+            _logger.LogDebug("Found {LinkCount} login-related link(s)", links.Count);
+            foreach (var link in links)
+            {
+                var href = link.Attributes["href"]?.Value;
+                var text = link.InnerText?.Trim();
+                _logger.LogDebug("Link: href='{Href}', text='{Text}'", href, text);
+            }
+        }
+    }
+
+    private void LogMetaRefresh(HtmlDocument doc)
+    {
+        var metaRefresh = doc.DocumentNode.SelectSingleNode("//meta[@http-equiv='refresh']");
+        if (metaRefresh != null)
+        {
+            var refreshContent = metaRefresh.Attributes["content"]?.Value;
+            _logger.LogDebug("Meta refresh found: {RefreshContent}", refreshContent);
+        }
+    }
+
+    private void LogErrorMessages(HtmlDocument doc)
+    {
+        var errorElements = doc.DocumentNode.SelectNodes("//*[contains(@class, 'error') or contains(@class, 'alert')]");
+        if (errorElements != null)
+        {
+            foreach (var error in errorElements)
+            {
+                _logger.LogWarning("Possible error message: {ErrorMessage}", error.InnerText?.Trim());
+            }
+        }
+
+        var loginButton = doc.DocumentNode.SelectSingleNode("//button[contains(text(), 'Log') or contains(text(), 'Uni')]");
+        if (loginButton != null)
+        {
+            _logger.LogDebug("Found login button: {ButtonText}", loginButton.InnerText);
+        }
     }
 
     private Tuple<string, Dictionary<string, string>>? ExtractFormData(string htmlContent)
@@ -512,6 +424,153 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
 
         _logger.LogWarning("All authentication verification endpoints failed");
         return false;
+    }
+
+    private async Task<bool> TryVerifyAuthenticationAfterCredentials(string currentUrl, bool hasSubmittedCredentials)
+    {
+        if (!hasSubmittedCredentials || !currentUrl.Contains("minuddannelse.net") || currentUrl.Contains("Login"))
+        {
+            return false;
+        }
+
+        _logger.LogDebug("Back at MinUddannelse after credential submission");
+        var authenticated = await VerifyAuthentication();
+        if (authenticated)
+        {
+            _logger.LogInformation("Authentication confirmed via API access");
+            return true;
+        }
+
+        _logger.LogWarning("At MinUddannelse but API access failed - may need another redirect");
+        return false;
+    }
+
+    private bool CheckForAuthenticationSuccess(HtmlDocument doc, string currentUrl, int stepCounter)
+    {
+        if (!currentUrl.Contains("/Node/") && !currentUrl.Contains("/portal/") &&
+            !(currentUrl.Contains("minuddannelse.net") && !currentUrl.Contains("Login") && !currentUrl.Contains("Forside")))
+        {
+            return false;
+        }
+
+        _logger.LogDebug("Possible success - URL indicates we're back at MinUddannelse");
+        _logger.LogDebug("Checking for user profile");
+
+        var userInfo = doc.DocumentNode.SelectSingleNode("//*[contains(@class, 'user') or contains(@class, 'profile')]");
+        if (userInfo != null)
+        {
+            _logger.LogDebug("Found user info element");
+        }
+
+        var scripts = doc.DocumentNode.SelectNodes("//script");
+        if (scripts != null)
+        {
+            foreach (var script in scripts)
+            {
+                if (script.InnerText.Contains("currentUser") ||
+                    script.InnerText.Contains("bruger") ||
+                    script.InnerText.Contains("elev"))
+                {
+                    _logger.LogInformation("Found user context in script - authentication successful");
+                    return true;
+                }
+            }
+        }
+
+        if (stepCounter > 5 && currentUrl.Contains("minuddannelse.net"))
+        {
+            _logger.LogInformation("After multiple redirects, back at MinUddannelse - assuming success");
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task<(bool authenticated, bool hasSubmittedCredentials, string newContent, string newUrl)> TrySubmitForm(
+        string content, string currentUrl, bool hasSubmittedCredentials)
+    {
+        var formData = ExtractFormData(content);
+        if (formData == null)
+        {
+            return (false, hasSubmittedCredentials, content, currentUrl);
+        }
+
+        _logger.LogDebug("Submitting form to: {FormUrl}", formData.Item1);
+        _logger.LogDebug("Form data fields: {FormFields}", string.Join(", ", formData.Item2.Keys));
+
+        var isCredentialForm = formData.Item2.ContainsKey("username") ||
+                              formData.Item2.ContainsKey("Username") ||
+                              formData.Item2.ContainsKey("j_username");
+
+        if (isCredentialForm)
+        {
+            _logger.LogDebug("Submitting credentials for user: {Username}", _username);
+            hasSubmittedCredentials = true;
+        }
+
+        var response = await HttpClient.PostAsync(formData.Item1, new FormUrlEncodedContent(formData.Item2));
+        var newContent = await response.Content.ReadAsStringAsync();
+        var newUrl = response.RequestMessage?.RequestUri?.ToString() ?? currentUrl;
+
+        _logger.LogDebug("Response status: {StatusCode}", response.StatusCode);
+        _logger.LogDebug("New URL: {CurrentUrl}", newUrl);
+
+        if (hasSubmittedCredentials && newUrl.Contains("minuddannelse.net"))
+        {
+            _logger.LogDebug("Returned to MinUddannelse after credentials, verifying");
+            var authenticated = await VerifyAuthentication();
+            if (authenticated)
+            {
+                _logger.LogInformation("Login successful");
+                HttpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                return (true, hasSubmittedCredentials, newContent, newUrl);
+            }
+        }
+
+        var success = CheckIfLoginSuccessful(response);
+        if (success)
+        {
+            _logger.LogInformation("Login successful (URL match)");
+            HttpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            return (true, hasSubmittedCredentials, newContent, newUrl);
+        }
+
+        return (false, hasSubmittedCredentials, newContent, newUrl);
+    }
+
+    private async Task<(bool navigated, string newContent, string newUrl)> TryAlternativeNavigation(
+        HtmlDocument doc, string currentUrl)
+    {
+        var uniLoginLink = doc.DocumentNode.SelectSingleNode("//a[contains(@href, 'unilogin-idp-prod')]");
+        if (uniLoginLink == null)
+        {
+            return (false, string.Empty, currentUrl);
+        }
+
+        var href = uniLoginLink.Attributes["href"]?.Value;
+        _logger.LogDebug("Found UniLogin link, navigating to: {Href}", href);
+
+        if (!string.IsNullOrEmpty(href))
+        {
+            if (!href.StartsWith("http"))
+            {
+                var baseUri = new Uri(currentUrl);
+                var absoluteUri = new Uri(baseUri, href);
+                href = absoluteUri.ToString();
+            }
+
+            _logger.LogDebug("Following UniLogin link to: {Href}", href);
+            var response = await HttpClient.GetAsync(href);
+            var newContent = await response.Content.ReadAsStringAsync();
+            var newUrl = response.RequestMessage?.RequestUri?.ToString() ?? href;
+
+            _logger.LogDebug("After following link - Status: {StatusCode}", response.StatusCode);
+            _logger.LogDebug("New URL: {CurrentUrl}", newUrl);
+
+            return (true, newContent, newUrl);
+        }
+
+        return (false, string.Empty, currentUrl);
     }
 
     public void Dispose()
