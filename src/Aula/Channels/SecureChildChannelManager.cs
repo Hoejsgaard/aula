@@ -50,7 +50,6 @@ public class SecureChildChannelManager : IChildChannelManager
             return false;
         }
 
-        // Get child's channels
         var childChannels = await GetChildChannelsAsync(child);
         if (childChannels.Count == 0)
         {
@@ -58,7 +57,6 @@ public class SecureChildChannelManager : IChildChannelManager
             return false;
         }
 
-        // Send to child's channels only
         var success = true;
         foreach (var channelConfig in childChannels.Where(c => c.IsEnabled))
         {
@@ -110,7 +108,6 @@ public class SecureChildChannelManager : IChildChannelManager
             return false;
         }
 
-        // Send message
         try
         {
             var channel = _channelManager.GetChannel(platformId);
@@ -134,13 +131,11 @@ public class SecureChildChannelManager : IChildChannelManager
     {
         if (child == null) throw new ArgumentNullException(nameof(child));
 
-        // Get child-specific channels
         lock (_configLock)
         {
             var key = GetChildKey(child);
             if (_childChannelConfigs.TryGetValue(key, out var configs))
             {
-                // Return defensive copies
                 return Task.FromResult<IReadOnlyList<ChildChannelConfig>>(configs.Select(c => CloneConfig(c)).ToList());
             }
         }
@@ -184,7 +179,6 @@ public class SecureChildChannelManager : IChildChannelManager
     {
         if (child == null) throw new ArgumentNullException(nameof(child));
 
-        // Check alert permissions per channel
         var childChannels = await GetChildChannelsAsync(child);
         var alertChannels = childChannels.Where(c =>
             c.IsEnabled && c.Permissions.CanReceiveAlerts).ToList();
@@ -195,10 +189,8 @@ public class SecureChildChannelManager : IChildChannelManager
             return false;
         }
 
-        // Format alert message
         var formattedAlert = $"⚠️ ALERT for {child.FirstName}: {alertMessage}";
 
-        // Send alert with high priority
         var success = await SendToSpecificChannels(alertChannels, formattedAlert, child);
 
         return success;
@@ -208,7 +200,6 @@ public class SecureChildChannelManager : IChildChannelManager
     {
         if (child == null) throw new ArgumentNullException(nameof(child));
 
-        // Get reminder-enabled channels
         var childChannels = await GetChildChannelsAsync(child);
         var reminderChannels = childChannels.Where(c =>
             c.IsEnabled && c.Permissions.CanReceiveReminders).ToList();
@@ -219,14 +210,12 @@ public class SecureChildChannelManager : IChildChannelManager
             return false;
         }
 
-        // Format reminder
         var formattedReminder = $"Reminder for {child.FirstName}: {reminderMessage}";
         if (!string.IsNullOrEmpty(metadata))
         {
             formattedReminder += $"\n{metadata}";
         }
 
-        // Send reminder
         var success = await SendToSpecificChannels(reminderChannels, formattedReminder, child);
 
         return success;
@@ -267,11 +256,9 @@ public class SecureChildChannelManager : IChildChannelManager
                 _childChannelConfigs[key] = new List<ChildChannelConfig>();
             }
 
-            // Remove existing config for same platform if exists
             _childChannelConfigs[key].RemoveAll(c =>
                 c.PlatformId.Equals(config.PlatformId, StringComparison.OrdinalIgnoreCase));
 
-            // Add new config
             config.ChildFirstName = child.FirstName;
             config.ChildLastName = child.LastName;
             _childChannelConfigs[key].Add(config);

@@ -40,7 +40,6 @@ public class ChildAgentFactory : IChildAgentFactory
         if (child == null) throw new ArgumentNullException(nameof(child));
         if (schedulingService == null) throw new ArgumentNullException(nameof(schedulingService));
 
-        // Resolve all required dependencies from the service provider
         var openAiService = _serviceProvider.GetRequiredService<IOpenAiService>();
         var weekLetterService = _serviceProvider.GetRequiredService<IWeekLetterService>();
         var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
@@ -48,7 +47,6 @@ public class ChildAgentFactory : IChildAgentFactory
         // Get configuration-driven feature flag
         var postWeekLettersOnStartup = _config.WeekLetter?.PostOnStartup ?? false;
 
-        // Create and return the configured ChildAgent
         return new ChildAgent(
             child,
             openAiService,

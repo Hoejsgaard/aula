@@ -47,42 +47,36 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         var weekNumber = WeekLetterUtilities.GetIsoWeekNumber(date);
         var year = date.Year;
 
-        // Step 1: Check database first
         if (_weekLetterRepository != null)
         {
             var storedLetter = await GetStoredWeekLetter(child, weekNumber, year);
             if (storedLetter != null)
             {
-                _logger.LogInformation("📚 Found week letter in database for {ChildName} week {WeekNumber}/{Year}",
+                _logger.LogInformation("Found week letter in database for {ChildName} week {WeekNumber}/{Year}",
                     child.FirstName, weekNumber, year);
                 return storedLetter;
             }
         }
 
-        // Step 2: If not in database and live fetch not allowed, return empty
         if (!allowLiveFetch)
         {
-            _logger.LogInformation("🚫 Week letter not in database and live fetch not allowed for {ChildName} week {WeekNumber}/{Year}",
+            _logger.LogInformation("Week letter not in database and live fetch not allowed for {ChildName} week {WeekNumber}/{Year}",
                 child.FirstName, weekNumber, year);
             return WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
         }
 
-        // Step 3: Live fetch from MinUddannelse (only if allowed)
-        _logger.LogInformation("🌐 Fetching week letter from MinUddannelse for {ChildName} week {WeekNumber}/{Year}",
+        _logger.LogInformation("Fetching week letter from MinUddannelse for {ChildName} week {WeekNumber}/{Year}",
             child.FirstName, weekNumber, year);
 
-        // Check credentials - need username and either password or pictogram sequence
         if (child.UniLogin == null || string.IsNullOrEmpty(child.UniLogin.Username) ||
             (string.IsNullOrEmpty(child.UniLogin.Password) && (child.UniLogin.PictogramSequence == null || child.UniLogin.PictogramSequence.Length == 0)))
         {
-            _logger.LogError("❌ No credentials available for {ChildName}", child.FirstName);
+            _logger.LogError("No credentials available for {ChildName}", child.FirstName);
             return WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
         }
 
-        // Create fresh authenticated client and fetch
-        _logger.LogInformation("🔑 Creating fresh authenticated session for {ChildName}", child.FirstName);
+        _logger.LogInformation("Creating fresh authenticated session for {ChildName}", child.FirstName);
 
-        // Choose authentication method based on config
         var logger = _loggerFactory.CreateLogger<PerChildMinUddannelseClient>();
         using IChildAuthenticatedClient childClient = child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null
             ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, logger)
@@ -100,10 +94,8 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
         _logger.LogInformation("Successfully authenticated {ChildName} for this request", child.FirstName);
 
-        // Fetch from MinUddannelse
         var weekLetter = await childClient.GetWeekLetter(date);
 
-        // Store to database if we have repository
         if (_weekLetterRepository != null && weekLetter != null)
         {
             try
@@ -111,7 +103,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
                 var contentHash = WeekLetterUtilities.ComputeContentHash(weekLetter.ToString());
                 await _weekLetterRepository.StoreWeekLetterAsync(
                     child.FirstName, weekNumber, year, contentHash, weekLetter.ToString());
-                _logger.LogInformation("💾 Stored week letter to database for {ChildName} week {WeekNumber}/{Year}",
+                _logger.LogInformation("Stored week letter to database for {ChildName} week {WeekNumber}/{Year}",
                     child.FirstName, weekNumber, year);
             }
             catch (Exception ex)
@@ -125,18 +117,15 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
     public async Task<JObject> GetWeekSchedule(Child child, DateOnly date)
     {
-        // Create a fresh authenticated client for this request
-        // Check credentials - need username and either password or pictogram sequence
         if (child.UniLogin == null || string.IsNullOrEmpty(child.UniLogin.Username) ||
             (string.IsNullOrEmpty(child.UniLogin.Password) && (child.UniLogin.PictogramSequence == null || child.UniLogin.PictogramSequence.Length == 0)))
         {
-            _logger.LogError("❌ No credentials available for {ChildName}", child.FirstName);
+            _logger.LogError("No credentials available for {ChildName}", child.FirstName);
             return new JObject();
         }
 
         _logger.LogInformation("Creating fresh authenticated session for {ChildName} (schedule request)", child.FirstName);
 
-        // Choose authentication method based on config
         var logger = _loggerFactory.CreateLogger<PerChildMinUddannelseClient>();
         using IChildAuthenticatedClient childClient = child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null
             ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, logger)
@@ -154,7 +143,6 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
         _logger.LogInformation("Successfully authenticated {ChildName} for schedule request", child.FirstName);
 
-        // Use the fresh client to get their week schedule
         return await childClient.GetWeekSchedule(date);
     }
 
@@ -243,7 +231,6 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
                 _childLogger.LogInformation("Attempting to extract child ID for {ChildName}", _child.FirstName);
 
-                // When logged in as the child, we need to extract their own ID
                 _childId = await ExtractChildId();
 
                 if (string.IsNullOrEmpty(_childId))
@@ -266,20 +253,15 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
             {
                 _childLogger.LogInformation("Extracting child ID for {ChildName}", _child.FirstName);
 
-                // The authenticated page contains the child ID in the __tempcontext__ object
-                // We need to navigate to any MinUddannelse page after authentication to get this
                 var response = await HttpClient.GetAsync($"{_config.MinUddannelse.ApiBaseUrl}/node/minuge");
                 var content = await response.Content.ReadAsStringAsync();
 
-                // Look for personid in the __tempcontext__ object
-                // Format: "personid":2643430
                 var personIdMatch = PersonIdRegex().Match(content);
                 if (personIdMatch.Success)
                 {
                     var childId = personIdMatch.Groups[1].Value;
                     _childLogger.LogInformation("Extracted child ID from page context: {ChildId}", childId);
 
-                    // Verify the user name matches what we expect
                     var nameMatch = NameRegex().Match(content);
                     if (nameMatch.Success)
                     {
@@ -292,7 +274,6 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
                     return childId;
                 }
 
-                // Fallback: Try the old API method
                 _childLogger.LogInformation("Page context method failed, trying API");
                 var apiUrl = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.StudentDataPath}?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 

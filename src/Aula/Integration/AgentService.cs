@@ -106,7 +106,6 @@ public class AgentService : IAgentService
             _logger.LogWarning("MONITOR: Week letter for {ChildName} does not contain ugebreve array or it's empty", child.FirstName);
         }
 
-        // Add child name to the week letter object
         weekLetter["child"] = child.FirstName;
         _logger.LogInformation("MONITOR: Added child name to week letter: {ChildName}", child.FirstName);
 
@@ -278,7 +277,6 @@ public class AgentService : IAgentService
                     : "I don't have any week letters available at the moment.";
             }
 
-            // Add day context if needed
             string enhancedQuery = query;
             if (query.ToLowerInvariant().Contains("i dag") || query.ToLowerInvariant().Contains("today"))
             {
@@ -291,7 +289,6 @@ public class AgentService : IAgentService
                 enhancedQuery = $"{query} (Tomorrow is {dayOfWeek})";
             }
 
-            // Add language instruction to ensure response is in same language as query
             bool isDanish = query.ToLowerInvariant().Contains("hvad") ||
                            query.ToLowerInvariant().Contains("skal") ||
                            query.ToLowerInvariant().Contains("dag") ||

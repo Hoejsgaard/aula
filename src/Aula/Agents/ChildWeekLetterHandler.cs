@@ -98,7 +98,6 @@ public class ChildWeekLetterHandler
         // Format the title
         var title = $"Ugebrev for {_child.FirstName} ({@class}) uge {week}";
 
-        // Return formatted message
         return $"{title}\n\n{letterText}";
     }
 }

@@ -55,31 +55,27 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
         var weekNumber = WeekLetterUtilities.GetIsoWeekNumber(date);
         var year = date.Year;
 
-        // Step 1: Check database first
         if (_weekLetterRepository != null)
         {
             var storedLetter = await GetStoredWeekLetter(child, weekNumber, year);
             if (storedLetter != null)
             {
-                _logger?.LogInformation("📚 Found week letter in database for {ChildName} week {WeekNumber}/{Year}",
+                _logger?.LogInformation("Found week letter in database for {ChildName} week {WeekNumber}/{Year}",
                     child.FirstName, weekNumber, year);
                 return storedLetter;
             }
         }
 
-        // Step 2: If not in database and live fetch not allowed, return empty
         if (!allowLiveFetch)
         {
-            _logger?.LogInformation("🚫 Week letter not in database and live fetch not allowed for {ChildName} week {WeekNumber}/{Year}",
+            _logger?.LogInformation("Week letter not in database and live fetch not allowed for {ChildName} week {WeekNumber}/{Year}",
                 child.FirstName, weekNumber, year);
             return WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
         }
 
-        // Step 3: Live fetch from MinUddannelse (only if allowed)
-        _logger?.LogInformation("🌐 Fetching week letter from MinUddannelse for {ChildName} week {WeekNumber}/{Year}",
+        _logger?.LogInformation("Fetching week letter from MinUddannelse for {ChildName} week {WeekNumber}/{Year}",
             child.FirstName, weekNumber, year);
 
-        // Normal mode - hit the real API
         var url = string.Format(
             "{0}{1}?tidspunkt={2}-W{3}&elevId={4}&_={5}",
             _config?.MinUddannelse.ApiBaseUrl ?? "https://www.minuddannelse.net",
@@ -104,7 +100,6 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
 
         }
 
-        // Store to database if we have repository
         if (_weekLetterRepository != null && weekLetter != null)
         {
             try
@@ -112,7 +107,7 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
                 var contentHash = WeekLetterUtilities.ComputeContentHash(weekLetter.ToString());
                 await _weekLetterRepository.StoreWeekLetterAsync(
                     child.FirstName, weekNumber, year, contentHash, weekLetter.ToString());
-                _logger?.LogInformation("💾 Stored week letter to database for {ChildName} week {WeekNumber}/{Year}",
+                _logger?.LogInformation("Stored week letter to database for {ChildName} week {WeekNumber}/{Year}",
                     child.FirstName, weekNumber, year);
             }
             catch (Exception ex)

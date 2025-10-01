@@ -34,13 +34,10 @@ public partial class MessageContentFilter : IMessageContentFilter
 
         var filteredMessage = message;
 
-        // Remove references to other children
         filteredMessage = RemoveOtherChildReferences(filteredMessage, child);
 
-        // Redact sensitive information
         filteredMessage = RedactSensitiveInfo(filteredMessage);
 
-        // Ensure child's own name is properly formatted
         filteredMessage = EnsureProperChildReference(filteredMessage, child);
 
         if (filteredMessage != message)
@@ -57,21 +54,17 @@ public partial class MessageContentFilter : IMessageContentFilter
         if (string.IsNullOrWhiteSpace(message))
             return false;
 
-        // Check for any name patterns in the message
         var matches = NamePatternRegex().Matches(message);
 
         foreach (Match match in matches)
         {
             var name = match.Value;
 
-            // Check if this looks like a person's name and isn't the current child
             if (LooksLikePersonName(name))
             {
-                // Split the name to check both parts
                 var nameParts = name.Split(' ');
                 var isCurrentChild = false;
 
-                // Check if either part matches the current child's first or last name
                 foreach (var part in nameParts)
                 {
                     if (part.Equals(currentChild.FirstName, StringComparison.OrdinalIgnoreCase) ||
@@ -90,7 +83,6 @@ public partial class MessageContentFilter : IMessageContentFilter
             }
         }
 
-        // Check for multiple distinct class references (might indicate cross-child data)
         var classReferences = ClassReferenceRegex().Matches(message);
         var distinctClasses = classReferences.Cast<Match>()
             .Select(m => m.Value)
@@ -113,13 +105,11 @@ public partial class MessageContentFilter : IMessageContentFilter
 
         var filteredMessage = message;
 
-        // Remove lines that mention other children by name
         var lines = filteredMessage.Split('\n');
         var filteredLines = new List<string>();
 
         foreach (var line in lines)
         {
-            // Skip lines that appear to reference other children
             if (IsLineAboutOtherChild(line, currentChild))
             {
                 _logger.LogDebug("Removing line that references other child: {Line}",
@@ -135,21 +125,18 @@ public partial class MessageContentFilter : IMessageContentFilter
 
     public bool ValidateMessageSafety(string message, Child targetChild)
     {
-        // Check if message contains other child data
         if (ContainsOtherChildData(message, targetChild))
         {
             _logger.LogWarning("Message failed safety validation - contains other child data");
             return false;
         }
 
-        // Check for potential security risks
         if (ContainsSecurityRisks(message))
         {
             _logger.LogWarning("Message failed safety validation - security risks detected");
             return false;
         }
 
-        // Check message length (prevent spam/abuse)
         if (message.Length > 10000)
         {
             _logger.LogWarning("Message failed safety validation - exceeds maximum length");
@@ -198,25 +185,20 @@ public partial class MessageContentFilter : IMessageContentFilter
     // Helper methods
     private bool IsLineAboutOtherChild(string line, Child currentChild)
     {
-        // Skip empty lines
         if (string.IsNullOrWhiteSpace(line))
             return false;
 
-        // Check if line mentions a child's name that isn't the current child
         var matches = NamePatternRegex().Matches(line);
 
         foreach (Match match in matches)
         {
             var name = match.Value;
 
-            // Check if this looks like a person's name and isn't the current child
             if (LooksLikePersonName(name))
             {
-                // Split the name to check both parts
                 var nameParts = name.Split(' ');
                 var isCurrentChild = false;
 
-                // Check if either part matches the current child's first or last name
                 foreach (var part in nameParts)
                 {
                     if (part.Equals(currentChild.FirstName, StringComparison.OrdinalIgnoreCase) ||
@@ -229,9 +211,7 @@ public partial class MessageContentFilter : IMessageContentFilter
 
                 if (!isCurrentChild)
                 {
-                    // Additional context check - is this in a context that suggests it's about a child?
                     var context = GetSurroundingContext(line, match.Index);
-                    // For safety, assume any name that isn't the current child might be another child
                     return true;
                 }
             }
@@ -242,12 +222,10 @@ public partial class MessageContentFilter : IMessageContentFilter
 
     private bool LooksLikePersonName(string text)
     {
-        // Basic heuristic: two capitalized words that could be first and last name
         var parts = text.Split(' ');
         if (parts.Length != 2)
             return false;
 
-        // Check if both parts start with capital letter
         return char.IsUpper(parts[0][0]) && char.IsUpper(parts[1][0]);
     }
 
@@ -272,7 +250,6 @@ public partial class MessageContentFilter : IMessageContentFilter
 
     private bool ContainsSecurityRisks(string message)
     {
-        // Check for potential script injection attempts
         var scriptPatterns = new[]
         {
             @"<script[^>]*>.*?</script>",
@@ -290,7 +267,6 @@ public partial class MessageContentFilter : IMessageContentFilter
             }
         }
 
-        // Check for SQL injection patterns
         var sqlPatterns = new[]
         {
             @";\s*(DROP|DELETE|INSERT|UPDATE|ALTER)\s+",

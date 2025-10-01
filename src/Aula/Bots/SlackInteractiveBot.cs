@@ -28,14 +28,12 @@ public class SlackInteractiveBot : IDisposable
 
     public string AssignedChildName => _child.FirstName;
 
-    // _isRunning field removed - value never read
     private Timer? _pollingTimer;
     private Timer? _cleanupTimer;
     private string _lastTimestamp = "0";
     private readonly object _lockObject = new object();
     private int _pollingInProgress;
 
-    // Track sent messages to avoid processing our own
     private readonly ConcurrentDictionary<string, byte> _sentMessageIds = new ConcurrentDictionary<string, byte>();
     private readonly ConcurrentDictionary<string, DateTime> _messageTimestamps = new ConcurrentDictionary<string, DateTime>();
 
@@ -72,27 +70,22 @@ public class SlackInteractiveBot : IDisposable
 
         _logger.LogInformation("Starting Slack bot for child: {ChildName}", _child.FirstName);
 
-        // Configure HTTP client for this child's Slack API token
         _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _child.Channels.Slack.ApiToken);
 
-        // Get current timestamp
         _lastTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
 
         _logger.LogInformation("Initial timestamp set to: {Timestamp}", _lastTimestamp + ".000000");
 
-        // Start polling timer using child's Slack configuration
         int pollingInterval = _child.Channels.Slack.PollingIntervalSeconds * 1000;
         _pollingTimer = new Timer(async _ => await PollForMessages(), null, pollingInterval, pollingInterval);
 
         _logger.LogInformation("Slack polling started - checking every {Seconds} seconds", _child.Channels.Slack.PollingIntervalSeconds);
 
-        // Start cleanup timer using child's Slack configuration
         int cleanupInterval = _child.Channels.Slack.CleanupIntervalHours;
         _cleanupTimer = new Timer(_ => CleanupOldMessages(), null, TimeSpan.FromHours(cleanupInterval), TimeSpan.FromHours(cleanupInterval));
 
         _logger.LogInformation("Slack cleanup timer started - running every {Hours} hour(s)", cleanupInterval);
 
-        // Send startup message
         await SendMessageToSlack($"Bot for {_child.FirstName} is now online and ready to help!");
     }
 
@@ -100,7 +93,7 @@ public class SlackInteractiveBot : IDisposable
     {
         if (Interlocked.Exchange(ref _pollingInProgress, 1) == 1)
         {
-            return; // Already polling
+            return;
         }
 
         try
@@ -129,7 +122,6 @@ public class SlackInteractiveBot : IDisposable
                 return;
             }
 
-            // Process messages in chronological order
             foreach (var message in messages.OrderBy(m => m["ts"]?.ToString()))
             {
                 await ProcessMessage(message as JObject);
@@ -159,16 +151,13 @@ public class SlackInteractiveBot : IDisposable
             return;
         }
 
-        // Update timestamp for next poll
         _lastTimestamp = messageId;
 
-        // Skip our own messages
         if (_sentMessageIds.ContainsKey(messageId))
         {
             return;
         }
 
-        // Skip bot messages
         if (subtype == "bot_message" || message["bot_id"] != null)
         {
             return;
@@ -177,7 +166,6 @@ public class SlackInteractiveBot : IDisposable
         _logger.LogInformation("Processing message for {ChildName} from user {UserId}: {Text}",
             _child.FirstName, userId, text);
 
-        // Process the message using direct service calls with child parameters
         try
         {
             var response = await _aiService.GetResponseAsync(_child, text);
@@ -192,8 +180,6 @@ public class SlackInteractiveBot : IDisposable
             await SendMessageToSlack($"Sorry, I encountered an error processing your request about {_child.FirstName}.");
         }
     }
-
-    // This bot doesn't need to extract child names - it only knows about one child
 
     public async Task SendMessageToSlack(string text, string? threadTs = null)
     {

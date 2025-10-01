@@ -50,14 +50,11 @@ public class TelegramInteractiveBot : IDisposable
 
         try
         {
-            // Create bot client with the child's token
             _botClient = new TelegramBotClient(_child.Channels.Telegram.Token);
 
-            // Verify bot can connect
             var me = await _botClient.GetMeAsync();
             _logger.LogInformation("Telegram bot authenticated as @{BotUsername} for child {ChildName}", me.Username, _child.FirstName);
 
-            // Start receiving updates
             _cancellationTokenSource = new CancellationTokenSource();
 
             var receiverOptions = new ReceiverOptions
@@ -75,7 +72,6 @@ public class TelegramInteractiveBot : IDisposable
 
             _logger.LogInformation("Telegram bot started successfully for {ChildName}", _child.FirstName);
 
-            // Send startup message if chat ID is configured
             if (_child.Channels.Telegram.ChatId.HasValue)
             {
                 await SendMessageToTelegram($"Bot for {_child.FirstName} is now online and ready to help!");
@@ -141,14 +137,12 @@ public class TelegramInteractiveBot : IDisposable
 
         try
         {
-            // Check for help command
             if (IsHelpCommand(messageText))
             {
                 await SendHelpMessage(botClient, chatId, cancellationToken);
                 return;
             }
 
-            // Process the message using AI service
             string contextKey = $"telegram-{_child.FirstName}-{chatId}";
             string? response = await _aiService.GetResponseWithContextAsync(_child, messageText, contextKey);
 

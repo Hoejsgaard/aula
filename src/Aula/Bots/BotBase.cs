@@ -93,7 +93,6 @@ public abstract class BotBase
             return;
         }
 
-        // Check for duplicates using hash
         var hash = ComputeWeekLetterHash(weekLetter);
         if (PostedWeekLetterHashes.ContainsKey(hash))
         {
@@ -119,14 +118,11 @@ public abstract class BotBase
     /// </summary>
     protected string BuildWelcomeMessage()
     {
-        // Build a list of available children (first names only)
         string childrenList = string.Join(" og ", ChildrenByName.Values.Select(c =>
             c.FirstName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? c.FirstName));
 
-        // Get the current week number
         int weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(DateTime.Now);
 
-        // Get the first child's name for examples (use only first word if multiple)
         var firstChild = ChildrenByName.Values.FirstOrDefault();
         string exampleChildName = firstChild?.FirstName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? firstChild?.FirstName ?? "barnet";
 

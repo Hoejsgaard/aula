@@ -72,7 +72,6 @@ public class ConfigurationValidator : IConfigurationValidator
                 errors.Add($"Child LastName is required for {child.FirstName}");
             }
 
-            // Check per-child UniLogin credentials
             if (child.UniLogin != null &&
                 !string.IsNullOrWhiteSpace(child.UniLogin.Username) &&
                 !string.IsNullOrWhiteSpace(child.UniLogin.Password))

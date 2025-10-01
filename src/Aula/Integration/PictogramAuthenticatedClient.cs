@@ -62,7 +62,6 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
                 var doc = new HtmlDocument();
                 doc.LoadHtml(content);
 
-                // Step 1: Handle login selector page
                 if (!hasSelectedUnilogin)
                 {
                     var loginButtons = doc.DocumentNode.SelectNodes("//button[@name='selectedIdp']");
@@ -85,7 +84,6 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
                     }
                 }
 
-                // Step 2: Submit username
                 if (!hasSubmittedUsername)
                 {
                     var usernameField = doc.DocumentNode.SelectSingleNode("//input[@name='username' and @type='text']");
@@ -108,10 +106,9 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
                     }
                 }
 
-                // Step 3: Handle pictogram authentication
                 if (IsPictogramPage(doc))
                 {
-                    _logger.LogInformation("🎯 Reached pictogram authentication page");
+                    _logger.LogInformation("Reached pictogram authentication page");
 
                     // Parse the dynamic pictogram mapping
                     var pictogramMapping = ParsePictogramMapping(doc);
@@ -121,7 +118,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
                         return false;
                     }
 
-                    _logger.LogDebug("📊 Found {Count} pictograms: {Pictograms}",
+                    _logger.LogDebug("Found {Count} pictograms: {Pictograms}",
                         pictogramMapping.Count, string.Join(", ", pictogramMapping.Keys));
 
                     // Build password from sequence
@@ -132,7 +129,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
                         return false;
                     }
 
-                    _logger.LogDebug("🔑 Built password from pictogram sequence");
+                    _logger.LogDebug("Built password from pictogram sequence");
 
                     // Submit the form with the password
                     var authenticated = await SubmitPictogramForm(doc, response, _username, password);
@@ -265,11 +262,11 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
             {
                 var value = mapping[pictogramName.ToLower()];
                 passwordBuilder.Append(value);
-                _logger.LogTrace("🔑 {Pictogram} → {Value}", pictogramName, value);
+                _logger.LogTrace("{Pictogram} → {Value}", pictogramName, value);
             }
             else
             {
-                _logger.LogError("⚠️ Pictogram '{Pictogram}' not found in mapping! Available: {Available}",
+                _logger.LogError("Pictogram '{Pictogram}' not found in mapping! Available: {Available}",
                     pictogramName, string.Join(", ", mapping.Keys));
                 return "";
             }
@@ -322,7 +319,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
         // Handle SAML response form if present
         if (content.Contains("SAMLResponse"))
         {
-            _logger.LogDebug("🔑 Found SAML response, processing...");
+            _logger.LogDebug("Found SAML response, processing...");
 
             var samlDoc = new HtmlDocument();
             samlDoc.LoadHtml(content);
@@ -400,7 +397,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
                             }
                         }
 
-                        _logger.LogDebug("➡️ Following redirect to: {Action}", nextAction);
+                        _logger.LogDebug("Following redirect to: {Action}", nextAction);
                         response = await HttpClient.PostAsync(nextAction, new FormUrlEncodedContent(nextFormData));
                         content = await response.Content.ReadAsStringAsync();
                     }
@@ -436,7 +433,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
             }
         }
 
-        _logger.LogWarning("⚠️ Unknown response after pictogram submission");
+        _logger.LogWarning("Unknown response after pictogram submission");
         return false;
     }
 
@@ -466,22 +463,19 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
     {
         try
         {
-            _logger.LogInformation("🔍 Extracting child ID for {ChildName}...", _child.FirstName);
+            _logger.LogInformation("Extracting child ID for {ChildName}...", _child.FirstName);
 
             // First try: Extract from page context (same method as ChildAuthenticatedClient)
             // Navigate to any MinUddannelse page after authentication to get this
             var response = await HttpClient.GetAsync($"{_config.MinUddannelse.ApiBaseUrl}/node/minuge");
             var content = await response.Content.ReadAsStringAsync();
 
-            // Look for personid in the __tempcontext__ object
-            // Format: "personid":2643430
             var personIdMatch = PersonIdRegex().Match(content);
             if (personIdMatch.Success)
             {
                 _childId = personIdMatch.Groups[1].Value;
                 _logger.LogInformation("✅ Extracted child ID from page context: {ChildId}", _childId);
 
-                // Verify the user name matches what we expect
                 var nameMatch = NameRegex().Match(content);
                 if (nameMatch.Success)
                 {
