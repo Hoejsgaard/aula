@@ -66,6 +66,7 @@ Must validate before committing:
    - Code reads like a story (clear, linear, obvious intent)
    - Clean code over clever code
    - Dependency injection with interfaces
+   - Use `ILoggerFactory` injection (not `ILogger<T>`) - create loggers as needed
    - XML documentation on public APIs only (not internal/private methods)
    - No comments unless explaining complex business logic
 
