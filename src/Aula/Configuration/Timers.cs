@@ -2,16 +2,10 @@ namespace Aula.Configuration;
 
 public class Timers
 {
-    // Polling intervals
+    // Scheduling
     public int SchedulingIntervalSeconds { get; set; } = 10;
 
-    // Adaptive polling
-    public bool AdaptivePolling { get; set; } = true;
-    public int MaxPollingIntervalSeconds { get; set; } = 30;
-    public int MinPollingIntervalSeconds { get; set; } = 5;
-
-    // Cleanup and retention
-    public int CleanupIntervalHours { get; set; } = 1;
+    // Retention
     public int ProcessedMessageRetentionHours { get; set; } = 24;
 
     // Task execution
@@ -20,7 +14,6 @@ public class Timers
 
     // Timeouts
     public int HttpTimeoutSeconds { get; set; } = 30;
-    public int ShutdownTimeoutSeconds { get; set; } = 30;
 
     // Retry intervals
     public int WeekLetterRetryIntervalHours { get; set; } = 2;

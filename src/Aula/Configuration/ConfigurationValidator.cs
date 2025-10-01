@@ -212,17 +212,5 @@ public class ConfigurationValidator : IConfigurationValidator
         {
             errors.Add("Timers.SchedulingIntervalSeconds must be greater than 0");
         }
-
-        if (timers.CleanupIntervalHours <= 0)
-        {
-            errors.Add("Timers.CleanupIntervalHours must be greater than 0");
-        }
-        if (timers.AdaptivePolling)
-        {
-            if (timers.MaxPollingIntervalSeconds <= timers.MinPollingIntervalSeconds)
-            {
-                errors.Add("Timers.MaxPollingIntervalSeconds must be greater than MinPollingIntervalSeconds when AdaptivePolling is enabled");
-            }
-        }
     }
 }
