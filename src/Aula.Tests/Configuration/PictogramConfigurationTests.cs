@@ -14,7 +14,6 @@ public class PictogramConfigurationTests
             FirstName = "Søren Johannes",
             LastName = "Højsgaard",
             Colour = "#b4a7d6",
-            GoogleCalendarId = "test@group.calendar.google.com",
             UniLogin = new UniLogin
             {
                 Username = "testchild1439j",
@@ -41,7 +40,6 @@ public class PictogramConfigurationTests
             FirstName = "Hans Martin",
             LastName = "Højsgaard",
             Colour = "#377f00",
-            GoogleCalendarId = "test@group.calendar.google.com",
             UniLogin = new UniLogin
             {
                 Username = "soer51f3",

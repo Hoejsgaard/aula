@@ -15,11 +15,9 @@ public class ChildTests
         Assert.NotNull(child.FirstName);
         Assert.NotNull(child.LastName);
         Assert.NotNull(child.Colour);
-        Assert.NotNull(child.GoogleCalendarId);
         Assert.Equal(string.Empty, child.FirstName);
         Assert.Equal(string.Empty, child.LastName);
         Assert.Equal(string.Empty, child.Colour);
-        Assert.Equal(string.Empty, child.GoogleCalendarId);
     }
 
     [Fact]
@@ -62,20 +60,6 @@ public class ChildTests
 
         // Assert
         Assert.Equal(testColour, child.Colour);
-    }
-
-    [Fact]
-    public void GoogleCalendarId_CanSetAndGetValue()
-    {
-        // Arrange
-        var child = new Child();
-        var testCalendarId = "primary";
-
-        // Act
-        child.GoogleCalendarId = testCalendarId;
-
-        // Assert
-        Assert.Equal(testCalendarId, child.GoogleCalendarId);
     }
 
     [Theory]
@@ -146,27 +130,6 @@ public class ChildTests
         Assert.Equal(colour, child.Colour);
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData("primary")]
-    [InlineData("emma@example.com")]
-    [InlineData("calendar-id-123")]
-    [InlineData("very.long.calendar.id.with.many.dots")]
-    [InlineData("calendar_with_underscores")]
-    [InlineData("UPPERCASE_CALENDAR_ID")]
-    public void GoogleCalendarId_AcceptsVariousFormats(string calendarId)
-    {
-        // Arrange
-        var child = new Child();
-
-        // Act
-        child.GoogleCalendarId = calendarId;
-
-        // Assert
-        Assert.Equal(calendarId, child.GoogleCalendarId);
-    }
-
     [Fact]
     public void FirstName_CanBeSetToNull()
     {
@@ -207,19 +170,6 @@ public class ChildTests
     }
 
     [Fact]
-    public void GoogleCalendarId_CanBeSetToNull()
-    {
-        // Arrange
-        var child = new Child();
-
-        // Act
-        child.GoogleCalendarId = null!;
-
-        // Assert
-        Assert.Null(child.GoogleCalendarId);
-    }
-
-    [Fact]
     public void AllProperties_CanBeSetSimultaneously()
     {
         // Arrange
@@ -227,19 +177,16 @@ public class ChildTests
         var firstName = "Emma";
         var lastName = "Doe";
         var colour = "#FF5733";
-        var calendarId = "emma@example.com";
 
         // Act
         child.FirstName = firstName;
         child.LastName = lastName;
         child.Colour = colour;
-        child.GoogleCalendarId = calendarId;
 
         // Assert
         Assert.Equal(firstName, child.FirstName);
         Assert.Equal(lastName, child.LastName);
         Assert.Equal(colour, child.Colour);
-        Assert.Equal(calendarId, child.GoogleCalendarId);
     }
 
     [Fact]
@@ -274,13 +221,11 @@ public class ChildTests
         var firstNameProperty = type.GetProperty("FirstName");
         var lastNameProperty = type.GetProperty("LastName");
         var colourProperty = type.GetProperty("Colour");
-        var googleCalendarIdProperty = type.GetProperty("GoogleCalendarId");
 
         // Assert
         Assert.NotNull(firstNameProperty);
         Assert.NotNull(lastNameProperty);
         Assert.NotNull(colourProperty);
-        Assert.NotNull(googleCalendarIdProperty);
 
         Assert.True(firstNameProperty.CanRead);
         Assert.True(firstNameProperty.CanWrite);
@@ -293,10 +238,6 @@ public class ChildTests
         Assert.True(colourProperty.CanRead);
         Assert.True(colourProperty.CanWrite);
         Assert.Equal(typeof(string), colourProperty.PropertyType);
-
-        Assert.True(googleCalendarIdProperty.CanRead);
-        Assert.True(googleCalendarIdProperty.CanWrite);
-        Assert.Equal(typeof(string), googleCalendarIdProperty.PropertyType);
     }
 
     [Fact]
@@ -327,7 +268,6 @@ public class ChildTests
         Assert.Equal("Changed", child.FirstName);
         Assert.Equal(string.Empty, child.LastName);
         Assert.Equal(string.Empty, child.Colour);
-        Assert.Equal(string.Empty, child.GoogleCalendarId);
     }
 
     [Fact]
@@ -338,15 +278,13 @@ public class ChildTests
         {
             FirstName = "Emma",
             LastName = "Doe",
-            Colour = "#FF5733",
-            GoogleCalendarId = "emma@example.com"
+            Colour = "#FF5733"
         };
 
         // Assert
         Assert.Equal("Emma", child.FirstName);
         Assert.Equal("Doe", child.LastName);
         Assert.Equal("#FF5733", child.Colour);
-        Assert.Equal("emma@example.com", child.GoogleCalendarId);
     }
 
     [Fact]

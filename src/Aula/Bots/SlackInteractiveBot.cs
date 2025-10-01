@@ -86,10 +86,11 @@ public class SlackInteractiveBot : IDisposable
 
         _logger.LogInformation("Slack polling started - checking every {Seconds} seconds", _child.Channels.Slack.PollingIntervalSeconds);
 
-        // Start cleanup timer (every hour)
-        _cleanupTimer = new Timer(_ => CleanupOldMessages(), null, TimeSpan.FromHours(1), TimeSpan.FromHours(1));
+        // Start cleanup timer using child's Slack configuration
+        int cleanupInterval = _child.Channels.Slack.CleanupIntervalHours;
+        _cleanupTimer = new Timer(_ => CleanupOldMessages(), null, TimeSpan.FromHours(cleanupInterval), TimeSpan.FromHours(cleanupInterval));
 
-        _logger.LogInformation("Slack cleanup timer started - running every 1 hour");
+        _logger.LogInformation("Slack cleanup timer started - running every {Hours} hour(s)", cleanupInterval);
 
         // Send startup message
         await SendMessageToSlack($"Bot for {_child.FirstName} is now online and ready to help!");

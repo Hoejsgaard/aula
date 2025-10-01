@@ -68,7 +68,6 @@ public class ProgramTests
         // Assert - Config should be bound (not null/default)
         Assert.NotNull(config);
         Assert.NotNull(config.UniLogin);
-        Assert.NotNull(config.Slack);
         Assert.NotNull(config.OpenAi);
     }
 

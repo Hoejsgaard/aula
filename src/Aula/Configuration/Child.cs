@@ -5,7 +5,6 @@ public class Child
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string Colour { get; set; } = string.Empty;
-    public string GoogleCalendarId { get; set; } = string.Empty;
     public UniLogin? UniLogin { get; set; }
     public ChildChannels? Channels { get; set; }
 }
@@ -25,6 +24,7 @@ public class ChildSlackConfig
     public string? ChannelId { get; set; }
     public bool EnableInteractiveBot { get; set; }
     public int PollingIntervalSeconds { get; set; } = 5;
+    public int CleanupIntervalHours { get; set; } = 1;
 }
 
 public class ChildTelegramConfig

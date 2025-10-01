@@ -333,15 +333,13 @@ public class DataModelTests
         {
             FirstName = "Emma",
             LastName = "Wilson",
-            Colour = "green",
-            GoogleCalendarId = "emma.wilson@example.com"
+            Colour = "green"
         };
 
         // Assert
         Assert.Equal("Emma", configChild.FirstName);
         Assert.Equal("Wilson", configChild.LastName);
         Assert.Equal("green", configChild.Colour);
-        Assert.Equal("emma.wilson@example.com", configChild.GoogleCalendarId);
 
         // Test full name logic if it exists
         var expectedFullName = $"{configChild.FirstName} {configChild.LastName}";
