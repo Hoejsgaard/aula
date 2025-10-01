@@ -24,6 +24,7 @@ public class ChildAgent : IChildAgent
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ChildAgent> _logger;
     private SlackInteractiveBot? _slackBot;
+    private TelegramInteractiveBot? _telegramBot;
     private EventHandler<ChildWeekLetterEventArgs>? _weekLetterHandler;
 
     public ChildAgent(
@@ -49,8 +50,8 @@ public class ChildAgent : IChildAgent
     {
         _logger.LogInformation("Starting agent for child {ChildName}", _child.FirstName);
 
-        await InitializeSlackBotAsync();
-        await InitializeTelegramBotAsync();
+        await StartSlackBotAsync();
+        await StartTelegramBotAsync();
         SubscribeToWeekLetterEvents();
 
         if (_postWeekLettersOnStartup)
@@ -71,12 +72,12 @@ public class ChildAgent : IChildAgent
         }
 
         _slackBot?.Dispose();
-
+        _telegramBot?.Dispose();
 
         await Task.CompletedTask;
     }
 
-    private async Task InitializeSlackBotAsync()
+    private async Task StartSlackBotAsync()
     {
         // Start Slack bot if configured for this child
         if (_child.Channels?.Slack?.Enabled == true &&
@@ -96,23 +97,26 @@ public class ChildAgent : IChildAgent
         }
     }
 
-    private async Task InitializeTelegramBotAsync()
+    private async Task StartTelegramBotAsync()
     {
         if (_child.Channels?.Telegram?.Enabled == true &&
             _child.Channels?.Telegram?.EnableInteractiveBot == true &&
             !string.IsNullOrEmpty(_child.Channels?.Telegram?.Token))
         {
-            _logger.LogInformation("Starting Telegram bot for {ChildName} with token ending in {TokenSuffix}",
-                _child.FirstName, _child.Channels!.Telegram!.Token.Substring(Math.Max(0, _child.Channels.Telegram.Token.Length - 4)));
+            _logger.LogInformation("Starting TelegramInteractiveBot for {ChildName}", _child.FirstName);
 
-            _logger.LogInformation("Telegram bot initialized for {ChildName} - using shared TelegramMessageHandler", _child.FirstName);
+            _telegramBot = new TelegramInteractiveBot(
+                _openAiService,
+                _loggerFactory);
+
+            await _telegramBot.Start(_child);
+
+            _logger.LogInformation("TelegramInteractiveBot started successfully for {ChildName}", _child.FirstName);
         }
         else
         {
             _logger.LogInformation("Telegram bot disabled for {ChildName} - not configured or not enabled", _child.FirstName);
         }
-
-        await Task.CompletedTask;
     }
 
     private void SubscribeToWeekLetterEvents()
@@ -122,7 +126,7 @@ public class ChildAgent : IChildAgent
             _weekLetterHandler = async (sender, args) =>
             {
                 var handler = new ChildWeekLetterHandler(_child, _weekLetterHandlerLogger);
-                await handler.HandleWeekLetterEventAsync(args, _slackBot);
+                await handler.HandleWeekLetterEventAsync(args, _slackBot, _telegramBot);
             };
             schedService.ChildWeekLetterReady += _weekLetterHandler;
         }

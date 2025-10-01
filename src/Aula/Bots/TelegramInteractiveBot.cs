@@ -1,0 +1,238 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using Telegram.Bot;
+using Telegram.Bot.Exceptions;
+using Telegram.Bot.Polling;
+using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
+using Aula.Configuration;
+using Aula.Services;
+
+namespace Aula.Bots;
+
+/// <summary>
+/// Telegram interactive bot that is dedicated to a single child.
+/// This bot instance handles Telegram interactions for one specific child.
+/// </summary>
+public class TelegramInteractiveBot : IDisposable
+{
+    private readonly IOpenAiService _aiService;
+    private readonly ILogger _logger;
+    private ITelegramBotClient? _botClient;
+    private CancellationTokenSource? _cancellationTokenSource;
+
+    // This bot is dedicated to ONE specific child
+    private Child? _assignedChild;
+    public string? AssignedChildName => _assignedChild?.FirstName;
+
+    private bool _disposed;
+
+    public TelegramInteractiveBot(
+        IOpenAiService aiService,
+        ILoggerFactory loggerFactory)
+    {
+        _aiService = aiService ?? throw new ArgumentNullException(nameof(aiService));
+        _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<TelegramInteractiveBot>();
+    }
+
+    public async Task Start(Child child)
+    {
+        _assignedChild = child ?? throw new ArgumentNullException(nameof(child));
+
+        if (string.IsNullOrEmpty(_assignedChild.Channels?.Telegram?.Token))
+        {
+            _logger.LogError("Cannot start Telegram bot for {ChildName}: Token is missing", _assignedChild.FirstName);
+            return;
+        }
+
+        _logger.LogInformation("Starting Telegram bot for child: {ChildName}", _assignedChild.FirstName);
+
+        try
+        {
+            // Create bot client with the child's token
+            _botClient = new TelegramBotClient(_assignedChild.Channels.Telegram.Token);
+
+            // Verify bot can connect
+            var me = await _botClient.GetMeAsync();
+            _logger.LogInformation("Telegram bot authenticated as @{BotUsername} for child {ChildName}", me.Username, _assignedChild.FirstName);
+
+            // Start receiving updates
+            _cancellationTokenSource = new CancellationTokenSource();
+
+            var receiverOptions = new ReceiverOptions
+            {
+                AllowedUpdates = new[] { UpdateType.Message },
+                ThrowPendingUpdates = true
+            };
+
+            _botClient.StartReceiving(
+                updateHandler: HandleUpdateAsync,
+                pollingErrorHandler: HandlePollingErrorAsync,
+                receiverOptions: receiverOptions,
+                cancellationToken: _cancellationTokenSource.Token
+            );
+
+            _logger.LogInformation("Telegram bot started successfully for {ChildName}", _assignedChild.FirstName);
+
+            // Send startup message if chat ID is configured
+            if (_assignedChild.Channels.Telegram.ChatId.HasValue)
+            {
+                await SendMessageToTelegram($"👋 Bot for {_assignedChild.FirstName} is now online and ready to help!");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to start Telegram bot for {ChildName}", _assignedChild.FirstName);
+            throw;
+        }
+    }
+
+    public void Stop()
+    {
+        _logger.LogInformation("Telegram bot stopped for {ChildName}", _assignedChild?.FirstName ?? "unknown");
+        _cancellationTokenSource?.Cancel();
+    }
+
+    public async Task SendMessageToTelegram(string message)
+    {
+        if (_botClient == null)
+        {
+            _logger.LogWarning("Cannot send message: Telegram bot not initialized");
+            return;
+        }
+
+        if (_assignedChild?.Channels?.Telegram?.ChatId == null)
+        {
+            _logger.LogWarning("Cannot send message for {ChildName}: ChatId not configured", _assignedChild?.FirstName);
+            return;
+        }
+
+        try
+        {
+            await _botClient.SendTextMessageAsync(
+                chatId: _assignedChild.Channels.Telegram.ChatId.Value,
+                text: message,
+                parseMode: ParseMode.Html,
+                cancellationToken: default
+            );
+
+            _logger.LogInformation("Message sent successfully to Telegram for {ChildName}", _assignedChild.FirstName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send Telegram message for {ChildName}", _assignedChild?.FirstName);
+        }
+    }
+
+    private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
+    {
+        if (update.Message is not { } message)
+            return;
+
+        if (message.Type != MessageType.Text || string.IsNullOrEmpty(message.Text))
+            return;
+
+        var chatId = message.Chat.Id;
+        var messageText = message.Text.Trim();
+
+        _logger.LogInformation("Processing message from {ChatId} for child {ChildName}: {Text}",
+            chatId, _assignedChild?.FirstName, messageText);
+
+        try
+        {
+            // Check for help command
+            if (IsHelpCommand(messageText))
+            {
+                await SendHelpMessage(botClient, chatId, cancellationToken);
+                return;
+            }
+
+            // Process the message using AI service
+            string contextKey = $"telegram-{_assignedChild!.FirstName}-{chatId}";
+            string? response = await _aiService.GetResponseWithContextAsync(_assignedChild!, messageText, contextKey);
+
+            if (string.IsNullOrEmpty(response))
+            {
+                response = "I couldn't process your request. Please try again.";
+            }
+
+            await botClient.SendTextMessageAsync(
+                chatId: chatId,
+                text: response,
+                parseMode: ParseMode.Html,
+                cancellationToken: cancellationToken
+            );
+
+            _logger.LogInformation("Sent response to Telegram chat {ChatId} for child {ChildName}", chatId, _assignedChild.FirstName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing message for child {ChildName}: {Message}", _assignedChild?.FirstName, messageText);
+
+            await botClient.SendTextMessageAsync(
+                chatId: chatId,
+                text: "Sorry, I encountered an error processing your message. Please try again.",
+                cancellationToken: cancellationToken
+            );
+        }
+    }
+
+    private Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
+    {
+        var errorMessage = exception switch
+        {
+            ApiRequestException apiRequestException =>
+                $"Telegram API Error for {_assignedChild?.FirstName}: [{apiRequestException.ErrorCode}] {apiRequestException.Message}",
+            _ => exception.ToString()
+        };
+
+        _logger.LogError(exception, "Telegram polling error for {ChildName}: {Error}", _assignedChild?.FirstName, errorMessage);
+
+        return Task.CompletedTask;
+    }
+
+    private static bool IsHelpCommand(string text)
+    {
+        var normalized = text.Trim().ToLowerInvariant();
+        return normalized == "help" || normalized == "--help" || normalized == "?" ||
+               normalized == "commands" || normalized == "/help" || normalized == "/start" ||
+               normalized == "hjælp" || normalized == "kommandoer" || normalized == "/hjælp";
+    }
+
+    private async Task SendHelpMessage(ITelegramBotClient botClient, long chatId, CancellationToken cancellationToken)
+    {
+        var helpMessage = $@"🤖 **Aula Bot Help for {_assignedChild?.FirstName}**
+
+I can help you with information about {_assignedChild?.FirstName}'s school activities from Aula.
+
+**Commands:**
+• Ask about activities: ""What activities does {_assignedChild?.FirstName} have this week?""
+• Get week letters: ""Show me this week's letter""
+• Get homework info: ""What homework is there?""
+
+**Languages:** You can ask in both English and Danish.
+
+**Tips:**
+• I can remember the context of our conversation
+• Use natural language - no need for special commands";
+
+        await botClient.SendTextMessageAsync(
+            chatId: chatId,
+            text: helpMessage,
+            parseMode: ParseMode.Markdown,
+            cancellationToken: cancellationToken
+        );
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _cancellationTokenSource?.Cancel();
+        _cancellationTokenSource?.Dispose();
+        _disposed = true;
+    }
+}

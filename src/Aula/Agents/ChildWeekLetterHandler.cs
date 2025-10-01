@@ -30,9 +30,9 @@ public class ChildWeekLetterHandler
     }
 
     /// <summary>
-    /// Handles a week letter event by posting it to the child's Slack channel via the interactive bot.
+    /// Handles a week letter event by posting it to the child's Slack and Telegram channels via the interactive bots.
     /// </summary>
-    public async Task HandleWeekLetterEventAsync(ChildWeekLetterEventArgs args, SlackInteractiveBot? slackBot)
+    public async Task HandleWeekLetterEventAsync(ChildWeekLetterEventArgs args, SlackInteractiveBot? slackBot, TelegramInteractiveBot? telegramBot = null)
     {
         // Filter by child name (defensive check)
         if (!args.ChildFirstName.Equals(_child.FirstName, StringComparison.OrdinalIgnoreCase))
@@ -44,27 +44,29 @@ public class ChildWeekLetterHandler
 
         try
         {
-            if (slackBot != null && args.WeekLetter != null)
+            if (args.WeekLetter != null)
             {
                 // Format the week letter message
                 var message = FormatWeekLetterMessage(args.WeekLetter, args.WeekNumber, args.Year);
 
-                // Post via the existing interactive bot
-                await slackBot.SendMessageToSlack(message);
-                var success = true;
-
-                if (success)
+                // Post to Slack if bot available
+                if (slackBot != null)
                 {
+                    await slackBot.SendMessageToSlack(message);
                     _logger.LogInformation("Posted week letter to Slack for {ChildName}", args.ChildFirstName);
                 }
-                else
+
+                // Post to Telegram if bot available
+                if (telegramBot != null)
                 {
-                    _logger.LogError("Failed to post week letter to Slack for {ChildName}", args.ChildFirstName);
+                    await telegramBot.SendMessageToTelegram(message);
+                    _logger.LogInformation("Posted week letter to Telegram for {ChildName}", args.ChildFirstName);
                 }
-            }
-            else if (args.WeekLetter != null)
-            {
-                _logger.LogWarning("Slack bot not available for {ChildName}", args.ChildFirstName);
+
+                if (slackBot == null && telegramBot == null)
+                {
+                    _logger.LogWarning("No bots available for {ChildName}", args.ChildFirstName);
+                }
             }
             else
             {

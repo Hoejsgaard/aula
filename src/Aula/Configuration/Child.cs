@@ -31,7 +31,7 @@ public class ChildTelegramConfig
 {
     public bool Enabled { get; set; }
     public string? Token { get; set; }
-    public string? ChannelId { get; set; }
+    public long? ChatId { get; set; }
     public bool EnableInteractiveBot { get; set; }
 }
 
