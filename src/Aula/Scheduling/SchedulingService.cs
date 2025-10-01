@@ -63,9 +63,9 @@ public class SchedulingService : ISchedulingService
         }
 
         // Start the timer first, then check for missed reminders in background
-        var timerInterval = TimeSpan.FromSeconds(_config.Timers.SchedulingIntervalSeconds);
+        var timerInterval = TimeSpan.FromSeconds(_config.Scheduling.IntervalSeconds);
         _schedulingTimer = new Timer(CheckScheduledTasksWrapper, null, TimeSpan.Zero, timerInterval);
-        _logger.LogInformation("Scheduling service timer started - checking every {IntervalSeconds} seconds", _config.Timers.SchedulingIntervalSeconds);
+        _logger.LogInformation("Scheduling service timer started - checking every {IntervalSeconds} seconds", _config.Scheduling.IntervalSeconds);
 
         // Check for missed reminders in background to avoid blocking startup
         _ = Task.Run(async () =>
@@ -192,10 +192,10 @@ public class SchedulingService : ISchedulingService
             var schedule = CrontabSchedule.Parse(task.CronExpression);
             var nextRun = task.LastRun != null
                 ? schedule.GetNextOccurrence(task.LastRun.Value)
-                : schedule.GetNextOccurrence(now.AddMinutes(-_config.Timers.InitialOccurrenceOffsetMinutes));
+                : schedule.GetNextOccurrence(now.AddMinutes(-_config.Scheduling.InitialOccurrenceOffsetMinutes));
 
             // Allow for a window to account for timing variations
-            return now >= nextRun && now <= nextRun.AddMinutes(_config.Timers.TaskExecutionWindowMinutes);
+            return now >= nextRun && now <= nextRun.AddMinutes(_config.Scheduling.TaskExecutionWindowMinutes);
         }
         catch (Exception ex)
         {

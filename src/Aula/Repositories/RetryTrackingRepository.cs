@@ -50,7 +50,7 @@ public class RetryTrackingRepository : IRetryTrackingRepository
             retryAttempt.LastAttempt = DateTime.UtcNow;
 
             // Use configured retry hours
-            var retryHours = _config.Timers.WeekLetterRetryIntervalHours;
+            var retryHours = _config.WeekLetter.RetryIntervalHours;
             retryAttempt.NextAttempt = DateTime.UtcNow.AddHours(retryHours);
 
             await _supabase
@@ -63,8 +63,8 @@ public class RetryTrackingRepository : IRetryTrackingRepository
         else
         {
             // Use configured retry settings
-            var retryHours = _config.Timers.WeekLetterRetryIntervalHours;
-            var maxRetryHours = 48; // Could be made configurable if needed
+            var retryHours = _config.WeekLetter.RetryIntervalHours;
+            var maxRetryHours = _config.WeekLetter.MaxRetryDurationHours;
             var maxAttempts = maxRetryHours / retryHours; // Calculate max attempts based on retry duration
 
             // Create new retry attempt record

@@ -8,5 +8,6 @@ public interface IConfig
     OpenAi OpenAi { get; init; }
     Supabase Supabase { get; init; }
     Features Features { get; init; }
-    Timers Timers { get; init; }
+    Scheduling Scheduling { get; init; }
+    WeekLetter WeekLetter { get; init; }
 }

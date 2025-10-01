@@ -29,7 +29,8 @@ public class ConfigurationValidator : IConfigurationValidator
         // Optional features - validate if enabled
         ValidateGoogleServiceAccount(config.GoogleServiceAccount, errors, warnings);
         ValidateFeatures(config.Features, errors, warnings);
-        ValidateTimers(config.Timers, errors, warnings);
+        ValidateScheduling(config.Scheduling, errors, warnings);
+        ValidateWeekLetter(config.WeekLetter, errors, warnings);
 
         // Simulate async work if needed in future
         await Task.CompletedTask;
@@ -200,17 +201,51 @@ public class ConfigurationValidator : IConfigurationValidator
         }
     }
 
-    private void ValidateTimers(Timers timers, List<string> errors, List<string> warnings)
+    private void ValidateScheduling(Scheduling scheduling, List<string> errors, List<string> warnings)
     {
-        if (timers == null)
+        if (scheduling == null)
         {
-            warnings.Add("Timers configuration section is missing - using default timer settings");
+            warnings.Add("Scheduling configuration section is missing - using default scheduling settings");
             return;
         }
 
-        if (timers.SchedulingIntervalSeconds <= 0)
+        if (scheduling.IntervalSeconds <= 0)
         {
-            errors.Add("Timers.SchedulingIntervalSeconds must be greater than 0");
+            errors.Add("Scheduling.IntervalSeconds must be greater than 0");
+        }
+
+        if (scheduling.TaskExecutionWindowMinutes <= 0)
+        {
+            errors.Add("Scheduling.TaskExecutionWindowMinutes must be greater than 0");
+        }
+
+        if (scheduling.InitialOccurrenceOffsetMinutes <= 0)
+        {
+            errors.Add("Scheduling.InitialOccurrenceOffsetMinutes must be greater than 0");
+        }
+    }
+
+    private void ValidateWeekLetter(WeekLetter weekLetter, List<string> errors, List<string> warnings)
+    {
+        if (weekLetter == null)
+        {
+            warnings.Add("WeekLetter configuration section is missing - using default week letter settings");
+            return;
+        }
+
+        if (weekLetter.RetryIntervalHours <= 0)
+        {
+            errors.Add("WeekLetter.RetryIntervalHours must be greater than 0");
+        }
+
+        if (weekLetter.MaxRetryDurationHours <= 0)
+        {
+            errors.Add("WeekLetter.MaxRetryDurationHours must be greater than 0");
+        }
+
+        if (weekLetter.MaxRetryDurationHours < weekLetter.RetryIntervalHours)
+        {
+            errors.Add("WeekLetter.MaxRetryDurationHours must be greater than or equal to RetryIntervalHours");
         }
     }
 }
