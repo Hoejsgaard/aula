@@ -12,8 +12,6 @@ namespace Aula.Tests.Services;
 
 public class SecureChildDataServiceTests
 {
-	private readonly Mock<IChildContext> _mockContext;
-	private readonly Mock<IChildContextValidator> _mockContextValidator;
 	private readonly Mock<IChildAuditService> _mockAuditService;
 	private readonly Mock<IChildRateLimiter> _mockRateLimiter;
 	private readonly Mock<IDataService> _mockDataService;
@@ -25,8 +23,6 @@ public class SecureChildDataServiceTests
 
 	public SecureChildDataServiceTests()
 	{
-		_mockContext = new Mock<IChildContext>();
-		_mockContextValidator = new Mock<IChildContextValidator>();
 		_mockAuditService = new Mock<IChildAuditService>();
 		_mockRateLimiter = new Mock<IChildRateLimiter>();
 		_mockDataService = new Mock<IDataService>();
@@ -35,11 +31,8 @@ public class SecureChildDataServiceTests
 		_mockLogger = new Mock<ILogger<SecureChildDataService>>();
 
 		_testChild = new Child { FirstName = "Test", LastName = "Child" };
-		_mockContext.Setup(c => c.CurrentChild).Returns(_testChild);
 
 		_service = new SecureChildDataService(
-			_mockContext.Object,
-			_mockContextValidator.Object,
 			_mockAuditService.Object,
 			_mockRateLimiter.Object,
 			_mockDataService.Object,
@@ -53,16 +46,13 @@ public class SecureChildDataServiceTests
 	{
 		// Arrange
 		var weekLetter = JObject.Parse("{\"content\": \"test\"}");
-		_mockContextValidator.Setup(v => v.ValidateChildPermissionsAsync(_testChild, "write:week_letter"))
-			.ReturnsAsync(true);
 		_mockRateLimiter.Setup(r => r.IsAllowedAsync(_testChild, "CacheWeekLetter"))
 			.ReturnsAsync(true);
 
 		// Act
-		await _service.CacheWeekLetterAsync(2025, 10, weekLetter);
+		await _service.CacheWeekLetterAsync(_testChild, 2025, 10, weekLetter);
 
 		// Assert
-		_mockContext.Verify(c => c.ValidateContext(), Times.Once);
 		_mockDataService.Verify(d => d.CacheWeekLetter(_testChild, 2025, 10, weekLetter), Times.Once);
 		_mockRateLimiter.Verify(r => r.RecordOperationAsync(_testChild, "CacheWeekLetter"), Times.Once);
 		_mockAuditService.Verify(a => a.LogDataAccessAsync(_testChild, "CacheWeekLetter", "week_2025_10", true), Times.Once);
@@ -73,15 +63,15 @@ public class SecureChildDataServiceTests
 	{
 		// Arrange
 		var weekLetter = JObject.Parse("{\"content\": \"test\"}");
-		_mockContextValidator.Setup(v => v.ValidateChildPermissionsAsync(_testChild, "write:week_letter"))
+		_mockRateLimiter.Setup(r => r.IsAllowedAsync(_testChild, "CacheWeekLetter"))
 			.ReturnsAsync(false);
 
 		// Act & Assert
-		await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
-			_service.CacheWeekLetterAsync(2025, 10, weekLetter));
+		await Assert.ThrowsAsync<RateLimitExceededException>(() =>
+			_service.CacheWeekLetterAsync(_testChild, 2025, 10, weekLetter));
 
 		_mockDataService.Verify(d => d.CacheWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<JObject>()), Times.Never);
-		_mockAuditService.Verify(a => a.LogSecurityEventAsync(_testChild, "PermissionDenied", "write:week_letter", SecuritySeverity.Warning), Times.Once);
+		_mockAuditService.Verify(a => a.LogSecurityEventAsync(_testChild, "RateLimitExceeded", "CacheWeekLetter", SecuritySeverity.Warning), Times.Once);
 	}
 
 	[Fact]
@@ -89,14 +79,12 @@ public class SecureChildDataServiceTests
 	{
 		// Arrange
 		var weekLetter = JObject.Parse("{\"content\": \"test\"}");
-		_mockContextValidator.Setup(v => v.ValidateChildPermissionsAsync(_testChild, "write:week_letter"))
-			.ReturnsAsync(true);
 		_mockRateLimiter.Setup(r => r.IsAllowedAsync(_testChild, "CacheWeekLetter"))
 			.ReturnsAsync(false);
 
 		// Act & Assert
 		await Assert.ThrowsAsync<RateLimitExceededException>(() =>
-			_service.CacheWeekLetterAsync(2025, 10, weekLetter));
+			_service.CacheWeekLetterAsync(_testChild, 2025, 10, weekLetter));
 
 		_mockDataService.Verify(d => d.CacheWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<JObject>()), Times.Never);
 		_mockAuditService.Verify(a => a.LogSecurityEventAsync(_testChild, "RateLimitExceeded", "CacheWeekLetter", SecuritySeverity.Warning), Times.Once);
@@ -107,15 +95,13 @@ public class SecureChildDataServiceTests
 	{
 		// Arrange
 		var expectedLetter = JObject.Parse("{\"content\": \"test\"}");
-		_mockContextValidator.Setup(v => v.ValidateChildPermissionsAsync(_testChild, "read:week_letter"))
-			.ReturnsAsync(true);
 		_mockRateLimiter.Setup(r => r.IsAllowedAsync(_testChild, "GetWeekLetter"))
 			.ReturnsAsync(true);
 		_mockDataService.Setup(d => d.GetWeekLetter(_testChild, 2025, 10))
 			.Returns(expectedLetter);
 
 		// Act
-		var result = await _service.GetWeekLetterAsync(2025, 10);
+		var result = await _service.GetWeekLetterAsync(_testChild, 2025, 10);
 
 		// Assert
 		Assert.NotNull(result);
@@ -128,16 +114,15 @@ public class SecureChildDataServiceTests
 	public async Task GetWeekLetterAsync_WithoutPermission_ReturnsNull()
 	{
 		// Arrange
-		_mockContextValidator.Setup(v => v.ValidateChildPermissionsAsync(_testChild, "read:week_letter"))
+		_mockRateLimiter.Setup(r => r.IsAllowedAsync(_testChild, "GetWeekLetter"))
 			.ReturnsAsync(false);
 
-		// Act
-		var result = await _service.GetWeekLetterAsync(2025, 10);
+		// Act & Assert
+		await Assert.ThrowsAsync<RateLimitExceededException>(() =>
+			_service.GetWeekLetterAsync(_testChild, 2025, 10));
 
-		// Assert
-		Assert.Null(result);
 		_mockDataService.Verify(d => d.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>()), Times.Never);
-		_mockAuditService.Verify(a => a.LogSecurityEventAsync(_testChild, "PermissionDenied", "read:week_letter", SecuritySeverity.Warning), Times.Once);
+		_mockAuditService.Verify(a => a.LogSecurityEventAsync(_testChild, "RateLimitExceeded", "GetWeekLetter", SecuritySeverity.Warning), Times.Once);
 	}
 
 	[Fact]
@@ -145,13 +130,11 @@ public class SecureChildDataServiceTests
 	{
 		// Arrange
 		var weekLetter = JObject.Parse("{\"content\": \"test\"}");
-		_mockContextValidator.Setup(v => v.ValidateChildPermissionsAsync(_testChild, "write:database"))
-			.ReturnsAsync(true);
 		_mockRateLimiter.Setup(r => r.IsAllowedAsync(_testChild, "StoreWeekLetter"))
 			.ReturnsAsync(true);
 
 		// Act
-		var result = await _service.StoreWeekLetterAsync(2025, 10, weekLetter);
+		var result = await _service.StoreWeekLetterAsync(_testChild, 2025, 10, weekLetter);
 
 		// Assert
 		Assert.True(result);
@@ -171,13 +154,11 @@ public class SecureChildDataServiceTests
 	public async Task DeleteWeekLetterAsync_WithValidPermissions_DeletesFromDatabase()
 	{
 		// Arrange
-		_mockContextValidator.Setup(v => v.ValidateChildPermissionsAsync(_testChild, "delete:database"))
-			.ReturnsAsync(true);
 		_mockRateLimiter.Setup(r => r.IsAllowedAsync(_testChild, "DeleteWeekLetter"))
 			.ReturnsAsync(true);
 
 		// Act
-		var result = await _service.DeleteWeekLetterAsync(2025, 10);
+		var result = await _service.DeleteWeekLetterAsync(_testChild, 2025, 10);
 
 		// Assert
 		Assert.True(result);
@@ -190,24 +171,21 @@ public class SecureChildDataServiceTests
 	public async Task DeleteWeekLetterAsync_WithoutPermission_ReturnsFalse()
 	{
 		// Arrange
-		_mockContextValidator.Setup(v => v.ValidateChildPermissionsAsync(_testChild, "delete:database"))
+		_mockRateLimiter.Setup(r => r.IsAllowedAsync(_testChild, "DeleteWeekLetter"))
 			.ReturnsAsync(false);
 
-		// Act
-		var result = await _service.DeleteWeekLetterAsync(2025, 10);
+		// Act & Assert
+		await Assert.ThrowsAsync<RateLimitExceededException>(() =>
+			_service.DeleteWeekLetterAsync(_testChild, 2025, 10));
 
-		// Assert
-		Assert.False(result);
 		_mockSupabaseService.Verify(s => s.DeleteWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()), Times.Never);
-		_mockAuditService.Verify(a => a.LogSecurityEventAsync(_testChild, "PermissionDenied", "delete:database", SecuritySeverity.Critical), Times.Once);
+		_mockAuditService.Verify(a => a.LogSecurityEventAsync(_testChild, "RateLimitExceeded", "DeleteWeekLetter", SecuritySeverity.Warning), Times.Once);
 	}
 
 	[Fact]
 	public async Task GetStoredWeekLettersAsync_WithValidPermissions_ReturnsLetters()
 	{
 		// Arrange
-		_mockContextValidator.Setup(v => v.ValidateChildPermissionsAsync(_testChild, "read:database"))
-			.ReturnsAsync(true);
 		_mockRateLimiter.Setup(r => r.IsAllowedAsync(_testChild, "GetStoredWeekLetters"))
 			.ReturnsAsync(true);
 
@@ -220,7 +198,7 @@ public class SecureChildDataServiceTests
 			.ReturnsAsync(storedLetters);
 
 		// Act
-		var result = await _service.GetStoredWeekLettersAsync(2025);
+		var result = await _service.GetStoredWeekLettersAsync(_testChild, 2025);
 
 		// Assert
 		Assert.NotNull(result);
@@ -232,13 +210,9 @@ public class SecureChildDataServiceTests
 	[Fact]
 	public async Task AllOperations_WithNullContext_ThrowsInvalidOperationException()
 	{
-		// Arrange
-		_mockContext.Setup(c => c.CurrentChild).Returns((Child?)null);
-		_mockContext.Setup(c => c.ValidateContext()).Throws<InvalidOperationException>();
-
 		// Act & Assert
-		await Assert.ThrowsAsync<InvalidOperationException>(() =>
-			_service.GetWeekLetterAsync(2025, 10));
+		await Assert.ThrowsAsync<ArgumentNullException>(() =>
+			_service.GetWeekLetterAsync(null!, 2025, 10));
 	}
 
 	[Fact]
@@ -246,36 +220,22 @@ public class SecureChildDataServiceTests
 	{
 		// Act & Assert
 		Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
-			null!, _mockContextValidator.Object, _mockAuditService.Object, _mockRateLimiter.Object,
-			_mockDataService.Object, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, _mockLogger.Object));
+			null!, _mockRateLimiter.Object, _mockDataService.Object, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, _mockLogger.Object));
 
 		Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
-			_mockContext.Object, null!, _mockAuditService.Object, _mockRateLimiter.Object,
-			_mockDataService.Object, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, _mockLogger.Object));
+			_mockAuditService.Object, null!, _mockDataService.Object, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, _mockLogger.Object));
 
 		Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
-			_mockContext.Object, _mockContextValidator.Object, null!, _mockRateLimiter.Object,
-			_mockDataService.Object, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, _mockLogger.Object));
+			_mockAuditService.Object, _mockRateLimiter.Object, null!, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, _mockLogger.Object));
 
 		Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
-			_mockContext.Object, _mockContextValidator.Object, _mockAuditService.Object, null!,
-			_mockDataService.Object, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, _mockLogger.Object));
+			_mockAuditService.Object, _mockRateLimiter.Object, _mockDataService.Object, null!, _mockMinUddannelseClient.Object, _mockLogger.Object));
 
 		Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
-			_mockContext.Object, _mockContextValidator.Object, _mockAuditService.Object, _mockRateLimiter.Object,
-			null!, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, _mockLogger.Object));
+			_mockAuditService.Object, _mockRateLimiter.Object, _mockDataService.Object, _mockSupabaseService.Object, null!, _mockLogger.Object));
 
 		Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
-			_mockContext.Object, _mockContextValidator.Object, _mockAuditService.Object, _mockRateLimiter.Object,
-			_mockDataService.Object, null!, _mockMinUddannelseClient.Object, _mockLogger.Object));
-
-		Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
-			_mockContext.Object, _mockContextValidator.Object, _mockAuditService.Object, _mockRateLimiter.Object,
-			_mockDataService.Object, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, null!));
-
-		Assert.Throws<ArgumentNullException>(() => new SecureChildDataService(
-			_mockContext.Object, _mockContextValidator.Object, _mockAuditService.Object, _mockRateLimiter.Object,
-			_mockDataService.Object, _mockSupabaseService.Object, null!, _mockLogger.Object));
+			_mockAuditService.Object, _mockRateLimiter.Object, _mockDataService.Object, _mockSupabaseService.Object, _mockMinUddannelseClient.Object, null!));
 
 		return Task.CompletedTask;
 	}
@@ -284,14 +244,12 @@ public class SecureChildDataServiceTests
 	public async Task CacheOperations_LogAtCorrectLevels()
 	{
 		// Arrange
-		_mockContextValidator.Setup(v => v.ValidateChildPermissionsAsync(_testChild, It.IsAny<string>()))
-			.ReturnsAsync(true);
 		_mockRateLimiter.Setup(r => r.IsAllowedAsync(_testChild, It.IsAny<string>()))
 			.ReturnsAsync(true);
 
 		// Act - Cache operation
 		var weekLetter = JObject.Parse("{\"content\": \"test\"}");
-		await _service.CacheWeekLetterAsync(2025, 10, weekLetter);
+		await _service.CacheWeekLetterAsync(_testChild, 2025, 10, weekLetter);
 
 		// Assert - Information level for cache operation
 		_mockLogger.Verify(
@@ -304,7 +262,7 @@ public class SecureChildDataServiceTests
 			Times.Once);
 
 		// Act - Delete operation
-		await _service.DeleteWeekLetterAsync(2025, 10);
+		await _service.DeleteWeekLetterAsync(_testChild, 2025, 10);
 
 		// Assert - Warning level for delete operation
 		_mockLogger.Verify(

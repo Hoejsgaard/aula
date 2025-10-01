@@ -91,6 +91,7 @@ public class Program
 	{
 		var config = serviceProvider.GetRequiredService<Config>();
 		var schedulingService = serviceProvider.GetRequiredService<ISchedulingService>();
+		var channelManager = serviceProvider.GetRequiredService<IChannelManager>();
 		var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
 
 		await schedulingService.StartAsync();
@@ -100,7 +101,7 @@ public class Program
 		foreach (var child in config.MinUddannelse?.Children ?? new List<Child>())
 		{
 			logger.LogInformation("Starting agent for child: {ChildName}", child.FirstName);
-			var childAgent = new ChildAgent(child, serviceProvider, config, schedulingService, loggerFactory);
+			var childAgent = new ChildAgent(child, serviceProvider, config, schedulingService, channelManager, loggerFactory);
 			await childAgent.StartAsync();
 			childAgents.Add(childAgent);
 		}

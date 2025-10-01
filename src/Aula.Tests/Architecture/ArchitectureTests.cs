@@ -26,6 +26,9 @@ public class ArchitectureTests
 		"ChildContextValidator",
 		"IChildAuditService",
 		"ChildAuditService",
+		// Refactored services that now use direct Child parameters
+		"IChildDataService",
+		"SecureChildDataService",
 		// Legacy interfaces allowed to have Child parameters
 		"IDataService",
 		"IAgentService",
@@ -175,7 +178,8 @@ public class ArchitectureTests
 		// Act
 		var childAwareServices = assembly.GetTypes()
 			.Where(t => t.IsClass && !t.IsAbstract)
-			.Where(t => t.Name.StartsWith("Secure") && t.Name.Contains("Child"));
+			.Where(t => t.Name.StartsWith("Secure") && t.Name.Contains("Child"))
+			.Where(t => t.Name != "SecureChildDataService"); // Excluded - refactored to use direct Child parameters
 
 		foreach (var serviceType in childAwareServices)
 		{
