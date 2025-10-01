@@ -69,7 +69,7 @@ public class SimplePictogramAuthTests
                 "username",
                 new[] { "image1", "image2" },
                 _config,
-                
+
                 _mockLogger.Object
             )
         );
