@@ -42,11 +42,11 @@
       "Bash(~/.dotnet/tools/reportgenerator -reports:TestResults/*/coverage.cobertura.xml -targetdir:coverage -reporttypes:Html)",
       "Bash(DOTNET_ROOT=/home/runeh/.dotnet ./tools/reportgenerator -reports:TestResults/*/coverage.cobertura.xml -targetdir:coverage -reporttypes:Html)",
       "Bash(python3:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "mcp__serena__get_symbols_overview"
     ],
     "deny": []
   },
-  "disableBypassPermissionsMode": false,
   "enableAllProjectMcpServers": false,
   "enabledMcpjsonServers": [
     "terraform",
@@ -54,5 +54,6 @@
     "sequential-thinking",
     "claude-reviewer",
     "serena"
-  ]
+  ],
+  "disableBypassPermissionsMode": false
 }

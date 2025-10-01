@@ -2,6 +2,6 @@ namespace Aula.Scheduling;
 
 public interface ISchedulingService
 {
-	Task StartAsync();
-	Task StopAsync();
+    Task StartAsync();
+    Task StopAsync();
 }

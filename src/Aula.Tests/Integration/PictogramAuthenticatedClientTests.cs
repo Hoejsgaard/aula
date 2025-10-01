@@ -12,62 +12,62 @@ namespace Aula.Tests.Integration;
 
 public class PictogramAuthenticatedClientTests
 {
-	private readonly Mock<ILogger<PictogramAuthenticatedClient>> _mockLogger;
-	private readonly Child _testChild;
-	private readonly string[] _pictogramSequence;
+    private readonly Mock<ILogger<PictogramAuthenticatedClient>> _mockLogger;
+    private readonly Child _testChild;
+    private readonly string[] _pictogramSequence;
 
-	public PictogramAuthenticatedClientTests()
-	{
-		_mockLogger = new Mock<ILogger<PictogramAuthenticatedClient>>();
-		_testChild = new Child
-		{
-			FirstName = "Test",
-			LastName = "Child",
-			UniLogin = new UniLogin
-			{
-				Username = "testuser",
-				AuthType = AuthenticationType.Pictogram,
-				PictogramSequence = new[] { "image1", "image2", "image3", "image4" }
-			}
-		};
-		_pictogramSequence = _testChild.UniLogin.PictogramSequence;
-	}
+    public PictogramAuthenticatedClientTests()
+    {
+        _mockLogger = new Mock<ILogger<PictogramAuthenticatedClient>>();
+        _testChild = new Child
+        {
+            FirstName = "Test",
+            LastName = "Child",
+            UniLogin = new UniLogin
+            {
+                Username = "testuser",
+                AuthType = AuthenticationType.Pictogram,
+                PictogramSequence = new[] { "image1", "image2", "image3", "image4" }
+            }
+        };
+        _pictogramSequence = _testChild.UniLogin.PictogramSequence;
+    }
 
-	[Fact]
-	public void Constructor_WithValidParameters_InitializesCorrectly()
-	{
-		// Act
-		var client = new PictogramAuthenticatedClient(
-			_testChild,
-			_testChild.UniLogin!.Username,
-			_pictogramSequence,
-			_mockLogger.Object);
+    [Fact]
+    public void Constructor_WithValidParameters_InitializesCorrectly()
+    {
+        // Act
+        var client = new PictogramAuthenticatedClient(
+            _testChild,
+            _testChild.UniLogin!.Username,
+            _pictogramSequence,
+            _mockLogger.Object);
 
-		// Assert
-		Assert.NotNull(client);
-	}
+        // Assert
+        Assert.NotNull(client);
+    }
 
-	[Fact]
-	public void Constructor_WithNullPictogramSequence_ThrowsArgumentNullException()
-	{
-		// Act & Assert
-		Assert.Throws<ArgumentNullException>(() =>
-			new PictogramAuthenticatedClient(
-				_testChild,
-				_testChild.UniLogin!.Username,
-				null!,
-				_mockLogger.Object));
-	}
+    [Fact]
+    public void Constructor_WithNullPictogramSequence_ThrowsArgumentNullException()
+    {
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            new PictogramAuthenticatedClient(
+                _testChild,
+                _testChild.UniLogin!.Username,
+                null!,
+                _mockLogger.Object));
+    }
 
-	[Fact]
-	public Task LoginAsync_WithSuccessfulAuth_ReturnsTrue()
-	{
-		// Arrange
-		var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
-		var httpClient = new HttpClient(mockHttpMessageHandler.Object);
+    [Fact]
+    public Task LoginAsync_WithSuccessfulAuth_ReturnsTrue()
+    {
+        // Arrange
+        var mockHttpMessageHandler = new Mock<HttpMessageHandler>();
+        var httpClient = new HttpClient(mockHttpMessageHandler.Object);
 
-		// Setup login selector page response
-		var loginSelectorHtml = @"
+        // Setup login selector page response
+        var loginSelectorHtml = @"
 			<html>
 				<body>
 					<form action='/login/select'>
@@ -76,8 +76,8 @@ public class PictogramAuthenticatedClientTests
 				</body>
 			</html>";
 
-		// Setup username page response
-		var usernamePageHtml = @"
+        // Setup username page response
+        var usernamePageHtml = @"
 			<html>
 				<body>
 					<form action='/login/username'>
@@ -86,8 +86,8 @@ public class PictogramAuthenticatedClientTests
 				</body>
 			</html>";
 
-		// Setup pictogram page response
-		var pictogramPageHtml = @"
+        // Setup pictogram page response
+        var pictogramPageHtml = @"
 			<html>
 				<body>
 					<div class='js-set-passw'>
@@ -106,8 +106,8 @@ public class PictogramAuthenticatedClientTests
 				</body>
 			</html>";
 
-		// Setup successful response with child ID
-		var successPageHtml = @"
+        // Setup successful response with child ID
+        var successPageHtml = @"
 			<html>
 				<body>
 					<script>
@@ -121,63 +121,63 @@ public class PictogramAuthenticatedClientTests
 				</body>
 			</html>";
 
-		var responseSequence = new Queue<HttpResponseMessage>();
-		responseSequence.Enqueue(new HttpResponseMessage(HttpStatusCode.OK)
-		{
-			Content = new StringContent(loginSelectorHtml, Encoding.UTF8, "text/html")
-		});
-		responseSequence.Enqueue(new HttpResponseMessage(HttpStatusCode.OK)
-		{
-			Content = new StringContent(usernamePageHtml, Encoding.UTF8, "text/html")
-		});
-		responseSequence.Enqueue(new HttpResponseMessage(HttpStatusCode.OK)
-		{
-			Content = new StringContent(pictogramPageHtml, Encoding.UTF8, "text/html")
-		});
-		responseSequence.Enqueue(new HttpResponseMessage(HttpStatusCode.OK)
-		{
-			Content = new StringContent(successPageHtml, Encoding.UTF8, "text/html")
-		});
+        var responseSequence = new Queue<HttpResponseMessage>();
+        responseSequence.Enqueue(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(loginSelectorHtml, Encoding.UTF8, "text/html")
+        });
+        responseSequence.Enqueue(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(usernamePageHtml, Encoding.UTF8, "text/html")
+        });
+        responseSequence.Enqueue(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(pictogramPageHtml, Encoding.UTF8, "text/html")
+        });
+        responseSequence.Enqueue(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(successPageHtml, Encoding.UTF8, "text/html")
+        });
 
-		mockHttpMessageHandler.Protected()
-			.Setup<Task<HttpResponseMessage>>(
-				"SendAsync",
-				ItExpr.IsAny<HttpRequestMessage>(),
-				ItExpr.IsAny<CancellationToken>())
-			.ReturnsAsync(() => responseSequence.Count > 0 ? responseSequence.Dequeue() :
-				new HttpResponseMessage(HttpStatusCode.OK)
-				{
-					Content = new StringContent(successPageHtml, Encoding.UTF8, "text/html")
-				});
+        mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() => responseSequence.Count > 0 ? responseSequence.Dequeue() :
+                new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(successPageHtml, Encoding.UTF8, "text/html")
+                });
 
-		// Note: In a real test, we'd need to inject the HttpClient into PictogramAuthenticatedClient
-		// For now, this test demonstrates the structure
-		var client = new PictogramAuthenticatedClient(
-			_testChild,
-			_testChild.UniLogin!.Username,
-			_pictogramSequence,
-			_mockLogger.Object);
+        // Note: In a real test, we'd need to inject the HttpClient into PictogramAuthenticatedClient
+        // For now, this test demonstrates the structure
+        var client = new PictogramAuthenticatedClient(
+            _testChild,
+            _testChild.UniLogin!.Username,
+            _pictogramSequence,
+            _mockLogger.Object);
 
-		// Act
-		// Note: This would fail in the current implementation because we can't inject the mock HttpClient
-		// We would need to refactor PictogramAuthenticatedClient to accept an HttpClient in the constructor
-		// var result = await client.LoginAsync();
+        // Act
+        // Note: This would fail in the current implementation because we can't inject the mock HttpClient
+        // We would need to refactor PictogramAuthenticatedClient to accept an HttpClient in the constructor
+        // var result = await client.LoginAsync();
 
-		// Assert
-		// Assert.True(result);
-		Assert.True(true); // Placeholder
-		return Task.CompletedTask;
-	}
+        // Assert
+        // Assert.True(result);
+        Assert.True(true); // Placeholder
+        return Task.CompletedTask;
+    }
 
-	[Fact]
-	public void ParsePictogramMapping_WithValidHtml_ExtractsMappingCorrectly()
-	{
-		// This test would need access to the private ParsePictogramMapping method
-		// We could refactor to make it protected or internal with InternalsVisibleTo
-		// Or test it indirectly through the public LoginAsync method
+    [Fact]
+    public void ParsePictogramMapping_WithValidHtml_ExtractsMappingCorrectly()
+    {
+        // This test would need access to the private ParsePictogramMapping method
+        // We could refactor to make it protected or internal with InternalsVisibleTo
+        // Or test it indirectly through the public LoginAsync method
 
-		// Arrange
-		_ = @"
+        // Arrange
+        _ = @"
 			<div class='password mb-4'>
 				<div class='js-icon' title='Hus' data-passw='8'></div>
 				<div class='js-icon' title='Is' data-passw='9'></div>
@@ -185,72 +185,72 @@ public class PictogramAuthenticatedClientTests
 				<div class='js-icon' title='Hest' data-passw='7'></div>
 			</div>";
 
-		// Expected mapping:
-		// image1 -> 8
-		// image2 -> 9
-		// image3 -> 6
-		// image4 -> 7
+        // Expected mapping:
+        // image1 -> 8
+        // image2 -> 9
+        // image3 -> 6
+        // image4 -> 7
 
-		// Act & Assert
-		// Would need to test through public interface or refactor for testability
-		Assert.True(true); // Placeholder
-	}
+        // Act & Assert
+        // Would need to test through public interface or refactor for testability
+        Assert.True(true); // Placeholder
+    }
 
-	[Fact]
-	public void BuildPasswordFromSequence_WithValidMapping_BuildsCorrectPassword()
-	{
-		// Arrange
-		var mapping = new Dictionary<string, string>
-		{
-			["image1"] = "8",
-			["image2"] = "9",
-			["image3"] = "6",
-			["image4"] = "7",
-			["image5"] = "1",
-			["image6"] = "2"
-		};
-		var sequence = new[] { "image1", "image2", "image3", "image4" };
+    [Fact]
+    public void BuildPasswordFromSequence_WithValidMapping_BuildsCorrectPassword()
+    {
+        // Arrange
+        var mapping = new Dictionary<string, string>
+        {
+            ["image1"] = "8",
+            ["image2"] = "9",
+            ["image3"] = "6",
+            ["image4"] = "7",
+            ["image5"] = "1",
+            ["image6"] = "2"
+        };
+        var sequence = new[] { "image1", "image2", "image3", "image4" };
 
-		// Expected password: "8967"
+        // Expected password: "8967"
 
-		// Act & Assert
-		// Would need to test through public interface or refactor for testability
-		Assert.True(true); // Placeholder
-	}
+        // Act & Assert
+        // Would need to test through public interface or refactor for testability
+        Assert.True(true); // Placeholder
+    }
 
-	[Fact]
-	public async Task GetWeekLetter_WithoutChildId_ReturnsEmptyObject()
-	{
-		// Arrange
-		var client = new PictogramAuthenticatedClient(
-			_testChild,
-			_testChild.UniLogin!.Username,
-			_pictogramSequence,
-			_mockLogger.Object);
+    [Fact]
+    public async Task GetWeekLetter_WithoutChildId_ReturnsEmptyObject()
+    {
+        // Arrange
+        var client = new PictogramAuthenticatedClient(
+            _testChild,
+            _testChild.UniLogin!.Username,
+            _pictogramSequence,
+            _mockLogger.Object);
 
-		// Act
-		var result = await client.GetWeekLetter(DateOnly.FromDateTime(DateTime.Now));
+        // Act
+        var result = await client.GetWeekLetter(DateOnly.FromDateTime(DateTime.Now));
 
-		// Assert
-		Assert.NotNull(result);
-		Assert.Empty(result);
-	}
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
 
-	[Fact]
-	public async Task GetWeekSchedule_WithoutChildId_ReturnsEmptyObject()
-	{
-		// Arrange
-		var client = new PictogramAuthenticatedClient(
-			_testChild,
-			_testChild.UniLogin!.Username,
-			_pictogramSequence,
-			_mockLogger.Object);
+    [Fact]
+    public async Task GetWeekSchedule_WithoutChildId_ReturnsEmptyObject()
+    {
+        // Arrange
+        var client = new PictogramAuthenticatedClient(
+            _testChild,
+            _testChild.UniLogin!.Username,
+            _pictogramSequence,
+            _mockLogger.Object);
 
-		// Act
-		var result = await client.GetWeekSchedule(DateOnly.FromDateTime(DateTime.Now));
+        // Act
+        var result = await client.GetWeekSchedule(DateOnly.FromDateTime(DateTime.Now));
 
-		// Assert
-		Assert.NotNull(result);
-		Assert.Empty(result);
-	}
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
 }

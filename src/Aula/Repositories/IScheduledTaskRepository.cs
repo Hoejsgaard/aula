@@ -6,7 +6,7 @@ namespace Aula.Repositories;
 
 public interface IScheduledTaskRepository
 {
-	Task<List<ScheduledTask>> GetScheduledTasksAsync();
-	Task<ScheduledTask?> GetScheduledTaskAsync(string name);
-	Task UpdateScheduledTaskAsync(ScheduledTask task);
+    Task<List<ScheduledTask>> GetScheduledTasksAsync();
+    Task<ScheduledTask?> GetScheduledTaskAsync(string name);
+    Task UpdateScheduledTaskAsync(ScheduledTask task);
 }

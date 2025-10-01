@@ -5,6 +5,6 @@ namespace Aula.Integration;
 
 public interface IGoogleCalendarService
 {
-	Task<IList<Event>> GetEventsThisWeek(string calendarId);
-	Task<bool> SynchronizeWeek(string googleCalendarId, DateOnly dateInWeek, JObject jsonEvents);
+    Task<IList<Event>> GetEventsThisWeek(string calendarId);
+    Task<bool> SynchronizeWeek(string googleCalendarId, DateOnly dateInWeek, JObject jsonEvents);
 }

@@ -2,8 +2,8 @@ namespace Aula.Channels;
 
 public interface IMessageSender
 {
-	Task SendMessageAsync(string message);
-	Task SendMessageAsync(string chatId, string message);
+    Task SendMessageAsync(string message);
+    Task SendMessageAsync(string chatId, string message);
 }
 
 /// <summary>
@@ -12,39 +12,39 @@ public interface IMessageSender
 /// </summary>
 public abstract class MessageSenderBase : IMessageSender
 {
-	protected IChannelMessenger Messenger { get; }
+    protected IChannelMessenger Messenger { get; }
 
-	protected MessageSenderBase(IChannelMessenger messenger, string expectedPlatformType)
-	{
-		Messenger = messenger ?? throw new ArgumentNullException(nameof(messenger));
+    protected MessageSenderBase(IChannelMessenger messenger, string expectedPlatformType)
+    {
+        Messenger = messenger ?? throw new ArgumentNullException(nameof(messenger));
 
-		if (messenger.PlatformType != expectedPlatformType)
-		{
-			throw new ArgumentException($"Expected {expectedPlatformType} messenger", nameof(messenger));
-		}
-	}
+        if (messenger.PlatformType != expectedPlatformType)
+        {
+            throw new ArgumentException($"Expected {expectedPlatformType} messenger", nameof(messenger));
+        }
+    }
 
-	public virtual async Task SendMessageAsync(string message)
-	{
-		await Messenger.SendMessageAsync(message);
-	}
+    public virtual async Task SendMessageAsync(string message)
+    {
+        await Messenger.SendMessageAsync(message);
+    }
 
-	public virtual async Task SendMessageAsync(string chatId, string message)
-	{
-		await Messenger.SendMessageAsync(chatId, message);
-	}
+    public virtual async Task SendMessageAsync(string chatId, string message)
+    {
+        await Messenger.SendMessageAsync(chatId, message);
+    }
 }
 
 public class SlackMessageSender : MessageSenderBase
 {
-	public SlackMessageSender(IChannelMessenger messenger) : base(messenger, "Slack")
-	{
-	}
+    public SlackMessageSender(IChannelMessenger messenger) : base(messenger, "Slack")
+    {
+    }
 }
 
 public class TelegramMessageSender : MessageSenderBase
 {
-	public TelegramMessageSender(IChannelMessenger messenger) : base(messenger, "Telegram")
-	{
-	}
+    public TelegramMessageSender(IChannelMessenger messenger) : base(messenger, "Telegram")
+    {
+    }
 }

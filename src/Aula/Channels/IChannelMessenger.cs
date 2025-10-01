@@ -6,18 +6,18 @@ namespace Aula.Channels;
 /// </summary>
 public interface IChannelMessenger
 {
-	/// <summary>
-	/// Sends a message to the default channel/chat.
-	/// </summary>
-	Task SendMessageAsync(string message);
+    /// <summary>
+    /// Sends a message to the default channel/chat.
+    /// </summary>
+    Task SendMessageAsync(string message);
 
-	/// <summary>
-	/// Sends a message to a specific channel/chat.
-	/// </summary>
-	Task SendMessageAsync(string channelId, string message);
+    /// <summary>
+    /// Sends a message to a specific channel/chat.
+    /// </summary>
+    Task SendMessageAsync(string channelId, string message);
 
-	/// <summary>
-	/// Gets the platform type for this messenger.
-	/// </summary>
-	string PlatformType { get; }
+    /// <summary>
+    /// Gets the platform type for this messenger.
+    /// </summary>
+    string PlatformType { get; }
 }

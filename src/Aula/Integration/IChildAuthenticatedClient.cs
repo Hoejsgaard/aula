@@ -7,7 +7,7 @@ namespace Aula.Integration;
 /// </summary>
 public interface IChildAuthenticatedClient
 {
-	Task<bool> LoginAsync();
-	Task<JObject> GetWeekLetter(DateOnly date);
-	Task<JObject> GetWeekSchedule(DateOnly date);
+    Task<bool> LoginAsync();
+    Task<JObject> GetWeekLetter(DateOnly date);
+    Task<JObject> GetWeekSchedule(DateOnly date);
 }

@@ -8,18 +8,18 @@ namespace Aula.Services;
 /// </summary>
 public interface IChildAwareOpenAiService
 {
-	/// <summary>
-	/// Gets an AI response for the given query in the specified child's context.
-	/// </summary>
-	Task<string?> GetResponseAsync(Child child, string query);
+    /// <summary>
+    /// Gets an AI response for the given query in the specified child's context.
+    /// </summary>
+    Task<string?> GetResponseAsync(Child child, string query);
 
-	/// <summary>
-	/// Gets an AI response with conversation context for the specified child.
-	/// </summary>
-	Task<string?> GetResponseWithContextAsync(Child child, string query, string conversationId);
+    /// <summary>
+    /// Gets an AI response with conversation context for the specified child.
+    /// </summary>
+    Task<string?> GetResponseWithContextAsync(Child child, string query, string conversationId);
 
-	/// <summary>
-	/// Clears the conversation history for the specified child.
-	/// </summary>
-	Task ClearConversationHistoryAsync(Child child, string conversationId);
+    /// <summary>
+    /// Clears the conversation history for the specified child.
+    /// </summary>
+    Task ClearConversationHistoryAsync(Child child, string conversationId);
 }

@@ -10,93 +10,93 @@ namespace Aula.Repositories;
 
 public class ReminderRepository : IReminderRepository
 {
-	private readonly Client _supabase;
-	private readonly ILogger _logger;
+    private readonly Client _supabase;
+    private readonly ILogger _logger;
 
-	public ReminderRepository(Client supabase, ILoggerFactory loggerFactory)
-	{
-		_supabase = supabase ?? throw new ArgumentNullException(nameof(supabase));
-		_logger = loggerFactory.CreateLogger<ReminderRepository>();
-	}
+    public ReminderRepository(Client supabase, ILoggerFactory loggerFactory)
+    {
+        _supabase = supabase ?? throw new ArgumentNullException(nameof(supabase));
+        _logger = loggerFactory.CreateLogger<ReminderRepository>();
+    }
 
-	public async Task<int> AddReminderAsync(string text, DateOnly date, TimeOnly time, string? childName = null)
-	{
-		var reminder = new Reminder
-		{
-			Text = text,
-			RemindDate = date,
-			RemindTime = time,
-			ChildName = childName,
-			CreatedBy = "bot"
-		};
+    public async Task<int> AddReminderAsync(string text, DateOnly date, TimeOnly time, string? childName = null)
+    {
+        var reminder = new Reminder
+        {
+            Text = text,
+            RemindDate = date,
+            RemindTime = time,
+            ChildName = childName,
+            CreatedBy = "bot"
+        };
 
-		var insertResponse = await _supabase
-			.From<Reminder>()
-			.Insert(reminder);
+        var insertResponse = await _supabase
+            .From<Reminder>()
+            .Insert(reminder);
 
-		var insertedReminder = insertResponse.Models.FirstOrDefault();
-		if (insertedReminder == null)
-		{
-			throw new InvalidOperationException("Failed to insert reminder");
-		}
+        var insertedReminder = insertResponse.Models.FirstOrDefault();
+        if (insertedReminder == null)
+        {
+            throw new InvalidOperationException("Failed to insert reminder");
+        }
 
-		_logger.LogInformation("Added reminder with ID {ReminderId}: {Text}", insertedReminder.Id, text);
-		return insertedReminder.Id;
-	}
+        _logger.LogInformation("Added reminder with ID {ReminderId}: {Text}", insertedReminder.Id, text);
+        return insertedReminder.Id;
+    }
 
-	public async Task<List<Reminder>> GetPendingRemindersAsync()
-	{
-		var now = DateTime.Now;
-		var currentDate = DateOnly.FromDateTime(now);
-		var currentTime = TimeOnly.FromDateTime(now);
+    public async Task<List<Reminder>> GetPendingRemindersAsync()
+    {
+        var now = DateTime.Now;
+        var currentDate = DateOnly.FromDateTime(now);
+        var currentTime = TimeOnly.FromDateTime(now);
 
-		// Get reminders for today that haven't been sent yet and are due now or in the past
-		var reminders = await _supabase
-			.From<Reminder>()
-			.Select("*")
-			.Where(r => r.RemindDate <= currentDate && r.IsSent == false)
-			.Get();
+        // Get reminders for today that haven't been sent yet and are due now or in the past
+        var reminders = await _supabase
+            .From<Reminder>()
+            .Select("*")
+            .Where(r => r.RemindDate <= currentDate && r.IsSent == false)
+            .Get();
 
-		var pendingReminders = reminders.Models
-			.Where(r => r.RemindDate < currentDate || (r.RemindDate == currentDate && r.RemindTime <= currentTime))
-			.OrderBy(r => r.RemindDate)
-			.ThenBy(r => r.RemindTime)
-			.ToList();
+        var pendingReminders = reminders.Models
+            .Where(r => r.RemindDate < currentDate || (r.RemindDate == currentDate && r.RemindTime <= currentTime))
+            .OrderBy(r => r.RemindDate)
+            .ThenBy(r => r.RemindTime)
+            .ToList();
 
-		_logger.LogInformation("Found {Count} pending reminders", pendingReminders.Count);
-		return pendingReminders;
-	}
+        _logger.LogInformation("Found {Count} pending reminders", pendingReminders.Count);
+        return pendingReminders;
+    }
 
-	public async Task MarkReminderAsSentAsync(int reminderId)
-	{
-		await _supabase
-			.From<Reminder>()
-			.Where(r => r.Id == reminderId)
-			.Set(r => r.IsSent, true)
-			.Update();
+    public async Task MarkReminderAsSentAsync(int reminderId)
+    {
+        await _supabase
+            .From<Reminder>()
+            .Where(r => r.Id == reminderId)
+            .Set(r => r.IsSent, true)
+            .Update();
 
-		_logger.LogInformation("Marked reminder {ReminderId} as sent", reminderId);
-	}
+        _logger.LogInformation("Marked reminder {ReminderId} as sent", reminderId);
+    }
 
-	public async Task<List<Reminder>> GetAllRemindersAsync()
-	{
-		var reminders = await _supabase
-			.From<Reminder>()
-			.Select("*")
-			.Order("remind_date", Supabase.Postgrest.Constants.Ordering.Descending)
-			.Order("remind_time", Supabase.Postgrest.Constants.Ordering.Descending)
-			.Get();
+    public async Task<List<Reminder>> GetAllRemindersAsync()
+    {
+        var reminders = await _supabase
+            .From<Reminder>()
+            .Select("*")
+            .Order("remind_date", Supabase.Postgrest.Constants.Ordering.Descending)
+            .Order("remind_time", Supabase.Postgrest.Constants.Ordering.Descending)
+            .Get();
 
-		return reminders.Models;
-	}
+        return reminders.Models;
+    }
 
-	public async Task DeleteReminderAsync(int reminderId)
-	{
-		await _supabase
-			.From<Reminder>()
-			.Where(r => r.Id == reminderId)
-			.Delete();
+    public async Task DeleteReminderAsync(int reminderId)
+    {
+        await _supabase
+            .From<Reminder>()
+            .Where(r => r.Id == reminderId)
+            .Delete();
 
-		_logger.LogInformation("Deleted reminder with ID {ReminderId}", reminderId);
-	}
+        _logger.LogInformation("Deleted reminder with ID {ReminderId}", reminderId);
+    }
 }
