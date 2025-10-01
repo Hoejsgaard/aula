@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Aula.Configuration;
 using Aula.Integration;
 using Aula.Repositories;
+using Aula.Utilities;
 using Newtonsoft.Json.Linq;
 
 namespace Aula.Services;
@@ -97,7 +98,7 @@ public class HistoricalDataSeeder : IHistoricalDataSeeder
                             if (!string.IsNullOrEmpty(content) && !content.Contains("Der er ikke skrevet nogen ugenoter"))
                             {
                                 // Store the week letter
-                                var contentHash = ComputeContentHash(weekLetter.ToString());
+                                var contentHash = WeekLetterUtilities.ComputeContentHash(weekLetter.ToString());
                                 await _weekLetterRepository.StoreWeekLetterAsync(
                                     childNameForStorage,
                                     weekNumber,
@@ -146,12 +147,5 @@ public class HistoricalDataSeeder : IHistoricalDataSeeder
         {
             _logger.LogError(ex, "❌ Error during historical week letter population");
         }
-    }
-
-    private static string ComputeContentHash(string content)
-    {
-        using var sha256 = SHA256.Create();
-        var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(content));
-        return Convert.ToHexString(hash);
     }
 }

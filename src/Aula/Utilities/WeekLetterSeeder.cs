@@ -78,7 +78,7 @@ public class WeekLetterSeeder : IWeekLetterSeeder
                 ["child"] = childName
             };
 
-            var contentHash = ComputeContentHash(content);
+            var contentHash = WeekLetterUtilities.ComputeContentHash(content);
             var rawContent = weekLetterJson.ToString();
 
             // Check if already exists
@@ -100,11 +100,5 @@ public class WeekLetterSeeder : IWeekLetterSeeder
             _logger.LogError(ex, "Error seeding week letter for {ChildName}, week {WeekNumber}/{Year}",
                 childName, weekNumber, year);
         }
-    }
-
-    private static string ComputeContentHash(string content)
-    {
-        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content));
-        return Convert.ToHexString(hash);
     }
 }

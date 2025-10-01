@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 using Aula.Repositories;
 using Aula.Services;
+using Aula.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -51,7 +52,7 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
 
     public async Task<JObject> GetWeekLetter(Child child, DateOnly date, bool allowLiveFetch = false)
     {
-        var weekNumber = GetIsoWeekNumber(date);
+        var weekNumber = WeekLetterUtilities.GetIsoWeekNumber(date);
         var year = date.Year;
 
         // Step 1: Check database first
@@ -71,7 +72,7 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
         {
             _logger?.LogInformation("🚫 Week letter not in database and live fetch not allowed for {ChildName} week {WeekNumber}/{Year}",
                 child.FirstName, weekNumber, year);
-            return CreateEmptyWeekLetter(weekNumber);
+            return WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
         }
 
         // Step 3: Live fetch from MinUddannelse (only if allowed)
@@ -83,7 +84,7 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
             "{0}{1}?tidspunkt={2}-W{3}&elevId={4}&_={5}",
             _config?.MinUddannelse.ApiBaseUrl ?? "https://www.minuddannelse.net",
             _config?.MinUddannelse.WeekLettersPath ?? "/api/stamdata/ugeplan/getUgeBreve",
-            date.Year, GetIsoWeekNumber(date), GetChildId(child), DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            date.Year, WeekLetterUtilities.GetIsoWeekNumber(date), GetChildId(child), DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         var response = await HttpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
@@ -96,7 +97,7 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
             var nullObject = new JObject
             {
                 ["klasseNavn"] = "N/A",
-                ["uge"] = $"{GetIsoWeekNumber(date)}",
+                ["uge"] = $"{WeekLetterUtilities.GetIsoWeekNumber(date)}",
                 ["indhold"] = "Der er ikke skrevet nogen ugenoter til denne uge",
             };
             weekLetter["ugebreve"] = new JArray(nullObject);
@@ -108,7 +109,7 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
         {
             try
             {
-                var contentHash = ComputeContentHash(weekLetter.ToString());
+                var contentHash = WeekLetterUtilities.ComputeContentHash(weekLetter.ToString());
                 await _weekLetterRepository.StoreWeekLetterAsync(
                     child.FirstName, weekNumber, year, contentHash, weekLetter.ToString());
                 _logger?.LogInformation("💾 Stored week letter to database for {ChildName} week {WeekNumber}/{Year}",
@@ -120,7 +121,7 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
             }
         }
 
-        return weekLetter ?? CreateEmptyWeekLetter(weekNumber);
+        return weekLetter ?? WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
     }
 
     public async Task<JObject> GetWeekSchedule(Child child, DateOnly date)
@@ -128,7 +129,7 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
         var url = string.Format(
             "{0}/api/stamdata/aulaskema/getElevSkema?elevId={1}&tidspunkt={2}-W{3}&_={4}",
             _config?.MinUddannelse.ApiBaseUrl ?? "https://www.minuddannelse.net",
-            GetChildId(child), date.Year, GetIsoWeekNumber(date), DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            GetChildId(child), date.Year, WeekLetterUtilities.GetIsoWeekNumber(date), DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         var response = await HttpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
@@ -149,11 +150,6 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
         if (id == "") throw new ArgumentException($"Child with first name '{child.FirstName}' not found in user profile");
 
         return id;
-    }
-
-    private static int GetIsoWeekNumber(DateOnly date)
-    {
-        return System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
     }
 
     public new async Task<bool> LoginAsync()
@@ -260,26 +256,5 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
                 child?.FirstName, year);
             return new List<StoredWeekLetter>();
         }
-    }
-
-    private static string ComputeContentHash(string content)
-    {
-        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content));
-        return Convert.ToHexString(hash);
-    }
-
-    private static JObject CreateEmptyWeekLetter(int weekNumber)
-    {
-        return new JObject
-        {
-            ["errorMessage"] = null,
-            ["ugebreve"] = new JArray(new JObject
-            {
-                ["klasseNavn"] = "Mock Class",
-                ["uge"] = weekNumber.ToString(),
-                ["indhold"] = "Der er ikke skrevet nogen ugenoter til denne uge (mock mode)"
-            }),
-            ["klasser"] = new JArray()
-        };
     }
 }

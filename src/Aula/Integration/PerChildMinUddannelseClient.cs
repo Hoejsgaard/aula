@@ -7,6 +7,7 @@ using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 using Aula.Repositories;
 using Aula.Services;
+using Aula.Utilities;
 
 namespace Aula.Integration;
 
@@ -43,7 +44,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
     public async Task<JObject> GetWeekLetter(Child child, DateOnly date, bool allowLiveFetch = false)
     {
-        var weekNumber = GetIsoWeekNumber(date);
+        var weekNumber = WeekLetterUtilities.GetIsoWeekNumber(date);
         var year = date.Year;
 
         // Step 1: Check database first
@@ -63,7 +64,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         {
             _logger.LogInformation("🚫 Week letter not in database and live fetch not allowed for {ChildName} week {WeekNumber}/{Year}",
                 child.FirstName, weekNumber, year);
-            return CreateEmptyWeekLetter(weekNumber);
+            return WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
         }
 
         // Step 3: Live fetch from MinUddannelse (only if allowed)
@@ -75,7 +76,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
             (string.IsNullOrEmpty(child.UniLogin.Password) && (child.UniLogin.PictogramSequence == null || child.UniLogin.PictogramSequence.Length == 0)))
         {
             _logger.LogError("❌ No credentials available for {ChildName}", child.FirstName);
-            return CreateEmptyWeekLetter(weekNumber);
+            return WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
         }
 
         // Create fresh authenticated client and fetch
@@ -99,7 +100,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         if (!loginSuccess)
         {
             _logger.LogError("Failed to authenticate {ChildName}", child.FirstName);
-            return CreateEmptyWeekLetter(weekNumber);
+            return WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
         }
 
         _logger.LogInformation("Successfully authenticated {ChildName} for this request", child.FirstName);
@@ -112,7 +113,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         {
             try
             {
-                var contentHash = ComputeContentHash(weekLetter.ToString());
+                var contentHash = WeekLetterUtilities.ComputeContentHash(weekLetter.ToString());
                 await _weekLetterRepository.StoreWeekLetterAsync(
                     child.FirstName, weekNumber, year, contentHash, weekLetter.ToString());
                 _logger.LogInformation("💾 Stored week letter to database for {ChildName} week {WeekNumber}/{Year}",
@@ -124,7 +125,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
             }
         }
 
-        return weekLetter ?? CreateEmptyWeekLetter(weekNumber);
+        return weekLetter ?? WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
     }
 
     public async Task<JObject> GetWeekSchedule(Child child, DateOnly date)
@@ -211,32 +212,6 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
             _logger.LogError(ex, "Error retrieving stored week letters");
             return new List<StoredWeekLetter>();
         }
-    }
-
-    private static int GetIsoWeekNumber(DateOnly date)
-    {
-        return System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
-    }
-
-    private static string ComputeContentHash(string content)
-    {
-        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content));
-        return Convert.ToHexString(hash);
-    }
-
-    private static JObject CreateEmptyWeekLetter(int weekNumber)
-    {
-        return new JObject
-        {
-            ["errorMessage"] = null,
-            ["ugebreve"] = new JArray(new JObject
-            {
-                ["klasseNavn"] = "N/A",
-                ["uge"] = weekNumber.ToString(),
-                ["indhold"] = "Der er ikke skrevet nogen ugenoter til denne uge"
-            }),
-            ["klasser"] = new JArray()
-        };
     }
 
     /// <summary>
@@ -368,7 +343,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
                 return new JObject();
             }
 
-            var url = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.WeekLettersPath}?tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}" +
+            var url = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.WeekLettersPath}?tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}" +
                      $"&elevId={_childId}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
             var response = await HttpClient.GetAsync(url);
@@ -383,7 +358,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
                 var nullObject = new JObject
                 {
                     ["klasseNavn"] = "N/A",
-                    ["uge"] = $"{GetIsoWeekNumber(date)}",
+                    ["uge"] = $"{WeekLetterUtilities.GetIsoWeekNumber(date)}",
                     ["indhold"] = "Der er ikke skrevet nogen ugenoter til denne uge",
                 };
                 weekLetter["ugebreve"] = new JArray(nullObject);
@@ -401,7 +376,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
             }
 
             var url = $"{_config.MinUddannelse.ApiBaseUrl}/api/stamdata/aulaskema/getElevSkema?elevId={_childId}" +
-                     $"&tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+                     $"&tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
             var response = await HttpClient.GetAsync(url);
             response.EnsureSuccessStatusCode();
@@ -409,10 +384,6 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
             return JObject.Parse(json);
         }
 
-        private static int GetIsoWeekNumber(DateOnly date)
-        {
-            return System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
-        }
         [GeneratedRegex(@"""personid"":(\d+)")]
         private static partial Regex PersonIdRegex();
 

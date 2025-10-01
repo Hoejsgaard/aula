@@ -6,6 +6,7 @@ using System.Web;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
 using Aula.Configuration;
+using Aula.Utilities;
 
 namespace Aula.Integration;
 
@@ -532,7 +533,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
             return new Newtonsoft.Json.Linq.JObject();
         }
 
-        var url = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.WeekLettersPath}?tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}" +
+        var url = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.WeekLettersPath}?tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}" +
                  $"&elevId={_childId}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
         _logger.LogDebug("📥 Fetching week letter from: {Url}", url);
@@ -594,7 +595,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
         }
 
         var url = $"{_config.MinUddannelse.ApiBaseUrl}/api/stamdata/aulaskema/getElevSkema?elevId={_childId}" +
-                 $"&tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+                 $"&tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
         _logger.LogDebug("Fetching schedule from: {Url}", url);
 
@@ -607,13 +608,6 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
 
         _logger.LogError("❌ Failed to fetch schedule. Status: {Status}", response.StatusCode);
         return new Newtonsoft.Json.Linq.JObject();
-    }
-
-    private static int GetIsoWeekNumber(DateOnly date)
-    {
-        var cal = System.Globalization.CultureInfo.InvariantCulture.Calendar;
-        var dateTime = date.ToDateTime(TimeOnly.MinValue);
-        return cal.GetWeekOfYear(dateTime, System.Globalization.CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
     }
 
     [GeneratedRegex(@"""personid"":(\d+)")]
