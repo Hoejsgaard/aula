@@ -22,7 +22,8 @@ public class ChildAgent : IChildAgent
 	private readonly ILogger<ChildAgent> _logger;
 	private readonly Config _config;
 	private readonly ISchedulingService _schedulingService;
-	private readonly IChannelManager _channelManager;
+	private ChildAwareSlackInteractiveBot? _slackBot;
+	private TelegramInteractiveBot? _telegramBot;
 	private EventHandler<ChildWeekLetterEventArgs>? _weekLetterHandler;
 
 	public ChildAgent(
@@ -30,14 +31,12 @@ public class ChildAgent : IChildAgent
 		IServiceProvider serviceProvider,
 		Config config,
 		ISchedulingService schedulingService,
-		IChannelManager channelManager,
 		ILoggerFactory loggerFactory)
 	{
 		_child = child ?? throw new ArgumentNullException(nameof(child));
 		_serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 		_config = config ?? throw new ArgumentNullException(nameof(config));
 		_schedulingService = schedulingService ?? throw new ArgumentNullException(nameof(schedulingService));
-		_channelManager = channelManager ?? throw new ArgumentNullException(nameof(channelManager));
 		_loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
 		_logger = _loggerFactory.CreateLogger<ChildAgent>();
 	}
@@ -46,7 +45,8 @@ public class ChildAgent : IChildAgent
 	{
 		_logger.LogInformation("Starting agent for child {ChildName}", _child.FirstName);
 
-		await InitializeChannelsAsync();
+		await InitializeSlackBotAsync();
+		await InitializeTelegramBotAsync();
 		SubscribeToWeekLetterEvents();
 
 		if (_config.Features?.PostWeekLettersOnStartup == true)
@@ -66,26 +66,50 @@ public class ChildAgent : IChildAgent
 			_weekLetterHandler = null;
 		}
 
-		await _channelManager.StopAllChannelsAsync();
+		_slackBot?.Dispose();
+
+		_telegramBot?.Stop();
 
 		await Task.CompletedTask;
 	}
 
-	private async Task InitializeChannelsAsync()
+	private async Task InitializeSlackBotAsync()
 	{
-		_logger.LogInformation("Initializing channels for child {ChildName}", _child.FirstName);
-
-		try
+		// Start Slack bot if configured for this child
+		if (_child.Channels?.Slack?.Enabled == true &&
+			_child.Channels?.Slack?.EnableInteractiveBot == true &&
+			!string.IsNullOrEmpty(_child.Channels?.Slack?.ApiToken))
 		{
-			await _channelManager.InitializeAllChannelsAsync();
-			await _channelManager.StartAllChannelsAsync();
+			_logger.LogInformation("Starting ChildAwareSlackInteractiveBot for {ChildName} on channel {ChannelId}",
+				_child.FirstName, _child.Channels!.Slack!.ChannelId);
 
-			_logger.LogInformation("Channels initialized successfully for child {ChildName}", _child.FirstName);
+			_slackBot = new ChildAwareSlackInteractiveBot(
+				_serviceProvider,
+				_serviceProvider.GetRequiredService<IChildServiceCoordinator>(),
+				_config,
+				_loggerFactory);
+
+			await _slackBot.StartForChild(_child);
+
+			_logger.LogInformation("ChildAwareSlackInteractiveBot started successfully for {ChildName}", _child.FirstName);
 		}
-		catch (Exception ex)
+	}
+
+	private async Task InitializeTelegramBotAsync()
+	{
+		// Start Telegram bot if configured for this child
+		if (_child.Channels?.Telegram?.Enabled == true &&
+			!string.IsNullOrEmpty(_child.Channels?.Telegram?.Token))
 		{
-			_logger.LogError(ex, "Failed to initialize channels for child {ChildName}", _child.FirstName);
-			throw;
+			_logger.LogInformation("Starting Telegram bot handler for child {ChildName}", _child.FirstName);
+
+			var agentService = _serviceProvider.GetRequiredService<IAgentService>();
+			var supabaseService = _serviceProvider.GetRequiredService<ISupabaseService>();
+
+			_telegramBot = new TelegramInteractiveBot(agentService, _config, _loggerFactory, supabaseService);
+			await _telegramBot.Start();
+
+			_logger.LogInformation("Telegram bot started for child {ChildName}", _child.FirstName);
 		}
 	}
 
@@ -95,17 +119,9 @@ public class ChildAgent : IChildAgent
 		{
 			_weekLetterHandler = async (sender, args) =>
 			{
-				using (var scope = new ChildContextScope(_serviceProvider, _child))
-				{
-					await scope.ExecuteAsync(async provider =>
-					{
-						var channelManager = provider.GetRequiredService<IChildChannelManager>();
-						var logger = provider.GetRequiredService<ILogger<ChildWeekLetterHandler>>();
-
-						var handler = new ChildWeekLetterHandler(_child, channelManager, logger);
-						await handler.HandleWeekLetterEventAsync(args);
-					});
-				}
+				var logger = _serviceProvider.GetRequiredService<ILogger<ChildWeekLetterHandler>>();
+				var handler = new ChildWeekLetterHandler(_child, logger);
+				await handler.HandleWeekLetterEventAsync(args, _slackBot);
 			};
 			schedService.ChildWeekLetterReady += _weekLetterHandler;
 		}
@@ -124,16 +140,9 @@ public class ChildAgent : IChildAgent
 
 		try
 		{
-			JObject? weekLetter = null;
-			using (var scope = new ChildContextScope(_serviceProvider, _child))
-			{
-				await scope.ExecuteAsync(async provider =>
-				{
-					var dataService = provider.GetRequiredService<IChildDataService>();
-					var date = DateOnly.FromDateTime(now.AddDays(-7 * (System.Globalization.ISOWeek.GetWeekOfYear(now) - weekNumber)));
-					weekLetter = await dataService.GetOrFetchWeekLetterAsync(date, true);
-				});
-			}
+			var dataService = _serviceProvider.GetRequiredService<IChildDataService>();
+			var date = DateOnly.FromDateTime(now.AddDays(-7 * (System.Globalization.ISOWeek.GetWeekOfYear(now) - weekNumber)));
+			var weekLetter = await dataService.GetOrFetchWeekLetterAsync(_child, date, true);
 
 			if (weekLetter != null)
 			{

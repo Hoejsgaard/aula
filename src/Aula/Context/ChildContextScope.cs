@@ -4,10 +4,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Aula.Context;
 
-/// <summary>
-/// Provides explicit control over child context lifetime and service scope creation.
-/// This class enables creation of isolated child operation scopes with proper disposal.
-/// </summary>
 public class ChildContextScope : IDisposable
 {
 	private readonly IServiceScope _scope;
@@ -15,12 +11,6 @@ public class ChildContextScope : IDisposable
 	private readonly ILogger<ChildContextScope> _logger;
 	private bool _disposed;
 
-	/// <summary>
-	/// Creates a new child context scope with an initialized child context.
-	/// </summary>
-	/// <param name="serviceProvider">The root service provider</param>
-	/// <param name="child">The child to set for this scope</param>
-	/// <exception cref="ArgumentNullException">If serviceProvider or child is null</exception>
 	public ChildContextScope(IServiceProvider serviceProvider, Child child)
 	{
 		ArgumentNullException.ThrowIfNull(serviceProvider);
@@ -44,29 +34,13 @@ public class ChildContextScope : IDisposable
 		}
 	}
 
-	/// <summary>
-	/// Gets the scoped service provider for this child context.
-	/// All services resolved from this provider will share the same child context.
-	/// </summary>
 	public IServiceProvider ServiceProvider => _scope.ServiceProvider;
 
-	/// <summary>
-	/// Gets the child context for this scope.
-	/// </summary>
 	public IChildContext Context => _context;
 
-	/// <summary>
-	/// Gets the child associated with this scope.
-	/// </summary>
 	public Child Child => _context.CurrentChild ??
 		throw new InvalidOperationException("Child context not properly initialized");
 
-	/// <summary>
-	/// Executes an operation within this child context scope.
-	/// </summary>
-	/// <typeparam name="T">The return type of the operation</typeparam>
-	/// <param name="operation">The operation to execute</param>
-	/// <returns>The result of the operation</returns>
 	public async Task<T> ExecuteAsync<T>(Func<IServiceProvider, Task<T>> operation)
 	{
 		ArgumentNullException.ThrowIfNull(operation);
@@ -91,10 +65,6 @@ public class ChildContextScope : IDisposable
 		}
 	}
 
-	/// <summary>
-	/// Executes an operation within this child context scope without a return value.
-	/// </summary>
-	/// <param name="operation">The operation to execute</param>
 	public async Task ExecuteAsync(Func<IServiceProvider, Task> operation)
 	{
 		ArgumentNullException.ThrowIfNull(operation);

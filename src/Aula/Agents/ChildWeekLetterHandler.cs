@@ -1,9 +1,11 @@
 using System;
 using System.Threading.Tasks;
+using Aula.Bots;
 using Aula.Channels;
 using Aula.Configuration;
 using Aula.Context;
 using Aula.Events;
+using Aula.Utilities;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
@@ -16,23 +18,22 @@ namespace Aula.Agents;
 public class ChildWeekLetterHandler
 {
 	private readonly Child _child;
-	private readonly IChildChannelManager _channelManager;
 	private readonly ILogger<ChildWeekLetterHandler> _logger;
+	private readonly Html2SlackMarkdownConverter _html2MarkdownConverter;
 
 	public ChildWeekLetterHandler(
 		Child child,
-		IChildChannelManager channelManager,
 		ILogger<ChildWeekLetterHandler> logger)
 	{
 		_child = child ?? throw new ArgumentNullException(nameof(child));
-		_channelManager = channelManager ?? throw new ArgumentNullException(nameof(channelManager));
 		_logger = logger ?? throw new ArgumentNullException(nameof(logger));
+		_html2MarkdownConverter = new Html2SlackMarkdownConverter();
 	}
 
 	/// <summary>
-	/// Handles a week letter event by posting it to the child's configured channels.
+	/// Handles a week letter event by posting it to the child's Slack channel via the interactive bot.
 	/// </summary>
-	public async Task HandleWeekLetterEventAsync(ChildWeekLetterEventArgs args)
+	public async Task HandleWeekLetterEventAsync(ChildWeekLetterEventArgs args, ChildAwareSlackInteractiveBot? slackBot)
 	{
 		// Filter by child name (defensive check)
 		if (!args.ChildFirstName.Equals(_child.FirstName, StringComparison.OrdinalIgnoreCase))
@@ -44,33 +45,31 @@ public class ChildWeekLetterHandler
 
 		try
 		{
-			// Check if child has configured channels
-			if (!await _channelManager.HasConfiguredChannelsAsync())
+			if (slackBot != null && args.WeekLetter != null)
 			{
-				_logger.LogWarning("No channels configured for {ChildName}", args.ChildFirstName);
-				return;
+				// Format the week letter message
+				var message = FormatWeekLetterMessage(args.WeekLetter, args.WeekNumber, args.Year);
+
+				// Post via the existing interactive bot
+				await slackBot.SendMessageToSlack(message);
+				var success = true;
+
+				if (success)
+				{
+					_logger.LogInformation("Posted week letter to Slack for {ChildName}", args.ChildFirstName);
+				}
+				else
+				{
+					_logger.LogError("Failed to post week letter to Slack for {ChildName}", args.ChildFirstName);
+				}
 			}
-
-			// Validate week letter content
-			if (args.WeekLetter == null)
+			else if (args.WeekLetter != null)
 			{
-				_logger.LogWarning("No week letter to post for {ChildName}", args.ChildFirstName);
-				return;
-			}
-
-			// Format week letter message
-			var message = FormatWeekLetterMessage(args.WeekLetter, args.WeekNumber, args.Year);
-
-			// Send to child's channels using IChildChannelManager
-			var success = await _channelManager.SendMessageAsync(message, MessageFormat.Markdown);
-
-			if (success)
-			{
-				_logger.LogInformation("Posted week letter to channels for {ChildName}", args.ChildFirstName);
+				_logger.LogWarning("Slack bot not available for {ChildName}", args.ChildFirstName);
 			}
 			else
 			{
-				_logger.LogError("Failed to post week letter to channels for {ChildName}", args.ChildFirstName);
+				_logger.LogWarning("No week letter to post for {ChildName}", args.ChildFirstName);
 			}
 		}
 		catch (Exception ex)
@@ -84,12 +83,18 @@ public class ChildWeekLetterHandler
 	/// </summary>
 	private string FormatWeekLetterMessage(JObject weekLetter, int weekNumber, int year)
 	{
-		var title = $"📚 Ugebrev for uge {weekNumber}/{year} - {_child.FirstName}";
+		// Extract class and week information from the JSON structure
+		var @class = weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? "";
+		var week = weekLetter["ugebreve"]?[0]?["uge"]?.ToString() ?? weekNumber.ToString();
 
-		// Extract the week letter content
-		var content = weekLetter.ToString();
+		// Extract HTML content and convert to readable text
+		var htmlContent = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
+		var letterText = _html2MarkdownConverter.Convert(htmlContent).Replace("**", "*");
 
-		// Format for better readability
-		return $"{title}\n\n{content}";
+		// Format the title
+		var title = $"Ugebrev for {_child.FirstName} ({@class}) uge {week}";
+
+		// Return formatted message
+		return $"{title}\n\n{letterText}";
 	}
 }

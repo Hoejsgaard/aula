@@ -119,7 +119,7 @@ public class SecureChildAuthenticationService : IChildAuthenticationService
 		try
 		{
 			// Use the child data service which has caching and database support
-			var letter = await _childDataService.GetOrFetchWeekLetterAsync(targetDate, allowLiveFetch);
+			var letter = await _childDataService.GetOrFetchWeekLetterAsync(child, targetDate, allowLiveFetch);
 
 			if (letter != null)
 			{
@@ -155,7 +155,7 @@ public class SecureChildAuthenticationService : IChildAuthenticationService
 				System.Globalization.CalendarWeekRule.FirstFourDayWeek,
 				DayOfWeek.Monday);
 
-			var schedule = await _childDataService.GetWeekScheduleAsync(weekNumber, targetDate.Year);
+			var schedule = await _childDataService.GetWeekScheduleAsync(child, weekNumber, targetDate.Year);
 
 			if (schedule != null)
 			{
@@ -185,7 +185,7 @@ public class SecureChildAuthenticationService : IChildAuthenticationService
 
 		try
 		{
-			var letter = await _childDataService.GetWeekLetterAsync(weekNumber, year);
+			var letter = await _childDataService.GetWeekLetterAsync(child, weekNumber, year);
 
 			if (letter != null)
 			{

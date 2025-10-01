@@ -9,6 +9,11 @@ namespace Aula.Services;
 public interface IChildOperationExecutor
 {
 	/// <summary>
+	/// Gets the service provider for creating service scopes.
+	/// </summary>
+	IServiceProvider ServiceProvider { get; }
+
+	/// <summary>
 	/// Executes an operation within a child's context scope.
 	/// </summary>
 	/// <typeparam name="TResult">The result type of the operation</typeparam>
@@ -42,7 +47,7 @@ public interface IChildOperationExecutor
 	/// <returns>Dictionary of results keyed by child</returns>
 	Task<Dictionary<Child, TResult>> ExecuteForAllChildrenAsync<TResult>(
 		IEnumerable<Child> children,
-		Func<IServiceProvider, Task<TResult>> operation,
+		Func<Child, IServiceProvider, Task<TResult>> operation,
 		string operationName);
 
 	/// <summary>

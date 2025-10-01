@@ -195,29 +195,21 @@ public class ChildAwareSlackInteractiveBot : IDisposable
 
 		var child = _assignedChild;
 
-		// Process the message within a child context scope
-		using (var scope = new ChildContextScope(_serviceProvider, child))
+		// Process the message using direct service calls with child parameters
+		try
 		{
-			try
-			{
-				// Get child agent service from the scoped provider
-				var agentService = scope.ServiceProvider.GetRequiredService<IChildAgentService>();
+			// This needs to be refactored to use a proper service that accepts Child parameters
+			// For now, we'll get a temporary basic response
+			var response = await _coordinator.ProcessAiQueryForChildAsync(child, text);
 
-				// Process the query using agent service (it will use the child from context)
-				var response = await agentService.ProcessQueryWithToolsAsync(
-					text,
-					$"slack-{child.Channels?.Slack?.ChannelId}",
-					ChatInterface.Slack);
+			await SendMessageToSlack(response);
 
-				await SendMessageToSlack(response);
-
-				_logger.LogInformation("Processed message for child {ChildName} successfully", child.FirstName);
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "Error processing message for child {ChildName}", child.FirstName);
-				await SendMessageToSlack($"Sorry, I encountered an error processing your request about {child.FirstName}.");
-			}
+			_logger.LogInformation("Processed message for child {ChildName} successfully", child.FirstName);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error processing message for child {ChildName}", child.FirstName);
+			await SendMessageToSlack($"Sorry, I encountered an error processing your request about {child.FirstName}.");
 		}
 	}
 

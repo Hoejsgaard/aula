@@ -16,21 +16,47 @@ namespace Aula.Services;
 /// </summary>
 public class ChildServiceCoordinator : IChildServiceCoordinator
 {
-	private readonly IChildOperationExecutor _executor;
+	private readonly IChildDataService _dataService;
 	private readonly IAgentService _agentService;
 	private readonly Config _config;
 	private readonly ILogger<ChildServiceCoordinator> _logger;
+	private readonly IServiceProvider _serviceProvider;
 
 	public ChildServiceCoordinator(
-		IChildOperationExecutor executor,
+		IChildDataService dataService,
 		IAgentService agentService,
 		Config config,
-		ILogger<ChildServiceCoordinator> logger)
+		ILogger<ChildServiceCoordinator> logger,
+		IServiceProvider serviceProvider)
 	{
-		_executor = executor ?? throw new ArgumentNullException(nameof(executor));
+		_dataService = dataService ?? throw new ArgumentNullException(nameof(dataService));
 		_agentService = agentService ?? throw new ArgumentNullException(nameof(agentService));
 		_config = config ?? throw new ArgumentNullException(nameof(config));
 		_logger = logger ?? throw new ArgumentNullException(nameof(logger));
+		_serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+	}
+
+	/// <summary>
+	/// Helper method to execute operations within a child context scope.
+	/// This replaces the executor pattern while maintaining proper child context isolation.
+	/// </summary>
+	private async Task<T> ExecuteInChildScopeAsync<T>(Child child, Func<IServiceProvider, Task<T>> operation)
+	{
+		using var scope = _serviceProvider.CreateScope();
+		var childContext = scope.ServiceProvider.GetRequiredService<IChildContext>();
+		childContext.SetChild(child);
+		return await operation(scope.ServiceProvider);
+	}
+
+	/// <summary>
+	/// Helper method to execute operations within a child context scope (void return).
+	/// </summary>
+	private async Task ExecuteInChildScopeAsync(Child child, Func<IServiceProvider, Task> operation)
+	{
+		using var scope = _serviceProvider.CreateScope();
+		var childContext = scope.ServiceProvider.GetRequiredService<IChildContext>();
+		childContext.SetChild(child);
+		await operation(scope.ServiceProvider);
 	}
 
 	public async Task PreloadWeekLettersForAllChildrenAsync()
@@ -39,25 +65,29 @@ public class ChildServiceCoordinator : IChildServiceCoordinator
 
 		var allChildren = await _agentService.GetAllChildrenAsync();
 		var today = DateOnly.FromDateTime(DateTime.Today);
+		var successCount = 0;
 
-		var results = await _executor.ExecuteForAllChildrenAsync<object>(allChildren,
-			async (serviceProvider) =>
+		foreach (var child in allChildren)
+		{
+			try
 			{
-				var dataService = serviceProvider.GetRequiredService<IChildDataService>();
-
 				// Fetch current week
-				var currentWeek = await dataService.GetOrFetchWeekLetterAsync(today, true);
+				var currentWeek = await _dataService.GetOrFetchWeekLetterAsync(child, today, true);
 
 				// Fetch past 2 weeks
-				var lastWeek = await dataService.GetOrFetchWeekLetterAsync(today.AddDays(-7), true);
-				var twoWeeksAgo = await dataService.GetOrFetchWeekLetterAsync(today.AddDays(-14), true);
+				var lastWeek = await _dataService.GetOrFetchWeekLetterAsync(child, today.AddDays(-7), true);
+				var twoWeeksAgo = await _dataService.GetOrFetchWeekLetterAsync(child, today.AddDays(-14), true);
 
-				return new { CurrentWeek = currentWeek, LastWeek = lastWeek, TwoWeeksAgo = twoWeeksAgo } as object;
-			},
-			"PreloadWeekLetters");
+				successCount++;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Failed to preload week letters for child {ChildName}", child.FirstName);
+			}
+		}
 
 		_logger.LogInformation("Completed week letter preload for {Count}/{Total} children",
-			results?.Count ?? 0, allChildren.Count());
+			successCount, allChildren.Count());
 	}
 
 	public async Task PostWeekLettersToChannelsAsync()
@@ -66,169 +96,216 @@ public class ChildServiceCoordinator : IChildServiceCoordinator
 
 		var allChildren = await _agentService.GetAllChildrenAsync();
 		var today = DateOnly.FromDateTime(DateTime.Today);
+		var successCount = 0;
 
-		var results = await _executor.ExecuteForAllChildrenAsync(allChildren,
-			async (serviceProvider) =>
+		foreach (var child in allChildren)
+		{
+			try
 			{
-				var dataService = serviceProvider.GetRequiredService<IChildDataService>();
-				var channelManager = serviceProvider.GetRequiredService<IChildChannelManager>();
-
 				// Calculate ISO week number
 				var calendar = System.Globalization.CultureInfo.InvariantCulture.Calendar;
 				var weekNumber = calendar.GetWeekOfYear(today.ToDateTime(TimeOnly.MinValue),
 					System.Globalization.CalendarWeekRule.FirstFourDayWeek,
 					DayOfWeek.Monday);
 
-				var weekLetter = await dataService.GetWeekLetterAsync(weekNumber, today.Year);
+				var weekLetter = await _dataService.GetWeekLetterAsync(child, weekNumber, today.Year);
 
 				if (weekLetter == null)
 				{
-					return false;
+					continue;
 				}
 
 				// Format the week letter content
 				var message = $"📚 Ugebrev for uge {weekNumber}\n\n{weekLetter.ToString()}";
 
-				// Send to all configured channels for this child
-				return await channelManager.SendMessageAsync(message, MessageFormat.Markdown);
-			},
-			"PostWeekLetters");
+				// Send to all configured channels for this child (requires child context)
+				var success = await ExecuteInChildScopeAsync(child, async serviceProvider =>
+				{
+					var channelManager = serviceProvider.GetRequiredService<IChildChannelManager>();
+					return await channelManager.SendMessageAsync(message, MessageFormat.Markdown);
+				});
 
-		var successCount = results.Values.Count(r => r);
+				if (success)
+				{
+					successCount++;
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Failed to post week letter for child {ChildName}", child.FirstName);
+			}
+		}
+
 		_logger.LogInformation("Posted week letters for {Success}/{Total} children",
 			successCount, allChildren.Count());
 	}
 
 	public async Task<bool> FetchWeekLetterForChildAsync(Child child, DateOnly date)
 	{
-		return await _executor.ExecuteInChildContextAsync(child,
-			async (serviceProvider) =>
-			{
-				var dataService = serviceProvider.GetRequiredService<IChildDataService>();
-				var letter = await dataService.GetOrFetchWeekLetterAsync(date, true);
-				return letter != null;
-			},
-			"FetchWeekLetter");
+		try
+		{
+			var letter = await _dataService.GetOrFetchWeekLetterAsync(child, date, true);
+			return letter != null;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Failed to fetch week letter for child {ChildName} on {Date}", child.FirstName, date);
+			return false;
+		}
 	}
 
 	public async Task<JObject?> GetWeekLetterForChildAsync(Child child, DateOnly date)
 	{
-		return await _executor.ExecuteInChildContextAsync(child,
-			async (serviceProvider) =>
-			{
-				var dataService = serviceProvider.GetRequiredService<IChildDataService>();
-				return await dataService.GetOrFetchWeekLetterAsync(date, true);
-			},
-			$"GetWeekLetter_{child.FirstName}");
+		try
+		{
+			return await _dataService.GetOrFetchWeekLetterAsync(child, date, true);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Failed to get week letter for child {ChildName} on {Date}", child.FirstName, date);
+			return null;
+		}
 	}
 
 	public async Task<IEnumerable<(Child child, JObject? weekLetter)>> FetchWeekLettersForAllChildrenAsync(DateOnly date)
 	{
 		var allChildren = await _agentService.GetAllChildrenAsync();
+		var results = new List<(Child child, JObject? weekLetter)>();
 
-		var results = await _executor.ExecuteForAllChildrenAsync(allChildren,
-			async (serviceProvider) =>
+		foreach (var child in allChildren)
+		{
+			try
 			{
-				var dataService = serviceProvider.GetRequiredService<IChildDataService>();
-				var letter = await dataService.GetOrFetchWeekLetterAsync(date, true);
-				var context = serviceProvider.GetRequiredService<IChildContext>();
-				return (child: context.CurrentChild!, weekLetter: letter);
-			},
-			"FetchWeekLettersForAll");
+				var letter = await _dataService.GetOrFetchWeekLetterAsync(child, date, true);
+				results.Add((child, letter));
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Failed to fetch week letter for child {ChildName} on {Date}", child.FirstName, date);
+				results.Add((child, null));
+			}
+		}
 
-		return results.Select(kvp => kvp.Value);
+		return results;
 	}
 
 	public async Task ProcessScheduledTasksForChildAsync(Child child)
 	{
-		await _executor.ExecuteInChildContextAsync(child,
-			async (serviceProvider) =>
+		try
+		{
+			await ExecuteInChildScopeAsync(child, async serviceProvider =>
 			{
 				var scheduler = serviceProvider.GetRequiredService<IChildScheduler>();
 				await scheduler.ProcessDueTasksAsync();
-			},
-			"ProcessScheduledTasks");
+			});
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Failed to process scheduled tasks for child {ChildName}", child.FirstName);
+		}
 	}
 
 	public async Task ProcessScheduledTasksForAllChildrenAsync()
 	{
 		var allChildren = await _agentService.GetAllChildrenAsync();
 
-		await _executor.ExecuteForAllChildrenAsync(allChildren,
-			async (serviceProvider) =>
+		foreach (var child in allChildren)
+		{
+			try
 			{
-				var scheduler = serviceProvider.GetRequiredService<IChildScheduler>();
-				await scheduler.ProcessDueTasksAsync();
-				return true;
-			},
-			"ProcessScheduledTasksForAll");
+				await ExecuteInChildScopeAsync(child, async serviceProvider =>
+				{
+					var scheduler = serviceProvider.GetRequiredService<IChildScheduler>();
+					await scheduler.ProcessDueTasksAsync();
+				});
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Failed to process scheduled tasks for child {ChildName}", child.FirstName);
+			}
+		}
 	}
 
 	public async Task<bool> SendReminderToChildAsync(Child child, string reminderMessage)
 	{
-		return await _executor.ExecuteInChildContextAsync(child,
-			async (serviceProvider) =>
+		try
+		{
+			return await ExecuteInChildScopeAsync(child, async serviceProvider =>
 			{
 				var channelManager = serviceProvider.GetRequiredService<IChildChannelManager>();
 				return await channelManager.SendReminderAsync(reminderMessage);
-			},
-			"SendReminder");
+			});
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Failed to send reminder to child {ChildName}", child.FirstName);
+			return false;
+		}
 	}
 
 	public async Task<string> ProcessAiQueryForChildAsync(Child child, string query)
 	{
-		return await _executor.ExecuteInChildContextAsync(child,
-			async (serviceProvider) =>
+		try
+		{
+			return await ExecuteInChildScopeAsync(child, async serviceProvider =>
 			{
 				var aiService = serviceProvider.GetRequiredService<IChildAwareOpenAiService>();
 				var response = await aiService.GetResponseAsync(query);
 				return response ?? "Jeg kunne ikke behandle din forespørgsel.";
-			},
-			"ProcessAiQuery");
+			});
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Failed to process AI query for child {ChildName}", child.FirstName);
+			return "Jeg kunne ikke behandle din forespørgsel.";
+		}
 	}
 
 	public async Task SeedHistoricalDataForChildAsync(Child child, int weeksBack = 12)
 	{
-		await _executor.ExecuteInChildContextAsync(child,
-			async (serviceProvider) =>
-			{
-				var dataService = serviceProvider.GetRequiredService<IChildDataService>();
-				var today = DateOnly.FromDateTime(DateTime.Today);
+		try
+		{
+			var today = DateOnly.FromDateTime(DateTime.Today);
 
-				for (int i = 0; i < weeksBack; i++)
-				{
-					var date = today.AddDays(-7 * i);
-					await dataService.GetOrFetchWeekLetterAsync(date, false);
-				}
-			},
-			"SeedHistoricalData");
+			for (int i = 0; i < weeksBack; i++)
+			{
+				var date = today.AddDays(-7 * i);
+				await _dataService.GetOrFetchWeekLetterAsync(child, date, false);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Failed to seed historical data for child {ChildName}", child.FirstName);
+		}
 	}
 
 	public async Task SeedHistoricalDataForAllChildrenAsync(int weeksBack = 12)
 	{
 		var allChildren = await _agentService.GetAllChildrenAsync();
+		var today = DateOnly.FromDateTime(DateTime.Today);
 
-		await _executor.ExecuteForAllChildrenAsync(allChildren,
-			async (serviceProvider) =>
+		foreach (var child in allChildren)
+		{
+			try
 			{
-				var dataService = serviceProvider.GetRequiredService<IChildDataService>();
-				var today = DateOnly.FromDateTime(DateTime.Today);
-
 				for (int i = 0; i < weeksBack; i++)
 				{
 					var date = today.AddDays(-7 * i);
-					await dataService.GetOrFetchWeekLetterAsync(date, false);
+					await _dataService.GetOrFetchWeekLetterAsync(child, date, false);
 				}
-
-				return true;
-			},
-			$"SeedHistoricalData_{weeksBack}Weeks");
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Failed to seed historical data for child {ChildName}", child.FirstName);
+			}
+		}
 	}
 
 	public async Task<DateTime?> GetNextScheduledTaskTimeForChildAsync(Child child)
 	{
-		return await _executor.ExecuteInChildContextAsync(child,
-			async (serviceProvider) =>
+		try
+		{
+			return await ExecuteInChildScopeAsync(child, async serviceProvider =>
 			{
 				var scheduler = serviceProvider.GetRequiredService<IChildScheduler>();
 				var tasks = await scheduler.GetScheduledTasksAsync();
@@ -241,8 +318,13 @@ public class ChildServiceCoordinator : IChildServiceCoordinator
 					.FirstOrDefault();
 
 				return nextTask;
-			},
-			"GetNextScheduledTaskTime");
+			});
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Failed to get next scheduled task time for child {ChildName}", child.FirstName);
+			return null;
+		}
 	}
 
 	public async Task<bool> ValidateChildServicesAsync()
@@ -261,41 +343,39 @@ public class ChildServiceCoordinator : IChildServiceCoordinator
 
 			// Test creating a scope for the first child
 			var testChild = allChildren.First();
-			var testResult = await _executor.ExecuteInChildContextAsync(testChild,
-				(serviceProvider) =>
+			var testResult = await ExecuteInChildScopeAsync(testChild, serviceProvider =>
+			{
+				// Verify all required services can be resolved
+				var requiredServices = new[]
 				{
-					// Verify all required services can be resolved
-					var requiredServices = new[]
-					{
-						typeof(IChildContext),
-						typeof(IChildDataService),
-						typeof(IChildChannelManager),
-						typeof(IChildScheduler),
-						typeof(IChildAwareOpenAiService)
-					};
+					typeof(IChildContext),
+					typeof(IChildDataService),
+					typeof(IChildChannelManager),
+					typeof(IChildScheduler),
+					typeof(IChildAwareOpenAiService)
+				};
 
-					foreach (var serviceType in requiredServices)
+				foreach (var serviceType in requiredServices)
+				{
+					var service = serviceProvider.GetService(serviceType);
+					if (service == null)
 					{
-						var service = serviceProvider.GetService(serviceType);
-						if (service == null)
-						{
-							_logger.LogError("Failed to resolve service {ServiceType}", serviceType.Name);
-							return Task.FromResult(false);
-						}
-					}
-
-					// Verify context is properly set
-					var context = serviceProvider.GetRequiredService<IChildContext>();
-					if (context.CurrentChild == null ||
-						context.CurrentChild.FirstName != testChild.FirstName)
-					{
-						_logger.LogError("Child context not properly set");
+						_logger.LogError("Failed to resolve service {ServiceType}", serviceType.Name);
 						return Task.FromResult(false);
 					}
+				}
 
-					return Task.FromResult(true);
-				},
-				"ValidateServices");
+				// Verify context is properly set
+				var context = serviceProvider.GetRequiredService<IChildContext>();
+				if (context.CurrentChild == null ||
+					context.CurrentChild.FirstName != testChild.FirstName)
+				{
+					_logger.LogError("Child context not properly set");
+					return Task.FromResult(false);
+				}
+
+				return Task.FromResult(true);
+			});
 
 			return testResult;
 		}
@@ -321,56 +401,54 @@ public class ChildServiceCoordinator : IChildServiceCoordinator
 				var testChild = allChildren.First();
 
 				// Check each service
-				var serviceChecks = await _executor.ExecuteInChildContextAsync(testChild,
-					async (serviceProvider) =>
+				var serviceChecks = await ExecuteInChildScopeAsync(testChild, async serviceProvider =>
+				{
+					var results = new Dictionary<string, bool>();
+
+					// Check IChildContext
+					try
 					{
-						var results = new Dictionary<string, bool>();
+						var context = serviceProvider.GetRequiredService<IChildContext>();
+						results["ChildContext"] = context.CurrentChild != null;
+					}
+					catch { results["ChildContext"] = false; }
 
-						// Check IChildContext
-						try
-						{
-							var context = serviceProvider.GetRequiredService<IChildContext>();
-							results["ChildContext"] = context.CurrentChild != null;
-						}
-						catch { results["ChildContext"] = false; }
+					// Check IChildDataService
+					try
+					{
+						var dataService = serviceProvider.GetRequiredService<IChildDataService>();
+						results["ChildDataService"] = dataService != null;
+					}
+					catch { results["ChildDataService"] = false; }
 
-						// Check IChildDataService
-						try
-						{
-							var dataService = serviceProvider.GetRequiredService<IChildDataService>();
-							results["ChildDataService"] = dataService != null;
-						}
-						catch { results["ChildDataService"] = false; }
+					// Check IChildChannelManager
+					try
+					{
+						var channelManager = serviceProvider.GetRequiredService<IChildChannelManager>();
+						var hasChannels = await channelManager.HasConfiguredChannelsAsync();
+						results["ChildChannelManager"] = true;
+						results["ConfiguredChannels"] = hasChannels;
+					}
+					catch { results["ChildChannelManager"] = false; }
 
-						// Check IChildChannelManager
-						try
-						{
-							var channelManager = serviceProvider.GetRequiredService<IChildChannelManager>();
-							var hasChannels = await channelManager.HasConfiguredChannelsAsync();
-							results["ChildChannelManager"] = true;
-							results["ConfiguredChannels"] = hasChannels;
-						}
-						catch { results["ChildChannelManager"] = false; }
+					// Check IChildScheduler
+					try
+					{
+						var scheduler = serviceProvider.GetRequiredService<IChildScheduler>();
+						results["ChildScheduler"] = scheduler != null;
+					}
+					catch { results["ChildScheduler"] = false; }
 
-						// Check IChildScheduler
-						try
-						{
-							var scheduler = serviceProvider.GetRequiredService<IChildScheduler>();
-							results["ChildScheduler"] = scheduler != null;
-						}
-						catch { results["ChildScheduler"] = false; }
+					// Check IChildAwareOpenAiService
+					try
+					{
+						var aiService = serviceProvider.GetRequiredService<IChildAwareOpenAiService>();
+						results["ChildAwareOpenAiService"] = aiService != null;
+					}
+					catch { results["ChildAwareOpenAiService"] = false; }
 
-						// Check IChildAwareOpenAiService
-						try
-						{
-							var aiService = serviceProvider.GetRequiredService<IChildAwareOpenAiService>();
-							results["ChildAwareOpenAiService"] = aiService != null;
-						}
-						catch { results["ChildAwareOpenAiService"] = false; }
-
-						return results;
-					},
-					"HealthCheck");
+					return results;
+				});
 
 				foreach (var kvp in serviceChecks)
 				{
@@ -404,15 +482,16 @@ public class ChildServiceCoordinator : IChildServiceCoordinator
 
 		foreach (var child in allChildren)
 		{
-			var weekLetter = await _executor.ExecuteInChildContextAsync(child,
-				async (serviceProvider) =>
-				{
-					var dataService = serviceProvider.GetRequiredService<IChildDataService>();
-					return await dataService.GetOrFetchWeekLetterAsync(date, true);
-				},
-				$"GetWeekLetter_{child.FirstName}");
-
-			await postAction(child, weekLetter);
+			try
+			{
+				var weekLetter = await _dataService.GetOrFetchWeekLetterAsync(child, date, true);
+				await postAction(child, weekLetter);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Failed to post week letter for child {ChildName} on {Date}", child.FirstName, date);
+				await postAction(child, null);
+			}
 		}
 	}
 

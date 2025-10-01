@@ -91,7 +91,6 @@ public class Program
 	{
 		var config = serviceProvider.GetRequiredService<Config>();
 		var schedulingService = serviceProvider.GetRequiredService<ISchedulingService>();
-		var channelManager = serviceProvider.GetRequiredService<IChannelManager>();
 		var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
 
 		await schedulingService.StartAsync();
@@ -101,7 +100,7 @@ public class Program
 		foreach (var child in config.MinUddannelse?.Children ?? new List<Child>())
 		{
 			logger.LogInformation("Starting agent for child: {ChildName}", child.FirstName);
-			var childAgent = new ChildAgent(child, serviceProvider, config, schedulingService, channelManager, loggerFactory);
+			var childAgent = new ChildAgent(child, serviceProvider, config, schedulingService, loggerFactory);
 			await childAgent.StartAsync();
 			childAgents.Add(childAgent);
 		}
@@ -178,7 +177,6 @@ public class Program
 		services.AddScoped<IChildAwareOpenAiService, SecureChildAwareOpenAiService>();
 		services.AddScoped<IChildAgentService, SecureChildAgentService>();
 		services.AddSingleton<IChildContextValidator, ChildContextValidator>();
-		services.AddSingleton<IChildOperationExecutor, ChildOperationExecutor>();
 
 		services.AddScoped<IDataService, DataService>();
 		services.AddScoped<IMinUddannelseClient, MinUddannelseClient>();

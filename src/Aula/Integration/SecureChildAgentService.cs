@@ -72,7 +72,7 @@ public class SecureChildAgentService : IChildAgentService
 
 			// Get the week letter
 			var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
-			var weekLetter = await _dataService.GetWeekLetterAsync(weekNumber, date.Year);
+			var weekLetter = await _dataService.GetWeekLetterAsync(child, weekNumber, date.Year);
 			if (weekLetter == null)
 			{
 				_logger.LogInformation("No week letter found for {ChildName} date {Date}",
@@ -147,7 +147,7 @@ public class SecureChildAgentService : IChildAgentService
 
 			// Get the week letter
 			var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
-			var weekLetter = await _dataService.GetWeekLetterAsync(weekNumber, date.Year);
+			var weekLetter = await _dataService.GetWeekLetterAsync(child, weekNumber, date.Year);
 			if (weekLetter == null)
 			{
 				_logger.LogInformation("No week letter found for {ChildName} date {Date}",
@@ -208,7 +208,7 @@ public class SecureChildAgentService : IChildAgentService
 
 			// Get the week letter
 			var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
-			var weekLetter = await _dataService.GetWeekLetterAsync(weekNumber, date.Year);
+			var weekLetter = await _dataService.GetWeekLetterAsync(child, weekNumber, date.Year);
 			if (weekLetter == null)
 			{
 				_logger.LogInformation("No week letter found for {ChildName} date {Date}",
@@ -289,7 +289,7 @@ public class SecureChildAgentService : IChildAgentService
 
 				// Try to answer using week letter data
 				var today = DateOnly.FromDateTime(DateTime.Today);
-				var weekLetter = await _dataService.GetOrFetchWeekLetterAsync(today, true);
+				var weekLetter = await _dataService.GetOrFetchWeekLetterAsync(child, today, true);
 
 				if (weekLetter != null)
 				{

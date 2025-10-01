@@ -18,6 +18,8 @@ public class ChildOperationExecutor : IChildOperationExecutor
 	private readonly ILogger<ChildOperationExecutor> _logger;
 	private readonly IChildAuditService _auditService;
 
+	public IServiceProvider ServiceProvider => _serviceProvider;
+
 	public ChildOperationExecutor(
 		IServiceProvider serviceProvider,
 		ILogger<ChildOperationExecutor> logger,
@@ -120,7 +122,7 @@ public class ChildOperationExecutor : IChildOperationExecutor
 
 	public async Task<Dictionary<Child, TResult>> ExecuteForAllChildrenAsync<TResult>(
 		IEnumerable<Child> children,
-		Func<IServiceProvider, Task<TResult>> operation,
+		Func<Child, IServiceProvider, Task<TResult>> operation,
 		string operationName)
 	{
 		ArgumentNullException.ThrowIfNull(children);
@@ -138,7 +140,8 @@ public class ChildOperationExecutor : IChildOperationExecutor
 			{
 				try
 				{
-					var result = await ExecuteInChildContextAsync(child, operation, operationName);
+					using var scope = _serviceProvider.CreateScope();
+				var result = await operation(child, scope.ServiceProvider);
 					lock (results)
 					{
 						results[child] = result;
@@ -180,7 +183,7 @@ public class ChildOperationExecutor : IChildOperationExecutor
 
 			// Export week letters
 			var dataService = serviceProvider.GetRequiredService<IChildDataService>();
-			var weekLetters = await dataService.GetAllWeekLettersAsync();
+			var weekLetters = await dataService.GetAllWeekLettersAsync(child);
 			exportData["weekLetters"] = weekLetters;
 
 			// Note: Additional data exports would be added here as services are implemented
@@ -218,7 +221,7 @@ public class ChildOperationExecutor : IChildOperationExecutor
 			{
 				// Delete week letters
 				var dataService = serviceProvider.GetRequiredService<IChildDataService>();
-				var weekLetters = await dataService.GetAllWeekLettersAsync();
+				var weekLetters = await dataService.GetAllWeekLettersAsync(child);
 
 				// For now, we can't delete individual letters as they're JObjects
 				// In a real implementation, we would parse the week number and year
