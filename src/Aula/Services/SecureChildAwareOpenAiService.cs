@@ -1,79 +1,146 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
-using Aula.Context;
+using Aula.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Aula.Services;
 
 /// <summary>
 /// Child-aware OpenAI service that ensures all AI operations happen within child context.
-/// This is a simplified implementation for Chapter 7 migration.
+/// Handles week letter questions by using child data service and current week letter data.
 /// </summary>
 public class SecureChildAwareOpenAiService : IChildAwareOpenAiService
 {
-	private readonly IChildContext _childContext;
 	private readonly IOpenAiService _openAiService;
+	private readonly IChildDataService _childDataService;
 	private readonly ILogger<SecureChildAwareOpenAiService> _logger;
 
 	public SecureChildAwareOpenAiService(
-		IChildContext childContext,
 		IOpenAiService openAiService,
+		IChildDataService childDataService,
 		ILogger<SecureChildAwareOpenAiService> logger)
 	{
-		_childContext = childContext ?? throw new ArgumentNullException(nameof(childContext));
 		_openAiService = openAiService ?? throw new ArgumentNullException(nameof(openAiService));
+		_childDataService = childDataService ?? throw new ArgumentNullException(nameof(childDataService));
 		_logger = logger ?? throw new ArgumentNullException(nameof(logger));
 	}
 
-	public async Task<string?> GetResponseAsync(string query)
+	public async Task<string?> GetResponseAsync(Child child, string query)
 	{
-		if (_childContext.CurrentChild == null)
+		if (child == null) throw new ArgumentNullException(nameof(child));
+
+		_logger.LogInformation("Getting AI response for child {ChildName}: {Query}", child.FirstName, query);
+
+		// Check if this looks like a week letter question about days of the week
+		if (IsWeekLetterQuery(query))
 		{
-			throw new InvalidOperationException("Cannot get AI response without child context");
+			_logger.LogInformation("Detected week letter query for {ChildName}, processing with week letter data", child.FirstName);
+			return await ProcessWeekLetterQuery(child, query);
 		}
 
-		_logger.LogInformation("Getting AI response for child {ChildName}",
-			_childContext.CurrentChild.FirstName);
-
-		// Add child context to the query
-		var contextualQuery = $"[Context: Child {_childContext.CurrentChild.FirstName}] {query}";
-
-		// Use the ProcessQueryWithToolsAsync method which exists in IOpenAiService
+		// For non-week letter queries, use the standard OpenAI service
+		var contextualQuery = $"[Context: Child {child.FirstName}] {query}";
 		return await _openAiService.ProcessQueryWithToolsAsync(contextualQuery,
-			$"child_{_childContext.CurrentChild.FirstName}",
+			$"child_{child.FirstName}",
 			ChatInterface.Slack);
 	}
 
-	public async Task<string?> GetResponseWithContextAsync(string query, string conversationId)
+	private bool IsWeekLetterQuery(string query)
 	{
-		if (_childContext.CurrentChild == null)
+		if (string.IsNullOrEmpty(query)) return false;
+
+		var lowerQuery = query.ToLowerInvariant();
+
+		// Check for Danish day names and common week letter question patterns
+		var weekLetterIndicators = new[]
 		{
-			throw new InvalidOperationException("Cannot get AI response without child context");
+			"mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag",
+			"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+			"hvad skal", "what should", "hvilken dag", "what day", "på", "on",
+			"denne uge", "this week", "ugebrev", "week letter"
+		};
+
+		return weekLetterIndicators.Any(indicator => lowerQuery.Contains(indicator));
+	}
+
+	private async Task<string?> ProcessWeekLetterQuery(Child child, string query)
+	{
+		try
+		{
+			// Get current week letter (default to current week)
+			var currentDate = DateOnly.FromDateTime(DateTime.Now);
+			var weekLetter = await _childDataService.GetOrFetchWeekLetterAsync(child, currentDate);
+
+			if (weekLetter == null)
+			{
+				_logger.LogWarning("No week letter available for {ChildName} for current week", child.FirstName);
+				return "Jeg kan ikke finde ugekrevset for denne uge.";
+			}
+
+			// Extract week letter content
+			var content = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
+			if (string.IsNullOrEmpty(content))
+			{
+				_logger.LogWarning("Week letter content is empty for {ChildName}", child.FirstName);
+				return "Ugebrevet er tomt denne uge.";
+			}
+
+			_logger.LogInformation("Processing week letter query for {ChildName}, content length: {Length} characters",
+				child.FirstName, content.Length);
+
+			// Create a direct query with week letter context to avoid conversation management duplicates
+			var contextualQuery = $@"Du er en hjælpsom assistent for {child.FirstName}.
+
+Her er ugebrevet for denne uge:
+{content}
+
+Spørgsmål: {query}
+
+Svar venligst kort og præcist på spørgsmålet baseret på information fra ugebrevet. Svar på dansk.";
+
+			var response = await _openAiService.ProcessDirectQueryAsync(contextualQuery, ChatInterface.Slack);
+
+			if (string.IsNullOrEmpty(response) || response == "FALLBACK_TO_EXISTING_SYSTEM")
+			{
+				_logger.LogError("Failed to get valid response from OpenAI service for week letter query for {ChildName}", child.FirstName);
+				return "Jeg kunne ikke finde svaret i ugebrevet.";
+			}
+
+			_logger.LogInformation("Successfully processed week letter query for {ChildName}", child.FirstName);
+			return response;
 		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error processing week letter query for {ChildName}", child.FirstName);
+			return "Der opstod en fejl ved behandling af dit spørgsmål om ugebrevet.";
+		}
+	}
+
+	public async Task<string?> GetResponseWithContextAsync(Child child, string query, string conversationId)
+	{
+		if (child == null) throw new ArgumentNullException(nameof(child));
 
 		_logger.LogInformation("Getting AI response with context for child {ChildName}, conversation {ConversationId}",
-			_childContext.CurrentChild.FirstName, conversationId);
+			child.FirstName, conversationId);
 
 		// Create child-specific conversation ID
-		var childConversationId = $"{_childContext.CurrentChild.FirstName}_{conversationId}";
+		var childConversationId = $"{child.FirstName}_{conversationId}";
 
 		return await _openAiService.ProcessQueryWithToolsAsync(query,
 			childConversationId,
 			ChatInterface.Slack);
 	}
 
-	public async Task ClearConversationHistoryAsync(string conversationId)
+	public async Task ClearConversationHistoryAsync(Child child, string conversationId)
 	{
-		if (_childContext.CurrentChild == null)
-		{
-			throw new InvalidOperationException("Cannot clear conversation without child context");
-		}
+		if (child == null) throw new ArgumentNullException(nameof(child));
 
 		_logger.LogInformation("Clearing conversation history for child {ChildName}, conversation {ConversationId}",
-			_childContext.CurrentChild.FirstName, conversationId);
+			child.FirstName, conversationId);
 
 		// Create child-specific conversation ID
-		var childConversationId = $"{_childContext.CurrentChild.FirstName}_{conversationId}";
+		var childConversationId = $"{child.FirstName}_{conversationId}";
 
 		// Use the ClearConversationHistory method from IOpenAiService
 		_openAiService.ClearConversationHistory(childConversationId);
