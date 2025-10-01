@@ -23,8 +23,6 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
     private readonly string _studentDataPath;
     private bool _loggedIn;
 
-    private JObject _userProfile = new();
-
     public UniLoginAuthenticatorBase(string username, string password, string loginUrl, string successUrl, ILogger<UniLoginAuthenticatorBase> logger, string apiBaseUrl = "https://www.minuddannelse.net", string studentDataPath = "/api/stamdata/elev/getElev")
     {
         var httpClientHandler = new HttpClientHandler

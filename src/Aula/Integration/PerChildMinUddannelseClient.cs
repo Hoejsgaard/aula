@@ -83,18 +83,13 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         _logger.LogInformation("🔑 Creating fresh authenticated session for {ChildName}", child.FirstName);
 
         // Choose authentication method based on config
-        IChildAuthenticatedClient childClient;
         var baseLogger = _loggerFactory.CreateLogger<UniLoginAuthenticatorBase>();
-        if (child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null)
-        {
-            _logger.LogInformation("Using pictogram authentication for {ChildName}", child.FirstName);
-            childClient = new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, baseLogger, _logger);
-        }
-        else
-        {
-            _logger.LogInformation("Using standard authentication for {ChildName}", child.FirstName);
-            childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, _logger);
-        }
+        using IChildAuthenticatedClient childClient = child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null
+            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, baseLogger, _logger)
+            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, _logger);
+
+        _logger.LogInformation("Using {AuthType} authentication for {ChildName}",
+            child.UniLogin.AuthType == AuthenticationType.Pictogram ? "pictogram" : "standard", child.FirstName);
 
         var loginSuccess = await childClient.LoginAsync();
         if (!loginSuccess)
@@ -142,18 +137,13 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         _logger.LogInformation("Creating fresh authenticated session for {ChildName} (schedule request)", child.FirstName);
 
         // Choose authentication method based on config
-        IChildAuthenticatedClient childClient;
         var baseLogger = _loggerFactory.CreateLogger<UniLoginAuthenticatorBase>();
-        if (child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null)
-        {
-            _logger.LogInformation("Using pictogram authentication for {ChildName}", child.FirstName);
-            childClient = new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, baseLogger, _logger);
-        }
-        else
-        {
-            _logger.LogInformation("Using standard authentication for {ChildName}", child.FirstName);
-            childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, _logger);
-        }
+        using IChildAuthenticatedClient childClient = child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null
+            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, baseLogger, _logger)
+            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, _logger);
+
+        _logger.LogInformation("Using {AuthType} authentication for {ChildName}",
+            child.UniLogin.AuthType == AuthenticationType.Pictogram ? "pictogram" : "standard", child.FirstName);
 
         var loginSuccess = await childClient.LoginAsync();
         if (!loginSuccess)

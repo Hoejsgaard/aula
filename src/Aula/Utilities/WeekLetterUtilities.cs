@@ -22,6 +22,7 @@ public static class WeekLetterUtilities
     /// </summary>
     public static string ComputeContentHash(string content)
     {
+        ArgumentNullException.ThrowIfNull(content);
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(content));
         return Convert.ToHexString(hash);
     }
