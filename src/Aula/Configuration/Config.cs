@@ -7,7 +7,6 @@ public class Config : IConfig
     public GoogleServiceAccount GoogleServiceAccount { get; init; } = new();
     public OpenAi OpenAi { get; init; } = new();
     public Supabase Supabase { get; init; } = new();
-    public Features Features { get; init; } = new();
     public Scheduling Scheduling { get; init; } = new();
     public WeekLetter WeekLetter { get; init; } = new();
 }

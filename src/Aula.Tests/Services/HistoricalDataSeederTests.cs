@@ -32,7 +32,6 @@ public class HistoricalDataSeederTests
 
         _config = new Config
         {
-            Features = new Features { UseMockData = false },
             MinUddannelse = new MinUddannelse
             {
                 Children = new List<Child>
@@ -269,30 +268,6 @@ public class HistoricalDataSeederTests
 
         // Verify the exception was handled
         _mockAgentService.Verify(s => s.LoginAsync(), Times.Once());
-    }
-
-    [Fact]
-    public async Task SeedHistoricalWeekLettersAsync_RestoresMockDataSetting()
-    {
-        // Arrange
-        _config.Features.UseMockData = true; // Start with mock mode enabled
-        var children = new List<Child>
-        {
-            new Child { FirstName = "Emma", LastName = "Test" }
-        };
-
-        _mockAgentService.Setup(s => s.LoginAsync()).ReturnsAsync(true);
-        _mockAgentService.Setup(s => s.GetAllChildrenAsync()).ReturnsAsync(children);
-        _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .ReturnsAsync((string)null!);
-        _mockAgentService.Setup(s => s.GetWeekLetterAsync(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>(), true))
-            .ReturnsAsync((JObject?)null);
-
-        // Act
-        await _seeder.SeedHistoricalWeekLettersAsync();
-
-        // Assert - Mock mode should be restored to original value
-        Assert.True(_config.Features.UseMockData);
     }
 
     [Fact]

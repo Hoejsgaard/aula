@@ -28,13 +28,7 @@ public class MinUddannelseClientTests
 
         _testConfig = new Config
         {
-            UniLogin = new UniLogin { Username = "testuser", Password = "testpass" },
-            Features = new Features
-            {
-                UseMockData = false,
-                MockCurrentWeek = 25,
-                MockCurrentYear = 2024
-            }
+            UniLogin = new UniLogin { Username = "testuser", Password = "testpass" }
         };
 
         _testChild = new Child { FirstName = "Emma", LastName = "Test" };
@@ -59,49 +53,6 @@ public class MinUddannelseClientTests
     {
         var client = new MinUddannelseClient("testuser", "testpass");
         Assert.NotNull(client);
-    }
-
-    [Fact]
-    public async Task GetWeekLetter_MockModeEnabled_WithStoredData_ReturnsStoredWeekLetter()
-    {
-        _testConfig.Features.UseMockData = true;
-        var storedContent = "{\"test\":\"stored data\"}";
-        _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024))
-            .ReturnsAsync(storedContent);
-
-        var client = new MinUddannelseClient(_testConfig, _mockSupabaseService.Object, _mockLoggerFactory.Object);
-        var testDate = new DateOnly(2024, 6, 17);
-
-        var result = await client.GetWeekLetter(_testChild, testDate);
-
-        Assert.NotNull(result);
-        Assert.Equal("stored data", result["test"]?.ToString());
-        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
-    }
-
-    [Fact]
-    public async Task GetWeekLetter_MockModeEnabled_NoStoredData_ReturnsEmptyWeekLetter()
-    {
-        _testConfig.Features.UseMockData = true;
-        _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024))
-            .ReturnsAsync((string?)null);
-
-        var client = new MinUddannelseClient(_testConfig, _mockSupabaseService.Object, _mockLoggerFactory.Object);
-        var testDate = new DateOnly(2024, 6, 17);
-
-        var result = await client.GetWeekLetter(_testChild, testDate);
-
-        Assert.NotNull(result);
-        Assert.NotNull(result["ugebreve"]);
-        var ugebreve = result["ugebreve"] as JArray;
-        Assert.NotNull(ugebreve);
-        Assert.Single(ugebreve);
-
-        var firstItem = ugebreve[0] as JObject;
-        Assert.NotNull(firstItem);
-        Assert.Equal("Mock Class", firstItem["klasseNavn"]?.ToString());
-        Assert.Equal("25", firstItem["uge"]?.ToString());
-        Assert.Contains("mock mode", firstItem["indhold"]?.ToString());
     }
 
     [Fact]
@@ -155,20 +106,6 @@ public class MinUddannelseClientTests
         var result = await client.GetStoredWeekLetter(_testChild, 25, 2024);
 
         Assert.Null(result);
-        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
-    }
-
-    [Fact]
-    public async Task GetWeekLetter_MockModeWithSupabaseException_ThrowsException()
-    {
-        _testConfig.Features.UseMockData = true;
-        _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024))
-            .ThrowsAsync(new TimeoutException("Request timeout"));
-
-        var client = new MinUddannelseClient(_testConfig, _mockSupabaseService.Object, _mockLoggerFactory.Object);
-        var testDate = new DateOnly(2024, 6, 17);
-
-        await Assert.ThrowsAsync<TimeoutException>(() => client.GetWeekLetter(_testChild, testDate));
         _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
     }
 

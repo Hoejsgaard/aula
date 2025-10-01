@@ -40,28 +40,6 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         var weekNumber = GetIsoWeekNumber(date);
         var year = date.Year;
 
-        // Check if we're in mock mode
-        if (_config.Features.UseMockData && _supabaseService != null)
-        {
-            _logger.LogInformation("🎭 Mock mode enabled - returning stored week letter for {ChildName}", child.FirstName);
-
-            var mockWeek = _config.Features.MockCurrentWeek;
-            var mockYear = _config.Features.MockCurrentYear;
-
-            var storedContent = await _supabaseService.GetStoredWeekLetterAsync(child.FirstName, mockWeek, mockYear);
-            if (!string.IsNullOrEmpty(storedContent))
-            {
-                _logger.LogInformation("✅ Found stored week letter for {ChildName} week {MockWeek}/{MockYear}",
-                    child.FirstName, mockWeek, mockYear);
-                return JObject.Parse(storedContent);
-            }
-
-            _logger.LogWarning("⚠️ No stored week letter found for {ChildName} week {MockWeek}/{MockYear}",
-                child.FirstName, mockWeek, mockYear);
-
-            return CreateEmptyWeekLetter(mockWeek);
-        }
-
         // Step 1: Check database first
         if (_supabaseService != null)
         {

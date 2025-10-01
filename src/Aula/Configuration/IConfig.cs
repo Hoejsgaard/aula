@@ -7,7 +7,6 @@ public interface IConfig
     GoogleServiceAccount GoogleServiceAccount { get; init; }
     OpenAi OpenAi { get; init; }
     Supabase Supabase { get; init; }
-    Features Features { get; init; }
     Scheduling Scheduling { get; init; }
     WeekLetter WeekLetter { get; init; }
 }

@@ -28,7 +28,6 @@ public class ConfigurationValidator : IConfigurationValidator
 
         // Optional features - validate if enabled
         ValidateGoogleServiceAccount(config.GoogleServiceAccount, errors, warnings);
-        ValidateFeatures(config.Features, errors, warnings);
         ValidateScheduling(config.Scheduling, errors, warnings);
         ValidateWeekLetter(config.WeekLetter, errors, warnings);
 
@@ -173,31 +172,6 @@ public class ConfigurationValidator : IConfigurationValidator
         else
         {
             warnings.Add("Google Calendar features are disabled - no service account configured");
-        }
-    }
-
-    private void ValidateFeatures(Features features, List<string> errors, List<string> warnings)
-    {
-        if (features == null)
-        {
-            warnings.Add("Features configuration section is missing - using default feature settings");
-            return;
-        }
-
-        if (features.UseMockData)
-        {
-            warnings.Add("Mock data mode is enabled - application will use stored historical data");
-            if (features.MockCurrentWeek <= 0 || features.MockCurrentWeek > 53)
-            {
-                errors.Add("Features.MockCurrentWeek must be between 1 and 53 when UseMockData is true");
-            }
-            // Allow reasonable range: past 5 years to next year
-            var minYear = _timeProvider.CurrentYear - 5;
-            var maxYear = _timeProvider.CurrentYear + 1;
-            if (features.MockCurrentYear < minYear || features.MockCurrentYear > maxYear)
-            {
-                errors.Add($"Features.MockCurrentYear must be between {minYear} and {maxYear} when UseMockData is true");
-            }
         }
     }
 

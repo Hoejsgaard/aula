@@ -44,10 +44,6 @@ public class PerChildMinUddannelseClientTests
                         }
                     }
                 }
-            },
-            Features = new Features
-            {
-                UseMockData = false
             }
         };
     }
@@ -105,29 +101,6 @@ public class PerChildMinUddannelseClientTests
             It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Week letter not in database and live fetch not allowed")),
             It.IsAny<Exception>(),
             It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once());
-    }
-
-    [Fact]
-    public async Task GetWeekLetter_WithMockModeEnabled_ReturnsStoredData()
-    {
-        // Arrange
-        _config.Features.UseMockData = true;
-        _config.Features.MockCurrentWeek = 10;
-        _config.Features.MockCurrentYear = 2025;
-
-        var storedWeekLetter = new JObject { ["test"] = "data" };
-        _mockSupabaseService.Setup(x => x.GetStoredWeekLetterAsync("Test", 10, 2025))
-            .ReturnsAsync(storedWeekLetter.ToString());
-
-        var client = new PerChildMinUddannelseClient(_config, _mockSupabaseService.Object, _mockLoggerFactory.Object);
-
-        // Act
-        var result = await client.GetWeekLetter(_config.MinUddannelse.Children[0], DateOnly.FromDateTime(DateTime.Today));
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.Equal("data", result["test"]?.ToString());
-        _mockSupabaseService.Verify(x => x.GetStoredWeekLetterAsync("Test", 10, 2025), Times.Once());
     }
 
     [Fact]

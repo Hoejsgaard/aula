@@ -47,7 +47,7 @@ public class ChildAgentFactory : IChildAgentFactory
         var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
 
         // Get configuration-driven feature flag
-        var postWeekLettersOnStartup = _config.Features?.PostWeekLettersOnStartup ?? false;
+        var postWeekLettersOnStartup = _config.WeekLetter?.PostOnStartup ?? false;
 
         // Create and return the configured ChildAgent
         return new ChildAgent(

@@ -37,34 +37,6 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
 
     public async Task<JObject> GetWeekLetter(Child child, DateOnly date, bool allowLiveFetch = false)
     {
-        // Check if we're in mock mode
-        if (_config?.Features.UseMockData == true && _supabaseService != null)
-        {
-            _logger?.LogInformation("🎭 Mock mode enabled - returning stored week letter for {ChildName}", child.FirstName);
-
-            // Use configured mock week/year instead of the requested date
-            var mockWeek = _config.Features.MockCurrentWeek;
-            var mockYear = _config.Features.MockCurrentYear;
-
-            _logger?.LogInformation("🎭 Simulating week {MockWeek}/{MockYear} as current week for {ChildName}",
-                mockWeek, mockYear, child.FirstName);
-
-            // Try to get stored week letter for the mock week
-            var storedContent = await _supabaseService.GetStoredWeekLetterAsync(child.FirstName, mockWeek, mockYear);
-            if (!string.IsNullOrEmpty(storedContent))
-            {
-                _logger?.LogInformation("✅ Found stored week letter for {ChildName} week {MockWeek}/{MockYear}",
-                    child.FirstName, mockWeek, mockYear);
-                return JObject.Parse(storedContent);
-            }
-
-            _logger?.LogWarning("⚠️ No stored week letter found for {ChildName} week {MockWeek}/{MockYear} - returning empty",
-                child.FirstName, mockWeek, mockYear);
-
-            // Return empty week letter if no stored data found
-            return CreateEmptyWeekLetter(mockWeek);
-        }
-
         var weekNumber = GetIsoWeekNumber(date);
         var year = date.Year;
 

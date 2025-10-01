@@ -85,19 +85,9 @@ public class HistoricalDataSeeder : IHistoricalDataSeeder
                             continue;
                         }
 
-                        // Try to fetch week letter for this historical date - DISABLE MOCK MODE temporarily
-                        var originalUseMockData = _config.Features.UseMockData;
-                        JObject? weekLetter;
-                        try
-                        {
-                            _config.Features.UseMockData = false; // Force real API call
-                                                                  // Use allowLiveFetch: true to fetch from MinUddannelse
-                            weekLetter = await _agentService.GetWeekLetterAsync(child, targetDate, false, true);
-                        }
-                        finally
-                        {
-                            _config.Features.UseMockData = originalUseMockData; // Restore original setting
-                        }
+                        // Try to fetch week letter for this historical date
+                        // Use allowLiveFetch: true to fetch from MinUddannelse
+                        var weekLetter = await _agentService.GetWeekLetterAsync(child, targetDate, false, true);
 
                         if (weekLetter != null)
                         {
@@ -148,7 +138,6 @@ public class HistoricalDataSeeder : IHistoricalDataSeeder
 
             if (successCount > 0)
             {
-                _logger.LogInformation("📊 You can now test with stored week letters by setting Features.UseStoredWeekLetters = true");
                 _logger.LogInformation("🔧 Remember to remove this PopulateHistoricalWeekLetters method once you're done seeding data");
             }
         }
