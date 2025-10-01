@@ -66,7 +66,7 @@ Must validate before committing:
    - Code reads like a story (clear, linear, obvious intent)
    - Clean code over clever code
    - Dependency injection with interfaces
-   - XML documentation on all public methods
+   - XML documentation on public APIs only (not internal/private methods)
    - No comments unless explaining complex business logic
 
 3. **✅ Security Standards**
