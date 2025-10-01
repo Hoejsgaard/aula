@@ -21,13 +21,12 @@ namespace Aula.Bots;
 /// </summary>
 public class SlackInteractiveBot : IDisposable
 {
+    private readonly Child _child;
     private readonly IOpenAiService _aiService;
     private readonly ILogger _logger;
     private readonly HttpClient _httpClient;
 
-    // This bot is dedicated to ONE specific child
-    private Child? _assignedChild;
-    public string? AssignedChildName => _assignedChild?.FirstName;
+    public string AssignedChildName => _child.FirstName;
 
     // _isRunning field removed - value never read
     private Timer? _pollingTimer;
@@ -41,10 +40,12 @@ public class SlackInteractiveBot : IDisposable
     private readonly ConcurrentDictionary<string, DateTime> _messageTimestamps = new ConcurrentDictionary<string, DateTime>();
 
     public SlackInteractiveBot(
+        Child child,
         IOpenAiService aiService,
         ILoggerFactory loggerFactory,
         HttpClient? httpClient = null)
     {
+        _child = child ?? throw new ArgumentNullException(nameof(child));
         _aiService = aiService ?? throw new ArgumentNullException(nameof(aiService));
         _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<SlackInteractiveBot>();
         _httpClient = httpClient ?? new HttpClient();
@@ -53,30 +54,26 @@ public class SlackInteractiveBot : IDisposable
         {
             _httpClient.Timeout = TimeSpan.FromSeconds(30);
         }
-
-        // Bot will be assigned to a specific child via StartForChild method
     }
 
-    public async Task Start(Child child)
+    public async Task Start()
     {
-        _assignedChild = child ?? throw new ArgumentNullException(nameof(child));
-
-        if (string.IsNullOrEmpty(_assignedChild.Channels?.Slack?.ApiToken))
+        if (string.IsNullOrEmpty(_child.Channels?.Slack?.ApiToken))
         {
-            _logger.LogError("Cannot start Slack bot for {ChildName}: API token is missing", _assignedChild.FirstName);
+            _logger.LogError("Cannot start Slack bot for {ChildName}: API token is missing", _child.FirstName);
             return;
         }
 
-        if (string.IsNullOrEmpty(_assignedChild.Channels?.Slack?.ChannelId))
+        if (string.IsNullOrEmpty(_child.Channels?.Slack?.ChannelId))
         {
-            _logger.LogError("Cannot start Slack bot for {ChildName}: Channel ID is missing", _assignedChild.FirstName);
+            _logger.LogError("Cannot start Slack bot for {ChildName}: Channel ID is missing", _child.FirstName);
             return;
         }
 
-        _logger.LogInformation("Starting Slack bot for child: {ChildName}", _assignedChild.FirstName);
+        _logger.LogInformation("Starting Slack bot for child: {ChildName}", _child.FirstName);
 
         // Configure HTTP client for this child's Slack API token
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _assignedChild.Channels.Slack.ApiToken);
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _child.Channels.Slack.ApiToken);
 
         // Get current timestamp
         _lastTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
@@ -84,10 +81,10 @@ public class SlackInteractiveBot : IDisposable
         _logger.LogInformation("Initial timestamp set to: {Timestamp}", _lastTimestamp + ".000000");
 
         // Start polling timer using child's Slack configuration
-        int pollingInterval = _assignedChild.Channels.Slack.PollingIntervalSeconds * 1000;
+        int pollingInterval = _child.Channels.Slack.PollingIntervalSeconds * 1000;
         _pollingTimer = new Timer(async _ => await PollForMessages(), null, pollingInterval, pollingInterval);
 
-        _logger.LogInformation("Slack polling started - checking every {Seconds} seconds", _assignedChild.Channels.Slack.PollingIntervalSeconds);
+        _logger.LogInformation("Slack polling started - checking every {Seconds} seconds", _child.Channels.Slack.PollingIntervalSeconds);
 
         // Start cleanup timer (every hour)
         _cleanupTimer = new Timer(_ => CleanupOldMessages(), null, TimeSpan.FromHours(1), TimeSpan.FromHours(1));
@@ -95,7 +92,7 @@ public class SlackInteractiveBot : IDisposable
         _logger.LogInformation("Slack cleanup timer started - running every 1 hour");
 
         // Send startup message
-        await SendMessageToSlack($"👋 Bot for {_assignedChild.FirstName} is now online and ready to help!");
+        await SendMessageToSlack($"👋 Bot for {_child.FirstName} is now online and ready to help!");
     }
 
     private async Task PollForMessages()
@@ -107,7 +104,7 @@ public class SlackInteractiveBot : IDisposable
 
         try
         {
-            var url = $"https://slack.com/api/conversations.history?channel={_assignedChild?.Channels?.Slack?.ChannelId}&oldest={_lastTimestamp}";
+            var url = $"https://slack.com/api/conversations.history?channel={_child.Channels?.Slack?.ChannelId}&oldest={_lastTimestamp}";
             var response = await _httpClient.GetAsync(url);
 
             if (!response.IsSuccessStatusCode)
@@ -177,30 +174,21 @@ public class SlackInteractiveBot : IDisposable
         }
 
         _logger.LogInformation("Processing message for {ChildName} from user {UserId}: {Text}",
-            _assignedChild?.FirstName, userId, text);
-
-        // This bot only knows about its assigned child
-        if (_assignedChild == null)
-        {
-            _logger.LogError("Bot has no assigned child");
-            return;
-        }
-
-        var child = _assignedChild;
+            _child.FirstName, userId, text);
 
         // Process the message using direct service calls with child parameters
         try
         {
-            var response = await _aiService.GetResponseAsync(child, text);
+            var response = await _aiService.GetResponseAsync(_child, text);
 
             await SendMessageToSlack(response ?? "I couldn't process your request.");
 
-            _logger.LogInformation("Processed message for child {ChildName} successfully", child.FirstName);
+            _logger.LogInformation("Processed message for child {ChildName} successfully", _child.FirstName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing message for child {ChildName}", child.FirstName);
-            await SendMessageToSlack($"Sorry, I encountered an error processing your request about {child.FirstName}.");
+            _logger.LogError(ex, "Error processing message for child {ChildName}", _child.FirstName);
+            await SendMessageToSlack($"Sorry, I encountered an error processing your request about {_child.FirstName}.");
         }
     }
 
@@ -210,7 +198,7 @@ public class SlackInteractiveBot : IDisposable
     {
         var payload = new
         {
-            channel = _assignedChild?.Channels?.Slack?.ChannelId,
+            channel = _child.Channels?.Slack?.ChannelId,
             text = text,
             thread_ts = threadTs
         };

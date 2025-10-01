@@ -362,8 +362,171 @@ var childAgent = factory.CreateChildAgent(child, schedulingService);
 - **Maintainability**: Medium - inconsistent naming violates "clean naming" from Task 011
 - **Completeness**: Factory pattern incomplete - defeats purpose if not used
 
+## 🔧 PHASE 6: Bot Constructor Injection Refactoring (IN PROGRESS)
+
+### Phase 6: Bot Constructor Injection - Move Child to Constructor
+**Status**: 🔄 IN PROGRESS
+**Date**: Oct 2025
+**Issue**: Bots use two-phase initialization pattern (constructor + Start(Child))
+**Goal**: Move Child parameter to constructor for consistency and fail-fast validation
+
+### Expert Analysis Summary:
+
+**Participants**: @backend (Backend Engineer), @architect (System Architect)
+
+#### Issue 1: Two-Phase Initialization Anti-Pattern
+
+**Current Pattern:**
+```csharp
+_slackBot = new SlackInteractiveBot(_openAiService, _loggerFactory);
+await _slackBot.Start(_child);  // Child assigned here
+```
+
+**Problems Identified:**
+- ❌ Bot in invalid state after construction (nullable _assignedChild)
+- ❌ Temporal coupling - must remember to call Start()
+- ❌ Inconsistent with ChildAgent pattern (which receives Child in constructor)
+- ❌ No compile-time enforcement that Start() must be called
+- ❌ Complicates testing (two-phase setup in every test)
+
+**Backend Engineer Assessment:**
+> "After construction, the bot is in an unusable state. The `_assignedChild` field is null until `Start()` is called, yet the bot has public methods that depend on this field. This is a classic two-phase initialization anti-pattern."
+
+**Architect Assessment:**
+> "Bots are already conceptually bound to a single child for their entire lifetime. The nullable field is a code smell indicating the initialization pattern doesn't match the domain model."
+
+#### Issue 2: "God Object" Concern with Child Parameter
+
+**Question**: Should we extract channel-specific config instead of passing full Child object?
+
+**Unanimous Expert Verdict**: ✅ Keep Child Object Intact
+
+**Rationale:**
+- Child is a focused configuration DTO (5 properties), not a god object
+- Bots legitimately need multiple aspects of Child:
+  - `FirstName` for logging/context
+  - `Channels.Slack/Telegram.*` for configuration
+  - **Full Child object required for IOpenAiService calls** (can't avoid this)
+- Extracting config would create parameter explosion (6+ parameters vs 3)
+
+**Backend Engineer Assessment:**
+> "The `Child` class is a focused configuration DTO with only 5 properties. It's not accumulating unrelated behavior. Each bot is responsible for handling one channel's interactions for one child. The `Child` object represents that responsibility boundary."
+
+**Architect Assessment:**
+> "Child is a cohesive configuration object that naturally belongs as a bot dependency. The coupling is appropriate given the domain model (bot-per-child architecture)."
+
+### Recommended Changes:
+
+#### 1. SlackInteractiveBot Constructor Signature
+```csharp
+public SlackInteractiveBot(
+    Child child,
+    IOpenAiService aiService,
+    ILoggerFactory loggerFactory,
+    HttpClient? httpClient = null)
+{
+    _child = child ?? throw new ArgumentNullException(nameof(child));
+    _aiService = aiService ?? throw new ArgumentNullException(nameof(aiService));
+    _logger = loggerFactory.CreateLogger<SlackInteractiveBot>();
+    _httpClient = httpClient ?? new HttpClient();
+}
+
+public async Task Start()  // Parameterless
+{
+    // Validation (kept in Start() for graceful degradation)
+    if (string.IsNullOrEmpty(_child.Channels?.Slack?.ApiToken))
+    {
+        _logger.LogError("Cannot start Slack bot for {ChildName}: API token is missing", _child.FirstName);
+        return;
+    }
+    // ... rest of startup logic
+}
+```
+
+#### 2. TelegramInteractiveBot Constructor Signature
+```csharp
+public TelegramInteractiveBot(
+    Child child,
+    IOpenAiService aiService,
+    ILoggerFactory loggerFactory)
+{
+    _child = child ?? throw new ArgumentNullException(nameof(child));
+    _aiService = aiService ?? throw new ArgumentNullException(nameof(aiService));
+    _logger = loggerFactory.CreateLogger<TelegramInteractiveBot>();
+}
+
+public async Task Start()  // Parameterless
+{
+    // Validation logic here
+}
+```
+
+#### 3. ChildAgent Instantiation Updates
+```csharp
+private async Task StartSlackBotAsync()
+{
+    if (_child.Channels?.Slack?.Enabled == true &&
+        _child.Channels?.Slack?.EnableInteractiveBot == true)
+    {
+        _slackBot = new SlackInteractiveBot(_child, _openAiService, _loggerFactory);
+        await _slackBot.Start();  // Parameterless
+    }
+}
+
+private async Task StartTelegramBotAsync()
+{
+    if (_child.Channels?.Telegram?.Enabled == true &&
+        _child.Channels?.Telegram?.EnableInteractiveBot == true)
+    {
+        _telegramBot = new TelegramInteractiveBot(_child, _openAiService, _loggerFactory);
+        await _telegramBot.Start();  // Parameterless
+    }
+}
+```
+
+### Key Architectural Decisions:
+
+1. **✅ No Bot Factories Needed**: Direct instantiation in ChildAgent is sufficient (YAGNI principle)
+   - Bots have only 2-3 dependencies (simple construction)
+   - No complex resolution logic required
+   - Factory pattern only justified if 5+ constructor parameters or complex logic emerges
+
+2. **✅ Keep Validation in Start() Method**: Don't move to constructor
+   - Allows graceful degradation if config invalid (log error, don't throw)
+   - Consistent with current error handling philosophy
+   - Preserves async initialization pattern
+
+3. **✅ Consistency with ChildAgent Pattern**:
+   - ChildAgent receives Child in constructor
+   - Bots should follow same pattern
+   - Makes bot-child relationship explicit and immutable
+
+### Benefits of Proposed Changes:
+
+- ✅ Fail-fast: Configuration errors caught at construction
+- ✅ Clear contract: Dependencies explicit in constructor
+- ✅ No temporal coupling: Object always in valid state
+- ✅ Simpler testing: One-phase setup in tests
+- ✅ SOLID compliance: Improves Dependency Inversion Principle
+- ✅ Consistency: Matches ChildAgent constructor pattern
+- ✅ Scalability: No impact on multi-child scenarios (agents remain isolated)
+
+### Files to Modify:
+- `src/Aula/Bots/SlackInteractiveBot.cs` (lines 43-99)
+- `src/Aula/Bots/TelegramInteractiveBot.cs` (lines 32-90)
+- `src/Aula/Agents/ChildAgent.cs` (lines 80-120)
+
+### Confidence Level: 95%
+
+Both experts independently reached same conclusions with evidence-based reasoning. Recommendations align with:
+- SOLID principles
+- Existing codebase patterns (ChildAgent)
+- Dependency injection best practices
+- Child-centric architecture philosophy
+
 ---
 *Analysis completed by @architect and @backend expert agents*
 *Task started: [Previous Date]*
 *Implementation completed: December 2024*
 *Cleanup phase: October 2025*
+*Phase 6 analysis: October 2025*

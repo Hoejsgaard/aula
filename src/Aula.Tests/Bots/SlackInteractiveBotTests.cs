@@ -58,7 +58,7 @@ public class SlackInteractiveBotTests : IDisposable
 
         _httpClient = new HttpClient(_mockHttpMessageHandler.Object);
 
-        _slackBot = new SlackInteractiveBot(_mockOpenAiService.Object, _mockLoggerFactory.Object, _httpClient);
+        _slackBot = new SlackInteractiveBot(_testChild, _mockOpenAiService.Object, _mockLoggerFactory.Object, _httpClient);
     }
 
     [Fact]
@@ -68,10 +68,18 @@ public class SlackInteractiveBotTests : IDisposable
     }
 
     [Fact]
+    public void Constructor_WithNullChild_ThrowsArgumentNullException()
+    {
+        var exception = Assert.Throws<ArgumentNullException>(() =>
+            new SlackInteractiveBot(null!, _mockOpenAiService.Object, _mockLoggerFactory.Object, _httpClient));
+        Assert.Equal("child", exception.ParamName);
+    }
+
+    [Fact]
     public void Constructor_WithNullOpenAiService_ThrowsArgumentNullException()
     {
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new SlackInteractiveBot(null!, _mockLoggerFactory.Object, _httpClient));
+            new SlackInteractiveBot(_testChild, null!, _mockLoggerFactory.Object, _httpClient));
         Assert.Equal("aiService", exception.ParamName);
     }
 
@@ -79,7 +87,7 @@ public class SlackInteractiveBotTests : IDisposable
     public void Constructor_WithNullLoggerFactory_ThrowsArgumentNullException()
     {
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new SlackInteractiveBot(_mockOpenAiService.Object, null!, _httpClient));
+            new SlackInteractiveBot(_testChild, _mockOpenAiService.Object, null!, _httpClient));
         Assert.Equal("loggerFactory", exception.ParamName);
     }
 
@@ -93,7 +101,7 @@ public class SlackInteractiveBotTests : IDisposable
     public async Task SendMessageToSlack_WithValidText_SendsSuccessfully()
     {
         SetupSuccessfulHttpResponse();
-        await _slackBot.Start(_testChild);
+        await _slackBot.Start();
 
         await _slackBot.SendMessageToSlack("Test message");
 
@@ -111,7 +119,7 @@ public class SlackInteractiveBotTests : IDisposable
     {
         var longMessage = new string('a', MaxMessageLength + 1);
         SetupSuccessfulHttpResponse();
-        await _slackBot.Start(_testChild);
+        await _slackBot.Start();
 
         await _slackBot.SendMessageToSlack(longMessage);
 
@@ -186,7 +194,7 @@ public class SlackInteractiveBotTests : IDisposable
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(mockResponse);
 
-        await _slackBot.Start(_testChild);
+        await _slackBot.Start();
 
         _mockLogger.Verify(
             logger => logger.Log(
@@ -232,7 +240,7 @@ public class SlackInteractiveBotTests : IDisposable
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(mockResponse);
 
-        await _slackBot.Start(_testChild);
+        await _slackBot.Start();
 
         // Verify the welcome message contains the child's name
         _mockHttpMessageHandler.Protected().Verify(
@@ -261,7 +269,7 @@ public class SlackInteractiveBotTests : IDisposable
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(mockResponse);
 
-        await _slackBot.Start(_testChild);
+        await _slackBot.Start();
 
         // Verify the HTTP client has the correct authorization header
         Assert.Equal("Bearer", _httpClient.DefaultRequestHeaders.Authorization?.Scheme);
@@ -285,7 +293,7 @@ public class SlackInteractiveBotTests : IDisposable
             .ReturnsAsync(mockResponse);
 
         var beforeStart = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        await _slackBot.Start(_testChild);
+        await _slackBot.Start();
         var afterStart = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         // Verify timestamp was logged and is reasonable
@@ -365,7 +373,7 @@ public class SlackInteractiveBotTests : IDisposable
     private async Task TriggerPollMessagesByStarting()
     {
         SetupSlackPostMessageResponse(new { ok = true, ts = "1234567890.123456" });
-        await _slackBot.Start(_testChild);
+        await _slackBot.Start();
         // Give the timer a moment to trigger
         await Task.Delay(100);
     }

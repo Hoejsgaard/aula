@@ -88,10 +88,11 @@ public class ChildAgent : IChildAgent
                 _child.FirstName, _child.Channels!.Slack!.ChannelId);
 
             _slackBot = new SlackInteractiveBot(
+                _child,
                 _openAiService,
                 _loggerFactory);
 
-            await _slackBot.Start(_child);
+            await _slackBot.Start();
 
             _logger.LogInformation("SlackInteractiveBot started successfully for {ChildName}", _child.FirstName);
         }
@@ -106,10 +107,11 @@ public class ChildAgent : IChildAgent
             _logger.LogInformation("Starting TelegramInteractiveBot for {ChildName}", _child.FirstName);
 
             _telegramBot = new TelegramInteractiveBot(
+                _child,
                 _openAiService,
                 _loggerFactory);
 
-            await _telegramBot.Start(_child);
+            await _telegramBot.Start();
 
             _logger.LogInformation("TelegramInteractiveBot started successfully for {ChildName}", _child.FirstName);
         }

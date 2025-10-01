@@ -18,45 +18,44 @@ namespace Aula.Bots;
 /// </summary>
 public class TelegramInteractiveBot : IDisposable
 {
+    private readonly Child _child;
     private readonly IOpenAiService _aiService;
     private readonly ILogger _logger;
     private ITelegramBotClient? _botClient;
     private CancellationTokenSource? _cancellationTokenSource;
 
-    // This bot is dedicated to ONE specific child
-    private Child? _assignedChild;
-    public string? AssignedChildName => _assignedChild?.FirstName;
+    public string AssignedChildName => _child.FirstName;
 
     private bool _disposed;
 
     public TelegramInteractiveBot(
+        Child child,
         IOpenAiService aiService,
         ILoggerFactory loggerFactory)
     {
+        _child = child ?? throw new ArgumentNullException(nameof(child));
         _aiService = aiService ?? throw new ArgumentNullException(nameof(aiService));
         _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<TelegramInteractiveBot>();
     }
 
-    public async Task Start(Child child)
+    public async Task Start()
     {
-        _assignedChild = child ?? throw new ArgumentNullException(nameof(child));
-
-        if (string.IsNullOrEmpty(_assignedChild.Channels?.Telegram?.Token))
+        if (string.IsNullOrEmpty(_child.Channels?.Telegram?.Token))
         {
-            _logger.LogError("Cannot start Telegram bot for {ChildName}: Token is missing", _assignedChild.FirstName);
+            _logger.LogError("Cannot start Telegram bot for {ChildName}: Token is missing", _child.FirstName);
             return;
         }
 
-        _logger.LogInformation("Starting Telegram bot for child: {ChildName}", _assignedChild.FirstName);
+        _logger.LogInformation("Starting Telegram bot for child: {ChildName}", _child.FirstName);
 
         try
         {
             // Create bot client with the child's token
-            _botClient = new TelegramBotClient(_assignedChild.Channels.Telegram.Token);
+            _botClient = new TelegramBotClient(_child.Channels.Telegram.Token);
 
             // Verify bot can connect
             var me = await _botClient.GetMeAsync();
-            _logger.LogInformation("Telegram bot authenticated as @{BotUsername} for child {ChildName}", me.Username, _assignedChild.FirstName);
+            _logger.LogInformation("Telegram bot authenticated as @{BotUsername} for child {ChildName}", me.Username, _child.FirstName);
 
             // Start receiving updates
             _cancellationTokenSource = new CancellationTokenSource();
@@ -74,24 +73,24 @@ public class TelegramInteractiveBot : IDisposable
                 cancellationToken: _cancellationTokenSource.Token
             );
 
-            _logger.LogInformation("Telegram bot started successfully for {ChildName}", _assignedChild.FirstName);
+            _logger.LogInformation("Telegram bot started successfully for {ChildName}", _child.FirstName);
 
             // Send startup message if chat ID is configured
-            if (_assignedChild.Channels.Telegram.ChatId.HasValue)
+            if (_child.Channels.Telegram.ChatId.HasValue)
             {
-                await SendMessageToTelegram($"👋 Bot for {_assignedChild.FirstName} is now online and ready to help!");
+                await SendMessageToTelegram($"👋 Bot for {_child.FirstName} is now online and ready to help!");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to start Telegram bot for {ChildName}", _assignedChild.FirstName);
+            _logger.LogError(ex, "Failed to start Telegram bot for {ChildName}", _child.FirstName);
             throw;
         }
     }
 
     public void Stop()
     {
-        _logger.LogInformation("Telegram bot stopped for {ChildName}", _assignedChild?.FirstName ?? "unknown");
+        _logger.LogInformation("Telegram bot stopped for {ChildName}", _child.FirstName);
         _cancellationTokenSource?.Cancel();
     }
 
@@ -103,26 +102,26 @@ public class TelegramInteractiveBot : IDisposable
             return;
         }
 
-        if (_assignedChild?.Channels?.Telegram?.ChatId == null)
+        if (_child.Channels?.Telegram?.ChatId == null)
         {
-            _logger.LogWarning("Cannot send message for {ChildName}: ChatId not configured", _assignedChild?.FirstName);
+            _logger.LogWarning("Cannot send message for {ChildName}: ChatId not configured", _child.FirstName);
             return;
         }
 
         try
         {
             await _botClient.SendTextMessageAsync(
-                chatId: _assignedChild.Channels.Telegram.ChatId.Value,
+                chatId: _child.Channels.Telegram.ChatId.Value,
                 text: message,
                 parseMode: ParseMode.Html,
                 cancellationToken: default
             );
 
-            _logger.LogInformation("Message sent successfully to Telegram for {ChildName}", _assignedChild.FirstName);
+            _logger.LogInformation("Message sent successfully to Telegram for {ChildName}", _child.FirstName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send Telegram message for {ChildName}", _assignedChild?.FirstName);
+            _logger.LogError(ex, "Failed to send Telegram message for {ChildName}", _child.FirstName);
         }
     }
 
@@ -138,7 +137,7 @@ public class TelegramInteractiveBot : IDisposable
         var messageText = message.Text.Trim();
 
         _logger.LogInformation("Processing message from {ChatId} for child {ChildName}: {Text}",
-            chatId, _assignedChild?.FirstName, messageText);
+            chatId, _child.FirstName, messageText);
 
         try
         {
@@ -150,8 +149,8 @@ public class TelegramInteractiveBot : IDisposable
             }
 
             // Process the message using AI service
-            string contextKey = $"telegram-{_assignedChild!.FirstName}-{chatId}";
-            string? response = await _aiService.GetResponseWithContextAsync(_assignedChild!, messageText, contextKey);
+            string contextKey = $"telegram-{_child.FirstName}-{chatId}";
+            string? response = await _aiService.GetResponseWithContextAsync(_child, messageText, contextKey);
 
             if (string.IsNullOrEmpty(response))
             {
@@ -165,11 +164,11 @@ public class TelegramInteractiveBot : IDisposable
                 cancellationToken: cancellationToken
             );
 
-            _logger.LogInformation("Sent response to Telegram chat {ChatId} for child {ChildName}", chatId, _assignedChild.FirstName);
+            _logger.LogInformation("Sent response to Telegram chat {ChatId} for child {ChildName}", chatId, _child.FirstName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing message for child {ChildName}: {Message}", _assignedChild?.FirstName, messageText);
+            _logger.LogError(ex, "Error processing message for child {ChildName}: {Message}", _child.FirstName, messageText);
 
             await botClient.SendTextMessageAsync(
                 chatId: chatId,
@@ -184,11 +183,11 @@ public class TelegramInteractiveBot : IDisposable
         var errorMessage = exception switch
         {
             ApiRequestException apiRequestException =>
-                $"Telegram API Error for {_assignedChild?.FirstName}: [{apiRequestException.ErrorCode}] {apiRequestException.Message}",
+                $"Telegram API Error for {_child.FirstName}: [{apiRequestException.ErrorCode}] {apiRequestException.Message}",
             _ => exception.ToString()
         };
 
-        _logger.LogError(exception, "Telegram polling error for {ChildName}: {Error}", _assignedChild?.FirstName, errorMessage);
+        _logger.LogError(exception, "Telegram polling error for {ChildName}: {Error}", _child.FirstName, errorMessage);
 
         return Task.CompletedTask;
     }
@@ -203,12 +202,12 @@ public class TelegramInteractiveBot : IDisposable
 
     private async Task SendHelpMessage(ITelegramBotClient botClient, long chatId, CancellationToken cancellationToken)
     {
-        var helpMessage = $@"🤖 **Aula Bot Help for {_assignedChild?.FirstName}**
+        var helpMessage = $@"🤖 **Aula Bot Help for {_child.FirstName}**
 
-I can help you with information about {_assignedChild?.FirstName}'s school activities from Aula.
+I can help you with information about {_child.FirstName}'s school activities from Aula.
 
 **Commands:**
-• Ask about activities: ""What activities does {_assignedChild?.FirstName} have this week?""
+• Ask about activities: ""What activities does {_child.FirstName} have this week?""
 • Get week letters: ""Show me this week's letter""
 • Get homework info: ""What homework is there?""
 
