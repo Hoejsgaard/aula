@@ -208,10 +208,21 @@ public class Program
         {
             var config = provider.GetRequiredService<Config>();
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-            var logger = loggerFactory.CreateLogger("SupabaseClientFactory");
+            var logger = loggerFactory.CreateLogger("SupabaseClient");
 
-            return SupabaseClientFactory.CreateClientAsync(config, logger)
-                .GetAwaiter().GetResult();
+            logger.LogInformation("Initializing Supabase connection");
+
+            var options = new SupabaseOptions
+            {
+                AutoConnectRealtime = false, // We don't need realtime for this use case
+                AutoRefreshToken = false     // We're using service role key
+            };
+
+            var client = new Client(config.Supabase.Url, config.Supabase.ServiceRoleKey, options);
+            client.InitializeAsync().GetAwaiter().GetResult();
+
+            logger.LogInformation("Supabase client initialized successfully");
+            return client;
         });
 
         // Repository singletons (no state, all parameters passed as method arguments)
