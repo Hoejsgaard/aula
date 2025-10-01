@@ -5,50 +5,50 @@ using Aula.Configuration;
 namespace Aula.Channels;
 
 /// <summary>
-/// Child-aware channel manager that operates within a child context.
-/// Ensures messages are routed only to the channels configured for the current child.
+/// Child-aware channel manager that accepts Child parameters for all operations.
+/// Ensures messages are routed only to the channels configured for the specified child.
 /// </summary>
 public interface IChildChannelManager
 {
 	/// <summary>
-	/// Sends a message to all channels configured for the current child.
+	/// Sends a message to all channels configured for the specified child.
 	/// </summary>
-	Task<bool> SendMessageAsync(string message, MessageFormat format = MessageFormat.Auto);
+	Task<bool> SendMessageAsync(Child child, string message, MessageFormat format = MessageFormat.Auto);
 
 	/// <summary>
-	/// Sends a message to a specific platform configured for the current child.
+	/// Sends a message to a specific platform configured for the specified child.
 	/// </summary>
-	Task<bool> SendToPlatformAsync(string platformId, string message, MessageFormat format = MessageFormat.Auto);
+	Task<bool> SendToPlatformAsync(Child child, string platformId, string message, MessageFormat format = MessageFormat.Auto);
 
 	/// <summary>
-	/// Gets all channels configured for the current child.
+	/// Gets all channels configured for the specified child.
 	/// </summary>
-	Task<IReadOnlyList<ChildChannelConfig>> GetChildChannelsAsync();
+	Task<IReadOnlyList<ChildChannelConfig>> GetChildChannelsAsync(Child child);
 
 	/// <summary>
-	/// Tests connectivity for all channels configured for the current child.
+	/// Tests connectivity for all channels configured for the specified child.
 	/// </summary>
-	Task<Dictionary<string, bool>> TestChildChannelsAsync();
+	Task<Dictionary<string, bool>> TestChildChannelsAsync(Child child);
 
 	/// <summary>
 	/// Sends a high-priority alert to the child's channels.
 	/// </summary>
-	Task<bool> SendAlertAsync(string alertMessage);
+	Task<bool> SendAlertAsync(Child child, string alertMessage);
 
 	/// <summary>
 	/// Sends a reminder notification to the child's channels.
 	/// </summary>
-	Task<bool> SendReminderAsync(string reminderMessage, string? metadata = null);
+	Task<bool> SendReminderAsync(Child child, string reminderMessage, string? metadata = null);
 
 	/// <summary>
-	/// Gets the preferred channel for the current child.
+	/// Gets the preferred channel for the specified child.
 	/// </summary>
-	Task<ChildChannelConfig?> GetPreferredChannelAsync();
+	Task<ChildChannelConfig?> GetPreferredChannelAsync(Child child);
 
 	/// <summary>
-	/// Validates that the current child has at least one configured channel.
+	/// Validates that the specified child has at least one configured channel.
 	/// </summary>
-	Task<bool> HasConfiguredChannelsAsync();
+	Task<bool> HasConfiguredChannelsAsync(Child child);
 }
 
 /// <summary>

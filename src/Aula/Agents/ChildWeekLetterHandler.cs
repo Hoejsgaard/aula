@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Aula.Bots;
 using Aula.Channels;
 using Aula.Configuration;
-using Aula.Context;
 using Aula.Events;
 using Aula.Utilities;
 using Microsoft.Extensions.Logging;

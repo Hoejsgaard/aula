@@ -8,32 +8,35 @@ using Xunit;
 namespace Aula.Tests.Architecture;
 
 /// <summary>
-/// Architecture tests to enforce the child-centric architecture rules.
-/// These tests ensure no regression to the old pattern of passing Child parameters.
+/// Architecture tests to enforce the new child-centric architecture rules.
+/// These tests ensure services follow the pattern: "Pass the fucking child as parameter to singletons"
+/// No context patterns, no scoping - just direct Child parameters to singleton services.
 /// </summary>
 public class ArchitectureTests
 {
 	private static readonly HashSet<string> AllowedChildParameterTypes = new()
 	{
-		// These are the ONLY types allowed to have Child parameters
-		"IChildServiceCoordinator",
-		"ChildServiceCoordinator",
-		"IChildContext",
-		"ChildContext",
-		"IChildContextValidator",
-		"ChildContextValidator",
-		"IChildAuditService",
-		"ChildAuditService",
-		// Refactored services that now use direct Child parameters
+		// New child-aware services that accept Child parameters directly
 		"IChildDataService",
 		"SecureChildDataService",
-		// Legacy interfaces allowed to have Child parameters
+		"IChildChannelManager",
+		"SecureChildChannelManager",
+		"IChildScheduler",
+		"SecureChildScheduler",
+		"IChildAwareOpenAiService",
+		"SecureChildAwareOpenAiService",
+		"IChildAuditService",
+		"ChildAuditService",
+		"IChildRateLimiter",
+		"ChildRateLimiter",
+		// Utility services that need Child parameters
+		"IPromptSanitizer",
+		"IMessageContentFilter",
+		"IChildSchedulingRateLimiter",
+		// Legacy interfaces allowed to have Child parameters (marked obsolete)
 		"IDataService",
 		"IAgentService",
-		"IMinUddannelseClient",
-		"IChildRateLimiter",
-		"IPromptSanitizer",
-		"IMessageContentFilter"
+		"IMinUddannelseClient"
 	};
 
 	private static readonly HashSet<string> LegacyInterfacesToObsolete = new()
@@ -43,8 +46,62 @@ public class ArchitectureTests
 		"IMinUddannelseClient"
 	};
 
+	private static readonly HashSet<string> RequiredChildParameterServices = new()
+	{
+		// These services MUST accept Child parameters
+		"IChildDataService",
+		"IChildChannelManager",
+		"IChildScheduler",
+		"IChildAwareOpenAiService"
+	};
+
 	[Fact]
-	public void NoNewServiceInterfaces_Should_HaveChildParameters()
+	public void ChildAwareServices_Should_AcceptChildParameters()
+	{
+		// Arrange
+		var assembly = typeof(Aula.Program).Assembly;
+		var violations = new List<string>();
+
+		// Act - Check that child-aware services accept Child parameters
+		foreach (var serviceName in RequiredChildParameterServices)
+		{
+			var serviceType = assembly.GetTypes()
+				.FirstOrDefault(t => t.Name == serviceName);
+
+			if (serviceType != null)
+			{
+				var hasChildParameter = false;
+				var methods = serviceType.GetMethods();
+
+				foreach (var method in methods)
+				{
+					var parameters = method.GetParameters();
+					if (parameters.Any(p => p.ParameterType == typeof(Child)))
+					{
+						hasChildParameter = true;
+						break;
+					}
+				}
+
+				if (!hasChildParameter)
+				{
+					violations.Add($"{serviceName} does not accept Child parameters in any method");
+				}
+			}
+		}
+
+		// Assert
+		if (violations.Any())
+		{
+			var message = "Architecture violation: Child-aware services not accepting Child parameters:\n" +
+						 string.Join("\n", violations) +
+						 "\n\nChild-aware services must accept Child parameters directly. No context patterns allowed.";
+			Assert.Fail(message);
+		}
+	}
+
+	[Fact]
+	public void NonAllowedServices_Should_NotHaveChildParameters()
 	{
 		// Arrange
 		var assembly = typeof(Aula.Program).Assembly;
@@ -56,7 +113,8 @@ public class ArchitectureTests
 			.Where(t => t.Namespace != null &&
 					   (t.Namespace.Contains("Services") ||
 						t.Namespace.Contains("Integration") ||
-						t.Namespace.Contains("Channels")))
+						t.Namespace.Contains("Channels") ||
+						t.Namespace.Contains("Scheduling")))
 			.Where(t => !AllowedChildParameterTypes.Contains(t.Name));
 
 		foreach (var interfaceType in serviceInterfaces)
@@ -78,10 +136,9 @@ public class ArchitectureTests
 		// Assert
 		if (violations.Any())
 		{
-			var message = "Architecture violation: The following methods have Child parameters:\n" +
+			var message = "Architecture violation: The following methods have Child parameters but are not allowed:\n" +
 						 string.Join("\n", violations) +
-						 "\n\nChild parameters should only exist in the allowed executor types. " +
-						 "Use IChildContext for child-aware services.";
+						 "\n\nOnly approved child-aware services should accept Child parameters.";
 			Assert.Fail(message);
 		}
 	}
@@ -129,9 +186,12 @@ public class ArchitectureTests
 		// Act
 		var serviceTypes = assembly.GetTypes()
 			.Where(t => t.IsClass && !t.IsAbstract)
-			.Where(t => t.Namespace != null && t.Namespace.Contains("Services"))
-			.Where(t => !AllowedChildParameterTypes.Contains(t.Name))
-			.Where(t => t.Name != "DataService"); // Legacy service allowed to have GetChildren
+			.Where(t => t.Namespace != null && (t.Namespace.Contains("Services") ||
+											   t.Namespace.Contains("Channels") ||
+											   t.Namespace.Contains("Scheduling")))
+			.Where(t => t.Name != "DataService") // Legacy service allowed to have GetChildren
+			.Where(t => t.Name != "ChannelManager") // Channel manager operates on all channels
+			.Where(t => t.Name != "SchedulingService"); // Scheduling service coordinates multiple children
 
 		foreach (var serviceType in serviceTypes)
 		{
@@ -161,51 +221,38 @@ public class ArchitectureTests
 		{
 			var message = "Architecture violation: Services operating on multiple children:\n" +
 						 string.Join("\n", violations) +
-						 "\n\nServices should operate on single child context only.";
+						 "\n\nServices should operate on single child only. Use singleton services with Child parameters.";
 			Assert.Fail(message);
 		}
 	}
 
 	[Fact]
-	public void ChildAwareServices_Should_UseIChildContext()
+	public void NoContextPatterns_Should_Exist()
 	{
 		// Arrange
 		var assembly = typeof(Aula.Program).Assembly;
 		var violations = new List<string>();
+		var forbiddenPatterns = new[] { "Context", "Scope", "Scoped" };
 
-		// Act
-		var childAwareServices = assembly.GetTypes()
-			.Where(t => t.IsClass && !t.IsAbstract)
-			.Where(t => t.Name.StartsWith("Secure") && t.Name.Contains("Child"))
-			.Where(t => t.Name != "SecureChildDataService"); // Excluded - refactored to use direct Child parameters
+		// Act - Check for any remaining context patterns
+		var allTypes = assembly.GetTypes()
+			.Where(t => t.Namespace != null && !t.Namespace.Contains("Tests"))
+			.Where(t => forbiddenPatterns.Any(pattern => t.Name.Contains(pattern)))
+			.Where(t => !t.Name.Contains("Conversation")) // ConversationContext is allowed
+			.Where(t => !t.Name.StartsWith("<")) // Exclude compiler-generated types
+			.ToList();
 
-		foreach (var serviceType in childAwareServices)
+		foreach (var type in allTypes)
 		{
-			var constructors = serviceType.GetConstructors();
-			var hasChildContext = false;
-
-			foreach (var ctor in constructors)
-			{
-				var parameters = ctor.GetParameters();
-				if (parameters.Any(p => p.ParameterType.Name == "IChildContext"))
-				{
-					hasChildContext = true;
-					break;
-				}
-			}
-
-			if (!hasChildContext)
-			{
-				violations.Add($"{serviceType.Name} does not inject IChildContext");
-			}
+			violations.Add($"Type '{type.Name}' contains forbidden context pattern");
 		}
 
 		// Assert
 		if (violations.Any())
 		{
-			var message = "Architecture violation: Child-aware services not using IChildContext:\n" +
+			var message = "Architecture violation: Context patterns still exist:\n" +
 						 string.Join("\n", violations) +
-						 "\n\nChild-aware services must inject IChildContext for child isolation.";
+						 "\n\nAll context patterns should be eliminated. Use direct Child parameters instead.";
 			Assert.Fail(message);
 		}
 	}
@@ -231,8 +278,8 @@ public class ArchitectureTests
 
 		foreach (var type in allTypes)
 		{
-			if (type.Name == "Program" || type.Name == "ProgramChildAware")
-				continue; // Program classes are allowed to configure DI
+			if (type.Name == "Program")
+				continue; // Program class is allowed to configure DI
 
 			var methods = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static);
 

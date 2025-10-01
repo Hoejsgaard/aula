@@ -5,7 +5,6 @@ using Aula.Services;
 using Aula.Scheduling;
 using Aula.Bots;
 using Aula.Channels;
-using Aula.Context;
 using Aula.Events;
 using Aula.Integration;
 using Microsoft.Extensions.DependencyInjection;
@@ -85,7 +84,7 @@ public class ChildAgent : IChildAgent
 
 			_slackBot = new ChildAwareSlackInteractiveBot(
 				_serviceProvider,
-				_serviceProvider.GetRequiredService<IChildServiceCoordinator>(),
+				_serviceProvider.GetRequiredService<IChildAwareOpenAiService>(),
 				_config,
 				_loggerFactory);
 

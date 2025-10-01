@@ -255,6 +255,45 @@ public class OpenAiService : IOpenAiService
 		}
 	}
 
+	public async Task<string> ProcessDirectQueryAsync(string query, ChatInterface chatInterface = ChatInterface.Slack)
+	{
+		try
+		{
+			_logger.LogInformation("Processing direct query: {Query}", query);
+
+			var messages = new List<ChatMessage>
+			{
+				ChatMessage.FromUser(query)
+			};
+
+			var chatRequest = new ChatCompletionCreateRequest
+			{
+				Messages = messages,
+				Model = _aiModel,
+				Temperature = 0.7f
+			};
+
+			var response = await _openAiClient.ChatCompletion.CreateCompletion(chatRequest);
+
+			if (response.Successful)
+			{
+				var reply = response.Choices.First().Message.Content ?? "No response content received.";
+				_logger.LogInformation("Direct query processed successfully");
+				return reply;
+			}
+			else
+			{
+				_logger.LogError("Error calling OpenAI API: {Error}", response.Error?.Message);
+				return "Sorry, I couldn't answer your question at this time.";
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Error processing direct query");
+			return "❌ I encountered an error processing your request. Please try again.";
+		}
+	}
+
 	public void ClearConversationHistory(string? contextKey = null)
 	{
 		_conversationManager.ClearConversationHistory(contextKey);

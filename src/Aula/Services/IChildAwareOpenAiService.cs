@@ -1,25 +1,25 @@
 using System.Threading.Tasks;
+using Aula.Configuration;
 
 namespace Aula.Services;
 
 /// <summary>
-/// OpenAI service that is aware of the current child context.
-/// This is a simplified version for Chapter 7 migration.
+/// OpenAI service that accepts Child parameters for all operations.
 /// </summary>
 public interface IChildAwareOpenAiService
 {
 	/// <summary>
-	/// Gets an AI response for the given query in the current child's context.
+	/// Gets an AI response for the given query in the specified child's context.
 	/// </summary>
-	Task<string?> GetResponseAsync(string query);
+	Task<string?> GetResponseAsync(Child child, string query);
 
 	/// <summary>
-	/// Gets an AI response with conversation context.
+	/// Gets an AI response with conversation context for the specified child.
 	/// </summary>
-	Task<string?> GetResponseWithContextAsync(string query, string conversationId);
+	Task<string?> GetResponseWithContextAsync(Child child, string query, string conversationId);
 
 	/// <summary>
-	/// Clears the conversation history for the current child.
+	/// Clears the conversation history for the specified child.
 	/// </summary>
-	Task ClearConversationHistoryAsync(string conversationId);
+	Task ClearConversationHistoryAsync(Child child, string conversationId);
 }

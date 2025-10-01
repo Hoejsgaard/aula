@@ -16,7 +16,7 @@ public class SchedulingService : ISchedulingService
 {
 	private readonly ILogger _logger;
 	private readonly ISupabaseService _supabaseService;
-	private readonly IChildServiceCoordinator _coordinator;
+	private readonly IChildDataService _childDataService;
 	private readonly IChannelManager _channelManager;
 	private readonly Config _config;
 	private Timer? _schedulingTimer;
@@ -36,13 +36,13 @@ public class SchedulingService : ISchedulingService
 	public SchedulingService(
 		ILoggerFactory loggerFactory,
 		ISupabaseService supabaseService,
-		IChildServiceCoordinator coordinator,
+		IChildDataService childDataService,
 		IChannelManager channelManager,
 		Config config)
 	{
 		_logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<SchedulingService>();
 		_supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
-		_coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
+		_childDataService = childDataService ?? throw new ArgumentNullException(nameof(childDataService));
 		_channelManager = channelManager ?? throw new ArgumentNullException(nameof(channelManager));
 		_config = config ?? throw new ArgumentNullException(nameof(config));
 	}
@@ -300,8 +300,8 @@ public class SchedulingService : ISchedulingService
 		{
 			_logger.LogInformation("Executing weekly letter check");
 
-			// Get all children from coordinator
-			var children = await _coordinator.GetAllChildrenAsync();
+			// Get all children from config
+			var children = _config.MinUddannelse?.Children ?? new List<Child>();
 			if (!children.Any())
 			{
 				_logger.LogWarning("No children configured for week letter check");
@@ -391,7 +391,7 @@ public class SchedulingService : ISchedulingService
 	private async Task<dynamic?> TryGetWeekLetter(Child child, int weekNumber, int year)
 	{
 		var date = DateOnly.FromDateTime(DateTime.Now);
-		var weekLetter = await _coordinator.GetWeekLetterForChildAsync(child, date);
+		var weekLetter = await _childDataService.GetOrFetchWeekLetterAsync(child, date, true);
 		if (weekLetter == null)
 		{
 			_logger.LogWarning("No week letter available for {ChildName}, will retry later", child.FirstName);

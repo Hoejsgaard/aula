@@ -23,5 +23,7 @@ public interface IOpenAiService
 
 	Task<string> ProcessQueryWithToolsAsync(string query, string contextKey, ChatInterface chatInterface = ChatInterface.Slack);
 
+	Task<string> ProcessDirectQueryAsync(string query, ChatInterface chatInterface = ChatInterface.Slack);
+
 	void ClearConversationHistory(string? contextKey = null);
 }

@@ -7,7 +7,6 @@ using Aula.Scheduling;
 using Aula.Configuration;
 using Aula.Services;
 using Aula.Agents;
-using Aula.Context;
 using Aula.Authentication;
 using Aula.Channels;
 using Aula.Tools;
@@ -168,20 +167,17 @@ public class Program
 
 		services.AddMemoryCache();
 
-		services.AddScoped<IChildContext, ChildContext>();
-		services.AddScoped<IChildAuditService, ChildAuditService>();
-		services.AddScoped<IChildRateLimiter, ChildRateLimiter>();
-		services.AddScoped<IChildDataService, SecureChildDataService>();
-		services.AddScoped<IChildChannelManager, SecureChildChannelManager>();
-		services.AddScoped<IChildScheduler, SecureChildScheduler>();
-		services.AddScoped<IChildAwareOpenAiService, SecureChildAwareOpenAiService>();
-		services.AddScoped<IChildAgentService, SecureChildAgentService>();
-		services.AddSingleton<IChildContextValidator, ChildContextValidator>();
+		// Child-aware services are singletons that accept Child parameters
+		services.AddSingleton<IChildAuditService, ChildAuditService>();
+		services.AddSingleton<IChildRateLimiter, ChildRateLimiter>();
+		services.AddSingleton<IChildDataService, SecureChildDataService>();
+		services.AddSingleton<IChildChannelManager, SecureChildChannelManager>();
+		services.AddSingleton<IChildScheduler, SecureChildScheduler>();
+		services.AddSingleton<IChildAwareOpenAiService, SecureChildAwareOpenAiService>();
 
 		services.AddScoped<IDataService, DataService>();
 		services.AddScoped<IMinUddannelseClient, MinUddannelseClient>();
 		services.AddScoped<IAgentService, AgentService>();
-		services.AddSingleton<IChildServiceCoordinator, ChildServiceCoordinator>();
 		services.AddSingleton<IPromptSanitizer, PromptSanitizer>();
 		services.AddSingleton<IMessageContentFilter, MessageContentFilter>();
 

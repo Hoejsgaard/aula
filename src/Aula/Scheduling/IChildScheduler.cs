@@ -3,45 +3,45 @@ using Aula.Configuration;
 namespace Aula.Scheduling;
 
 /// <summary>
-/// Child-aware scheduling service that operates within a child context.
+/// Child-aware scheduling service that accepts Child parameters for all operations.
 /// All operations are isolated per child with no cross-child interference.
 /// </summary>
 public interface IChildScheduler
 {
 	/// <summary>
-	/// Schedule a new task for the current child context.
+	/// Schedule a new task for the specified child.
 	/// </summary>
-	Task<int> ScheduleTaskAsync(string taskName, string cronExpression, string? description = null);
+	Task<int> ScheduleTaskAsync(Child child, string taskName, string cronExpression, string? description = null);
 
 	/// <summary>
-	/// Cancel a scheduled task for the current child.
+	/// Cancel a scheduled task for the specified child.
 	/// </summary>
-	Task<bool> CancelTaskAsync(int taskId);
+	Task<bool> CancelTaskAsync(Child child, int taskId);
 
 	/// <summary>
-	/// Get all scheduled tasks for the current child.
+	/// Get all scheduled tasks for the specified child.
 	/// </summary>
-	Task<List<ChildScheduledTask>> GetScheduledTasksAsync();
+	Task<List<ChildScheduledTask>> GetScheduledTasksAsync(Child child);
 
 	/// <summary>
-	/// Enable or disable a scheduled task for the current child.
+	/// Enable or disable a scheduled task for the specified child.
 	/// </summary>
-	Task<bool> SetTaskEnabledAsync(int taskId, bool enabled);
+	Task<bool> SetTaskEnabledAsync(Child child, int taskId, bool enabled);
 
 	/// <summary>
-	/// Execute a specific task immediately for the current child.
+	/// Execute a specific task immediately for the specified child.
 	/// </summary>
-	Task ExecuteTaskAsync(string taskName);
+	Task ExecuteTaskAsync(Child child, string taskName);
 
 	/// <summary>
 	/// Check if a task should run based on its schedule.
 	/// </summary>
-	Task<bool> ShouldRunTaskAsync(ChildScheduledTask task);
+	Task<bool> ShouldRunTaskAsync(Child child, ChildScheduledTask task);
 
 	/// <summary>
-	/// Process all due tasks for the current child.
+	/// Process all due tasks for the specified child.
 	/// </summary>
-	Task ProcessDueTasksAsync();
+	Task ProcessDueTasksAsync(Child child);
 }
 
 /// <summary>

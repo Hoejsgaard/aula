@@ -31,7 +31,6 @@ public class ProgramTests
 		Assert.NotNull(serviceProvider.GetRequiredService<IOpenAiService>());
 		Assert.NotNull(serviceProvider.GetRequiredService<ISupabaseService>());
 		Assert.NotNull(serviceProvider.GetRequiredService<ISchedulingService>());
-		Assert.NotNull(serviceProvider.GetRequiredService<IChildServiceCoordinator>());
 		Assert.NotNull(serviceProvider.GetRequiredService<IPromptSanitizer>());
 		Assert.NotNull(serviceProvider.GetRequiredService<IMessageContentFilter>());
 	}

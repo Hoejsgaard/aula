@@ -10,7 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
-using Aula.Context;
 using Aula.Integration;
 using Aula.Services;
 
@@ -23,7 +22,7 @@ namespace Aula.Bots;
 public class ChildAwareSlackInteractiveBot : IDisposable
 {
 	private readonly IServiceProvider _serviceProvider;
-	private readonly IChildServiceCoordinator _coordinator;
+	private readonly IChildAwareOpenAiService _aiService;
 	private readonly Config _config;
 	private readonly ILogger _logger;
 	private readonly HttpClient _httpClient;
@@ -45,13 +44,13 @@ public class ChildAwareSlackInteractiveBot : IDisposable
 
 	public ChildAwareSlackInteractiveBot(
 		IServiceProvider serviceProvider,
-		IChildServiceCoordinator coordinator,
+		IChildAwareOpenAiService aiService,
 		Config config,
 		ILoggerFactory loggerFactory,
 		HttpClient? httpClient = null)
 	{
 		_serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-		_coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
+		_aiService = aiService ?? throw new ArgumentNullException(nameof(aiService));
 		_config = config ?? throw new ArgumentNullException(nameof(config));
 		_logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<ChildAwareSlackInteractiveBot>();
 		_httpClient = httpClient ?? new HttpClient();
@@ -198,11 +197,9 @@ public class ChildAwareSlackInteractiveBot : IDisposable
 		// Process the message using direct service calls with child parameters
 		try
 		{
-			// This needs to be refactored to use a proper service that accepts Child parameters
-			// For now, we'll get a temporary basic response
-			var response = await _coordinator.ProcessAiQueryForChildAsync(child, text);
+			var response = await _aiService.GetResponseAsync(child, text);
 
-			await SendMessageToSlack(response);
+			await SendMessageToSlack(response ?? "I couldn't process your request.");
 
 			_logger.LogInformation("Processed message for child {ChildName} successfully", child.FirstName);
 		}

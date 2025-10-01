@@ -1,6 +1,5 @@
 using Aula.Authentication;
 using Aula.Configuration;
-using Aula.Context;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -15,9 +14,6 @@ namespace Aula.Channels;
 /// </summary>
 public class SecureChildChannelManager : IChildChannelManager
 {
-	private readonly IChildContext _context;
-	private readonly IChildContextValidator _contextValidator;
-	private readonly IChildAuditService _auditService;
 	private readonly IChannelManager _channelManager;
 	private readonly IMessageContentFilter _contentFilter;
 	private readonly ILogger<SecureChildChannelManager> _logger;
@@ -27,16 +23,10 @@ public class SecureChildChannelManager : IChildChannelManager
 	private readonly object _configLock = new();
 
 	public SecureChildChannelManager(
-		IChildContext context,
-		IChildContextValidator contextValidator,
-		IChildAuditService auditService,
 		IChannelManager channelManager,
 		IMessageContentFilter contentFilter,
 		ILogger<SecureChildChannelManager> logger)
 	{
-		_context = context ?? throw new ArgumentNullException(nameof(context));
-		_contextValidator = contextValidator ?? throw new ArgumentNullException(nameof(contextValidator));
-		_auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
 		_channelManager = channelManager ?? throw new ArgumentNullException(nameof(channelManager));
 		_contentFilter = contentFilter ?? throw new ArgumentNullException(nameof(contentFilter));
 		_logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -44,38 +34,27 @@ public class SecureChildChannelManager : IChildChannelManager
 		InitializeDefaultConfigurations();
 	}
 
-	public async Task<bool> SendMessageAsync(string message, MessageFormat format = MessageFormat.Auto)
+	public async Task<bool> SendMessageAsync(Child child, string message, MessageFormat format = MessageFormat.Auto)
 	{
-		// Layer 1: Context validation
-		_context.ValidateContext();
-		var child = _context.CurrentChild!;
+		if (child == null) throw new ArgumentNullException(nameof(child));
 
-		// Layer 2: Permission validation
-		if (!await _contextValidator.ValidateChildPermissionsAsync(child, "channel:send"))
-		{
-			_logger.LogWarning("Permission denied for {ChildName} to send messages", child.FirstName);
-			await _auditService.LogSecurityEventAsync(child, "PermissionDenied", "channel:send", SecuritySeverity.Warning);
-			return false;
-		}
-
-		// Layer 3: Content filtering
+		// Content filtering
 		var filteredMessage = _contentFilter.FilterForChild(message, child);
 		if (!_contentFilter.ValidateMessageSafety(filteredMessage, child))
 		{
 			_logger.LogWarning("Message failed safety validation for {ChildName}", child.FirstName);
-			await _auditService.LogSecurityEventAsync(child, "UnsafeMessage", "channel:send", SecuritySeverity.Warning);
 			return false;
 		}
 
-		// Layer 4: Get child's channels
-		var childChannels = await GetChildChannelsAsync();
+		// Get child's channels
+		var childChannels = await GetChildChannelsAsync(child);
 		if (childChannels.Count == 0)
 		{
 			_logger.LogWarning("No channels configured for {ChildName}", child.FirstName);
 			return false;
 		}
 
-		// Layer 5: Send to child's channels only
+		// Send to child's channels only
 		var success = true;
 		foreach (var channelConfig in childChannels.Where(c => c.IsEnabled))
 		{
@@ -99,31 +78,15 @@ public class SecureChildChannelManager : IChildChannelManager
 			}
 		}
 
-		// Layer 6: Audit logging
-		await _auditService.LogDataAccessAsync(child, "SendMessage",
-			$"Channels:{childChannels.Count},Success:{success}", success);
-
 		return success;
 	}
 
-	public async Task<bool> SendToPlatformAsync(string platformId, string message, MessageFormat format = MessageFormat.Auto)
+	public async Task<bool> SendToPlatformAsync(Child child, string platformId, string message, MessageFormat format = MessageFormat.Auto)
 	{
-		// Layer 1: Context validation
-		_context.ValidateContext();
-		var child = _context.CurrentChild!;
+		if (child == null) throw new ArgumentNullException(nameof(child));
 
-		// Layer 2: Permission validation
-		if (!await _contextValidator.ValidateChildPermissionsAsync(child, "channel:send"))
-		{
-			_logger.LogWarning("Permission denied for {ChildName} to send to {Platform}",
-				child.FirstName, platformId);
-			await _auditService.LogSecurityEventAsync(child, "PermissionDenied",
-				$"channel:send:{platformId}", SecuritySeverity.Warning);
-			return false;
-		}
-
-		// Layer 3: Check if child has access to this platform
-		var childChannels = await GetChildChannelsAsync();
+		// Check if child has access to this platform
+		var childChannels = await GetChildChannelsAsync(child);
 		var channelConfig = childChannels.FirstOrDefault(c =>
 			c.PlatformId.Equals(platformId, StringComparison.OrdinalIgnoreCase));
 
@@ -131,12 +94,10 @@ public class SecureChildChannelManager : IChildChannelManager
 		{
 			_logger.LogWarning("Platform {Platform} not configured for {ChildName}",
 				platformId, child.FirstName);
-			await _auditService.LogSecurityEventAsync(child, "UnauthorizedPlatform",
-				platformId, SecuritySeverity.Warning);
 			return false;
 		}
 
-		// Layer 4: Content filtering
+		// Content filtering
 		var filteredMessage = _contentFilter.FilterForChild(message, child);
 		if (!_contentFilter.ValidateMessageSafety(filteredMessage, child))
 		{
@@ -145,7 +106,7 @@ public class SecureChildChannelManager : IChildChannelManager
 			return false;
 		}
 
-		// Layer 5: Send message
+		// Send message
 		try
 		{
 			var channel = _channelManager.GetChannel(platformId);
@@ -153,11 +114,6 @@ public class SecureChildChannelManager : IChildChannelManager
 			{
 				var formattedMessage = channel.FormatMessage(filteredMessage, format);
 				await channel.SendMessageAsync(channelConfig.ChannelId, formattedMessage);
-
-				// Layer 6: Audit logging
-				await _auditService.LogDataAccessAsync(child, "SendToPlatform",
-					$"Platform:{platformId}", true);
-
 				return true;
 			}
 		}
@@ -165,27 +121,16 @@ public class SecureChildChannelManager : IChildChannelManager
 		{
 			_logger.LogError(ex, "Failed to send message to {Platform} for {ChildName}",
 				platformId, child.FirstName);
-			await _auditService.LogDataAccessAsync(child, "SendToPlatform",
-				$"Platform:{platformId}", false);
 		}
 
 		return false;
 	}
 
-	public async Task<IReadOnlyList<ChildChannelConfig>> GetChildChannelsAsync()
+	public async Task<IReadOnlyList<ChildChannelConfig>> GetChildChannelsAsync(Child child)
 	{
-		// Layer 1: Context validation
-		_context.ValidateContext();
-		var child = _context.CurrentChild!;
+		if (child == null) throw new ArgumentNullException(nameof(child));
 
-		// Layer 2: Permission validation
-		if (!await _contextValidator.ValidateChildPermissionsAsync(child, "channel:read"))
-		{
-			_logger.LogWarning("Permission denied for {ChildName} to read channel config", child.FirstName);
-			return new List<ChildChannelConfig>();
-		}
-
-		// Layer 3: Get child-specific channels
+		// Get child-specific channels
 		lock (_configLock)
 		{
 			var key = GetChildKey(child);
@@ -200,14 +145,12 @@ public class SecureChildChannelManager : IChildChannelManager
 		return new List<ChildChannelConfig>();
 	}
 
-	public async Task<Dictionary<string, bool>> TestChildChannelsAsync()
+	public async Task<Dictionary<string, bool>> TestChildChannelsAsync(Child child)
 	{
-		// Layer 1: Context validation
-		_context.ValidateContext();
-		var child = _context.CurrentChild!;
+		if (child == null) throw new ArgumentNullException(nameof(child));
 
 		var results = new Dictionary<string, bool>();
-		var childChannels = await GetChildChannelsAsync();
+		var childChannels = await GetChildChannelsAsync(child);
 
 		foreach (var channelConfig in childChannels)
 		{
@@ -230,29 +173,15 @@ public class SecureChildChannelManager : IChildChannelManager
 			}
 		}
 
-		await _auditService.LogDataAccessAsync(child, "TestChannels",
-			$"Count:{results.Count}", true);
-
 		return results;
 	}
 
-	public async Task<bool> SendAlertAsync(string alertMessage)
+	public async Task<bool> SendAlertAsync(Child child, string alertMessage)
 	{
-		// Layer 1: Context validation
-		_context.ValidateContext();
-		var child = _context.CurrentChild!;
+		if (child == null) throw new ArgumentNullException(nameof(child));
 
-		// Layer 2: Permission validation for alerts
-		if (!await _contextValidator.ValidateChildPermissionsAsync(child, "channel:alert"))
-		{
-			_logger.LogWarning("Permission denied for {ChildName} to send alerts", child.FirstName);
-			await _auditService.LogSecurityEventAsync(child, "PermissionDenied",
-				"channel:alert", SecuritySeverity.Warning);
-			return false;
-		}
-
-		// Layer 3: Check alert permissions per channel
-		var childChannels = await GetChildChannelsAsync();
+		// Check alert permissions per channel
+		var childChannels = await GetChildChannelsAsync(child);
 		var alertChannels = childChannels.Where(c =>
 			c.IsEnabled && c.Permissions.CanReceiveAlerts).ToList();
 
@@ -262,33 +191,21 @@ public class SecureChildChannelManager : IChildChannelManager
 			return false;
 		}
 
-		// Layer 4: Format alert message
+		// Format alert message
 		var formattedAlert = $"⚠️ ALERT for {child.FirstName}: {alertMessage}";
 
-		// Layer 5: Send alert with high priority
+		// Send alert with high priority
 		var success = await SendToSpecificChannels(alertChannels, formattedAlert, child);
-
-		await _auditService.LogDataAccessAsync(child, "SendAlert",
-			$"Channels:{alertChannels.Count},Success:{success}", success);
 
 		return success;
 	}
 
-	public async Task<bool> SendReminderAsync(string reminderMessage, string? metadata = null)
+	public async Task<bool> SendReminderAsync(Child child, string reminderMessage, string? metadata = null)
 	{
-		// Layer 1: Context validation
-		_context.ValidateContext();
-		var child = _context.CurrentChild!;
+		if (child == null) throw new ArgumentNullException(nameof(child));
 
-		// Layer 2: Check reminder permissions
-		if (!await _contextValidator.ValidateChildPermissionsAsync(child, "channel:reminder"))
-		{
-			_logger.LogWarning("Permission denied for {ChildName} to send reminders", child.FirstName);
-			return false;
-		}
-
-		// Layer 3: Get reminder-enabled channels
-		var childChannels = await GetChildChannelsAsync();
+		// Get reminder-enabled channels
+		var childChannels = await GetChildChannelsAsync(child);
 		var reminderChannels = childChannels.Where(c =>
 			c.IsEnabled && c.Permissions.CanReceiveReminders).ToList();
 
@@ -298,25 +215,24 @@ public class SecureChildChannelManager : IChildChannelManager
 			return false;
 		}
 
-		// Layer 4: Format reminder
+		// Format reminder
 		var formattedReminder = $"📅 Reminder for {child.FirstName}: {reminderMessage}";
 		if (!string.IsNullOrEmpty(metadata))
 		{
 			formattedReminder += $"\n{metadata}";
 		}
 
-		// Layer 5: Send reminder
+		// Send reminder
 		var success = await SendToSpecificChannels(reminderChannels, formattedReminder, child);
-
-		await _auditService.LogDataAccessAsync(child, "SendReminder",
-			$"Channels:{reminderChannels.Count},Success:{success}", success);
 
 		return success;
 	}
 
-	public async Task<ChildChannelConfig?> GetPreferredChannelAsync()
+	public async Task<ChildChannelConfig?> GetPreferredChannelAsync(Child child)
 	{
-		var channels = await GetChildChannelsAsync();
+		if (child == null) throw new ArgumentNullException(nameof(child));
+
+		var channels = await GetChildChannelsAsync(child);
 		var preferred = channels.FirstOrDefault(c => c.IsPreferred && c.IsEnabled);
 
 		if (preferred == null)
@@ -328,9 +244,11 @@ public class SecureChildChannelManager : IChildChannelManager
 		return preferred != null ? CloneConfig(preferred) : null;
 	}
 
-	public async Task<bool> HasConfiguredChannelsAsync()
+	public async Task<bool> HasConfiguredChannelsAsync(Child child)
 	{
-		var channels = await GetChildChannelsAsync();
+		if (child == null) throw new ArgumentNullException(nameof(child));
+
+		var channels = await GetChildChannelsAsync(child);
 		return channels.Any(c => c.IsEnabled);
 	}
 
