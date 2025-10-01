@@ -163,6 +163,7 @@ Six MCP servers configured in `.mcp.json`:
 ### Code Comment Rules
 - **MINIMIZE COMMENTS**: Code should be self-explanatory through clear naming and structure
 - **NO redundant comments**: Don't state what the code obviously does
+- **NO XML documentation on public methods/classes**: Only add XML docs to public APIs (controllers, HTTP endpoints)
 - **ACCEPTABLE comments**:
   - Document non-obvious side effects
   - Explain complex business logic or intent when not clear from code
