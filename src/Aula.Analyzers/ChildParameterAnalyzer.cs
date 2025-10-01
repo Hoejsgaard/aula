@@ -20,8 +20,6 @@ public class ChildParameterAnalyzer : DiagnosticAnalyzer
 
 	private static readonly string[] AllowedTypes =
 	{
-		"IChildOperationExecutor",
-		"ChildOperationExecutor",
 		"IChildServiceCoordinator",
 		"ChildServiceCoordinator",
 		"IChildContext",

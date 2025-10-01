@@ -16,8 +16,6 @@ public class ArchitectureTests
 	private static readonly HashSet<string> AllowedChildParameterTypes = new()
 	{
 		// These are the ONLY types allowed to have Child parameters
-		"IChildOperationExecutor",
-		"ChildOperationExecutor",
 		"IChildServiceCoordinator",
 		"ChildServiceCoordinator",
 		"IChildContext",
