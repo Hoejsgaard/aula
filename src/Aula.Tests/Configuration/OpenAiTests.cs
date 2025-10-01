@@ -14,7 +14,7 @@ public class OpenAiTests
         // Assert
         Assert.NotNull(openAi.ApiKey);
         Assert.Equal(string.Empty, openAi.ApiKey);
-        Assert.Equal("gpt-4", openAi.Model);
+        Assert.Equal("gpt-3.5-turbo", openAi.Model);
         Assert.Equal(2000, openAi.MaxTokens);
         Assert.Equal(0.7, openAi.Temperature);
         Assert.Equal(30, openAi.CacheExpirationMinutes);
@@ -284,7 +284,7 @@ public class OpenAiTests
 
         // Assert
         Assert.Equal("changed-key", openAi.ApiKey);
-        Assert.Equal("gpt-4", openAi.Model); // Should remain default
+        Assert.Equal("gpt-3.5-turbo", openAi.Model); // Should remain default
         Assert.Equal(2000, openAi.MaxTokens); // Should remain default
         Assert.Equal(0.7, openAi.Temperature); // Should remain default
         Assert.Equal(30, openAi.CacheExpirationMinutes); // Should remain default

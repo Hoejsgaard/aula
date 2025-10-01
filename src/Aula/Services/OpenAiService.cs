@@ -38,7 +38,7 @@ public class WeekLetterAiService : IWeekLetterAiService
         ArgumentNullException.ThrowIfNull(conversationManager);
         ArgumentNullException.ThrowIfNull(promptBuilder);
 
-        _aiModel = model ?? Models.Gpt_4;
+        _aiModel = model ?? "gpt-3.5-turbo";
         _openAiClient = new OpenAIService(new OpenAiOptions()
         {
             ApiKey = apiKey

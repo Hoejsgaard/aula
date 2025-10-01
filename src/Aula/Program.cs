@@ -198,7 +198,7 @@ public class Program
             var aiToolsManager = provider.GetRequiredService<IAiToolsManager>();
             var conversationManager = provider.GetRequiredService<IConversationManager>();
             var promptBuilder = provider.GetRequiredService<IPromptBuilder>();
-            return new WeekLetterAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager, conversationManager, promptBuilder);
+            return new WeekLetterAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager, conversationManager, promptBuilder, config.OpenAi.Model);
         });
 
         services.AddSingleton<ISupabaseService, SupabaseService>();
