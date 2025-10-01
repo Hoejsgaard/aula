@@ -894,3 +894,64 @@ The architectural foundation provides an **excellent platform** for future devel
 *Emoji violations found: 43 (corrected from 11)*
 *Comment violations estimated: 50-80 (corrected from 20+)*
 *Dead code identified: ~1,000 lines (corrected from ~870)*
+
+---
+
+## 🔧 PHASE 7: Code Quality & Architecture Cleanup (COMPLETED)
+
+### Phase 7: IDataService Removal & Code Quality Cleanup
+**Status**: ✅ COMPLETE
+**Date**: October 2025
+**Issue**: IDataService obsolete interface still in use + code quality violations
+**Goal**: Complete child-centric architecture migration and enforce code quality standards
+
+### Part A: IDataService Interface Removal (COMPLETED)
+
+**Status**: ✅ COMPLETE - All 1246 tests passing, application verified
+
+**Changes Made:**
+
+1. **Deleted IDataService Interface**:
+   - Removed `src/Aula/Services/IDataService.cs`
+   - Obsolete abstraction from pre-child-centric architecture
+   - Replaced by direct DataService usage
+
+2. **Updated Service Constructors**:
+   - **AgentService**: Changed from `IDataService` to `DataService + Config`
+     - Added `Config` parameter to access Children collection
+     - Replaced `_dataManager.GetChildren()` with `_config.MinUddannelse.Children.AsEnumerable()`
+   - **AiToolsManager**: Added `Config` parameter
+     - Changed GetChildren() calls to use `_config.MinUddannelse.Children`
+   - **SecureWeekLetterService**: Updated from `IDataService` to `DataService`
+
+3. **Made DataService Methods Virtual**:
+   - Required for Moq mocking in tests
+   - Methods: CacheWeekLetter, GetWeekLetter, CacheWeekSchedule, GetWeekSchedule
+   - Standard pattern when mocking concrete classes
+
+4. **Updated Dependency Injection**:
+   - Changed `services.AddScoped<IDataService, DataService>()` to `services.AddScoped<DataService>()`
+   - Removed IDataService from architecture test allowlists
+
+5. **Fixed All Test Files** (6 files):
+   - **AgentServiceTests.cs**: Added Config, updated Mock<DataService> with constructor args
+   - **AiToolsManagerTests.cs**: Added Config, fixed DataService mocking
+   - **OpenAiServiceIntegrationTests.cs**: Added IMemoryCache, Config to DataService mock
+   - **OpenAiServiceTests.cs**: Fixed 3 occurrences of Mock.Of<DataService>() pattern
+   - **ProgramTests.cs**: Changed GetRequiredService<IDataService> to GetRequiredService<DataService>
+   - **ArchitectureTests.cs**: Removed IDataService from legacy interface lists
+
+**Rationale:**
+IDataService was a premature abstraction. The DataService is a simple caching service that doesn't need interface extraction. The Config-based children access pattern is now used directly where needed, following the child-centric architecture pattern established in Task 010.
+
+**Test Results:**
+- **Compilation**: ✅ SUCCESS (0 errors, 1 minor warning)
+- **Tests**: ✅ SUCCESS (1246 passed, 0 failed, 0 skipped)
+- **Application**: ✅ Starts successfully, week letters fetched and cached correctly
+
+**Commit**: `4a72414` - "refactor(services): remove obsolete IDataService interface"
+
+---
+
+*Phase 7 completed: October 2025*
+*Branch: feature/agent-implementation*
