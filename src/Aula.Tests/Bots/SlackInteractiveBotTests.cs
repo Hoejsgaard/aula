@@ -93,7 +93,7 @@ public class SlackInteractiveBotTests : IDisposable
     public async Task SendMessageToSlack_WithValidText_SendsSuccessfully()
     {
         SetupSuccessfulHttpResponse();
-        await _slackBot.StartForChild(_testChild);
+        await _slackBot.Start(_testChild);
 
         await _slackBot.SendMessageToSlack("Test message");
 
@@ -111,7 +111,7 @@ public class SlackInteractiveBotTests : IDisposable
     {
         var longMessage = new string('a', MaxMessageLength + 1);
         SetupSuccessfulHttpResponse();
-        await _slackBot.StartForChild(_testChild);
+        await _slackBot.Start(_testChild);
 
         await _slackBot.SendMessageToSlack(longMessage);
 
@@ -186,7 +186,7 @@ public class SlackInteractiveBotTests : IDisposable
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(mockResponse);
 
-        await _slackBot.StartForChild(_testChild);
+        await _slackBot.Start(_testChild);
 
         _mockLogger.Verify(
             logger => logger.Log(
@@ -232,7 +232,7 @@ public class SlackInteractiveBotTests : IDisposable
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(mockResponse);
 
-        await _slackBot.StartForChild(_testChild);
+        await _slackBot.Start(_testChild);
 
         // Verify the welcome message contains the child's name
         _mockHttpMessageHandler.Protected().Verify(
@@ -261,7 +261,7 @@ public class SlackInteractiveBotTests : IDisposable
                 ItExpr.IsAny<CancellationToken>())
             .ReturnsAsync(mockResponse);
 
-        await _slackBot.StartForChild(_testChild);
+        await _slackBot.Start(_testChild);
 
         // Verify the HTTP client has the correct authorization header
         Assert.Equal("Bearer", _httpClient.DefaultRequestHeaders.Authorization?.Scheme);
@@ -285,7 +285,7 @@ public class SlackInteractiveBotTests : IDisposable
             .ReturnsAsync(mockResponse);
 
         var beforeStart = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        await _slackBot.StartForChild(_testChild);
+        await _slackBot.Start(_testChild);
         var afterStart = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         // Verify timestamp was logged and is reasonable
@@ -365,7 +365,7 @@ public class SlackInteractiveBotTests : IDisposable
     private async Task TriggerPollMessagesByStarting()
     {
         SetupSlackPostMessageResponse(new { ok = true, ts = "1234567890.123456" });
-        await _slackBot.StartForChild(_testChild);
+        await _slackBot.Start(_testChild);
         // Give the timer a moment to trigger
         await Task.Delay(100);
     }

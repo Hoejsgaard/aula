@@ -57,7 +57,7 @@ public class SlackInteractiveBot : IDisposable
         // Bot will be assigned to a specific child via StartForChild method
     }
 
-    public async Task StartForChild(Child child)
+    public async Task Start(Child child)
     {
         _assignedChild = child ?? throw new ArgumentNullException(nameof(child));
 

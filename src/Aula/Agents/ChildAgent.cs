@@ -90,7 +90,7 @@ public class ChildAgent : IChildAgent
                 _openAiService,
                 _loggerFactory);
 
-            await _slackBot.StartForChild(_child);
+            await _slackBot.Start(_child);
 
             _logger.LogInformation("SlackInteractiveBot started successfully for {ChildName}", _child.FirstName);
         }

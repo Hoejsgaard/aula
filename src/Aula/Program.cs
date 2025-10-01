@@ -24,7 +24,7 @@ public class Program
 
         try
         {
-            logger.LogInformation("Starting aula");
+            logger.LogInformation("Starting MinUddannelse");
 
             if (!await ValidateConfigurationAsync(serviceProvider, logger))
                 return;
@@ -33,7 +33,7 @@ public class Program
 
             var childAgents = await StartChildAgentsAsync(serviceProvider, logger);
 
-            logger.LogInformation("Aula started");
+            logger.LogInformation("MinUddannelse started");
 
             var cancellationTokenSource = new CancellationTokenSource();
             ConfigureGracefulShutdown(childAgents, cancellationTokenSource, logger);
@@ -42,7 +42,7 @@ public class Program
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error starting aula");
+            logger.LogError(ex, "Error starting MinUddannelse");
         }
     }
 
@@ -100,7 +100,6 @@ public class Program
         {
             logger.LogInformation("Starting agent for child: {ChildName}", child.FirstName);
 
-            // Use factory to create child agent with all required dependencies
             var childAgent = factory.CreateChildAgent(child, schedulingService);
             await childAgent.StartAsync();
             childAgents.Add(childAgent);
