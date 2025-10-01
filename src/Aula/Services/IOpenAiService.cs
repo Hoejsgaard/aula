@@ -1,29 +1,25 @@
-using Newtonsoft.Json.Linq;
+using System.Threading.Tasks;
 using Aula.Configuration;
 
 namespace Aula.Services;
 
-public enum ChatInterface
+/// <summary>
+/// OpenAI service that accepts Child parameters for all operations.
+/// </summary>
+public interface IOpenAiService
 {
-    Slack,
-    Telegram
-}
+    /// <summary>
+    /// Gets an AI response for the given query in the specified child's context.
+    /// </summary>
+    Task<string?> GetResponseAsync(Child child, string query);
 
-public interface IWeekLetterAiService
-{
-    Task<string> SummarizeWeekLetterAsync(JObject weekLetter, ChatInterface chatInterface = ChatInterface.Slack);
+    /// <summary>
+    /// Gets an AI response with conversation context for the specified child.
+    /// </summary>
+    Task<string?> GetResponseWithContextAsync(Child child, string query, string conversationId);
 
-    Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, string childName, ChatInterface chatInterface = ChatInterface.Slack);
-
-    Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, string childName, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack);
-
-    Task<JObject> ExtractKeyInformationAsync(JObject weekLetter, ChatInterface chatInterface = ChatInterface.Slack);
-
-    Task<string> AskQuestionAboutChildrenAsync(Dictionary<string, JObject> childrenWeekLetters, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack);
-
-    Task<string> ProcessQueryWithToolsAsync(string query, string contextKey, ChatInterface chatInterface = ChatInterface.Slack);
-
-    Task<string> ProcessDirectQueryAsync(string query, ChatInterface chatInterface = ChatInterface.Slack);
-
-    void ClearConversationHistory(string? contextKey = null);
+    /// <summary>
+    /// Clears the conversation history for the specified child.
+    /// </summary>
+    Task ClearConversationHistoryAsync(Child child, string conversationId);
 }

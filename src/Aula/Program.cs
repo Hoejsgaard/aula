@@ -90,7 +90,7 @@ public class Program
     {
         var config = serviceProvider.GetRequiredService<Config>();
         var schedulingService = serviceProvider.GetRequiredService<ISchedulingService>();
-        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
+        var factory = serviceProvider.GetRequiredService<IChildAgentFactory>();
 
         await schedulingService.StartAsync();
         logger.LogInformation("SchedulingService started");
@@ -100,20 +100,8 @@ public class Program
         {
             logger.LogInformation("Starting agent for child: {ChildName}", child.FirstName);
 
-            // Get explicit dependencies instead of using service locator
-            var childAwareOpenAiService = serviceProvider.GetRequiredService<IOpenAiService>();
-            var weekLetterHandlerLogger = serviceProvider.GetRequiredService<ILogger<ChildWeekLetterHandler>>();
-            var childDataService = serviceProvider.GetRequiredService<IWeekLetterService>();
-            var postWeekLettersOnStartup = config.Features?.PostWeekLettersOnStartup ?? false;
-
-            var childAgent = new ChildAgent(
-                child,
-                childAwareOpenAiService,
-                weekLetterHandlerLogger,
-                childDataService,
-                postWeekLettersOnStartup,
-                schedulingService,
-                loggerFactory);
+            // Use factory to create child agent with all required dependencies
+            var childAgent = factory.CreateChildAgent(child, schedulingService);
             await childAgent.StartAsync();
             childAgents.Add(childAgent);
         }
@@ -187,7 +175,10 @@ public class Program
         services.AddSingleton<IWeekLetterService, SecureWeekLetterService>();
         services.AddSingleton<IChildChannelManager, SecureChildChannelManager>();
         services.AddSingleton<IChildScheduler, SecureChildScheduler>();
-        services.AddSingleton<IOpenAiService, SecureChildAwareOpenAiService>();
+        services.AddSingleton<IOpenAiService, SecureOpenAiService>();
+
+        // Factory for creating ChildAgent instances with proper dependency resolution
+        services.AddSingleton<IChildAgentFactory, ChildAgentFactory>();
 
         services.AddScoped<IDataService, DataService>();
         services.AddScoped<IMinUddannelseClient, MinUddannelseClient>();

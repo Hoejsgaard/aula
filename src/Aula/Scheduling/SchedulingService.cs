@@ -16,7 +16,7 @@ public class SchedulingService : ISchedulingService
 {
     private readonly ILogger _logger;
     private readonly ISupabaseService _supabaseService;
-    private readonly IWeekLetterService _childDataService;
+    private readonly IWeekLetterService _weekLetterService;
     private readonly IChannelManager _channelManager;
     private readonly Config _config;
     private Timer? _schedulingTimer;
@@ -36,13 +36,13 @@ public class SchedulingService : ISchedulingService
     public SchedulingService(
         ILoggerFactory loggerFactory,
         ISupabaseService supabaseService,
-        IWeekLetterService childDataService,
+        IWeekLetterService weekLetterService,
         IChannelManager channelManager,
         Config config)
     {
         _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<SchedulingService>();
         _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
-        _childDataService = childDataService ?? throw new ArgumentNullException(nameof(childDataService));
+        _weekLetterService = weekLetterService ?? throw new ArgumentNullException(nameof(weekLetterService));
         _channelManager = channelManager ?? throw new ArgumentNullException(nameof(channelManager));
         _config = config ?? throw new ArgumentNullException(nameof(config));
     }
@@ -391,7 +391,7 @@ public class SchedulingService : ISchedulingService
     private async Task<dynamic?> TryGetWeekLetter(Child child, int weekNumber, int year)
     {
         var date = DateOnly.FromDateTime(DateTime.Now);
-        var weekLetter = await _childDataService.GetOrFetchWeekLetterAsync(child, date, true);
+        var weekLetter = await _weekLetterService.GetOrFetchWeekLetterAsync(child, date, true);
         if (weekLetter == null)
         {
             _logger.LogWarning("No week letter available for {ChildName}, will retry later", child.FirstName);

@@ -7,22 +7,22 @@ using Microsoft.Extensions.Logging;
 namespace Aula.Services;
 
 /// <summary>
-/// Child-aware OpenAI service that ensures all AI operations happen within child context.
-/// Handles week letter questions by using child data service and current week letter data.
+/// Secure OpenAI service that ensures all AI operations happen within child context.
+/// Handles week letter questions by using week letter service and current week letter data.
 /// </summary>
-public class SecureChildAwareOpenAiService : IOpenAiService
+public class SecureOpenAiService : IOpenAiService
 {
     private readonly IWeekLetterAiService _openAiService;
-    private readonly IWeekLetterService _childDataService;
-    private readonly ILogger<SecureChildAwareOpenAiService> _logger;
+    private readonly IWeekLetterService _weekLetterService;
+    private readonly ILogger<SecureOpenAiService> _logger;
 
-    public SecureChildAwareOpenAiService(
+    public SecureOpenAiService(
         IWeekLetterAiService openAiService,
-        IWeekLetterService childDataService,
-        ILogger<SecureChildAwareOpenAiService> logger)
+        IWeekLetterService weekLetterService,
+        ILogger<SecureOpenAiService> logger)
     {
         _openAiService = openAiService ?? throw new ArgumentNullException(nameof(openAiService));
-        _childDataService = childDataService ?? throw new ArgumentNullException(nameof(childDataService));
+        _weekLetterService = weekLetterService ?? throw new ArgumentNullException(nameof(weekLetterService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -70,7 +70,7 @@ public class SecureChildAwareOpenAiService : IOpenAiService
         {
             // Get current week letter (default to current week)
             var currentDate = DateOnly.FromDateTime(DateTime.Now);
-            var weekLetter = await _childDataService.GetOrFetchWeekLetterAsync(child, currentDate);
+            var weekLetter = await _weekLetterService.GetOrFetchWeekLetterAsync(child, currentDate);
 
             if (weekLetter == null)
             {

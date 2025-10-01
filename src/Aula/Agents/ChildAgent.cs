@@ -16,9 +16,9 @@ namespace Aula.Agents;
 public class ChildAgent : IChildAgent
 {
     private readonly Child _child;
-    private readonly IOpenAiService _childAwareOpenAiService;
+    private readonly IOpenAiService _openAiService;
     private readonly ILogger<ChildWeekLetterHandler> _weekLetterHandlerLogger;
-    private readonly IWeekLetterService _childDataService;
+    private readonly IWeekLetterService _weekLetterService;
     private readonly bool _postWeekLettersOnStartup;
     private readonly ISchedulingService _schedulingService;
     private readonly ILoggerFactory _loggerFactory;
@@ -28,17 +28,17 @@ public class ChildAgent : IChildAgent
 
     public ChildAgent(
         Child child,
-        IOpenAiService childAwareOpenAiService,
+        IOpenAiService openAiService,
         ILogger<ChildWeekLetterHandler> weekLetterHandlerLogger,
-        IWeekLetterService childDataService,
+        IWeekLetterService weekLetterService,
         bool postWeekLettersOnStartup,
         ISchedulingService schedulingService,
         ILoggerFactory loggerFactory)
     {
         _child = child ?? throw new ArgumentNullException(nameof(child));
-        _childAwareOpenAiService = childAwareOpenAiService ?? throw new ArgumentNullException(nameof(childAwareOpenAiService));
+        _openAiService = openAiService ?? throw new ArgumentNullException(nameof(openAiService));
         _weekLetterHandlerLogger = weekLetterHandlerLogger ?? throw new ArgumentNullException(nameof(weekLetterHandlerLogger));
-        _childDataService = childDataService ?? throw new ArgumentNullException(nameof(childDataService));
+        _weekLetterService = weekLetterService ?? throw new ArgumentNullException(nameof(weekLetterService));
         _postWeekLettersOnStartup = postWeekLettersOnStartup;
         _schedulingService = schedulingService ?? throw new ArgumentNullException(nameof(schedulingService));
         _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
@@ -87,7 +87,7 @@ public class ChildAgent : IChildAgent
                 _child.FirstName, _child.Channels!.Slack!.ChannelId);
 
             _slackBot = new SlackInteractiveBot(
-                _childAwareOpenAiService,
+                _openAiService,
                 _loggerFactory);
 
             await _slackBot.StartForChild(_child);
@@ -142,7 +142,7 @@ public class ChildAgent : IChildAgent
         try
         {
             var date = DateOnly.FromDateTime(now.AddDays(-7 * (System.Globalization.ISOWeek.GetWeekOfYear(now) - weekNumber)));
-            var weekLetter = await _childDataService.GetOrFetchWeekLetterAsync(_child, date, true);
+            var weekLetter = await _weekLetterService.GetOrFetchWeekLetterAsync(_child, date, true);
 
             if (weekLetter != null)
             {
