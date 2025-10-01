@@ -37,14 +37,12 @@ public class ArchitectureTests
         "IMessageContentFilter",
         "IChildSchedulingRateLimiter",
 		// Legacy interfaces allowed to have Child parameters (marked obsolete)
-		"IDataService",
         "IAgentService",
         "IMinUddannelseClient"
     };
 
     private static readonly HashSet<string> LegacyInterfacesToObsolete = new()
     {
-        "IDataService",
         "IAgentService",
         "IMinUddannelseClient"
     };

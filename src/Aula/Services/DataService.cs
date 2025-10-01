@@ -5,7 +5,7 @@ using Aula.Configuration;
 
 namespace Aula.Services;
 
-public class DataService : IDataService
+public class DataService
 {
     private readonly IMemoryCache _cache;
     private readonly ILogger _logger;
@@ -19,14 +19,14 @@ public class DataService : IDataService
         _logger = loggerFactory.CreateLogger(nameof(DataService));
     }
 
-    public void CacheWeekLetter(Child child, int weekNumber, int year, JObject weekLetter)
+    public virtual void CacheWeekLetter(Child child, int weekNumber, int year, JObject weekLetter)
     {
         var cacheKey = GetWeekLetterCacheKey(child, weekNumber, year);
         _cache.Set(cacheKey, weekLetter, _cacheExpiration);
         _logger.LogInformation("Cached week letter for {ChildName} week {WeekNumber}/{Year}", child.FirstName, weekNumber, year);
     }
 
-    public JObject? GetWeekLetter(Child child, int weekNumber, int year)
+    public virtual JObject? GetWeekLetter(Child child, int weekNumber, int year)
     {
         var cacheKey = GetWeekLetterCacheKey(child, weekNumber, year);
         if (_cache.TryGetValue(cacheKey, out JObject? weekLetter))
@@ -39,14 +39,14 @@ public class DataService : IDataService
         return null;
     }
 
-    public void CacheWeekSchedule(Child child, int weekNumber, int year, JObject weekSchedule)
+    public virtual void CacheWeekSchedule(Child child, int weekNumber, int year, JObject weekSchedule)
     {
         var cacheKey = GetWeekScheduleCacheKey(child, weekNumber, year);
         _cache.Set(cacheKey, weekSchedule, _cacheExpiration);
         _logger.LogInformation("Cached week schedule for {ChildName} week {WeekNumber}/{Year}", child.FirstName, weekNumber, year);
     }
 
-    public JObject? GetWeekSchedule(Child child, int weekNumber, int year)
+    public virtual JObject? GetWeekSchedule(Child child, int weekNumber, int year)
     {
         var cacheKey = GetWeekScheduleCacheKey(child, weekNumber, year);
         if (_cache.TryGetValue(cacheKey, out JObject? weekSchedule))

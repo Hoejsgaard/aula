@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json.Linq;
@@ -10,15 +11,15 @@ namespace Aula.Tests.Tools;
 public class AiToolsManagerTests
 {
     private readonly Mock<ISupabaseService> _mockSupabaseService;
-    private readonly Mock<IDataService> _mockDataManager;
+    private readonly Mock<DataService> _mockDataManager;
     private readonly ILoggerFactory _loggerFactory;
     private readonly AiToolsManager _aiToolsManager;
     private readonly List<Child> _testChildren;
+    private readonly Config _config;
 
     public AiToolsManagerTests()
     {
         _mockSupabaseService = new Mock<ISupabaseService>();
-        _mockDataManager = new Mock<IDataService>();
         _loggerFactory = new LoggerFactory();
 
         _testChildren = new List<Child>
@@ -27,9 +28,18 @@ public class AiToolsManagerTests
             new Child { FirstName = "Bob", LastName = "Smith" }
         };
 
-        _mockDataManager.Setup(d => d.GetChildren()).Returns(_testChildren);
+        _config = new Config
+        {
+            MinUddannelse = new MinUddannelse
+            {
+                Children = _testChildren
+            }
+        };
 
-        _aiToolsManager = new AiToolsManager(_mockSupabaseService.Object, _mockDataManager.Object, _loggerFactory);
+        var mockCache = new Mock<IMemoryCache>();
+        _mockDataManager = new Mock<DataService>(mockCache.Object, _config, _loggerFactory);
+
+        _aiToolsManager = new AiToolsManager(_mockSupabaseService.Object, _mockDataManager.Object, _config, _loggerFactory);
     }
 
     [Fact]

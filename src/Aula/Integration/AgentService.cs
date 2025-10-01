@@ -8,23 +8,27 @@ namespace Aula.Integration;
 public class AgentService : IAgentService
 {
     private readonly IMinUddannelseClient _minUddannelseClient;
-    private readonly IDataService _dataManager;
+    private readonly DataService _dataService;
+    private readonly Config _config;
     private readonly IWeekLetterAiService _openAiService;
     private readonly ILogger _logger;
 
     public AgentService(
         IMinUddannelseClient minUddannelseClient,
-        IDataService dataManager,
+        DataService dataService,
+        Config config,
         IWeekLetterAiService openAiService,
         ILoggerFactory loggerFactory)
     {
         ArgumentNullException.ThrowIfNull(minUddannelseClient);
-        ArgumentNullException.ThrowIfNull(dataManager);
+        ArgumentNullException.ThrowIfNull(dataService);
+        ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(openAiService);
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
         _minUddannelseClient = minUddannelseClient;
-        _dataManager = dataManager;
+        _dataService = dataService;
+        _config = config;
         _openAiService = openAiService;
         _logger = loggerFactory.CreateLogger(nameof(AgentService));
     }
@@ -48,7 +52,7 @@ public class AgentService : IAgentService
 
         if (useCache)
         {
-            var cachedWeekLetter = _dataManager.GetWeekLetter(child, weekNumber, year);
+            var cachedWeekLetter = _dataService.GetWeekLetter(child, weekNumber, year);
             if (cachedWeekLetter != null)
             {
                 _logger.LogInformation("MONITOR: Returning cached week letter for {ChildName}", child.FirstName);
@@ -106,7 +110,7 @@ public class AgentService : IAgentService
         weekLetter["child"] = child.FirstName;
         _logger.LogInformation("MONITOR: Added child name to week letter: {ChildName}", child.FirstName);
 
-        _dataManager.CacheWeekLetter(child, weekNumber, year, weekLetter);
+        _dataService.CacheWeekLetter(child, weekNumber, year, weekLetter);
         _logger.LogInformation("MONITOR: Cached week letter for {ChildName}", child.FirstName);
 
         return weekLetter;
@@ -122,7 +126,7 @@ public class AgentService : IAgentService
 
         if (useCache)
         {
-            var cachedWeekSchedule = _dataManager.GetWeekSchedule(child, weekNumber, year);
+            var cachedWeekSchedule = _dataService.GetWeekSchedule(child, weekNumber, year);
             if (cachedWeekSchedule != null)
             {
                 _logger.LogInformation("Returning cached week schedule for {ChildName}", child.FirstName);
@@ -133,7 +137,7 @@ public class AgentService : IAgentService
         _logger.LogInformation("Getting week schedule for {ChildName} for date {Date}", child.FirstName, date);
         var weekSchedule = await _minUddannelseClient.GetWeekSchedule(child, date);
 
-        _dataManager.CacheWeekSchedule(child, weekNumber, year, weekSchedule);
+        _dataService.CacheWeekSchedule(child, weekNumber, year, weekSchedule);
 
         return weekSchedule;
     }
@@ -204,7 +208,7 @@ public class AgentService : IAgentService
     public ValueTask<Child?> GetChildByNameAsync(string childName)
     {
         _logger.LogInformation("Getting child by name: {ChildName}", childName);
-        var child = _dataManager.GetChildren()
+        var child = _config.MinUddannelse.Children
             .FirstOrDefault(c => c.FirstName.Equals(childName, StringComparison.OrdinalIgnoreCase));
 
         if (child == null)
@@ -222,7 +226,7 @@ public class AgentService : IAgentService
     public ValueTask<IEnumerable<Child>> GetAllChildrenAsync()
     {
         _logger.LogInformation("Getting all children");
-        var children = _dataManager.GetChildren();
+        var children = _config.MinUddannelse.Children.AsEnumerable();
         _logger.LogInformation("Found {Count} children", children.Count());
         return ValueTask.FromResult(children);
     }

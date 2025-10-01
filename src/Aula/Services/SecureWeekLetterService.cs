@@ -15,7 +15,7 @@ public class SecureWeekLetterService : IWeekLetterService
 {
     private readonly IChildAuditService _auditService;
     private readonly IChildRateLimiter _rateLimiter;
-    private readonly IDataService _dataService;
+    private readonly DataService _dataService;
     private readonly ISupabaseService _supabaseService;
     private readonly IMinUddannelseClient _minUddannelseClient;
     private readonly ILogger<SecureWeekLetterService> _logger;
@@ -23,7 +23,7 @@ public class SecureWeekLetterService : IWeekLetterService
     public SecureWeekLetterService(
         IChildAuditService auditService,
         IChildRateLimiter rateLimiter,
-        IDataService dataService,
+        DataService dataService,
         ISupabaseService supabaseService,
         IMinUddannelseClient minUddannelseClient,
         ILogger<SecureWeekLetterService> logger)

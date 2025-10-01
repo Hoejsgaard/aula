@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Aula.Integration;
@@ -15,17 +16,28 @@ public class AgentServiceTests
 {
     private readonly Mock<ILoggerFactory> _mockLoggerFactory;
     private readonly Mock<ILogger> _mockLogger;
-    private readonly Mock<IDataService> _mockDataService;
+    private readonly Mock<DataService> _mockDataService;
     private readonly Mock<IWeekLetterAiService> _mockOpenAiService;
     private readonly Mock<IMinUddannelseClient> _mockMinUddannelseClient;
+    private readonly Config _config;
 
     public AgentServiceTests()
     {
         _mockLoggerFactory = new Mock<ILoggerFactory>();
         _mockLogger = new Mock<ILogger>();
-        _mockDataService = new Mock<IDataService>();
         _mockOpenAiService = new Mock<IWeekLetterAiService>();
         _mockMinUddannelseClient = new Mock<IMinUddannelseClient>();
+
+        _config = new Config
+        {
+            MinUddannelse = new MinUddannelse
+            {
+                Children = new List<Child> { new Child { FirstName = "Test", LastName = "Child" } }
+            }
+        };
+
+        var mockCache = new Mock<IMemoryCache>();
+        _mockDataService = new Mock<DataService>(mockCache.Object, _config, _mockLoggerFactory.Object);
 
         _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
     }
@@ -35,7 +47,7 @@ public class AgentServiceTests
     {
         // Arrange & Act
         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
-            _mockOpenAiService.Object, _mockLoggerFactory.Object);
+            _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
 
         // Assert
         Assert.NotNull(service);
@@ -46,7 +58,7 @@ public class AgentServiceTests
     {
         // Arrange & Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new AgentService(null!, _mockDataService.Object, _mockOpenAiService.Object, _mockLoggerFactory.Object));
+            new AgentService(null!, _mockDataService.Object, _config, _mockOpenAiService.Object, _mockLoggerFactory.Object));
     }
 
     [Fact]
@@ -54,7 +66,7 @@ public class AgentServiceTests
     {
         // Arrange & Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new AgentService(_mockMinUddannelseClient.Object, null!, _mockOpenAiService.Object, _mockLoggerFactory.Object));
+            new AgentService(_mockMinUddannelseClient.Object, null!, _config, _mockOpenAiService.Object, _mockLoggerFactory.Object));
     }
 
     [Fact]
@@ -62,7 +74,7 @@ public class AgentServiceTests
     {
         // Arrange & Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object, null!, _mockLoggerFactory.Object));
+            new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object, _config, null!, _mockLoggerFactory.Object));
     }
 
     [Fact]
@@ -70,7 +82,7 @@ public class AgentServiceTests
     {
         // Arrange & Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object, _mockOpenAiService.Object, null!));
+            new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object, _config, _mockOpenAiService.Object, null!));
     }
 
     [Fact]
@@ -131,11 +143,12 @@ public class AgentServiceTests
         var parameters = constructor.GetParameters();
 
         // Assert
-        Assert.Equal(4, parameters.Length);
+        Assert.Equal(5, parameters.Length);
         Assert.Equal(typeof(IMinUddannelseClient), parameters[0].ParameterType);
-        Assert.Equal(typeof(IDataService), parameters[1].ParameterType);
-        Assert.Equal(typeof(IWeekLetterAiService), parameters[2].ParameterType);
-        Assert.Equal(typeof(ILoggerFactory), parameters[3].ParameterType);
+        Assert.Equal(typeof(DataService), parameters[1].ParameterType);
+        Assert.Equal(typeof(Config), parameters[2].ParameterType);
+        Assert.Equal(typeof(IWeekLetterAiService), parameters[3].ParameterType);
+        Assert.Equal(typeof(ILoggerFactory), parameters[4].ParameterType);
     }
 
     [Fact]
@@ -150,9 +163,10 @@ public class AgentServiceTests
 
         // Assert
         Assert.Equal("minUddannelseClient", parameters[0].Name);
-        Assert.Equal("dataManager", parameters[1].Name);
-        Assert.Equal("openAiService", parameters[2].Name);
-        Assert.Equal("loggerFactory", parameters[3].Name);
+        Assert.Equal("dataService", parameters[1].Name);
+        Assert.Equal("config", parameters[2].Name);
+        Assert.Equal("openAiService", parameters[3].Name);
+        Assert.Equal("loggerFactory", parameters[4].Name);
     }
 
     [Fact]
@@ -161,7 +175,7 @@ public class AgentServiceTests
         // Arrange
         _mockMinUddannelseClient.Setup(x => x.LoginAsync()).ReturnsAsync(true);
         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
-            _mockOpenAiService.Object, _mockLoggerFactory.Object);
+            _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
 
         // Act
         var result = await service.LoginAsync();
@@ -180,7 +194,7 @@ public class AgentServiceTests
         _mockDataService.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns(cachedData);
 
         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
-            _mockOpenAiService.Object, _mockLoggerFactory.Object);
+            _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
 
         // Act
         var result = await service.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), useCache: true);
@@ -202,7 +216,7 @@ public class AgentServiceTests
         _mockMinUddannelseClient.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>())).ReturnsAsync(freshData);
 
         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
-            _mockOpenAiService.Object, _mockLoggerFactory.Object);
+            _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
 
         // Act
         var result = await service.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), useCache: true);
@@ -225,7 +239,7 @@ public class AgentServiceTests
             .ReturnsAsync(new JObject());
 
         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
-            _mockOpenAiService.Object, _mockLoggerFactory.Object);
+            _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
 
         // Act - Call without calling LoginAsync first
         await service.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), useCache: false);
@@ -244,7 +258,7 @@ public class AgentServiceTests
         _mockDataService.Setup(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns(cachedSchedule);
 
         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
-            _mockOpenAiService.Object, _mockLoggerFactory.Object);
+            _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
 
         // Act
         var result = await service.GetWeekScheduleAsync(child, DateOnly.FromDateTime(DateTime.Today), useCache: true);
@@ -266,7 +280,7 @@ public class AgentServiceTests
         _mockMinUddannelseClient.Setup(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<DateOnly>())).ReturnsAsync(freshSchedule);
 
         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
-            _mockOpenAiService.Object, _mockLoggerFactory.Object);
+            _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
 
         // Act
         var result = await service.GetWeekScheduleAsync(child, DateOnly.FromDateTime(DateTime.Today), useCache: true);

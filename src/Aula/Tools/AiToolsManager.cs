@@ -8,13 +8,15 @@ namespace Aula.Tools;
 public class AiToolsManager : IAiToolsManager
 {
     private readonly ISupabaseService _supabaseService;
-    private readonly IDataService _dataService;
+    private readonly DataService _dataService;
+    private readonly Config _config;
     private readonly ILogger _logger;
 
-    public AiToolsManager(ISupabaseService supabaseService, IDataService dataService, ILoggerFactory loggerFactory)
+    public AiToolsManager(ISupabaseService supabaseService, DataService dataService, Config config, ILoggerFactory loggerFactory)
     {
         _supabaseService = supabaseService;
         _dataService = dataService;
+        _config = config;
         _logger = loggerFactory.CreateLogger<AiToolsManager>();
     }
 
@@ -108,7 +110,7 @@ public class AiToolsManager : IAiToolsManager
     {
         try
         {
-            var allChildren = _dataService.GetChildren();
+            var allChildren = _config.MinUddannelse.Children;
             var children = string.IsNullOrEmpty(childName)
                 ? allChildren.ToList()
                 : allChildren.Where(c => $"{c.FirstName} {c.LastName}".Contains(childName, StringComparison.OrdinalIgnoreCase)).ToList();
@@ -156,7 +158,7 @@ public class AiToolsManager : IAiToolsManager
             {
                 return $"❌ Invalid date format: '{date}'. Please use a valid date format.";
             }
-            var child = _dataService.GetChildren().FirstOrDefault(c =>
+            var child = _config.MinUddannelse.Children.FirstOrDefault(c =>
                 $"{c.FirstName} {c.LastName}".Contains(childName, StringComparison.OrdinalIgnoreCase));
 
             if (child == null)

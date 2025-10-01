@@ -25,7 +25,7 @@ public class ProgramTests
         // Assert - Verify core services are registered
         Assert.NotNull(serviceProvider.GetRequiredService<Config>());
         Assert.NotNull(serviceProvider.GetRequiredService<ILoggerFactory>());
-        Assert.NotNull(serviceProvider.GetRequiredService<IDataService>());
+        Assert.NotNull(serviceProvider.GetRequiredService<DataService>());
         Assert.NotNull(serviceProvider.GetRequiredService<IMinUddannelseClient>());
         Assert.NotNull(serviceProvider.GetRequiredService<IAgentService>());
         Assert.NotNull(serviceProvider.GetRequiredService<IWeekLetterAiService>());

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json.Linq;
@@ -17,18 +18,29 @@ public class OpenAiServiceIntegrationTests
     private readonly Mock<ILogger> _mockLogger;
     private readonly AiToolsManager _aiToolsManager;
     private readonly Mock<ISupabaseService> _mockSupabaseService;
-    private readonly Mock<IDataService> _mockDataService;
+    private readonly Mock<DataService> _mockDataService;
+    private readonly Config _config;
 
     public OpenAiServiceIntegrationTests()
     {
         _mockLoggerFactory = new Mock<ILoggerFactory>();
         _mockLogger = new Mock<ILogger>();
         _mockSupabaseService = new Mock<ISupabaseService>();
-        _mockDataService = new Mock<IDataService>();
+
+        _config = new Config
+        {
+            MinUddannelse = new MinUddannelse
+            {
+                Children = new List<Child> { new Child { FirstName = "Test", LastName = "Child" } }
+            }
+        };
+
+        var mockCache = new Mock<IMemoryCache>();
+        _mockDataService = new Mock<DataService>(mockCache.Object, _config, _mockLoggerFactory.Object);
 
         _mockLoggerFactory.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
 
-        _aiToolsManager = new AiToolsManager(_mockSupabaseService.Object, _mockDataService.Object, _mockLoggerFactory.Object);
+        _aiToolsManager = new AiToolsManager(_mockSupabaseService.Object, _mockDataService.Object, _config, _mockLoggerFactory.Object);
     }
 
     [Fact]

@@ -179,7 +179,7 @@ public class Program
         // Factory for creating ChildAgent instances with proper dependency resolution
         services.AddSingleton<IChildAgentFactory, ChildAgentFactory>();
 
-        services.AddScoped<IDataService, DataService>();
+        services.AddScoped<DataService>();
         services.AddScoped<IMinUddannelseClient, MinUddannelseClient>();
         services.AddScoped<IAgentService, AgentService>();
         services.AddSingleton<IPromptSanitizer, PromptSanitizer>();
