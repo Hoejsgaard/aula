@@ -4,7 +4,6 @@ using Aula.Configuration;
 using Aula.Services;
 using Aula.Integration;
 using Aula.Utilities;
-using Aula.Tools;
 
 namespace Aula.Bots;
 
@@ -20,7 +19,6 @@ public abstract class BotBase
     protected ISupabaseService SupabaseService { get; }
     protected Dictionary<string, Child> ChildrenByName { get; }
     protected ConcurrentDictionary<string, byte> PostedWeekLetterHashes { get; }
-    protected ReminderCommandHandler ReminderHandler { get; }
 
     protected BotBase(
         IAgentService agentService,
@@ -51,7 +49,6 @@ public abstract class BotBase
         }
 
         PostedWeekLetterHashes = new ConcurrentDictionary<string, byte>();
-        ReminderHandler = new ReminderCommandHandler(Logger, SupabaseService, ChildrenByName);
     }
 
     /// <summary>
