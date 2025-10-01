@@ -158,14 +158,14 @@ public class ReminderCommandHandler
                     if (reminders.Count == 0)
                     {
                         string noRemindersMessage = isEnglish
-                            ? "📝 No reminders found."
-                            : "📝 Ingen påmindelser fundet.";
+                            ? "No reminders found."
+                            : "Ingen påmindelser fundet.";
 
                         return (true, noRemindersMessage);
                     }
 
                     var messageBuilder = new StringBuilder();
-                    messageBuilder.AppendLine(isEnglish ? "📝 <b>Your Reminders:</b>" : "📝 <b>Dine Påmindelser:</b>");
+                    messageBuilder.AppendLine(isEnglish ? "<b>Your Reminders:</b>" : "<b>Dine Påmindelser:</b>");
                     messageBuilder.AppendLine();
 
                     foreach (var reminder in reminders.OrderBy(r => r.RemindDate).ThenBy(r => r.RemindTime))

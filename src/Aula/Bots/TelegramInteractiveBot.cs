@@ -78,7 +78,7 @@ public class TelegramInteractiveBot : IDisposable
             // Send startup message if chat ID is configured
             if (_child.Channels.Telegram.ChatId.HasValue)
             {
-                await SendMessageToTelegram($"👋 Bot for {_child.FirstName} is now online and ready to help!");
+                await SendMessageToTelegram($"Bot for {_child.FirstName} is now online and ready to help!");
             }
         }
         catch (Exception ex)
@@ -202,7 +202,7 @@ public class TelegramInteractiveBot : IDisposable
 
     private async Task SendHelpMessage(ITelegramBotClient botClient, long chatId, CancellationToken cancellationToken)
     {
-        var helpMessage = $@"🤖 **Aula Bot Help for {_child.FirstName}**
+        var helpMessage = $@"**Aula Bot Help for {_child.FirstName}**
 
 I can help you with information about {_child.FirstName}'s school activities from Aula.
 

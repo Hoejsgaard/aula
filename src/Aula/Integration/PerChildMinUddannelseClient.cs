@@ -31,7 +31,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
     {
         // This method is now a no-op since we authenticate per-request
         // Keeping it for backward compatibility with IMinUddannelseClient interface
-        _logger.LogInformation("🔐 LoginAsync called - authentication will happen per-request");
+        _logger.LogInformation("LoginAsync called - authentication will happen per-request");
         return Task.FromResult(true);
     }
 
@@ -101,12 +101,12 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         IChildAuthenticatedClient childClient;
         if (child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null)
         {
-            _logger.LogInformation("🖼️ Using pictogram authentication for {ChildName}", child.FirstName);
+            _logger.LogInformation("Using pictogram authentication for {ChildName}", child.FirstName);
             childClient = new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _logger);
         }
         else
         {
-            _logger.LogInformation("🔐 Using standard authentication for {ChildName}", child.FirstName);
+            _logger.LogInformation("Using standard authentication for {ChildName}", child.FirstName);
             childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _logger);
         }
 
@@ -159,12 +159,12 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         IChildAuthenticatedClient childClient;
         if (child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null)
         {
-            _logger.LogInformation("🖼️ Using pictogram authentication for {ChildName}", child.FirstName);
+            _logger.LogInformation("Using pictogram authentication for {ChildName}", child.FirstName);
             childClient = new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _logger);
         }
         else
         {
-            _logger.LogInformation("🔐 Using standard authentication for {ChildName}", child.FirstName);
+            _logger.LogInformation("Using standard authentication for {ChildName}", child.FirstName);
             childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _logger);
         }
 
@@ -273,12 +273,12 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
         public new async Task<bool> LoginAsync()
         {
-            _logger.LogInformation("🔐 Attempting to login for {ChildName} at URL: {Url}",
+            _logger.LogInformation("Attempting to login for {ChildName} at URL: {Url}",
                 _child.FirstName, "https://www.minuddannelse.net/");
 
             var loginSuccess = await base.LoginAsync();
 
-            _logger.LogInformation("🔐 Base login returned: {Success}", loginSuccess);
+            _logger.LogInformation("Base login returned: {Success}", loginSuccess);
 
             if (loginSuccess)
             {

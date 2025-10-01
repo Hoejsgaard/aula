@@ -35,7 +35,7 @@ public class HistoricalDataSeeder : IHistoricalDataSeeder
     {
         try
         {
-            _logger.LogInformation("📅 Fetching historical week letters from the past 8 weeks (weeks 19-26)");
+            _logger.LogInformation("Fetching historical week letters from the past 8 weeks (weeks 19-26)");
 
             // Login to MinUddannelse
             var loginSuccess = await _agentService.LoginAsync();
@@ -53,7 +53,7 @@ public class HistoricalDataSeeder : IHistoricalDataSeeder
             }
 
             var today = DateOnly.FromDateTime(DateTime.Today);
-            _logger.LogInformation("📅 Today is: {Today} (calculated from DateTime.Today: {DateTimeToday})", today, DateTime.Today);
+            _logger.LogInformation("Today is: {Today} (calculated from DateTime.Today: {DateTimeToday})", today, DateTime.Today);
             var successCount = 0;
             var totalAttempts = 0;
 

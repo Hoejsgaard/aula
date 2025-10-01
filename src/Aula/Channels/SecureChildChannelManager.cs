@@ -216,7 +216,7 @@ public class SecureChildChannelManager : IChildChannelManager
         }
 
         // Format reminder
-        var formattedReminder = $"📅 Reminder for {child.FirstName}: {reminderMessage}";
+        var formattedReminder = $"Reminder for {child.FirstName}: {reminderMessage}";
         if (!string.IsNullOrEmpty(metadata))
         {
             formattedReminder += $"\n{metadata}";

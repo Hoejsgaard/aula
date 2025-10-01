@@ -71,7 +71,7 @@ public class AiToolsManager : IAiToolsManager
                 })
                 .ToList();
 
-            return "📋 Active reminders:\n" + string.Join("\n", reminderList);
+            return "Active reminders:\n" + string.Join("\n", reminderList);
         }
         catch (Exception ex)
         {
@@ -130,11 +130,11 @@ public class AiToolsManager : IAiToolsManager
                 if (weekLetter != null)
                 {
                     var summary = ExtractSummaryFromWeekLetter(weekLetter);
-                    weekLetterSummaries.Add($"📝 **{child.FirstName} {child.LastName}** - Week Letter:\n{summary}");
+                    weekLetterSummaries.Add($"**{child.FirstName} {child.LastName}** - Week Letter:\n{summary}");
                 }
                 else
                 {
-                    weekLetterSummaries.Add($"📝 **{child.FirstName} {child.LastName}** - No week letter available");
+                    weekLetterSummaries.Add($"**{child.FirstName} {child.LastName}** - No week letter available");
                 }
             }
 
@@ -171,7 +171,7 @@ public class AiToolsManager : IAiToolsManager
             var weekLetter = _dataService.GetWeekLetter(child, weekNumber, year);
             if (weekLetter == null)
             {
-                return $"📝 No week letter available for {child.FirstName} {child.LastName}.";
+                return $"No week letter available for {child.FirstName} {child.LastName}.";
             }
 
             // Extract activities for the specific date from the week letter
@@ -186,11 +186,11 @@ public class AiToolsManager : IAiToolsManager
 
             if (lines.Count > 0)
             {
-                return $"📅 **{child.FirstName} {child.LastName}** activities for {targetDate:yyyy-MM-dd} ({dayName}):\n" +
+                return $"**{child.FirstName} {child.LastName}** activities for {targetDate:yyyy-MM-dd} ({dayName}):\n" +
                        string.Join("\n", lines.Select(l => $"• {l.Trim()}"));
             }
 
-            return $"📅 No specific activities found for {child.FirstName} {child.LastName} on {targetDate:yyyy-MM-dd} ({dayName}).";
+            return $"No specific activities found for {child.FirstName} {child.LastName} on {targetDate:yyyy-MM-dd} ({dayName}).";
         }
         catch (Exception ex)
         {
@@ -202,16 +202,16 @@ public class AiToolsManager : IAiToolsManager
     public string GetCurrentDateTime()
     {
         var now = DateTime.Now;
-        return $"📅 Today is {now:dddd, yyyy-MM-dd} and the current time is {now:HH:mm}.";
+        return $"Today is {now:dddd, yyyy-MM-dd} and the current time is {now:HH:mm}.";
     }
 
     public string GetHelp()
     {
-        return @"🤖 **Available Commands:**
+        return @"**Available Commands:**
 
 **Reminder Management:**
 • Create reminders for specific dates and times
-• List all your active reminders  
+• List all your active reminders
 • Delete reminders by number
 
 **Information Retrieval:**
@@ -225,7 +225,7 @@ public class AiToolsManager : IAiToolsManager
 • ""Show me this week's letter for all children""
 • ""List my reminders and delete the second one""
 
-Just ask me naturally and I'll help you! 🚀";
+Just ask me naturally and I'll help you!";
     }
 
     private string ExtractSummaryFromWeekLetter(Newtonsoft.Json.Linq.JObject weekLetter)

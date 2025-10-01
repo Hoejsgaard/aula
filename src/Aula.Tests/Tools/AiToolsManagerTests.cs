@@ -113,7 +113,7 @@ public class AiToolsManagerTests
         var result = await _aiToolsManager.ListRemindersAsync();
 
         // Assert
-        Assert.Contains("📋 Active reminders:", result);
+        Assert.Contains("Active reminders:", result);
         Assert.Contains("Reminder 1", result);
         Assert.Contains("Reminder 2", result);
         Assert.Contains("(Alice)", result);
@@ -262,7 +262,6 @@ public class AiToolsManagerTests
 
         // Assert
         Assert.NotNull(result);
-        Assert.Contains("🤖", result);
         Assert.Contains("Available Commands", result);
         Assert.Contains("Reminder", result);
     }
@@ -727,7 +726,7 @@ public class AiToolsManagerTests
         var result = _aiToolsManager.GetChildActivities(childName, dateString);
 
         // Assert
-        Assert.Contains("📝 No week letter available", result);
+        Assert.Contains("No week letter available", result);
         Assert.Contains("Alice", result);
     }
 
@@ -767,7 +766,7 @@ public class AiToolsManagerTests
         var result = _aiToolsManager.GetChildActivities(childName, dateString);
 
         // Assert
-        Assert.Contains("📅 No specific activities found", result);
+        Assert.Contains("No specific activities found", result);
         Assert.Contains("Alice", result);
         Assert.Contains("Saturday", result);
     }

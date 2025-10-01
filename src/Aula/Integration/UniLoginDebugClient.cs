@@ -228,7 +228,7 @@ public abstract class UniLoginDebugClient
 
                     if (isCredentialForm)
                     {
-                        Console.WriteLine($"[DEBUG] 🔐 Submitting credentials for user: {_username}");
+                        Console.WriteLine($"[DEBUG] Submitting credentials for user: {_username}");
                         hasSubmittedCredentials = true;
                     }
 

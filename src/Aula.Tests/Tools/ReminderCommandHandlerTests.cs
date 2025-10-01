@@ -204,13 +204,13 @@ public class ReminderCommandHandlerTests
 
         if (isEnglish)
         {
-            Assert.Contains("📝 <b>Your Reminders:</b>", result.response);
+            Assert.Contains("<b>Your Reminders:</b>", result.response);
             Assert.Contains("✅ Sent", result.response);
             Assert.Contains("⏳ Pending", result.response);
         }
         else
         {
-            Assert.Contains("📝 <b>Dine Påmindelser:</b>", result.response);
+            Assert.Contains("<b>Dine Påmindelser:</b>", result.response);
             Assert.Contains("✅ Sendt", result.response);
             Assert.Contains("⏳ Afventer", result.response);
         }
@@ -245,11 +245,11 @@ public class ReminderCommandHandlerTests
 
         if (isEnglish)
         {
-            Assert.Contains("📝 No reminders found", result.response);
+            Assert.Contains("No reminders found", result.response);
         }
         else
         {
-            Assert.Contains("📝 Ingen påmindelser fundet", result.response);
+            Assert.Contains("Ingen påmindelser fundet", result.response);
         }
     }
 

@@ -38,7 +38,7 @@ public partial class PictogramAuthenticatedClient : UniLoginDebugClient, IChildA
 
     public new async Task<bool> LoginAsync()
     {
-        _logger.LogInformation("🖼️ Starting pictogram authentication for {ChildName} with sequence: {Sequence}",
+        _logger.LogInformation("Starting pictogram authentication for {ChildName} with sequence: {Sequence}",
             _child.FirstName, string.Join(" → ", _pictogramSequence));
 
         try
@@ -63,7 +63,7 @@ public partial class PictogramAuthenticatedClient : UniLoginDebugClient, IChildA
                     var loginButtons = doc.DocumentNode.SelectNodes("//button[@name='selectedIdp']");
                     if (loginButtons != null)
                     {
-                        _logger.LogDebug("📋 Found login selector page, selecting Unilogin");
+                        _logger.LogDebug("Found login selector page, selecting Unilogin");
 
                         var form = loginButtons[0].Ancestors("form").FirstOrDefault();
                         if (form != null)
@@ -86,7 +86,7 @@ public partial class PictogramAuthenticatedClient : UniLoginDebugClient, IChildA
                     var usernameField = doc.DocumentNode.SelectSingleNode("//input[@name='username' and @type='text']");
                     if (usernameField != null)
                     {
-                        _logger.LogDebug("📝 Submitting username: {Username}", _username);
+                        _logger.LogDebug("Submitting username: {Username}", _username);
 
                         var form = usernameField.Ancestors("form").FirstOrDefault();
                         if (form != null)
@@ -242,7 +242,7 @@ public partial class PictogramAuthenticatedClient : UniLoginDebugClient, IChildA
                 if (!string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(dataPassw))
                 {
                     mapping[title] = dataPassw;
-                    _logger.LogTrace("🖼️ Pictogram: {Title} = {Value}", title, dataPassw);
+                    _logger.LogTrace("Pictogram: {Title} = {Value}", title, dataPassw);
                 }
             }
         }
@@ -592,7 +592,7 @@ public partial class PictogramAuthenticatedClient : UniLoginDebugClient, IChildA
         var url = $"https://www.minuddannelse.net/api/stamdata/aulaskema/getElevSkema?elevId={_childId}" +
                  $"&tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
-        _logger.LogDebug("📅 Fetching schedule from: {Url}", url);
+        _logger.LogDebug("Fetching schedule from: {Url}", url);
 
         var response = await HttpClient.GetAsync(url);
         if (response.IsSuccessStatusCode)

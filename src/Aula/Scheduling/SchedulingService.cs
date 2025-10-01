@@ -111,7 +111,7 @@ public class SchedulingService : ISchedulingService
 
     private void CheckScheduledTasksWrapper(object? state)
     {
-        _logger.LogInformation("🔥 TIMER FIRED - CheckScheduledTasksWrapper called at {Time}", DateTime.Now);
+        _logger.LogInformation("TIMER FIRED - CheckScheduledTasksWrapper called at {Time}", DateTime.Now);
 
         // Don't use async void - use Fire and Forget pattern instead
         _ = Task.Run(async () =>
@@ -133,7 +133,7 @@ public class SchedulingService : ISchedulingService
 
         try
         {
-            _logger.LogInformation("🔔 Timer fired: Checking scheduled tasks and reminders at {LocalTime} (UTC: {UtcTime})", DateTime.Now, DateTime.UtcNow);
+            _logger.LogInformation("Timer fired: Checking scheduled tasks and reminders at {LocalTime} (UTC: {UtcTime})", DateTime.Now, DateTime.UtcNow);
 
             // ALWAYS check for pending reminders every 10 seconds
             await ExecutePendingReminders();
@@ -144,7 +144,7 @@ public class SchedulingService : ISchedulingService
             // Run scheduled tasks only at the top of each minute (when seconds are 0-9)
             if (currentSecond < 10)
             {
-                _logger.LogInformation("⏰ Running scheduled tasks check at {Time}", DateTime.Now);
+                _logger.LogInformation("Running scheduled tasks check at {Time}", DateTime.Now);
 
                 var tasks = await _supabaseService.GetScheduledTasksAsync();
                 var now = DateTime.UtcNow;
@@ -242,7 +242,7 @@ public class SchedulingService : ISchedulingService
     {
         try
         {
-            _logger.LogInformation("📋 ExecutePendingReminders called at {LocalTime} (UTC: {UtcTime})", DateTime.Now, DateTime.UtcNow);
+            _logger.LogInformation("ExecutePendingReminders called at {LocalTime} (UTC: {UtcTime})", DateTime.Now, DateTime.UtcNow);
 
             var pendingReminders = await _supabaseService.GetPendingRemindersAsync();
 
@@ -278,12 +278,11 @@ public class SchedulingService : ISchedulingService
     private Task SendReminderNotification(Reminder reminder)
     {
         string childInfo = !string.IsNullOrEmpty(reminder.ChildName) ? $" ({reminder.ChildName})" : "";
-        string message = $"🔔 *Reminder*{childInfo}: {reminder.Text}";
+        string message = $"*Reminder*{childInfo}: {reminder.Text}";
 
         // Send to all enabled channels
         try
         {
-            // Legacy channel manager removed - reminders disabled in current build
             _logger.LogInformation("Reminder {ReminderId} sending disabled in current build", reminder.Id);
         }
         catch (Exception ex)
@@ -467,11 +466,9 @@ public class SchedulingService : ISchedulingService
             var html2MarkdownConverter = new Html2SlackMarkdownConverter();
             var markdownContent = html2MarkdownConverter.Convert(content).Replace("**", "*");
 
-            // TODO: Refactor week letter posting to use channel architecture
             // Week letter posting is complex and platform-specific (Slack uses markdown, Telegram uses JSON)
             // For now, use channels directly until IChannel interface is enhanced with week letter capabilities
 
-            // Legacy channel manager removed - week letter posting disabled
             _logger.LogInformation("Week letter posting disabled in current build for {ChildName}", child.FirstName);
         }
         catch (Exception ex)

@@ -9,6 +9,7 @@ namespace Aula.Services;
 /// <summary>
 /// Secure week letter service with defense-in-depth security layers.
 /// Provides isolated week letter operations for each child with comprehensive security controls.
+/// NOTE: Child permission validation temporarily disabled pending architecture review.
 /// </summary>
 public class SecureWeekLetterService : IWeekLetterService
 {
@@ -38,9 +39,6 @@ public class SecureWeekLetterService : IWeekLetterService
     public async Task CacheWeekLetterAsync(Child child, int weekNumber, int year, JObject weekLetter)
     {
         ArgumentNullException.ThrowIfNull(child);
-
-        // Layer 2: Permission validation (temporarily disabled)
-        // TODO: Re-implement child permission validation
 
         // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "CacheWeekLetter"))
@@ -74,9 +72,6 @@ public class SecureWeekLetterService : IWeekLetterService
     public async Task<JObject?> GetWeekLetterAsync(Child child, int weekNumber, int year)
     {
         ArgumentNullException.ThrowIfNull(child);
-
-        // Layer 2: Permission validation (temporarily disabled)
-        // TODO: Re-implement child permission validation
 
         // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "GetWeekLetter"))
@@ -113,9 +108,6 @@ public class SecureWeekLetterService : IWeekLetterService
     {
         ArgumentNullException.ThrowIfNull(child);
 
-        // Layer 2: Permission validation (temporarily disabled)
-        // TODO: Re-implement child permission validation
-
         // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "CacheWeekSchedule"))
         {
@@ -147,9 +139,6 @@ public class SecureWeekLetterService : IWeekLetterService
     public async Task<JObject?> GetWeekScheduleAsync(Child child, int weekNumber, int year)
     {
         ArgumentNullException.ThrowIfNull(child);
-
-        // Layer 2: Permission validation (temporarily disabled)
-        // TODO: Re-implement child permission validation
 
         // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "GetWeekSchedule"))
@@ -184,9 +173,6 @@ public class SecureWeekLetterService : IWeekLetterService
     public async Task<bool> StoreWeekLetterAsync(Child child, int weekNumber, int year, JObject weekLetter)
     {
         ArgumentNullException.ThrowIfNull(child);
-
-        // Layer 2: Permission validation (temporarily disabled)
-        // TODO: Re-implement child permission validation
 
         // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "StoreWeekLetter"))
@@ -228,9 +214,6 @@ public class SecureWeekLetterService : IWeekLetterService
     {
         ArgumentNullException.ThrowIfNull(child);
 
-        // Layer 2: Permission validation (temporarily disabled)
-        // TODO: Re-implement child permission validation
-
         // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "DeleteWeekLetter"))
         {
@@ -265,9 +248,6 @@ public class SecureWeekLetterService : IWeekLetterService
     public async Task<List<JObject>> GetStoredWeekLettersAsync(Child child, int? year = null)
     {
         ArgumentNullException.ThrowIfNull(child);
-
-        // Layer 2: Permission validation (temporarily disabled)
-        // TODO: Re-implement child permission validation
 
         // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "GetStoredWeekLetters"))
@@ -326,9 +306,6 @@ public class SecureWeekLetterService : IWeekLetterService
             System.Globalization.CalendarWeekRule.FirstFourDayWeek,
             DayOfWeek.Monday);
         var year = date.Year;
-
-        // Layer 2: Permission validation (temporarily disabled)
-        // TODO: Re-implement child permission validation
 
         // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "GetOrFetchWeekLetter"))
@@ -415,9 +392,6 @@ public class SecureWeekLetterService : IWeekLetterService
     public async Task<List<JObject>> GetAllWeekLettersAsync(Child child)
     {
         ArgumentNullException.ThrowIfNull(child);
-
-        // Layer 2: Permission validation (temporarily disabled)
-        // TODO: Re-implement child permission validation
 
         // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "GetAllWeekLetters"))

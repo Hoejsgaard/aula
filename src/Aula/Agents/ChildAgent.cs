@@ -139,7 +139,7 @@ public class ChildAgent : IChildAgent
         if (!(_schedulingService is SchedulingService startupSchedService))
             return;
 
-        _logger.LogInformation("📬 Posting current week letters on startup for {ChildName}", _child.FirstName);
+        _logger.LogInformation("Posting current week letters on startup for {ChildName}", _child.FirstName);
 
         var now = DateTime.Now;
         var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(now);
@@ -152,7 +152,7 @@ public class ChildAgent : IChildAgent
 
             if (weekLetter != null)
             {
-                _logger.LogInformation("📨 Emitting week letter event for {ChildName} (week {WeekNumber}/{Year})",
+                _logger.LogInformation("Emitting week letter event for {ChildName} (week {WeekNumber}/{Year})",
                     _child.FirstName, weekNumber, year);
 
                 var childId = _child.FirstName.ToLowerInvariant().Replace(" ", "_");

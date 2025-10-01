@@ -92,7 +92,7 @@ public class SlackInteractiveBot : IDisposable
         _logger.LogInformation("Slack cleanup timer started - running every 1 hour");
 
         // Send startup message
-        await SendMessageToSlack($"👋 Bot for {_child.FirstName} is now online and ready to help!");
+        await SendMessageToSlack($"Bot for {_child.FirstName} is now online and ready to help!");
     }
 
     private async Task PollForMessages()
