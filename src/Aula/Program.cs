@@ -2,10 +2,12 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Supabase;
 using Aula.Integration;
 using Aula.Scheduling;
 using Aula.Configuration;
 using Aula.Services;
+using Aula.Repositories;
 using Aula.Agents;
 using Aula.Authentication;
 using Aula.Channels;
@@ -72,17 +74,17 @@ public class Program
 
     private static async Task InitializeSupabaseAsync(IServiceProvider serviceProvider, ILogger logger)
     {
-        var supabaseService = serviceProvider.GetRequiredService<ISupabaseService>();
-        await supabaseService.InitializeAsync();
+        var supabaseClient = serviceProvider.GetRequiredService<Client>();
 
-        var connectionTest = await supabaseService.TestConnectionAsync();
-        if (!connectionTest)
+        // Test connection by attempting to get a simple query
+        try
         {
-            logger.LogWarning("Supabase connection test failed - continuing without database features");
-        }
-        else
-        {
+            await supabaseClient.From<Reminder>().Limit(1).Get();
             logger.LogInformation("Supabase connection test successful");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Supabase connection test failed - continuing without database features");
         }
     }
 
@@ -201,7 +203,24 @@ public class Program
             return new WeekLetterAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager, conversationManager, promptBuilder, config.OpenAi.Model);
         });
 
-        services.AddSingleton<ISupabaseService, SupabaseService>();
+        // Supabase Client singleton (initialized asynchronously via factory)
+        services.AddSingleton<Client>(provider =>
+        {
+            var config = provider.GetRequiredService<Config>();
+            var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger("SupabaseClientFactory");
+
+            return SupabaseClientFactory.CreateClientAsync(config, logger)
+                .GetAwaiter().GetResult();
+        });
+
+        // Repository singletons (no state, all parameters passed as method arguments)
+        services.AddSingleton<IReminderRepository, ReminderRepository>();
+        services.AddSingleton<IWeekLetterRepository, WeekLetterRepository>();
+        services.AddSingleton<IAppStateRepository, AppStateRepository>();
+        services.AddSingleton<IRetryTrackingRepository, RetryTrackingRepository>();
+        services.AddSingleton<IScheduledTaskRepository, ScheduledTaskRepository>();
+
         services.AddSingleton<IWeekLetterSeeder, WeekLetterSeeder>();
         services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
 

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
+using Aula.Repositories;
 using Xunit;
 using Aula.Tools;
 using Aula.Configuration;
@@ -21,7 +22,7 @@ public class WeekLetterAiServiceTests
         var mockCache = new Mock<IMemoryCache>();
         var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
         var mockAiToolsManager = new Mock<AiToolsManager>(
-            Mock.Of<ISupabaseService>(),
+            Mock.Of<IReminderRepository>(),
             mockDataService.Object,
             config,
             mockLoggerFactory.Object);
@@ -43,7 +44,7 @@ public class WeekLetterAiServiceTests
         var mockCache = new Mock<IMemoryCache>();
         var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
         var mockAiToolsManager = new Mock<AiToolsManager>(
-            Mock.Of<ISupabaseService>(),
+            Mock.Of<IReminderRepository>(),
             mockDataService.Object,
             config,
             mockLoggerFactory.Object);
@@ -62,7 +63,7 @@ public class WeekLetterAiServiceTests
         var mockCache = new Mock<IMemoryCache>();
         var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
         var mockAiToolsManager = new Mock<AiToolsManager>(
-            Mock.Of<ISupabaseService>(),
+            Mock.Of<IReminderRepository>(),
             mockDataService.Object,
             config,
             mockLoggerFactory.Object);
@@ -85,7 +86,7 @@ public class WeekLetterAiServiceTests
         var mockCache = new Mock<IMemoryCache>();
         var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
         var mockAiToolsManager = new Mock<AiToolsManager>(
-            Mock.Of<ISupabaseService>(),
+            Mock.Of<IReminderRepository>(),
             mockDataService.Object,
             config,
             mockLoggerFactory.Object);
@@ -189,7 +190,7 @@ public class WeekLetterAiServiceTests
         var mockLogger = new Mock<ILogger>();
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
-        var mockSupabaseService = new Mock<ISupabaseService>();
+        var mockSupabaseService = new Mock<IReminderRepository>();
         var config = new Config { MinUddannelse = new MinUddannelse { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
         var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
@@ -218,7 +219,7 @@ public class WeekLetterAiServiceTests
         var mockLogger = new Mock<ILogger>();
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
-        var mockSupabaseService = new Mock<ISupabaseService>();
+        var mockSupabaseService = new Mock<IReminderRepository>();
         var config = new Config { MinUddannelse = new MinUddannelse { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
         var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
@@ -250,7 +251,7 @@ public class WeekLetterAiServiceTests
         var mockLogger = new Mock<ILogger>();
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
-        var mockSupabaseService = new Mock<ISupabaseService>();
+        var mockSupabaseService = new Mock<IReminderRepository>();
         var config = new Config { MinUddannelse = new MinUddannelse { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
         var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);

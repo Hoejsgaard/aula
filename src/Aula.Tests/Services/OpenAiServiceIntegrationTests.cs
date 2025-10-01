@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Aula.Repositories;
 using Moq;
 using Newtonsoft.Json.Linq;
 using Xunit;
@@ -17,7 +18,7 @@ public class OpenAiServiceIntegrationTests
     private readonly Mock<ILoggerFactory> _mockLoggerFactory;
     private readonly Mock<ILogger> _mockLogger;
     private readonly AiToolsManager _aiToolsManager;
-    private readonly Mock<ISupabaseService> _mockSupabaseService;
+    private readonly Mock<IReminderRepository> _mockReminderRepository;
     private readonly Mock<DataService> _mockDataService;
     private readonly Config _config;
 
@@ -25,7 +26,7 @@ public class OpenAiServiceIntegrationTests
     {
         _mockLoggerFactory = new Mock<ILoggerFactory>();
         _mockLogger = new Mock<ILogger>();
-        _mockSupabaseService = new Mock<ISupabaseService>();
+        _mockReminderRepository = new Mock<IReminderRepository>();
 
         _config = new Config
         {
@@ -40,7 +41,7 @@ public class OpenAiServiceIntegrationTests
 
         _mockLoggerFactory.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
 
-        _aiToolsManager = new AiToolsManager(_mockSupabaseService.Object, _mockDataService.Object, _config, _mockLoggerFactory.Object);
+        _aiToolsManager = new AiToolsManager(_mockReminderRepository.Object, _mockDataService.Object, _config, _mockLoggerFactory.Object);
     }
 
     [Fact]

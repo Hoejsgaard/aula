@@ -7,6 +7,7 @@ using Google.Apis.Services;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
+using Aula.Integration.Exceptions;
 
 namespace Aula.Integration;
 
@@ -128,7 +129,7 @@ public class GoogleCalendarService : IGoogleCalendarService
                     var location = jEvent["location"]?.ToString() ?? "";
                     var start = jEvent["timeBegin"]?.ToString();
                     var end = jEvent["timeEnd"]?.ToString();
-                    if (start == null || end == null) throw new Exception("Events must have start and end");
+                    if (start == null || end == null) throw new InvalidCalendarEventException("Events must have start and end");
 
                     var newEvent = new Event
                     {

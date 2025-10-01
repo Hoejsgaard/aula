@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
+using Aula.Repositories;
 using Aula.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -12,26 +13,39 @@ namespace Aula.Integration;
 public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
 {
     private JObject _userProfile = new();
-    private readonly ISupabaseService? _supabaseService;
+    private readonly IWeekLetterRepository? _weekLetterRepository;
     private readonly ILogger? _logger;
     private readonly Config? _config;
 
-    public MinUddannelseClient(Config config) : this(config.UniLogin.Username, config.UniLogin.Password)
+    public MinUddannelseClient(Config config)
+        : this(config.UniLogin.Username, config.UniLogin.Password,
+            config.MinUddannelse.SamlLoginUrl,
+            config.MinUddannelse.ApiBaseUrl + "/Node/",
+            config.MinUddannelse.ApiBaseUrl,
+            config.MinUddannelse.StudentDataPath,
+            null)
     {
         _config = config;
     }
 
-    public MinUddannelseClient(Config config, ISupabaseService supabaseService, ILoggerFactory loggerFactory)
-        : this(config.UniLogin.Username, config.UniLogin.Password)
+    public MinUddannelseClient(Config config, IWeekLetterRepository weekLetterRepository, ILoggerFactory loggerFactory)
+        : this(config.UniLogin.Username, config.UniLogin.Password,
+            config.MinUddannelse.SamlLoginUrl,
+            config.MinUddannelse.ApiBaseUrl + "/Node/",
+            config.MinUddannelse.ApiBaseUrl,
+            config.MinUddannelse.StudentDataPath,
+            loggerFactory.CreateLogger<UniLoginClient>())
     {
         _config = config;
-        _supabaseService = supabaseService;
+        _weekLetterRepository = weekLetterRepository;
         _logger = loggerFactory.CreateLogger<MinUddannelseClient>();
     }
 
-    public MinUddannelseClient(string username, string password) : base(username, password,
-        "https://www.minuddannelse.net/KmdIdentity/Login?domainHint=unilogin-idp-prod&toFa=False",
-        "https://www.minuddannelse.net/Node/")
+    public MinUddannelseClient(string username, string password, string loginUrl, string successUrl, string apiBaseUrl, string studentDataPath, ILogger<UniLoginClient>? logger = null)
+        : base(username, password, loginUrl, successUrl,
+            logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<UniLoginClient>.Instance,
+            apiBaseUrl,
+            studentDataPath)
     {
     }
 
@@ -41,7 +55,7 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
         var year = date.Year;
 
         // Step 1: Check database first
-        if (_supabaseService != null)
+        if (_weekLetterRepository != null)
         {
             var storedLetter = await GetStoredWeekLetter(child, weekNumber, year);
             if (storedLetter != null)
@@ -66,8 +80,10 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
 
         // Normal mode - hit the real API
         var url = string.Format(
-            "https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt={0}-W{1}&elevId={2}&_={3}"
-            , date.Year, GetIsoWeekNumber(date), GetChildId(child), DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            "{0}{1}?tidspunkt={2}-W{3}&elevId={4}&_={5}",
+            _config?.MinUddannelse.ApiBaseUrl ?? "https://www.minuddannelse.net",
+            _config?.MinUddannelse.WeekLettersPath ?? "/api/stamdata/ugeplan/getUgeBreve",
+            date.Year, GetIsoWeekNumber(date), GetChildId(child), DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         var response = await HttpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
@@ -87,13 +103,13 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
 
         }
 
-        // Store to database if we have Supabase service
-        if (_supabaseService != null && weekLetter != null)
+        // Store to database if we have repository
+        if (_weekLetterRepository != null && weekLetter != null)
         {
             try
             {
                 var contentHash = ComputeContentHash(weekLetter.ToString());
-                await _supabaseService.StoreWeekLetterAsync(
+                await _weekLetterRepository.StoreWeekLetterAsync(
                     child.FirstName, weekNumber, year, contentHash, weekLetter.ToString());
                 _logger?.LogInformation("💾 Stored week letter to database for {ChildName} week {WeekNumber}/{Year}",
                     child.FirstName, weekNumber, year);
@@ -110,7 +126,8 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
     public async Task<JObject> GetWeekSchedule(Child child, DateOnly date)
     {
         var url = string.Format(
-            "https://www.minuddannelse.net/api/stamdata/aulaskema/getElevSkema?elevId={0}&tidspunkt={1}-W{2}&_={3}",
+            "{0}/api/stamdata/aulaskema/getElevSkema?elevId={1}&tidspunkt={2}-W{3}&_={4}",
+            _config?.MinUddannelse.ApiBaseUrl ?? "https://www.minuddannelse.net",
             GetChildId(child), date.Year, GetIsoWeekNumber(date), DateTimeOffset.UtcNow.ToUnixTimeSeconds());
         var response = await HttpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
@@ -197,15 +214,15 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
 
     public async Task<JObject?> GetStoredWeekLetter(Child child, int weekNumber, int year)
     {
-        if (_supabaseService == null)
+        if (_weekLetterRepository == null)
         {
-            _logger?.LogWarning("Supabase service not available - cannot retrieve stored week letter");
+            _logger?.LogWarning("Week letter repository not available - cannot retrieve stored week letter");
             return null;
         }
 
         try
         {
-            var storedContent = await _supabaseService.GetStoredWeekLetterAsync(child.FirstName, weekNumber, year);
+            var storedContent = await _weekLetterRepository.GetStoredWeekLetterAsync(child.FirstName, weekNumber, year);
             if (string.IsNullOrEmpty(storedContent))
             {
                 _logger?.LogInformation("No stored week letter found for {ChildName}, week {WeekNumber}/{Year}",
@@ -226,16 +243,16 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
 
     public async Task<List<StoredWeekLetter>> GetStoredWeekLetters(Child? child = null, int? year = null)
     {
-        if (_supabaseService == null)
+        if (_weekLetterRepository == null)
         {
-            _logger?.LogWarning("Supabase service not available - cannot retrieve stored week letters");
+            _logger?.LogWarning("Week letter repository not available - cannot retrieve stored week letters");
             return new List<StoredWeekLetter>();
         }
 
         try
         {
             var childName = child?.FirstName;
-            return await _supabaseService.GetStoredWeekLettersAsync(childName, year);
+            return await _weekLetterRepository.GetStoredWeekLettersAsync(childName, year);
         }
         catch (Exception ex)
         {

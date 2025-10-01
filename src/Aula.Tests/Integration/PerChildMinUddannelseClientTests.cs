@@ -3,6 +3,7 @@ using Moq;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 using Aula.Integration;
+using Aula.Repositories;
 using Aula.Services;
 using System;
 using System.Collections.Generic;
@@ -15,14 +16,16 @@ public class PerChildMinUddannelseClientTests
 {
     private readonly Mock<ILoggerFactory> _mockLoggerFactory;
     private readonly Mock<ILogger> _mockLogger;
-    private readonly Mock<ISupabaseService> _mockSupabaseService;
+    private readonly Mock<IWeekLetterRepository> _mockWeekLetterRepository;
+    private readonly Mock<IRetryTrackingRepository> _mockRetryTrackingRepository;
     private readonly Config _config;
 
     public PerChildMinUddannelseClientTests()
     {
         _mockLoggerFactory = new Mock<ILoggerFactory>();
         _mockLogger = new Mock<ILogger>();
-        _mockSupabaseService = new Mock<ISupabaseService>();
+        _mockWeekLetterRepository = new Mock<IWeekLetterRepository>();
+        _mockRetryTrackingRepository = new Mock<IRetryTrackingRepository>();
 
         _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>()))
             .Returns(_mockLogger.Object);
@@ -52,7 +55,7 @@ public class PerChildMinUddannelseClientTests
     public void Constructor_WithValidParameters_InitializesCorrectly()
     {
         // Act
-        var client = new PerChildMinUddannelseClient(_config, _mockSupabaseService.Object, _mockLoggerFactory.Object);
+        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object);
 
         // Assert
         Assert.NotNull(client);
@@ -62,7 +65,7 @@ public class PerChildMinUddannelseClientTests
     public async Task LoginAsync_AlwaysReturnsTrue()
     {
         // Arrange
-        var client = new PerChildMinUddannelseClient(_config, _mockSupabaseService.Object, _mockLoggerFactory.Object);
+        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object);
 
         // Act
         var result = await client.LoginAsync();
@@ -88,7 +91,7 @@ public class PerChildMinUddannelseClientTests
             UniLogin = null
         };
 
-        var client = new PerChildMinUddannelseClient(_config, _mockSupabaseService.Object, _mockLoggerFactory.Object);
+        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object);
 
         // Act
         var result = await client.GetWeekLetter(childWithoutCredentials, DateOnly.FromDateTime(DateTime.Today));
@@ -114,7 +117,7 @@ public class PerChildMinUddannelseClientTests
             UniLogin = null
         };
 
-        var client = new PerChildMinUddannelseClient(_config, _mockSupabaseService.Object, _mockLoggerFactory.Object);
+        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object);
 
         // Act
         var result = await client.GetWeekSchedule(childWithoutCredentials, DateOnly.FromDateTime(DateTime.Today));
@@ -158,7 +161,7 @@ public class PerChildMinUddannelseClientTests
     public async Task GetWeekLetter_LogsAuthenticationForEachRequest()
     {
         // Arrange
-        var client = new PerChildMinUddannelseClient(_config, _mockSupabaseService.Object, _mockLoggerFactory.Object);
+        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object);
         var child = _config.MinUddannelse.Children[0];
 
         // Note: This test verifies logging behavior but cannot test actual authentication

@@ -16,14 +16,18 @@ public partial class PictogramAuthenticatedClient : UniLoginDebugClient, IChildA
 {
     private readonly Child _child;
     private readonly ILogger _logger;
+    private readonly Config _config;
     private readonly string[] _pictogramSequence;
     private readonly string _username;
     private string? _childId;
 
-    public PictogramAuthenticatedClient(Child child, string username, string[] pictogramSequence, ILogger logger)
+    public PictogramAuthenticatedClient(Child child, string username, string[] pictogramSequence, Config config, ILogger<UniLoginDebugClient> baseLogger, ILogger logger)
         : base(username, "", // Empty password since we'll build it dynamically
-            "https://www.minuddannelse.net/KmdIdentity/Login?domainHint=unilogin-idp-prod&toFa=False",
-            "https://www.minuddannelse.net/")
+            config.MinUddannelse.SamlLoginUrl,
+            config.MinUddannelse.ApiBaseUrl,
+            baseLogger,
+            config.MinUddannelse.ApiBaseUrl,
+            config.MinUddannelse.StudentDataPath)
     {
         ArgumentNullException.ThrowIfNull(child);
         ArgumentNullException.ThrowIfNull(pictogramSequence);
@@ -31,6 +35,7 @@ public partial class PictogramAuthenticatedClient : UniLoginDebugClient, IChildA
         _child = child;
         _username = username;
         _pictogramSequence = pictogramSequence;
+        _config = config;
         if (pictogramSequence.Length == 0)
             throw new ArgumentException("Pictogram sequence cannot be empty", nameof(pictogramSequence));
         _logger = logger;
@@ -44,8 +49,7 @@ public partial class PictogramAuthenticatedClient : UniLoginDebugClient, IChildA
         try
         {
             // Navigate through the login flow to reach the pictogram page
-            var response = await HttpClient.GetAsync(
-                "https://www.minuddannelse.net/KmdIdentity/Login?domainHint=unilogin-idp-prod&toFa=False");
+            var response = await HttpClient.GetAsync(_config.MinUddannelse.SamlLoginUrl);
 
             var content = await response.Content.ReadAsStringAsync();
             var maxSteps = 10;
@@ -465,7 +469,7 @@ public partial class PictogramAuthenticatedClient : UniLoginDebugClient, IChildA
 
             // First try: Extract from page context (same method as ChildAuthenticatedClient)
             // Navigate to any MinUddannelse page after authentication to get this
-            var response = await HttpClient.GetAsync("https://www.minuddannelse.net/node/minuge");
+            var response = await HttpClient.GetAsync($"{_config.MinUddannelse.ApiBaseUrl}/node/minuge");
             var content = await response.Content.ReadAsStringAsync();
 
             // Look for personid in the __tempcontext__ object
@@ -491,7 +495,7 @@ public partial class PictogramAuthenticatedClient : UniLoginDebugClient, IChildA
 
             // Fallback: Try the API method (improved version)
             _logger.LogInformation("Page context method failed, trying API...");
-            var apiUrl = $"https://www.minuddannelse.net/api/stamdata/elev/getElev?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+            var apiUrl = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.StudentDataPath}?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
             var apiResponse = await HttpClient.GetAsync(apiUrl);
             if (apiResponse.IsSuccessStatusCode)
@@ -528,7 +532,7 @@ public partial class PictogramAuthenticatedClient : UniLoginDebugClient, IChildA
             return new Newtonsoft.Json.Linq.JObject();
         }
 
-        var url = $"https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}" +
+        var url = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.WeekLettersPath}?tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}" +
                  $"&elevId={_childId}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
         _logger.LogDebug("📥 Fetching week letter from: {Url}", url);
@@ -589,7 +593,7 @@ public partial class PictogramAuthenticatedClient : UniLoginDebugClient, IChildA
             return new Newtonsoft.Json.Linq.JObject();
         }
 
-        var url = $"https://www.minuddannelse.net/api/stamdata/aulaskema/getElevSkema?elevId={_childId}" +
+        var url = $"{_config.MinUddannelse.ApiBaseUrl}/api/stamdata/aulaskema/getElevSkema?elevId={_childId}" +
                  $"&tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
         _logger.LogDebug("Fetching schedule from: {Url}", url);

@@ -1,20 +1,21 @@
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Aula.Services;
+using Aula.Repositories;
 
 namespace Aula.Utilities;
 
 public class WeekLetterSeeder : IWeekLetterSeeder
 {
-    private readonly ISupabaseService _supabaseService;
+    private readonly IWeekLetterRepository _weekLetterRepository;
     private readonly ILogger _logger;
 
-    public WeekLetterSeeder(ISupabaseService supabaseService, ILoggerFactory loggerFactory)
+    public WeekLetterSeeder(IWeekLetterRepository weekLetterRepository, ILoggerFactory loggerFactory)
     {
-        ArgumentNullException.ThrowIfNull(supabaseService);
+        ArgumentNullException.ThrowIfNull(weekLetterRepository);
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
-        _supabaseService = supabaseService;
+        _weekLetterRepository = weekLetterRepository;
         _logger = loggerFactory.CreateLogger<WeekLetterSeeder>();
     }
 
@@ -81,7 +82,7 @@ public class WeekLetterSeeder : IWeekLetterSeeder
             var rawContent = weekLetterJson.ToString();
 
             // Check if already exists
-            var existingContent = await _supabaseService.GetStoredWeekLetterAsync(childName, weekNumber, year);
+            var existingContent = await _weekLetterRepository.GetStoredWeekLetterAsync(childName, weekNumber, year);
             if (!string.IsNullOrEmpty(existingContent))
             {
                 _logger.LogInformation("Week letter for {ChildName}, week {WeekNumber}/{Year} already exists - skipping",
@@ -89,7 +90,7 @@ public class WeekLetterSeeder : IWeekLetterSeeder
                 return;
             }
 
-            await _supabaseService.StoreWeekLetterAsync(childName, weekNumber, year, contentHash, rawContent, false, false);
+            await _weekLetterRepository.StoreWeekLetterAsync(childName, weekNumber, year, contentHash, rawContent, false, false);
 
             _logger.LogInformation("Seeded week letter for {ChildName}, week {WeekNumber}/{Year}",
                 childName, weekNumber, year);

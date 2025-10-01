@@ -2,19 +2,20 @@ using Microsoft.Extensions.Logging;
 using System.ComponentModel;
 using Aula.Configuration;
 using Aula.Services;
+using Aula.Repositories;
 
 namespace Aula.Tools;
 
 public class AiToolsManager : IAiToolsManager
 {
-    private readonly ISupabaseService _supabaseService;
+    private readonly IReminderRepository _reminderRepository;
     private readonly DataService _dataService;
     private readonly Config _config;
     private readonly ILogger _logger;
 
-    public AiToolsManager(ISupabaseService supabaseService, DataService dataService, Config config, ILoggerFactory loggerFactory)
+    public AiToolsManager(IReminderRepository reminderRepository, DataService dataService, Config config, ILoggerFactory loggerFactory)
     {
-        _supabaseService = supabaseService;
+        _reminderRepository = reminderRepository;
         _dataService = dataService;
         _config = config;
         _logger = loggerFactory.CreateLogger<AiToolsManager>();
@@ -32,7 +33,7 @@ public class AiToolsManager : IAiToolsManager
             var date = DateOnly.FromDateTime(parsedDateTime);
             var time = TimeOnly.FromDateTime(parsedDateTime);
 
-            var reminderId = await _supabaseService.AddReminderAsync(description, date, time, childName);
+            var reminderId = await _reminderRepository.AddReminderAsync(description, date, time, childName);
 
             var childInfo = string.IsNullOrEmpty(childName) ? "" : $" for {childName}";
             _logger.LogInformation("Created reminder: {Description} at {DateTime}{ChildInfo}", description, parsedDateTime, childInfo);
@@ -50,7 +51,7 @@ public class AiToolsManager : IAiToolsManager
     {
         try
         {
-            var reminders = await _supabaseService.GetAllRemindersAsync();
+            var reminders = await _reminderRepository.GetAllRemindersAsync();
 
             if (!string.IsNullOrEmpty(childName))
             {
@@ -86,7 +87,7 @@ public class AiToolsManager : IAiToolsManager
     {
         try
         {
-            var reminders = await _supabaseService.GetAllRemindersAsync();
+            var reminders = await _reminderRepository.GetAllRemindersAsync();
 
             if (reminderNumber < 1 || reminderNumber > reminders.Count)
             {
@@ -94,7 +95,7 @@ public class AiToolsManager : IAiToolsManager
             }
 
             var reminderToDelete = reminders.OrderBy(r => r.RemindDate).ThenBy(r => r.RemindTime).ElementAt(reminderNumber - 1);
-            await _supabaseService.DeleteReminderAsync(reminderToDelete.Id);
+            await _reminderRepository.DeleteReminderAsync(reminderToDelete.Id);
 
             _logger.LogInformation("Deleted reminder: {Text}", reminderToDelete.Text);
             return $"✅ Deleted reminder: '{reminderToDelete.Text}'";

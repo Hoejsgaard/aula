@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json.Linq;
 using Aula.Tools;
+using Aula.Repositories;
 using Aula.Configuration;
 using Aula.Services;
 
@@ -10,7 +11,7 @@ namespace Aula.Tests.Tools;
 
 public class AiToolsManagerTests
 {
-    private readonly Mock<ISupabaseService> _mockSupabaseService;
+    private readonly Mock<IReminderRepository> _mockReminderRepository;
     private readonly Mock<DataService> _mockDataManager;
     private readonly ILoggerFactory _loggerFactory;
     private readonly AiToolsManager _aiToolsManager;
@@ -19,7 +20,7 @@ public class AiToolsManagerTests
 
     public AiToolsManagerTests()
     {
-        _mockSupabaseService = new Mock<ISupabaseService>();
+        _mockReminderRepository = new Mock<IReminderRepository>();
         _loggerFactory = new LoggerFactory();
 
         _testChildren = new List<Child>
@@ -39,7 +40,7 @@ public class AiToolsManagerTests
         var mockCache = new Mock<IMemoryCache>();
         _mockDataManager = new Mock<DataService>(mockCache.Object, _config, _loggerFactory);
 
-        _aiToolsManager = new AiToolsManager(_mockSupabaseService.Object, _mockDataManager.Object, _config, _loggerFactory);
+        _aiToolsManager = new AiToolsManager(_mockReminderRepository.Object, _mockDataManager.Object, _config, _loggerFactory);
     }
 
     [Fact]
@@ -50,7 +51,7 @@ public class AiToolsManagerTests
         var dateTime = DateTime.Now.AddDays(1).ToString("yyyy-MM-dd HH:mm");
         var childName = "Alice";
 
-        _mockSupabaseService.Setup(s => s.AddReminderAsync(
+        _mockReminderRepository.Setup(s => s.AddReminderAsync(
             It.IsAny<string>(),
             It.IsAny<DateOnly>(),
             It.IsAny<TimeOnly>(),
@@ -63,7 +64,7 @@ public class AiToolsManagerTests
         // Assert
         Assert.Contains("✅", result);
         Assert.Contains("Pick up Alice from school", result);
-        _mockSupabaseService.Verify(s => s.AddReminderAsync(
+        _mockReminderRepository.Verify(s => s.AddReminderAsync(
             description,
             It.IsAny<DateOnly>(),
             It.IsAny<TimeOnly>(),
@@ -83,7 +84,7 @@ public class AiToolsManagerTests
 
         // Assert
         Assert.Contains("Error: Invalid date format", result);
-        _mockSupabaseService.Verify(s => s.AddReminderAsync(
+        _mockReminderRepository.Verify(s => s.AddReminderAsync(
             It.IsAny<string>(),
             It.IsAny<DateOnly>(),
             It.IsAny<TimeOnly>(),
@@ -116,7 +117,7 @@ public class AiToolsManagerTests
             }
         };
 
-        _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
+        _mockReminderRepository.Setup(s => s.GetAllRemindersAsync())
             .ReturnsAsync(testReminders);
 
         // Act
@@ -134,7 +135,7 @@ public class AiToolsManagerTests
     public async Task ListRemindersAsync_WithNoReminders_ReturnsEmptyMessage()
     {
         // Arrange
-        _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
+        _mockReminderRepository.Setup(s => s.GetAllRemindersAsync())
             .ReturnsAsync(new List<Reminder>());
 
         // Act
@@ -154,7 +155,7 @@ public class AiToolsManagerTests
             new Reminder { Id = 123, Text = "Test reminder to delete", RemindDate = DateOnly.FromDateTime(DateTime.Today), RemindTime = new TimeOnly(10, 0) }
         };
 
-        _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
+        _mockReminderRepository.Setup(s => s.GetAllRemindersAsync())
             .ReturnsAsync(testReminders);
 
         // Act
@@ -162,7 +163,7 @@ public class AiToolsManagerTests
 
         // Assert
         Assert.Contains("✅ Deleted reminder", result);
-        _mockSupabaseService.Verify(s => s.DeleteReminderAsync(123), Times.Once()); // Verify actual ID is used
+        _mockReminderRepository.Verify(s => s.DeleteReminderAsync(123), Times.Once()); // Verify actual ID is used
     }
 
     [Fact]
@@ -170,7 +171,7 @@ public class AiToolsManagerTests
     {
         // Arrange
         var invalidReminderNumber = 999; // 1-based index that doesn't exist in list
-        _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
+        _mockReminderRepository.Setup(s => s.GetAllRemindersAsync())
             .ReturnsAsync(new List<Reminder>());
 
         // Act
@@ -178,7 +179,7 @@ public class AiToolsManagerTests
 
         // Assert
         Assert.Contains("❌ Invalid reminder number", result);
-        _mockSupabaseService.Verify(s => s.DeleteReminderAsync(It.IsAny<int>()), Times.Never());
+        _mockReminderRepository.Verify(s => s.DeleteReminderAsync(It.IsAny<int>()), Times.Never());
     }
 
     [Fact]
@@ -230,7 +231,7 @@ public class AiToolsManagerTests
         var description = "General reminder";
         var dateTime = DateTime.Now.AddDays(1).ToString("yyyy-MM-dd HH:mm");
 
-        _mockSupabaseService.Setup(s => s.AddReminderAsync(
+        _mockReminderRepository.Setup(s => s.AddReminderAsync(
             It.IsAny<string>(),
             It.IsAny<DateOnly>(),
             It.IsAny<TimeOnly>(),
@@ -243,7 +244,7 @@ public class AiToolsManagerTests
         // Assert
         Assert.Contains("✅", result);
         Assert.Contains("General reminder", result);
-        _mockSupabaseService.Verify(s => s.AddReminderAsync(
+        _mockReminderRepository.Verify(s => s.AddReminderAsync(
             description,
             It.IsAny<DateOnly>(),
             It.IsAny<TimeOnly>(),
@@ -477,11 +478,11 @@ public class AiToolsManagerTests
     public async Task DeleteReminderAsync_WithInvalidId_ReturnsErrorMessage()
     {
         // Arrange
-        _mockSupabaseService.Setup(s => s.DeleteReminderAsync(999))
+        _mockReminderRepository.Setup(s => s.DeleteReminderAsync(999))
             .Returns(Task.CompletedTask);
 
         // Set up GetAllRemindersAsync to return empty list (simulating reminder not found)
-        _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
+        _mockReminderRepository.Setup(s => s.GetAllRemindersAsync())
             .ReturnsAsync(new List<Aula.Services.Reminder>());
 
         // Act
@@ -496,7 +497,7 @@ public class AiToolsManagerTests
     public async Task ListRemindersAsync_WithDatabaseError_ReturnsErrorMessage()
     {
         // Arrange
-        _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
+        _mockReminderRepository.Setup(s => s.GetAllRemindersAsync())
             .ThrowsAsync(new Exception("Database connection failed"));
 
         // Act
@@ -512,7 +513,7 @@ public class AiToolsManagerTests
     {
         // Arrange
         var validDateTime = DateTime.Now.AddDays(1).ToString("yyyy-MM-dd HH:mm");
-        _mockSupabaseService.Setup(s => s.AddReminderAsync(
+        _mockReminderRepository.Setup(s => s.AddReminderAsync(
             It.IsAny<string>(),
             It.IsAny<DateOnly>(),
             It.IsAny<TimeOnly>(),
@@ -531,7 +532,7 @@ public class AiToolsManagerTests
     public async Task DeleteReminderAsync_WithDatabaseError_ReturnsErrorMessage()
     {
         // Arrange
-        _mockSupabaseService.Setup(s => s.DeleteReminderAsync(1))
+        _mockReminderRepository.Setup(s => s.DeleteReminderAsync(1))
             .ThrowsAsync(new Exception("Database connection failed"));
 
         // Act
@@ -550,7 +551,7 @@ public class AiToolsManagerTests
         var dateTime = DateTime.Now.AddDays(1).ToString("yyyy-MM-dd HH:mm");
         var childName = "Alice";
 
-        _mockSupabaseService.Setup(s => s.AddReminderAsync(
+        _mockReminderRepository.Setup(s => s.AddReminderAsync(
             It.IsAny<string>(),
             It.IsAny<DateOnly>(),
             It.IsAny<TimeOnly>(),
@@ -568,7 +569,7 @@ public class AiToolsManagerTests
     public async Task ListRemindersAsync_WithSupabaseException_ReturnsError()
     {
         // Arrange
-        _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
+        _mockReminderRepository.Setup(s => s.GetAllRemindersAsync())
             .ThrowsAsync(new Exception("Database error"));
 
         // Act
@@ -588,9 +589,9 @@ public class AiToolsManagerTests
             new Reminder { Id = 123, Text = "Test reminder", RemindDate = DateOnly.FromDateTime(DateTime.Today), RemindTime = new TimeOnly(10, 0) }
         };
 
-        _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
+        _mockReminderRepository.Setup(s => s.GetAllRemindersAsync())
             .ReturnsAsync(testReminders);
-        _mockSupabaseService.Setup(s => s.DeleteReminderAsync(123))
+        _mockReminderRepository.Setup(s => s.DeleteReminderAsync(123))
             .ThrowsAsync(new Exception("Delete operation failed"));
 
         // Act
@@ -640,7 +641,7 @@ public class AiToolsManagerTests
             }
         };
 
-        _mockSupabaseService.Setup(s => s.GetAllRemindersAsync())
+        _mockReminderRepository.Setup(s => s.GetAllRemindersAsync())
             .ReturnsAsync(testReminders);
 
         // Act

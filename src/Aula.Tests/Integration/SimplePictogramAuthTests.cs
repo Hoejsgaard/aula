@@ -11,10 +11,22 @@ namespace Aula.Tests.Integration;
 public class SimplePictogramAuthTests
 {
     private readonly Mock<ILogger<PictogramAuthenticatedClient>> _mockLogger;
+    private readonly Mock<ILogger<UniLoginDebugClient>> _mockBaseLogger;
+    private readonly Config _config;
 
     public SimplePictogramAuthTests()
     {
         _mockLogger = new Mock<ILogger<PictogramAuthenticatedClient>>();
+        _mockBaseLogger = new Mock<ILogger<UniLoginDebugClient>>();
+        _config = new Config
+        {
+            MinUddannelse = new MinUddannelse
+            {
+                SamlLoginUrl = "https://test.unilogin.dk",
+                ApiBaseUrl = "https://api.test.aula.dk",
+                StudentDataPath = "/api/v1/students"
+            }
+        };
     }
 
     [Fact]
@@ -38,6 +50,8 @@ public class SimplePictogramAuthTests
             child,
             child.UniLogin.Username,
             child.UniLogin.PictogramSequence!,
+            _config,
+            _mockBaseLogger.Object,
             _mockLogger.Object
         );
 
@@ -54,6 +68,8 @@ public class SimplePictogramAuthTests
                 null!,
                 "username",
                 new[] { "image1", "image2" },
+                _config,
+                _mockBaseLogger.Object,
                 _mockLogger.Object
             )
         );
@@ -80,6 +96,8 @@ public class SimplePictogramAuthTests
                 child,
                 child.UniLogin.Username,
                 null!,
+                _config,
+                _mockBaseLogger.Object,
                 _mockLogger.Object
             )
         );
@@ -106,6 +124,8 @@ public class SimplePictogramAuthTests
                 child,
                 child.UniLogin.Username,
                 new string[0],
+                _config,
+                _mockBaseLogger.Object,
                 _mockLogger.Object
             )
         );

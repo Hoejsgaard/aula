@@ -21,8 +21,8 @@ public class TestBot : BotBase
     public string? LastWeekLetterChildName { get; set; }
     public string? LastWeekLetterContent { get; set; }
 
-    public TestBot(IAgentService agentService, Config config, ILogger logger, ISupabaseService supabaseService)
-        : base(agentService, config, logger, supabaseService)
+    public TestBot(IAgentService agentService, Config config, ILogger logger)
+        : base(agentService, config, logger)
     {
     }
 
@@ -68,8 +68,8 @@ public class TestBot : BotBase
 // Test implementation that throws during validation
 public class ThrowingTestBot : TestBot
 {
-    public ThrowingTestBot(IAgentService agentService, Config config, ILogger logger, ISupabaseService supabaseService)
-        : base(agentService, config, logger, supabaseService)
+    public ThrowingTestBot(IAgentService agentService, Config config, ILogger logger)
+        : base(agentService, config, logger)
     {
     }
 
@@ -82,7 +82,6 @@ public class ThrowingTestBot : TestBot
 public class BotBaseTests
 {
     private readonly Mock<IAgentService> _mockAgentService;
-    private readonly Mock<ISupabaseService> _mockSupabaseService;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger _logger;
     private readonly Config _testConfig;
@@ -90,7 +89,6 @@ public class BotBaseTests
     public BotBaseTests()
     {
         _mockAgentService = new Mock<IAgentService>();
-        _mockSupabaseService = new Mock<ISupabaseService>();
         _loggerFactory = new LoggerFactory();
         _logger = _loggerFactory.CreateLogger<TestBot>();
 
@@ -110,7 +108,7 @@ public class BotBaseTests
     [Fact]
     public void Constructor_WithValidParameters_InitializesCorrectly()
     {
-        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
+        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger);
 
         Assert.NotNull(bot);
     }
@@ -119,28 +117,21 @@ public class BotBaseTests
     public void Constructor_WithNullAgentService_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new TestBot(null!, _testConfig, _logger, _mockSupabaseService.Object));
+            new TestBot(null!, _testConfig, _logger));
     }
 
     [Fact]
     public void Constructor_WithNullConfig_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new TestBot(_mockAgentService.Object, null!, _logger, _mockSupabaseService.Object));
+            new TestBot(_mockAgentService.Object, null!, _logger));
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new TestBot(_mockAgentService.Object, _testConfig, null!, _mockSupabaseService.Object));
-    }
-
-    [Fact]
-    public void Constructor_WithNullSupabaseService_ThrowsArgumentNullException()
-    {
-        Assert.Throws<ArgumentNullException>(() =>
-            new TestBot(_mockAgentService.Object, _testConfig, _logger, null!));
+            new TestBot(_mockAgentService.Object, _testConfig, null!));
     }
 
     [Fact]
@@ -159,7 +150,7 @@ public class BotBaseTests
         };
 
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            new TestBot(_mockAgentService.Object, configWithDuplicates, _logger, _mockSupabaseService.Object));
+            new TestBot(_mockAgentService.Object, configWithDuplicates, _logger));
 
         Assert.Contains("Duplicate child first name: 'Emma'", ex.Message);
     }
@@ -180,7 +171,7 @@ public class BotBaseTests
         };
 
         var ex = Assert.Throws<InvalidOperationException>(() =>
-            new TestBot(_mockAgentService.Object, configWithDuplicates, _logger, _mockSupabaseService.Object));
+            new TestBot(_mockAgentService.Object, configWithDuplicates, _logger));
 
         Assert.Contains("Duplicate child first name: 'EMMA'", ex.Message);
     }
@@ -188,7 +179,7 @@ public class BotBaseTests
     [Fact]
     public async Task Start_CallsAllInitializationMethods()
     {
-        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
+        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger);
 
         await bot.Start();
 
@@ -202,7 +193,7 @@ public class BotBaseTests
     public async Task Start_WhenValidateConfigurationThrows_RethrowsException()
     {
         // Create a test bot that throws during validation
-        var throwingBot = new ThrowingTestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
+        var throwingBot = new ThrowingTestBot(_mockAgentService.Object, _testConfig, _logger);
 
         await Assert.ThrowsAsync<Exception>(() => throwingBot.Start());
     }
@@ -210,7 +201,7 @@ public class BotBaseTests
     [Fact]
     public void Stop_CallsStopMessageProcessing()
     {
-        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
+        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger);
 
         bot.Stop();
 
@@ -220,7 +211,7 @@ public class BotBaseTests
     [Fact]
     public async Task PostWeekLetter_WithValidContent_SendsMessage()
     {
-        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
+        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger);
 
         await bot.PostWeekLetter("Emma", "Week letter content");
 
@@ -231,7 +222,7 @@ public class BotBaseTests
     [Fact]
     public async Task PostWeekLetter_WithEmptyContent_DoesNotSendMessage()
     {
-        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
+        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger);
 
         await bot.PostWeekLetter("Emma", "");
 
@@ -242,7 +233,7 @@ public class BotBaseTests
     [Fact]
     public async Task PostWeekLetter_WithNullContent_DoesNotSendMessage()
     {
-        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
+        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger);
 
         await bot.PostWeekLetter("Emma", null!);
 
@@ -253,7 +244,7 @@ public class BotBaseTests
     [Fact]
     public async Task PostWeekLetter_WithDuplicateContent_SkipsSecondPost()
     {
-        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
+        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger);
         const string content = "Same week letter content";
 
         // Post first time
@@ -276,7 +267,7 @@ public class BotBaseTests
     [Fact]
     public async Task PostWeekLetter_WithDifferentContent_SendsBothMessages()
     {
-        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
+        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger);
 
         // Post first message
         await bot.PostWeekLetter("Emma", "First week letter");
@@ -300,7 +291,7 @@ public class BotBaseTests
             }
         };
 
-        var bot = new TestBot(_mockAgentService.Object, singleChildConfig, _logger, _mockSupabaseService.Object);
+        var bot = new TestBot(_mockAgentService.Object, singleChildConfig, _logger);
 
         // Use reflection to call protected method
         var method = typeof(BotBase).GetMethod("BuildWelcomeMessage", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -314,7 +305,7 @@ public class BotBaseTests
     [Fact]
     public void BuildWelcomeMessage_WithMultipleChildren_ContainsAllNames()
     {
-        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
+        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger);
 
         // Use reflection to call protected method
         var method = typeof(BotBase).GetMethod("BuildWelcomeMessage", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -336,7 +327,7 @@ public class BotBaseTests
             }
         };
 
-        var bot = new TestBot(_mockAgentService.Object, configWithComplexName, _logger, _mockSupabaseService.Object);
+        var bot = new TestBot(_mockAgentService.Object, configWithComplexName, _logger);
 
         // Use reflection to call protected method
         var method = typeof(BotBase).GetMethod("BuildWelcomeMessage", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -349,7 +340,7 @@ public class BotBaseTests
     [Fact]
     public void ComputeWeekLetterHash_WithSameContent_ReturnsSameHash()
     {
-        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
+        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger);
 
         // Use reflection to call protected method
         var method = typeof(BotBase).GetMethod("ComputeWeekLetterHash", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -364,7 +355,7 @@ public class BotBaseTests
     [Fact]
     public void ComputeWeekLetterHash_WithDifferentContent_ReturnsDifferentHash()
     {
-        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
+        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger);
 
         // Use reflection to call protected method
         var method = typeof(BotBase).GetMethod("ComputeWeekLetterHash", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -380,7 +371,7 @@ public class BotBaseTests
     [Fact]
     public void ComputeWeekLetterHash_ReturnsHexString()
     {
-        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger, _mockSupabaseService.Object);
+        var bot = new TestBot(_mockAgentService.Object, _testConfig, _logger);
 
         // Use reflection to call protected method
         var method = typeof(BotBase).GetMethod("ComputeWeekLetterHash", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);

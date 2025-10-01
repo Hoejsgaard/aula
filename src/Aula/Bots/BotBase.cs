@@ -1,7 +1,6 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using Aula.Configuration;
-using Aula.Services;
 using Aula.Integration;
 using Aula.Utilities;
 
@@ -16,25 +15,21 @@ public abstract class BotBase
     protected IAgentService AgentService { get; }
     protected Config Config { get; }
     protected ILogger Logger { get; }
-    protected ISupabaseService SupabaseService { get; }
     protected Dictionary<string, Child> ChildrenByName { get; }
     protected ConcurrentDictionary<string, byte> PostedWeekLetterHashes { get; }
 
     protected BotBase(
         IAgentService agentService,
         Config config,
-        ILogger logger,
-        ISupabaseService supabaseService)
+        ILogger logger)
     {
         ArgumentNullException.ThrowIfNull(agentService);
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(logger);
-        ArgumentNullException.ThrowIfNull(supabaseService);
 
         AgentService = agentService;
         Config = config;
         Logger = logger;
-        SupabaseService = supabaseService;
 
         ChildrenByName = new Dictionary<string, Child>();
         foreach (var child in Config.MinUddannelse.Children)

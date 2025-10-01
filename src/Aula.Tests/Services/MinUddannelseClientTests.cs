@@ -3,6 +3,7 @@ using Moq;
 using Aula.Configuration;
 using Aula.Integration;
 using Aula.Services;
+using Aula.Repositories;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Threading.Tasks;
@@ -12,7 +13,7 @@ namespace Aula.Tests.Services;
 
 public class MinUddannelseClientTests
 {
-    private readonly Mock<ISupabaseService> _mockSupabaseService;
+    private readonly Mock<IWeekLetterRepository> _mockWeekLetterRepository;
     private readonly Mock<ILoggerFactory> _mockLoggerFactory;
     private readonly Mock<ILogger<MinUddannelseClient>> _mockLogger;
     private readonly Config _testConfig;
@@ -20,7 +21,7 @@ public class MinUddannelseClientTests
 
     public MinUddannelseClientTests()
     {
-        _mockSupabaseService = new Mock<ISupabaseService>();
+        _mockWeekLetterRepository = new Mock<IWeekLetterRepository>();
         _mockLoggerFactory = new Mock<ILoggerFactory>();
         _mockLogger = new Mock<ILogger<MinUddannelseClient>>();
 
@@ -44,14 +45,7 @@ public class MinUddannelseClientTests
     [Fact]
     public void Constructor_WithConfigAndServices_InitializesCorrectly()
     {
-        var client = new MinUddannelseClient(_testConfig, _mockSupabaseService.Object, _mockLoggerFactory.Object);
-        Assert.NotNull(client);
-    }
-
-    [Fact]
-    public void Constructor_WithUsernamePassword_InitializesCorrectly()
-    {
-        var client = new MinUddannelseClient("testuser", "testpass");
+        var client = new MinUddannelseClient(_testConfig, _mockWeekLetterRepository.Object, _mockLoggerFactory.Object);
         Assert.NotNull(client);
     }
 
@@ -59,16 +53,16 @@ public class MinUddannelseClientTests
     public async Task GetStoredWeekLetter_WithSupabaseService_CallsService()
     {
         var storedContent = "{\"stored\":\"data\"}";
-        _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024))
+        _mockWeekLetterRepository.Setup(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024))
             .ReturnsAsync(storedContent);
 
-        var client = new MinUddannelseClient(_testConfig, _mockSupabaseService.Object, _mockLoggerFactory.Object);
+        var client = new MinUddannelseClient(_testConfig, _mockWeekLetterRepository.Object, _mockLoggerFactory.Object);
 
         var result = await client.GetStoredWeekLetter(_testChild, 25, 2024);
 
         Assert.NotNull(result);
         Assert.Equal("data", result["stored"]?.ToString());
-        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
+        _mockWeekLetterRepository.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
     }
 
     [Fact]
@@ -84,29 +78,29 @@ public class MinUddannelseClientTests
     [Fact]
     public async Task GetStoredWeekLetter_SupabaseServiceThrowsException_ReturnsNull()
     {
-        _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024))
+        _mockWeekLetterRepository.Setup(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024))
             .ThrowsAsync(new InvalidOperationException("Database connection failed"));
 
-        var client = new MinUddannelseClient(_testConfig, _mockSupabaseService.Object, _mockLoggerFactory.Object);
+        var client = new MinUddannelseClient(_testConfig, _mockWeekLetterRepository.Object, _mockLoggerFactory.Object);
 
         var result = await client.GetStoredWeekLetter(_testChild, 25, 2024);
 
         Assert.Null(result);
-        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
+        _mockWeekLetterRepository.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
     }
 
     [Fact]
     public async Task GetStoredWeekLetter_SupabaseServiceReturnsInvalidJson_ReturnsNull()
     {
-        _mockSupabaseService.Setup(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024))
+        _mockWeekLetterRepository.Setup(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024))
             .ReturnsAsync("invalid json content {{{");
 
-        var client = new MinUddannelseClient(_testConfig, _mockSupabaseService.Object, _mockLoggerFactory.Object);
+        var client = new MinUddannelseClient(_testConfig, _mockWeekLetterRepository.Object, _mockLoggerFactory.Object);
 
         var result = await client.GetStoredWeekLetter(_testChild, 25, 2024);
 
         Assert.Null(result);
-        _mockSupabaseService.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
+        _mockWeekLetterRepository.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
     }
 
     [Fact]
@@ -116,21 +110,9 @@ public class MinUddannelseClientTests
     }
 
     [Fact]
-    public void Constructor_WithNullUsername_ThrowsArgumentNullException()
-    {
-        Assert.Throws<ArgumentNullException>(() => new MinUddannelseClient(null!, "password"));
-    }
-
-    [Fact]
-    public void Constructor_WithNullPassword_ThrowsArgumentNullException()
-    {
-        Assert.Throws<ArgumentNullException>(() => new MinUddannelseClient("username", null!));
-    }
-
-    [Fact]
     public void Constructor_WithConfigAndServices_VerifyDependencyInjection()
     {
-        var client = new MinUddannelseClient(_testConfig, _mockSupabaseService.Object, _mockLoggerFactory.Object);
+        var client = new MinUddannelseClient(_testConfig, _mockWeekLetterRepository.Object, _mockLoggerFactory.Object);
 
         Assert.NotNull(client);
         _mockLoggerFactory.Verify(x => x.CreateLogger(typeof(MinUddannelseClient).FullName!), Times.Once());

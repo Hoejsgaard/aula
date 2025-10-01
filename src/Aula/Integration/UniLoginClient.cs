@@ -2,21 +2,27 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Web;
 using HtmlAgilityPack;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
+using Aula.Integration.Exceptions;
 
 namespace Aula.Integration;
 
-public abstract class UniLoginClient
+public abstract class UniLoginClient : IDisposable
 {
+    private bool _disposed = false;
+    private readonly ILogger<UniLoginClient> _logger;
     private readonly string _loginUrl;
     private readonly string _password;
     private readonly string _username;
+    private readonly string _apiBaseUrl;
+    private readonly string _studentDataPath;
     private bool _loggedIn;
 
     private JObject _userProfile = new();
 
-    public UniLoginClient(string username, string password, string loginUrl, string successUrl)
+    public UniLoginClient(string username, string password, string loginUrl, string successUrl, ILogger<UniLoginClient> logger, string apiBaseUrl = "https://www.minuddannelse.net", string studentDataPath = "/api/stamdata/elev/getElev")
     {
         var httpClientHandler = new HttpClientHandler
         {
@@ -29,6 +35,9 @@ public abstract class UniLoginClient
         _password = password ?? throw new ArgumentNullException(nameof(password));
         _loginUrl = loginUrl;
         SuccessUrl = successUrl;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _apiBaseUrl = apiBaseUrl;
+        _studentDataPath = studentDataPath;
     }
 
     protected HttpClient HttpClient { get; }
@@ -61,7 +70,7 @@ public abstract class UniLoginClient
                     formData.Item2.ContainsKey("j_username"))
                 {
                     hasSubmittedCredentials = true;
-                    Console.WriteLine($"[UniLogin] Submitting credentials at step {stepCounter}");
+                    _logger.LogInformation("Submitting credentials at step {StepCounter}", stepCounter);
                 }
 
                 var response = await HttpClient.PostAsync(formData.Item1, new FormUrlEncodedContent(formData.Item2));
@@ -71,15 +80,15 @@ public abstract class UniLoginClient
                 var currentUrl = response.RequestMessage?.RequestUri?.ToString() ?? "";
                 if (hasSubmittedCredentials && currentUrl.Contains("minuddannelse.net"))
                 {
-                    Console.WriteLine($"[UniLogin] Back at MinUddannelse after credentials");
+                    _logger.LogInformation("Back at MinUddannelse after credentials");
 
                     // Verify authentication with API call
-                    var apiUrl = $"https://www.minuddannelse.net/api/stamdata/elev/getElev?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+                    var apiUrl = $"{_apiBaseUrl}{_studentDataPath}?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
                     var apiResponse = await HttpClient.GetAsync(apiUrl);
 
                     if (apiResponse.IsSuccessStatusCode)
                     {
-                        Console.WriteLine($"[UniLogin] API verification successful - authenticated!");
+                        _logger.LogInformation("API verification successful - authenticated");
                         HttpClient.DefaultRequestHeaders.Accept.Add(
                             new MediaTypeWithQualityHeaderValue("application/json"));
                         return true;
@@ -96,22 +105,21 @@ public abstract class UniLoginClient
             }
             catch (Exception ex)
             {
-                // Log the exception for debugging
-                Console.WriteLine($"[UniLogin] Step {stepCounter} failed: {ex.Message}");
+                _logger.LogWarning("Step {StepCounter} failed: {Message}", stepCounter, ex.Message);
 
                 // If we can't extract form data, we might be at the end of the flow
                 if (ex.Message.Contains("Form not found") && hasSubmittedCredentials)
                 {
-                    Console.WriteLine($"[UniLogin] No more forms after credentials - checking authentication");
+                    _logger.LogInformation("No more forms after credentials - checking authentication");
 
                     // Try API verification
                     try
                     {
-                        var apiUrl = $"https://www.minuddannelse.net/api/stamdata/elev/getElev?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+                        var apiUrl = $"{_apiBaseUrl}{_studentDataPath}?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
                         var apiResponse = await HttpClient.GetAsync(apiUrl);
                         if (apiResponse.IsSuccessStatusCode)
                         {
-                            Console.WriteLine($"[UniLogin] API verification successful!");
+                            _logger.LogInformation("API verification successful");
                             HttpClient.DefaultRequestHeaders.Accept.Add(
                                 new MediaTypeWithQualityHeaderValue("application/json"));
                             return true;
@@ -131,10 +139,10 @@ public abstract class UniLoginClient
         doc.LoadHtml(htmlContent);
         var formNode = doc.DocumentNode.SelectSingleNode("//form");
 
-        if (formNode == null) throw new Exception("Form not found");
+        if (formNode == null) throw new AuthenticationFormNotFoundException("Form not found");
 
         var actionUrl = formNode.Attributes["action"]?.Value;
-        if (actionUrl == null) throw new Exception("No action node found");
+        if (actionUrl == null) throw new InvalidFormDataException("No action node found");
         var formData = BuildFormData(doc);
         var writer = new StringWriter();
         HttpUtility.HtmlDecode(actionUrl, writer);
@@ -178,5 +186,23 @@ public abstract class UniLoginClient
         _loggedIn = response.RequestMessage?.RequestUri?.ToString() == SuccessUrl;
 
         return _loggedIn;
+    }
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!_disposed)
+        {
+            if (disposing)
+            {
+                HttpClient?.Dispose();
+            }
+            _disposed = true;
+        }
     }
 }

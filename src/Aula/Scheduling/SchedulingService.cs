@@ -7,6 +7,7 @@ using Aula.Channels;
 using Aula.Integration;
 using Aula.Configuration;
 using Aula.Services;
+using Aula.Repositories;
 using Aula.Utilities;
 using Aula.Events;
 
@@ -15,7 +16,11 @@ namespace Aula.Scheduling;
 public class SchedulingService : ISchedulingService
 {
     private readonly ILogger _logger;
-    private readonly ISupabaseService _supabaseService;
+    private readonly IReminderRepository _reminderRepository;
+    private readonly IScheduledTaskRepository _scheduledTaskRepository;
+    private readonly IWeekLetterRepository _weekLetterRepository;
+    private readonly IRetryTrackingRepository _retryTrackingRepository;
+    private readonly IAppStateRepository _appStateRepository;
     private readonly IWeekLetterService _weekLetterService;
     private readonly IChannelManager _channelManager;
     private readonly Config _config;
@@ -35,13 +40,21 @@ public class SchedulingService : ISchedulingService
 
     public SchedulingService(
         ILoggerFactory loggerFactory,
-        ISupabaseService supabaseService,
+        IReminderRepository reminderRepository,
+        IScheduledTaskRepository scheduledTaskRepository,
+        IWeekLetterRepository weekLetterRepository,
+        IRetryTrackingRepository retryTrackingRepository,
+        IAppStateRepository appStateRepository,
         IWeekLetterService weekLetterService,
         IChannelManager channelManager,
         Config config)
     {
         _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<SchedulingService>();
-        _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
+        _reminderRepository = reminderRepository ?? throw new ArgumentNullException(nameof(reminderRepository));
+        _scheduledTaskRepository = scheduledTaskRepository ?? throw new ArgumentNullException(nameof(scheduledTaskRepository));
+        _weekLetterRepository = weekLetterRepository ?? throw new ArgumentNullException(nameof(weekLetterRepository));
+        _retryTrackingRepository = retryTrackingRepository ?? throw new ArgumentNullException(nameof(retryTrackingRepository));
+        _appStateRepository = appStateRepository ?? throw new ArgumentNullException(nameof(appStateRepository));
         _weekLetterService = weekLetterService ?? throw new ArgumentNullException(nameof(weekLetterService));
         _channelManager = channelManager ?? throw new ArgumentNullException(nameof(channelManager));
         _config = config ?? throw new ArgumentNullException(nameof(config));
@@ -146,7 +159,7 @@ public class SchedulingService : ISchedulingService
             {
                 _logger.LogInformation("Running scheduled tasks check at {Time}", DateTime.Now);
 
-                var tasks = await _supabaseService.GetScheduledTasksAsync();
+                var tasks = await _scheduledTaskRepository.GetScheduledTasksAsync();
                 var now = DateTime.UtcNow;
 
                 foreach (var task in tasks)
@@ -160,7 +173,7 @@ public class SchedulingService : ISchedulingService
                             // Update last run time
                             task.LastRun = now;
                             task.NextRun = GetNextRunTime(task.CronExpression, now);
-                            await _supabaseService.UpdateScheduledTaskAsync(task);
+                            await _scheduledTaskRepository.UpdateScheduledTaskAsync(task);
 
                             // Execute the task
                             await ExecuteTask(task);
@@ -244,7 +257,7 @@ public class SchedulingService : ISchedulingService
         {
             _logger.LogInformation("ExecutePendingReminders called at {LocalTime} (UTC: {UtcTime})", DateTime.Now, DateTime.UtcNow);
 
-            var pendingReminders = await _supabaseService.GetPendingRemindersAsync();
+            var pendingReminders = await _reminderRepository.GetPendingRemindersAsync();
 
             if (pendingReminders.Count == 0)
             {
@@ -259,7 +272,7 @@ public class SchedulingService : ISchedulingService
                 try
                 {
                     await SendReminderNotification(reminder);
-                    await _supabaseService.DeleteReminderAsync(reminder.Id); // DELETE instead of mark as sent
+                    await _reminderRepository.DeleteReminderAsync(reminder.Id); // DELETE instead of mark as sent
 
                     _logger.LogInformation("Sent and deleted reminder {ReminderId}: {Text}", reminder.Id, reminder.Text);
                 }
@@ -359,14 +372,14 @@ public class SchedulingService : ISchedulingService
             ChildWeekLetterReady?.Invoke(this, eventArgs);
 
             // Mark as posted after emitting event (subscribers will handle the actual posting)
-            await _supabaseService.MarkWeekLetterAsPostedAsync(child.FirstName, weekNumber, year, result.contentHash!);
+            await _weekLetterRepository.MarkWeekLetterAsPostedAsync(child.FirstName, weekNumber, year, result.contentHash!);
 
             _logger.LogInformation("Emitted week letter event for {ChildName}", child.FirstName);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing week letter for {ChildName}", child.FirstName);
-            await _supabaseService.IncrementRetryAttemptAsync(child.FirstName, weekNumber, year);
+            await _retryTrackingRepository.IncrementRetryAttemptAsync(child.FirstName, weekNumber, year);
         }
     }
 
@@ -378,7 +391,7 @@ public class SchedulingService : ISchedulingService
 
     private async Task<bool> IsWeekLetterAlreadyPosted(string childName, int weekNumber, int year)
     {
-        var alreadyPosted = await _supabaseService.HasWeekLetterBeenPostedAsync(childName, weekNumber, year);
+        var alreadyPosted = await _weekLetterRepository.HasWeekLetterBeenPostedAsync(childName, weekNumber, year);
         if (alreadyPosted)
         {
             _logger.LogInformation("Week letter for {ChildName} week {WeekNumber}/{Year} already posted",
@@ -394,7 +407,7 @@ public class SchedulingService : ISchedulingService
         if (weekLetter == null)
         {
             _logger.LogWarning("No week letter available for {ChildName}, will retry later", child.FirstName);
-            await _supabaseService.IncrementRetryAttemptAsync(child.FirstName, weekNumber, year);
+            await _retryTrackingRepository.IncrementRetryAttemptAsync(child.FirstName, weekNumber, year);
         }
         return weekLetter;
     }
@@ -405,7 +418,7 @@ public class SchedulingService : ISchedulingService
         if (string.IsNullOrEmpty(content))
         {
             _logger.LogWarning("Week letter content is empty for {ChildName}", childName);
-            await _supabaseService.IncrementRetryAttemptAsync(childName, weekNumber, year);
+            await _retryTrackingRepository.IncrementRetryAttemptAsync(childName, weekNumber, year);
             return (null, null);
         }
 
@@ -415,11 +428,11 @@ public class SchedulingService : ISchedulingService
 
     private async Task<bool> IsContentAlreadyPosted(Child child, string contentHash, int weekNumber, int year)
     {
-        var existingPosts = await _supabaseService.GetAppStateAsync($"last_posted_hash_{child.FirstName}");
+        var existingPosts = await _appStateRepository.GetAppStateAsync($"last_posted_hash_{child.FirstName}");
         if (existingPosts == contentHash)
         {
             _logger.LogInformation("Week letter content unchanged for {ChildName}, marking as posted", child.FirstName);
-            await _supabaseService.MarkWeekLetterAsPostedAsync(child.FirstName, weekNumber, year, contentHash, true, child.Channels?.Telegram?.Enabled == true);
+            await _weekLetterRepository.MarkWeekLetterAsPostedAsync(child.FirstName, weekNumber, year, contentHash, true, child.Channels?.Telegram?.Enabled == true);
             return true;
         }
         return false;
@@ -430,9 +443,9 @@ public class SchedulingService : ISchedulingService
         await PostWeekLetter(child, weekLetter, content);
 
         // Store the complete week letter with raw content for future retrieval
-        await _supabaseService.StoreWeekLetterAsync(child.FirstName, weekNumber, year, contentHash, weekLetter.ToString(), true, child.Channels?.Telegram?.Enabled == true);
-        await _supabaseService.SetAppStateAsync($"last_posted_hash_{child.FirstName}", contentHash);
-        await _supabaseService.MarkRetryAsSuccessfulAsync(child.FirstName, weekNumber, year);
+        await _weekLetterRepository.StoreWeekLetterAsync(child.FirstName, weekNumber, year, contentHash, weekLetter.ToString(), true, child.Channels?.Telegram?.Enabled == true);
+        await _appStateRepository.SetAppStateAsync($"last_posted_hash_{child.FirstName}", contentHash);
+        await _retryTrackingRepository.MarkRetryAsSuccessfulAsync(child.FirstName, weekNumber, year);
     }
 
     private string ExtractWeekLetterContent(dynamic weekLetter)
@@ -486,7 +499,7 @@ public class SchedulingService : ISchedulingService
         {
             _logger.LogInformation("Checking for missed reminders on startup");
 
-            var pendingReminders = await _supabaseService.GetPendingRemindersAsync();
+            var pendingReminders = await _reminderRepository.GetPendingRemindersAsync();
 
             if (pendingReminders.Count > 0)
             {
@@ -505,7 +518,7 @@ public class SchedulingService : ISchedulingService
                     _logger.LogInformation("Missed reminder notification disabled in current build: {Message}", message);
 
                     // Delete the missed reminder so it doesn't keep showing up
-                    await _supabaseService.DeleteReminderAsync(reminder.Id);
+                    await _reminderRepository.DeleteReminderAsync(reminder.Id);
 
                     _logger.LogInformation("Notified about missed reminder: {Text}", reminder.Text);
                 }

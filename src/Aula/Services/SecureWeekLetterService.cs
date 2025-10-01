@@ -1,6 +1,7 @@
 using Aula.Authentication;
 using Aula.Configuration;
 using Aula.Integration;
+using Aula.Repositories;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
@@ -16,7 +17,7 @@ public class SecureWeekLetterService : IWeekLetterService
     private readonly IChildAuditService _auditService;
     private readonly IChildRateLimiter _rateLimiter;
     private readonly DataService _dataService;
-    private readonly ISupabaseService _supabaseService;
+    private readonly IWeekLetterRepository _weekLetterRepository;
     private readonly IMinUddannelseClient _minUddannelseClient;
     private readonly ILogger<SecureWeekLetterService> _logger;
 
@@ -24,14 +25,14 @@ public class SecureWeekLetterService : IWeekLetterService
         IChildAuditService auditService,
         IChildRateLimiter rateLimiter,
         DataService dataService,
-        ISupabaseService supabaseService,
+        IWeekLetterRepository weekLetterRepository,
         IMinUddannelseClient minUddannelseClient,
         ILogger<SecureWeekLetterService> logger)
     {
         _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
         _rateLimiter = rateLimiter ?? throw new ArgumentNullException(nameof(rateLimiter));
         _dataService = dataService ?? throw new ArgumentNullException(nameof(dataService));
-        _supabaseService = supabaseService ?? throw new ArgumentNullException(nameof(supabaseService));
+        _weekLetterRepository = weekLetterRepository ?? throw new ArgumentNullException(nameof(weekLetterRepository));
         _minUddannelseClient = minUddannelseClient ?? throw new ArgumentNullException(nameof(minUddannelseClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -190,7 +191,7 @@ public class SecureWeekLetterService : IWeekLetterService
 
             // Layer 5: Secure database operation (parameterized query in SupabaseService)
             var contentHash = ComputeHash(weekLetter.ToString());
-            await _supabaseService.StoreWeekLetterAsync(
+            await _weekLetterRepository.StoreWeekLetterAsync(
                 child.FirstName,
                 weekNumber,
                 year,
@@ -230,7 +231,7 @@ public class SecureWeekLetterService : IWeekLetterService
             await _auditService.LogSecurityEventAsync(child, "DataDeletion", $"week_{weekNumber}_{year}", SecuritySeverity.Warning);
 
             // Layer 5: Secure database operation
-            await _supabaseService.DeleteWeekLetterAsync(child.FirstName, weekNumber, year);
+            await _weekLetterRepository.DeleteWeekLetterAsync(child.FirstName, weekNumber, year);
 
             await _rateLimiter.RecordOperationAsync(child, "DeleteWeekLetter");
             await _auditService.LogDataAccessAsync(child, "DeleteWeekLetter", $"db_week_{weekNumber}_{year}", true);
@@ -264,7 +265,7 @@ public class SecureWeekLetterService : IWeekLetterService
                 child.FirstName, year?.ToString() ?? "all");
 
             // Layer 5: Secure database operation (filtered by child)
-            var letters = await _supabaseService.GetStoredWeekLettersAsync(child.FirstName, year);
+            var letters = await _weekLetterRepository.GetStoredWeekLettersAsync(child.FirstName, year);
 
             var results = new List<JObject>();
             foreach (var letter in letters)
@@ -329,7 +330,7 @@ public class SecureWeekLetterService : IWeekLetterService
             }
 
             // Check database
-            var storedContent = await _supabaseService.GetStoredWeekLetterAsync(child.FirstName, weekNumber, year);
+            var storedContent = await _weekLetterRepository.GetStoredWeekLetterAsync(child.FirstName, weekNumber, year);
             if (!string.IsNullOrEmpty(storedContent))
             {
                 try

@@ -13,12 +13,24 @@ namespace Aula.Tests.Integration;
 public class PictogramAuthenticatedClientTests
 {
     private readonly Mock<ILogger<PictogramAuthenticatedClient>> _mockLogger;
+    private readonly Mock<ILogger<UniLoginDebugClient>> _mockBaseLogger;
     private readonly Child _testChild;
     private readonly string[] _pictogramSequence;
+    private readonly Config _config;
 
     public PictogramAuthenticatedClientTests()
     {
         _mockLogger = new Mock<ILogger<PictogramAuthenticatedClient>>();
+        _mockBaseLogger = new Mock<ILogger<UniLoginDebugClient>>();
+        _config = new Config
+        {
+            MinUddannelse = new MinUddannelse
+            {
+                SamlLoginUrl = "https://test.unilogin.dk",
+                ApiBaseUrl = "https://api.test.aula.dk",
+                StudentDataPath = "/api/v1/students"
+            }
+        };
         _testChild = new Child
         {
             FirstName = "Test",
@@ -41,6 +53,8 @@ public class PictogramAuthenticatedClientTests
             _testChild,
             _testChild.UniLogin!.Username,
             _pictogramSequence,
+            _config,
+            _mockBaseLogger.Object,
             _mockLogger.Object);
 
         // Assert
@@ -56,6 +70,8 @@ public class PictogramAuthenticatedClientTests
                 _testChild,
                 _testChild.UniLogin!.Username,
                 null!,
+                _config,
+                _mockBaseLogger.Object,
                 _mockLogger.Object));
     }
 
@@ -156,6 +172,8 @@ public class PictogramAuthenticatedClientTests
             _testChild,
             _testChild.UniLogin!.Username,
             _pictogramSequence,
+            _config,
+            _mockBaseLogger.Object,
             _mockLogger.Object);
 
         // Act
@@ -226,6 +244,8 @@ public class PictogramAuthenticatedClientTests
             _testChild,
             _testChild.UniLogin!.Username,
             _pictogramSequence,
+            _config,
+            _mockBaseLogger.Object,
             _mockLogger.Object);
 
         // Act
@@ -244,6 +264,8 @@ public class PictogramAuthenticatedClientTests
             _testChild,
             _testChild.UniLogin!.Username,
             _pictogramSequence,
+            _config,
+            _mockBaseLogger.Object,
             _mockLogger.Object);
 
         // Act

@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 using Aula.Configuration;
 using Aula.Integration;
+using Aula.Repositories;
 using Newtonsoft.Json.Linq;
 
 namespace Aula.Services;
@@ -11,18 +12,18 @@ public class HistoricalDataSeeder : IHistoricalDataSeeder
 {
     private readonly ILogger _logger;
     private readonly IAgentService _agentService;
-    private readonly ISupabaseService _supabaseService;
+    private readonly IWeekLetterRepository _weekLetterRepository;
     private readonly Config _config;
 
     public HistoricalDataSeeder(
         ILoggerFactory loggerFactory,
         IAgentService agentService,
-        ISupabaseService supabaseService,
+        IWeekLetterRepository weekLetterRepository,
         Config config)
     {
         _logger = loggerFactory.CreateLogger(nameof(HistoricalDataSeeder));
         _agentService = agentService;
-        _supabaseService = supabaseService;
+        _weekLetterRepository = weekLetterRepository;
         _config = config;
     }
 
@@ -76,7 +77,7 @@ public class HistoricalDataSeeder : IHistoricalDataSeeder
                         // Check if we already have this week letter stored
                         var childNameForStorage = child.FirstName;
                         _logger.LogInformation("💾 Checking storage for child: '{ChildName}'", childNameForStorage);
-                        var existingContent = await _supabaseService.GetStoredWeekLetterAsync(childNameForStorage, weekNumber, year);
+                        var existingContent = await _weekLetterRepository.GetStoredWeekLetterAsync(childNameForStorage, weekNumber, year);
                         if (!string.IsNullOrEmpty(existingContent))
                         {
                             _logger.LogInformation("✅ Week letter for {ChildName} week {WeekNumber}/{Year} already exists - skipping",
@@ -97,7 +98,7 @@ public class HistoricalDataSeeder : IHistoricalDataSeeder
                             {
                                 // Store the week letter
                                 var contentHash = ComputeContentHash(weekLetter.ToString());
-                                await _supabaseService.StoreWeekLetterAsync(
+                                await _weekLetterRepository.StoreWeekLetterAsync(
                                     childNameForStorage,
                                     weekNumber,
                                     year,

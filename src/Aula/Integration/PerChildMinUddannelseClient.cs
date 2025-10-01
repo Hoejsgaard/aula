@@ -2,8 +2,10 @@ using System.Net.Http.Headers;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
+using Aula.Repositories;
 using Aula.Services;
 
 namespace Aula.Integration;
@@ -14,16 +16,20 @@ namespace Aula.Integration;
 /// </summary>
 public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 {
-    private readonly ISupabaseService? _supabaseService;
+    private readonly IWeekLetterRepository? _weekLetterRepository;
+    private readonly IRetryTrackingRepository? _retryTrackingRepository;
     private readonly ILogger _logger;
+    private readonly ILoggerFactory _loggerFactory;
     private readonly Config _config;
 
     // No longer storing authenticated clients - creating fresh instances per request
 
-    public PerChildMinUddannelseClient(Config config, ISupabaseService? supabaseService, ILoggerFactory loggerFactory)
+    public PerChildMinUddannelseClient(Config config, IWeekLetterRepository? weekLetterRepository, IRetryTrackingRepository? retryTrackingRepository, ILoggerFactory loggerFactory)
     {
         _config = config;
-        _supabaseService = supabaseService;
+        _weekLetterRepository = weekLetterRepository;
+        _retryTrackingRepository = retryTrackingRepository;
+        _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<PerChildMinUddannelseClient>();
     }
 
@@ -41,7 +47,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         var year = date.Year;
 
         // Step 1: Check database first
-        if (_supabaseService != null)
+        if (_weekLetterRepository != null)
         {
             var storedLetter = await GetStoredWeekLetter(child, weekNumber, year);
             if (storedLetter != null)
@@ -77,36 +83,37 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
         // Choose authentication method based on config
         IChildAuthenticatedClient childClient;
+        var baseLogger = _loggerFactory.CreateLogger<UniLoginDebugClient>();
         if (child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null)
         {
             _logger.LogInformation("Using pictogram authentication for {ChildName}", child.FirstName);
-            childClient = new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _logger);
+            childClient = new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, baseLogger, _logger);
         }
         else
         {
             _logger.LogInformation("Using standard authentication for {ChildName}", child.FirstName);
-            childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _logger);
+            childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, _logger);
         }
 
         var loginSuccess = await childClient.LoginAsync();
         if (!loginSuccess)
         {
-            _logger.LogError("❌ Failed to authenticate {ChildName}", child.FirstName);
+            _logger.LogError("Failed to authenticate {ChildName}", child.FirstName);
             return CreateEmptyWeekLetter(weekNumber);
         }
 
-        _logger.LogInformation("✅ Successfully authenticated {ChildName} for this request", child.FirstName);
+        _logger.LogInformation("Successfully authenticated {ChildName} for this request", child.FirstName);
 
         // Fetch from MinUddannelse
         var weekLetter = await childClient.GetWeekLetter(date);
 
-        // Store to database if we have Supabase service
-        if (_supabaseService != null && weekLetter != null)
+        // Store to database if we have repository
+        if (_weekLetterRepository != null && weekLetter != null)
         {
             try
             {
                 var contentHash = ComputeContentHash(weekLetter.ToString());
-                await _supabaseService.StoreWeekLetterAsync(
+                await _weekLetterRepository.StoreWeekLetterAsync(
                     child.FirstName, weekNumber, year, contentHash, weekLetter.ToString());
                 _logger.LogInformation("💾 Stored week letter to database for {ChildName} week {WeekNumber}/{Year}",
                     child.FirstName, weekNumber, year);
@@ -131,29 +138,30 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
             return new JObject();
         }
 
-        _logger.LogInformation("🔑 Creating fresh authenticated session for {ChildName} (schedule request)", child.FirstName);
+        _logger.LogInformation("Creating fresh authenticated session for {ChildName} (schedule request)", child.FirstName);
 
         // Choose authentication method based on config
         IChildAuthenticatedClient childClient;
+        var baseLogger = _loggerFactory.CreateLogger<UniLoginDebugClient>();
         if (child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null)
         {
             _logger.LogInformation("Using pictogram authentication for {ChildName}", child.FirstName);
-            childClient = new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _logger);
+            childClient = new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, baseLogger, _logger);
         }
         else
         {
             _logger.LogInformation("Using standard authentication for {ChildName}", child.FirstName);
-            childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _logger);
+            childClient = new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, _logger);
         }
 
         var loginSuccess = await childClient.LoginAsync();
         if (!loginSuccess)
         {
-            _logger.LogError("❌ Failed to authenticate {ChildName} for schedule request", child.FirstName);
+            _logger.LogError("Failed to authenticate {ChildName} for schedule request", child.FirstName);
             return new JObject();
         }
 
-        _logger.LogInformation("✅ Successfully authenticated {ChildName} for schedule request", child.FirstName);
+        _logger.LogInformation("Successfully authenticated {ChildName} for schedule request", child.FirstName);
 
         // Use the fresh client to get their week schedule
         return await childClient.GetWeekSchedule(date);
@@ -162,7 +170,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
     public async Task<JObject?> GetStoredWeekLetter(Child child, int weekNumber, int year)
     {
-        if (_supabaseService == null)
+        if (_weekLetterRepository == null)
         {
             _logger.LogWarning("Supabase service not available");
             return null;
@@ -170,7 +178,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
         try
         {
-            var storedContent = await _supabaseService.GetStoredWeekLetterAsync(
+            var storedContent = await _weekLetterRepository.GetStoredWeekLetterAsync(
                 child.FirstName, weekNumber, year);
 
             if (string.IsNullOrEmpty(storedContent))
@@ -189,14 +197,14 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
     public async Task<List<StoredWeekLetter>> GetStoredWeekLetters(Child? child = null, int? year = null)
     {
-        if (_supabaseService == null)
+        if (_weekLetterRepository == null)
         {
             return new List<StoredWeekLetter>();
         }
 
         try
         {
-            return await _supabaseService.GetStoredWeekLettersAsync(child?.FirstName, year);
+            return await _weekLetterRepository.GetStoredWeekLettersAsync(child?.FirstName, year);
         }
         catch (Exception ex)
         {
@@ -237,48 +245,53 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
     private sealed partial class ChildAuthenticatedClient : UniLoginDebugClient, IChildAuthenticatedClient
     {
         private readonly Child _child;
-        private readonly ILogger _logger;
+        private readonly ILogger _childLogger;
+        private readonly Config _config;
         private string? _childId;
 
-        public ChildAuthenticatedClient(Child child, string username, string password, ILogger logger)
+        public ChildAuthenticatedClient(Child child, string username, string password, Config config, ILogger logger)
             : base(username, password,
-                "https://www.minuddannelse.net/KmdIdentity/Login?domainHint=unilogin-idp-prod&toFa=False",  // Direct to UniLogin
-                "https://www.minuddannelse.net/")  // Success is anywhere on MinUddannelse after auth
+                config.MinUddannelse.SamlLoginUrl,
+                config.MinUddannelse.ApiBaseUrl,
+                (ILogger<UniLoginDebugClient>)logger,
+                config.MinUddannelse.ApiBaseUrl,
+                config.MinUddannelse.StudentDataPath)
         {
             _child = child;
-            _logger = logger;
+            _childLogger = logger;
+            _config = config;
         }
 
         public new async Task<bool> LoginAsync()
         {
-            _logger.LogInformation("Attempting to login for {ChildName} at URL: {Url}",
-                _child.FirstName, "https://www.minuddannelse.net/");
+            _childLogger.LogInformation("Attempting to login for {ChildName} at URL: {Url}",
+                _child.FirstName, _config.MinUddannelse.ApiBaseUrl);
 
             var loginSuccess = await base.LoginAsync();
 
-            _logger.LogInformation("Base login returned: {Success}", loginSuccess);
+            _childLogger.LogInformation("Base login returned: {Success}", loginSuccess);
 
             if (loginSuccess)
             {
                 HttpClient.DefaultRequestHeaders.Accept.Add(
                     new MediaTypeWithQualityHeaderValue("application/json"));
 
-                _logger.LogInformation("🔍 Attempting to extract child ID for {ChildName}...", _child.FirstName);
+                _childLogger.LogInformation("Attempting to extract child ID for {ChildName}", _child.FirstName);
 
                 // When logged in as the child, we need to extract their own ID
                 _childId = await ExtractChildId();
 
                 if (string.IsNullOrEmpty(_childId))
                 {
-                    _logger.LogError("❌ Could not extract child ID for {ChildName}", _child.FirstName);
+                    _childLogger.LogError("Could not extract child ID for {ChildName}", _child.FirstName);
                     return false;
                 }
 
-                _logger.LogInformation("✅ Extracted child ID for {ChildName}: {ChildId}", _child.FirstName, _childId);
+                _childLogger.LogInformation("Extracted child ID for {ChildName}: {ChildId}", _child.FirstName, _childId);
                 return true;
             }
 
-            _logger.LogError("❌ Base login failed for {ChildName}", _child.FirstName);
+            _childLogger.LogError("Base login failed for {ChildName}", _child.FirstName);
             return false;
         }
 
@@ -286,11 +299,11 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         {
             try
             {
-                _logger.LogInformation("🔍 Extracting child ID for {ChildName}...", _child.FirstName);
+                _childLogger.LogInformation("Extracting child ID for {ChildName}", _child.FirstName);
 
                 // The authenticated page contains the child ID in the __tempcontext__ object
                 // We need to navigate to any MinUddannelse page after authentication to get this
-                var response = await HttpClient.GetAsync("https://www.minuddannelse.net/node/minuge");
+                var response = await HttpClient.GetAsync($"{_config.MinUddannelse.ApiBaseUrl}/node/minuge");
                 var content = await response.Content.ReadAsStringAsync();
 
                 // Look for personid in the __tempcontext__ object
@@ -299,7 +312,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
                 if (personIdMatch.Success)
                 {
                     var childId = personIdMatch.Groups[1].Value;
-                    _logger.LogInformation("✅ Extracted child ID from page context: {ChildId}", childId);
+                    _childLogger.LogInformation("Extracted child ID from page context: {ChildId}", childId);
 
                     // Verify the user name matches what we expect
                     var nameMatch = NameRegex().Match(content);
@@ -307,7 +320,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
                     {
                         var firstName = nameMatch.Groups[1].Value;
                         var lastName = nameMatch.Groups[2].Value;
-                        _logger.LogInformation("✅ Confirmed authenticated as: {FirstName} {LastName}",
+                        _childLogger.LogInformation("Confirmed authenticated as: {FirstName} {LastName}",
                             firstName, lastName);
                     }
 
@@ -315,8 +328,8 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
                 }
 
                 // Fallback: Try the old API method
-                _logger.LogInformation("Page context method failed, trying API...");
-                var apiUrl = $"https://www.minuddannelse.net/api/stamdata/elev/getElev?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+                _childLogger.LogInformation("Page context method failed, trying API");
+                var apiUrl = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.StudentDataPath}?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
                 var apiResponse = await HttpClient.GetAsync(apiUrl);
                 if (apiResponse.IsSuccessStatusCode)
@@ -331,18 +344,18 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
                         if (!string.IsNullOrEmpty(childId))
                         {
-                            _logger.LogInformation("✅ Extracted child ID from API: {ChildId}", childId);
+                            _childLogger.LogInformation("Extracted child ID from API: {ChildId}", childId);
                             return childId;
                         }
                     }
                 }
 
-                _logger.LogWarning("❌ Could not extract child ID from any source");
+                _childLogger.LogWarning("Could not extract child ID from any source");
                 return null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error extracting child ID");
+                _childLogger.LogError(ex, "Error extracting child ID");
                 return null;
             }
         }
@@ -351,11 +364,11 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         {
             if (string.IsNullOrEmpty(_childId))
             {
-                _logger.LogError("Child ID not available for {ChildName}", _child.FirstName);
+                _childLogger.LogError("Child ID not available for {ChildName}", _child.FirstName);
                 return new JObject();
             }
 
-            var url = $"https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}" +
+            var url = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.WeekLettersPath}?tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}" +
                      $"&elevId={_childId}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
             var response = await HttpClient.GetAsync(url);
@@ -383,11 +396,11 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         {
             if (string.IsNullOrEmpty(_childId))
             {
-                _logger.LogError("Child ID not available for {ChildName}", _child.FirstName);
+                _childLogger.LogError("Child ID not available for {ChildName}", _child.FirstName);
                 return new JObject();
             }
 
-            var url = $"https://www.minuddannelse.net/api/stamdata/aulaskema/getElevSkema?elevId={_childId}" +
+            var url = $"{_config.MinUddannelse.ApiBaseUrl}/api/stamdata/aulaskema/getElevSkema?elevId={_childId}" +
                      $"&tidspunkt={date.Year}-W{GetIsoWeekNumber(date)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
             var response = await HttpClient.GetAsync(url);
