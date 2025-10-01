@@ -4,6 +4,6 @@ namespace Aula.Agents;
 
 public interface IChildAgent
 {
-	Task StartAsync();
-	Task StopAsync();
+    Task StartAsync();
+    Task StopAsync();
 }
