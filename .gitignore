@@ -47,3 +47,7 @@ log.txt
 
 # Node.js dependencies
 node_modules/
+
+# Diagnostic/test tools with credentials
+TestHansDirect/
+Test*/
