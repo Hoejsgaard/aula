@@ -10,15 +10,15 @@ namespace Aula.Services;
 /// Child-aware OpenAI service that ensures all AI operations happen within child context.
 /// Handles week letter questions by using child data service and current week letter data.
 /// </summary>
-public class SecureChildAwareOpenAiService : IChildAwareOpenAiService
+public class SecureChildAwareOpenAiService : IOpenAiService
 {
-    private readonly IOpenAiService _openAiService;
-    private readonly IChildDataService _childDataService;
+    private readonly IWeekLetterAiService _openAiService;
+    private readonly IWeekLetterService _childDataService;
     private readonly ILogger<SecureChildAwareOpenAiService> _logger;
 
     public SecureChildAwareOpenAiService(
-        IOpenAiService openAiService,
-        IChildDataService childDataService,
+        IWeekLetterAiService openAiService,
+        IWeekLetterService childDataService,
         ILogger<SecureChildAwareOpenAiService> logger)
     {
         _openAiService = openAiService ?? throw new ArgumentNullException(nameof(openAiService));

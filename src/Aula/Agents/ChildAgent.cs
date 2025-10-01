@@ -16,24 +16,30 @@ namespace Aula.Agents;
 public class ChildAgent : IChildAgent
 {
     private readonly Child _child;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IOpenAiService _childAwareOpenAiService;
+    private readonly ILogger<ChildWeekLetterHandler> _weekLetterHandlerLogger;
+    private readonly IWeekLetterService _childDataService;
+    private readonly bool _postWeekLettersOnStartup;
+    private readonly ISchedulingService _schedulingService;
     private readonly ILoggerFactory _loggerFactory;
     private readonly ILogger<ChildAgent> _logger;
-    private readonly Config _config;
-    private readonly ISchedulingService _schedulingService;
-    private ChildAwareSlackInteractiveBot? _slackBot;
+    private SlackInteractiveBot? _slackBot;
     private EventHandler<ChildWeekLetterEventArgs>? _weekLetterHandler;
 
     public ChildAgent(
         Child child,
-        IServiceProvider serviceProvider,
-        Config config,
+        IOpenAiService childAwareOpenAiService,
+        ILogger<ChildWeekLetterHandler> weekLetterHandlerLogger,
+        IWeekLetterService childDataService,
+        bool postWeekLettersOnStartup,
         ISchedulingService schedulingService,
         ILoggerFactory loggerFactory)
     {
         _child = child ?? throw new ArgumentNullException(nameof(child));
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-        _config = config ?? throw new ArgumentNullException(nameof(config));
+        _childAwareOpenAiService = childAwareOpenAiService ?? throw new ArgumentNullException(nameof(childAwareOpenAiService));
+        _weekLetterHandlerLogger = weekLetterHandlerLogger ?? throw new ArgumentNullException(nameof(weekLetterHandlerLogger));
+        _childDataService = childDataService ?? throw new ArgumentNullException(nameof(childDataService));
+        _postWeekLettersOnStartup = postWeekLettersOnStartup;
         _schedulingService = schedulingService ?? throw new ArgumentNullException(nameof(schedulingService));
         _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
         _logger = _loggerFactory.CreateLogger<ChildAgent>();
@@ -47,7 +53,7 @@ public class ChildAgent : IChildAgent
         await InitializeTelegramBotAsync();
         SubscribeToWeekLetterEvents();
 
-        if (_config.Features?.PostWeekLettersOnStartup == true)
+        if (_postWeekLettersOnStartup)
         {
             await PostStartupWeekLetterAsync();
         }
@@ -77,18 +83,16 @@ public class ChildAgent : IChildAgent
             _child.Channels?.Slack?.EnableInteractiveBot == true &&
             !string.IsNullOrEmpty(_child.Channels?.Slack?.ApiToken))
         {
-            _logger.LogInformation("Starting ChildAwareSlackInteractiveBot for {ChildName} on channel {ChannelId}",
+            _logger.LogInformation("Starting SlackInteractiveBot for {ChildName} on channel {ChannelId}",
                 _child.FirstName, _child.Channels!.Slack!.ChannelId);
 
-            _slackBot = new ChildAwareSlackInteractiveBot(
-                _serviceProvider,
-                _serviceProvider.GetRequiredService<IChildAwareOpenAiService>(),
-                _config,
+            _slackBot = new SlackInteractiveBot(
+                _childAwareOpenAiService,
                 _loggerFactory);
 
             await _slackBot.StartForChild(_child);
 
-            _logger.LogInformation("ChildAwareSlackInteractiveBot started successfully for {ChildName}", _child.FirstName);
+            _logger.LogInformation("SlackInteractiveBot started successfully for {ChildName}", _child.FirstName);
         }
     }
 
@@ -117,8 +121,7 @@ public class ChildAgent : IChildAgent
         {
             _weekLetterHandler = async (sender, args) =>
             {
-                var logger = _serviceProvider.GetRequiredService<ILogger<ChildWeekLetterHandler>>();
-                var handler = new ChildWeekLetterHandler(_child, logger);
+                var handler = new ChildWeekLetterHandler(_child, _weekLetterHandlerLogger);
                 await handler.HandleWeekLetterEventAsync(args, _slackBot);
             };
             schedService.ChildWeekLetterReady += _weekLetterHandler;
@@ -138,9 +141,8 @@ public class ChildAgent : IChildAgent
 
         try
         {
-            var dataService = _serviceProvider.GetRequiredService<IChildDataService>();
             var date = DateOnly.FromDateTime(now.AddDays(-7 * (System.Globalization.ISOWeek.GetWeekOfYear(now) - weekNumber)));
-            var weekLetter = await dataService.GetOrFetchWeekLetterAsync(_child, date, true);
+            var weekLetter = await _childDataService.GetOrFetchWeekLetterAsync(_child, date, true);
 
             if (weekLetter != null)
             {

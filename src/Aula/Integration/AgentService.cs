@@ -9,13 +9,13 @@ public class AgentService : IAgentService
 {
     private readonly IMinUddannelseClient _minUddannelseClient;
     private readonly IDataService _dataManager;
-    private readonly IOpenAiService _openAiService;
+    private readonly IWeekLetterAiService _openAiService;
     private readonly ILogger _logger;
 
     public AgentService(
         IMinUddannelseClient minUddannelseClient,
         IDataService dataManager,
-        IOpenAiService openAiService,
+        IWeekLetterAiService openAiService,
         ILoggerFactory loggerFactory)
     {
         ArgumentNullException.ThrowIfNull(minUddannelseClient);

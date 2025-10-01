@@ -9,7 +9,7 @@ public enum ChatInterface
     Telegram
 }
 
-public interface IOpenAiService
+public interface IWeekLetterAiService
 {
     Task<string> SummarizeWeekLetterAsync(JObject weekLetter, ChatInterface chatInterface = ChatInterface.Slack);
 

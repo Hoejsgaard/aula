@@ -99,7 +99,21 @@ public class Program
         foreach (var child in config.MinUddannelse?.Children ?? new List<Child>())
         {
             logger.LogInformation("Starting agent for child: {ChildName}", child.FirstName);
-            var childAgent = new ChildAgent(child, serviceProvider, config, schedulingService, loggerFactory);
+
+            // Get explicit dependencies instead of using service locator
+            var childAwareOpenAiService = serviceProvider.GetRequiredService<IOpenAiService>();
+            var weekLetterHandlerLogger = serviceProvider.GetRequiredService<ILogger<ChildWeekLetterHandler>>();
+            var childDataService = serviceProvider.GetRequiredService<IWeekLetterService>();
+            var postWeekLettersOnStartup = config.Features?.PostWeekLettersOnStartup ?? false;
+
+            var childAgent = new ChildAgent(
+                child,
+                childAwareOpenAiService,
+                weekLetterHandlerLogger,
+                childDataService,
+                postWeekLettersOnStartup,
+                schedulingService,
+                loggerFactory);
             await childAgent.StartAsync();
             childAgents.Add(childAgent);
         }
@@ -170,10 +184,10 @@ public class Program
         // Child-aware services are singletons that accept Child parameters
         services.AddSingleton<IChildAuditService, ChildAuditService>();
         services.AddSingleton<IChildRateLimiter, ChildRateLimiter>();
-        services.AddSingleton<IChildDataService, SecureChildDataService>();
+        services.AddSingleton<IWeekLetterService, SecureWeekLetterService>();
         services.AddSingleton<IChildChannelManager, SecureChildChannelManager>();
         services.AddSingleton<IChildScheduler, SecureChildScheduler>();
-        services.AddSingleton<IChildAwareOpenAiService, SecureChildAwareOpenAiService>();
+        services.AddSingleton<IOpenAiService, SecureChildAwareOpenAiService>();
 
         services.AddScoped<IDataService, DataService>();
         services.AddScoped<IMinUddannelseClient, MinUddannelseClient>();
@@ -187,14 +201,14 @@ public class Program
         services.AddSingleton<IConversationManager, ConversationManager>();
         services.AddSingleton<IPromptBuilder, PromptBuilder>();
         services.AddSingleton<IAiToolsManager, AiToolsManager>();
-        services.AddSingleton<IOpenAiService>(provider =>
+        services.AddSingleton<IWeekLetterAiService>(provider =>
         {
             var config = provider.GetRequiredService<Config>();
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
             var aiToolsManager = provider.GetRequiredService<IAiToolsManager>();
             var conversationManager = provider.GetRequiredService<IConversationManager>();
             var promptBuilder = provider.GetRequiredService<IPromptBuilder>();
-            return new OpenAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager, conversationManager, promptBuilder);
+            return new WeekLetterAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager, conversationManager, promptBuilder);
         });
 
         services.AddSingleton<ISupabaseService, SupabaseService>();

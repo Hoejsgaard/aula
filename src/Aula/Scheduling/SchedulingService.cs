@@ -16,7 +16,7 @@ public class SchedulingService : ISchedulingService
 {
     private readonly ILogger _logger;
     private readonly ISupabaseService _supabaseService;
-    private readonly IChildDataService _childDataService;
+    private readonly IWeekLetterService _childDataService;
     private readonly IChannelManager _channelManager;
     private readonly Config _config;
     private Timer? _schedulingTimer;
@@ -36,7 +36,7 @@ public class SchedulingService : ISchedulingService
     public SchedulingService(
         ILoggerFactory loggerFactory,
         ISupabaseService supabaseService,
-        IChildDataService childDataService,
+        IWeekLetterService childDataService,
         IChannelManager channelManager,
         Config config)
     {

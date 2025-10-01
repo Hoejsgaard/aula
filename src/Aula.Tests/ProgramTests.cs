@@ -28,7 +28,7 @@ public class ProgramTests
         Assert.NotNull(serviceProvider.GetRequiredService<IDataService>());
         Assert.NotNull(serviceProvider.GetRequiredService<IMinUddannelseClient>());
         Assert.NotNull(serviceProvider.GetRequiredService<IAgentService>());
-        Assert.NotNull(serviceProvider.GetRequiredService<IOpenAiService>());
+        Assert.NotNull(serviceProvider.GetRequiredService<IWeekLetterAiService>());
         Assert.NotNull(serviceProvider.GetRequiredService<ISupabaseService>());
         Assert.NotNull(serviceProvider.GetRequiredService<ISchedulingService>());
         Assert.NotNull(serviceProvider.GetRequiredService<IPromptSanitizer>());

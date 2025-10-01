@@ -7,25 +7,25 @@ using Newtonsoft.Json.Linq;
 namespace Aula.Services;
 
 /// <summary>
-/// Secure child-aware data service with defense-in-depth security layers.
-/// Provides isolated data operations for each child with comprehensive security controls.
+/// Secure week letter service with defense-in-depth security layers.
+/// Provides isolated week letter operations for each child with comprehensive security controls.
 /// </summary>
-public class SecureChildDataService : IChildDataService
+public class SecureWeekLetterService : IWeekLetterService
 {
     private readonly IChildAuditService _auditService;
     private readonly IChildRateLimiter _rateLimiter;
     private readonly IDataService _dataService;
     private readonly ISupabaseService _supabaseService;
     private readonly IMinUddannelseClient _minUddannelseClient;
-    private readonly ILogger<SecureChildDataService> _logger;
+    private readonly ILogger<SecureWeekLetterService> _logger;
 
-    public SecureChildDataService(
+    public SecureWeekLetterService(
         IChildAuditService auditService,
         IChildRateLimiter rateLimiter,
         IDataService dataService,
         ISupabaseService supabaseService,
         IMinUddannelseClient minUddannelseClient,
-        ILogger<SecureChildDataService> logger)
+        ILogger<SecureWeekLetterService> logger)
     {
         _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
         _rateLimiter = rateLimiter ?? throw new ArgumentNullException(nameof(rateLimiter));

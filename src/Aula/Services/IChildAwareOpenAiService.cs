@@ -6,7 +6,7 @@ namespace Aula.Services;
 /// <summary>
 /// OpenAI service that accepts Child parameters for all operations.
 /// </summary>
-public interface IChildAwareOpenAiService
+public interface IOpenAiService
 {
     /// <summary>
     /// Gets an AI response for the given query in the specified child's context.

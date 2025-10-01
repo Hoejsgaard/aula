@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Aula.Services;
 
-public interface IChildDataService
+public interface IWeekLetterService
 {
     Task CacheWeekLetterAsync(Child child, int weekNumber, int year, JObject weekLetter);
     Task<JObject?> GetWeekLetterAsync(Child child, int weekNumber, int year);

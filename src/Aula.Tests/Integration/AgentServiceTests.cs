@@ -16,7 +16,7 @@ public class AgentServiceTests
     private readonly Mock<ILoggerFactory> _mockLoggerFactory;
     private readonly Mock<ILogger> _mockLogger;
     private readonly Mock<IDataService> _mockDataService;
-    private readonly Mock<IOpenAiService> _mockOpenAiService;
+    private readonly Mock<IWeekLetterAiService> _mockOpenAiService;
     private readonly Mock<IMinUddannelseClient> _mockMinUddannelseClient;
 
     public AgentServiceTests()
@@ -24,7 +24,7 @@ public class AgentServiceTests
         _mockLoggerFactory = new Mock<ILoggerFactory>();
         _mockLogger = new Mock<ILogger>();
         _mockDataService = new Mock<IDataService>();
-        _mockOpenAiService = new Mock<IOpenAiService>();
+        _mockOpenAiService = new Mock<IWeekLetterAiService>();
         _mockMinUddannelseClient = new Mock<IMinUddannelseClient>();
 
         _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
@@ -134,7 +134,7 @@ public class AgentServiceTests
         Assert.Equal(4, parameters.Length);
         Assert.Equal(typeof(IMinUddannelseClient), parameters[0].ParameterType);
         Assert.Equal(typeof(IDataService), parameters[1].ParameterType);
-        Assert.Equal(typeof(IOpenAiService), parameters[2].ParameterType);
+        Assert.Equal(typeof(IWeekLetterAiService), parameters[2].ParameterType);
         Assert.Equal(typeof(ILoggerFactory), parameters[3].ParameterType);
     }
 

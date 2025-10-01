@@ -11,9 +11,9 @@ using System;
 
 namespace Aula.Tests.Services;
 
-public class OpenAiServiceTests
+public class WeekLetterAiServiceTests
 {
-    private static OpenAiService CreateTestOpenAiService(string apiKey = "test-api-key")
+    private static WeekLetterAiService CreateTestWeekLetterAiService(string apiKey = "test-api-key")
     {
         var mockLoggerFactory = new Mock<ILoggerFactory>();
         var mockAiToolsManager = new Mock<AiToolsManager>(
@@ -23,11 +23,11 @@ public class OpenAiServiceTests
         var mockConversationManager = new Mock<IConversationManager>();
         var mockPromptBuilder = new Mock<IPromptBuilder>();
 
-        return new OpenAiService(apiKey, mockLoggerFactory.Object, mockAiToolsManager.Object,
+        return new WeekLetterAiService(apiKey, mockLoggerFactory.Object, mockAiToolsManager.Object,
             mockConversationManager.Object, mockPromptBuilder.Object);
     }
     [Fact]
-    public void OpenAiService_Constructor_WithApiKey_InitializesCorrectly()
+    public void WeekLetterAiService_Constructor_WithApiKey_InitializesCorrectly()
     {
         // Arrange
         var mockLoggerFactory = new Mock<ILoggerFactory>();
@@ -40,12 +40,12 @@ public class OpenAiServiceTests
             mockLoggerFactory.Object);
 
         // Act & Assert - Should not throw
-        var service = new OpenAiService("test-api-key", mockLoggerFactory.Object, mockAiToolsManager.Object, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
+        var service = new WeekLetterAiService("test-api-key", mockLoggerFactory.Object, mockAiToolsManager.Object, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
         Assert.NotNull(service);
     }
 
     [Fact]
-    public void OpenAiService_Constructor_WithNullApiKey_ThrowsException()
+    public void WeekLetterAiService_Constructor_WithNullApiKey_ThrowsException()
     {
         // Arrange
         var mockLoggerFactory = new Mock<ILoggerFactory>();
@@ -56,12 +56,12 @@ public class OpenAiServiceTests
 
         // Act & Assert
         Assert.Throws<ArgumentException>(() =>
-            new OpenAiService(string.Empty, mockLoggerFactory.Object, mockAiToolsManager.Object, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object));
+            new WeekLetterAiService(string.Empty, mockLoggerFactory.Object, mockAiToolsManager.Object, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object));
     }
 
 
     [Fact]
-    public void OpenAiService_ClearConversationHistory_WithContextKey_RemovesSpecificContext()
+    public void WeekLetterAiService_ClearConversationHistory_WithContextKey_RemovesSpecificContext()
     {
         // Arrange
         var mockLoggerFactory = new Mock<ILoggerFactory>();
@@ -73,7 +73,7 @@ public class OpenAiServiceTests
             Mock.Of<IDataService>(),
             mockLoggerFactory.Object);
 
-        var service = new OpenAiService("test-api-key", mockLoggerFactory.Object, mockAiToolsManager.Object, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
+        var service = new WeekLetterAiService("test-api-key", mockLoggerFactory.Object, mockAiToolsManager.Object, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
 
         // Act & Assert - Should not throw
         service.ClearConversationHistory("test-context");
@@ -85,7 +85,7 @@ public class OpenAiServiceTests
     [Theory]
     [InlineData(ChatInterface.Slack)]
     [InlineData(ChatInterface.Telegram)]
-    public void OpenAiService_GetChatInterfaceInstructions_ReturnsCorrectFormat(ChatInterface chatInterface)
+    public void WeekLetterAiService_GetChatInterfaceInstructions_ReturnsCorrectFormat(ChatInterface chatInterface)
     {
         // This tests the private helper method's logic indirectly by verifying the enum values
         // Arrange & Act
@@ -165,7 +165,7 @@ public class OpenAiServiceTests
     // However, the complex mocking required for OpenAI dependencies makes this
     // test too brittle. The fix is documented and verified by manual testing.
     [Fact]
-    public void OpenAiService_ClearConversationHistory_MultipleContexts()
+    public void WeekLetterAiService_ClearConversationHistory_MultipleContexts()
     {
         // Arrange
         var mockLoggerFactory = new Mock<ILoggerFactory>();
@@ -176,7 +176,7 @@ public class OpenAiServiceTests
         var mockDataService = new Mock<IDataService>();
         var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockDataService.Object, mockLoggerFactory.Object);
 
-        var service = new OpenAiService("test-api-key", mockLoggerFactory.Object, aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
+        var service = new WeekLetterAiService("test-api-key", mockLoggerFactory.Object, aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
 
         // Act & Assert - Multiple clears should not throw
         service.ClearConversationHistory("context1");
@@ -203,7 +203,7 @@ public class OpenAiServiceTests
         var mockDataService = new Mock<IDataService>();
         var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockDataService.Object, mockLoggerFactory.Object);
 
-        var service = new OpenAiService("test-api-key", mockLoggerFactory.Object, aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
+        var service = new WeekLetterAiService("test-api-key", mockLoggerFactory.Object, aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
         var weekLetter = CreateTestWeekLetter();
 
         // Act - This will trigger EnsureConversationHistory internally
@@ -233,7 +233,7 @@ public class OpenAiServiceTests
         var mockDataService = new Mock<IDataService>();
         var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockDataService.Object, mockLoggerFactory.Object);
 
-        var service = new OpenAiService("test-api-key", mockLoggerFactory.Object, aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
+        var service = new WeekLetterAiService("test-api-key", mockLoggerFactory.Object, aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
         var weekLetter = CreateTestWeekLetter();
 
         // Act - First call initializes, second call updates
@@ -259,7 +259,7 @@ public class OpenAiServiceTests
     {
         // Arrange & Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new OpenAiService("test-key", null!, Mock.Of<IAiToolsManager>(), Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>()));
+            new WeekLetterAiService("test-key", null!, Mock.Of<IAiToolsManager>(), Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>()));
     }
 
     [Fact]
@@ -267,7 +267,7 @@ public class OpenAiServiceTests
     {
         // Arrange & Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new OpenAiService("test-key", Mock.Of<ILoggerFactory>(), null!, Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>()));
+            new WeekLetterAiService("test-key", Mock.Of<ILoggerFactory>(), null!, Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>()));
     }
 
     [Fact]
@@ -275,7 +275,7 @@ public class OpenAiServiceTests
     {
         // Arrange & Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new OpenAiService("test-key", Mock.Of<ILoggerFactory>(), Mock.Of<IAiToolsManager>(), null!, Mock.Of<IPromptBuilder>()));
+            new WeekLetterAiService("test-key", Mock.Of<ILoggerFactory>(), Mock.Of<IAiToolsManager>(), null!, Mock.Of<IPromptBuilder>()));
     }
 
     [Fact]
@@ -283,7 +283,7 @@ public class OpenAiServiceTests
     {
         // Arrange & Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new OpenAiService("test-key", Mock.Of<ILoggerFactory>(), Mock.Of<IAiToolsManager>(), Mock.Of<IConversationManager>(), null!));
+            new WeekLetterAiService("test-key", Mock.Of<ILoggerFactory>(), Mock.Of<IAiToolsManager>(), Mock.Of<IConversationManager>(), null!));
     }
 
     [Fact]
@@ -291,7 +291,7 @@ public class OpenAiServiceTests
     {
         // Arrange & Act & Assert
         Assert.Throws<ArgumentException>(() =>
-            new OpenAiService("", Mock.Of<ILoggerFactory>(), Mock.Of<IAiToolsManager>(), Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>()));
+            new WeekLetterAiService("", Mock.Of<ILoggerFactory>(), Mock.Of<IAiToolsManager>(), Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>()));
     }
 
     [Fact]
@@ -299,7 +299,7 @@ public class OpenAiServiceTests
     {
         // Arrange & Act & Assert
         Assert.Throws<ArgumentException>(() =>
-            new OpenAiService("   ", Mock.Of<ILoggerFactory>(), Mock.Of<IAiToolsManager>(), Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>()));
+            new WeekLetterAiService("   ", Mock.Of<ILoggerFactory>(), Mock.Of<IAiToolsManager>(), Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>()));
     }
 
     [Fact]
@@ -312,7 +312,7 @@ public class OpenAiServiceTests
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
         // Act
-        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(),
+        var service = new WeekLetterAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(),
             Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>(), customModel);
 
         // Assert
@@ -328,7 +328,7 @@ public class OpenAiServiceTests
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
         // Act
-        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(),
+        var service = new WeekLetterAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(),
             Mock.Of<IConversationManager>(), Mock.Of<IPromptBuilder>(), null);
 
         // Assert
@@ -344,7 +344,7 @@ public class OpenAiServiceTests
         var mockLogger = new Mock<ILogger>();
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
-        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(),
+        var service = new WeekLetterAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(),
             mockConversationManager.Object, Mock.Of<IPromptBuilder>());
 
         // Act
@@ -363,7 +363,7 @@ public class OpenAiServiceTests
         var mockLogger = new Mock<ILogger>();
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
-        var service = new OpenAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(),
+        var service = new WeekLetterAiService("test-key", mockLoggerFactory.Object, Mock.Of<IAiToolsManager>(),
             mockConversationManager.Object, Mock.Of<IPromptBuilder>());
 
         var contextKey = "test-context";
@@ -376,17 +376,17 @@ public class OpenAiServiceTests
     }
 
     [Fact]
-    public void OpenAiService_ImplementsIOpenAiServiceInterface()
+    public void WeekLetterAiService_ImplementsIWeekLetterAiServiceInterface()
     {
         // Arrange & Act & Assert
-        Assert.True(typeof(IOpenAiService).IsAssignableFrom(typeof(OpenAiService)));
+        Assert.True(typeof(IWeekLetterAiService).IsAssignableFrom(typeof(WeekLetterAiService)));
     }
 
     [Fact]
-    public void OpenAiService_HasCorrectPublicMethods()
+    public void WeekLetterAiService_HasCorrectPublicMethods()
     {
         // Arrange
-        var serviceType = typeof(OpenAiService);
+        var serviceType = typeof(WeekLetterAiService);
 
         // Act & Assert
         Assert.NotNull(serviceType.GetMethod("SummarizeWeekLetterAsync"));
@@ -399,20 +399,20 @@ public class OpenAiServiceTests
     }
 
     [Fact]
-    public void OpenAiService_HasCorrectNamespace()
+    public void WeekLetterAiService_HasCorrectNamespace()
     {
         // Arrange
-        var serviceType = typeof(OpenAiService);
+        var serviceType = typeof(WeekLetterAiService);
 
         // Act & Assert
         Assert.Equal("Aula.Services", serviceType.Namespace);
     }
 
     [Fact]
-    public void OpenAiService_IsPublicClass()
+    public void WeekLetterAiService_IsPublicClass()
     {
         // Arrange
-        var serviceType = typeof(OpenAiService);
+        var serviceType = typeof(WeekLetterAiService);
 
         // Act & Assert
         Assert.True(serviceType.IsPublic);
@@ -421,10 +421,10 @@ public class OpenAiServiceTests
     }
 
     [Fact]
-    public void OpenAiService_ConstructorParametersHaveCorrectTypes()
+    public void WeekLetterAiService_ConstructorParametersHaveCorrectTypes()
     {
         // Arrange
-        var serviceType = typeof(OpenAiService);
+        var serviceType = typeof(WeekLetterAiService);
         var constructor = serviceType.GetConstructors()[0];
 
         // Act

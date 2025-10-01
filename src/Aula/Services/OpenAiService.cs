@@ -15,7 +15,7 @@ using Aula.Utilities;
 
 namespace Aula.Services;
 
-public class OpenAiService : IOpenAiService
+public class WeekLetterAiService : IWeekLetterAiService
 {
     private readonly OpenAIService _openAiClient;
     private readonly ILogger _logger;
@@ -29,7 +29,7 @@ public class OpenAiService : IOpenAiService
     private const int ConversationTrimAmount = 4;
     private const string FallbackToExistingSystem = "FALLBACK_TO_EXISTING_SYSTEM";
 
-    public OpenAiService(string apiKey, ILoggerFactory loggerFactory, IAiToolsManager aiToolsManager, IConversationManager conversationManager, IPromptBuilder promptBuilder, string? model = null)
+    public WeekLetterAiService(string apiKey, ILoggerFactory loggerFactory, IAiToolsManager aiToolsManager, IConversationManager conversationManager, IPromptBuilder promptBuilder, string? model = null)
     {
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new ArgumentException("API key cannot be null or empty", nameof(apiKey));
@@ -43,7 +43,7 @@ public class OpenAiService : IOpenAiService
         {
             ApiKey = apiKey
         });
-        _logger = loggerFactory.CreateLogger(nameof(OpenAiService));
+        _logger = loggerFactory.CreateLogger(nameof(WeekLetterAiService));
         _aiToolsManager = aiToolsManager;
         _conversationManager = conversationManager;
         _promptBuilder = promptBuilder;

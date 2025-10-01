@@ -32,7 +32,7 @@ public class ChildWeekLetterHandler
     /// <summary>
     /// Handles a week letter event by posting it to the child's Slack channel via the interactive bot.
     /// </summary>
-    public async Task HandleWeekLetterEventAsync(ChildWeekLetterEventArgs args, ChildAwareSlackInteractiveBot? slackBot)
+    public async Task HandleWeekLetterEventAsync(ChildWeekLetterEventArgs args, SlackInteractiveBot? slackBot)
     {
         // Filter by child name (defensive check)
         if (!args.ChildFirstName.Equals(_child.FirstName, StringComparison.OrdinalIgnoreCase))

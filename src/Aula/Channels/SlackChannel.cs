@@ -164,13 +164,15 @@ public partial class SlackChannel : IChannel
         {
             if (_bot != null && SupportsInteractivity)
             {
-                await _bot.Start();
-                _logger.LogInformation("Started Slack interactive bot");
+                // Bot lifecycle is managed by ChildAgent, not by the channel
+                _logger.LogInformation("Slack channel ready with interactive bot");
             }
             else
             {
                 _logger.LogInformation("Slack channel ready (webhook mode)");
             }
+
+            await Task.CompletedTask;
         }
         catch (Exception ex)
         {
@@ -185,8 +187,8 @@ public partial class SlackChannel : IChannel
         {
             if (_bot != null && SupportsInteractivity)
             {
-                _bot.Stop();
-                _logger.LogInformation("Stopped Slack interactive bot");
+                // Bot lifecycle is managed by ChildAgent, not by the channel
+                _logger.LogInformation("Slack channel stopped (interactive bot managed by ChildAgent)");
             }
             else
             {

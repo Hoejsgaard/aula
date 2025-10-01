@@ -25,6 +25,9 @@ public class ArchitectureTests
         "SecureChildScheduler",
         "IChildAwareOpenAiService",
         "SecureChildAwareOpenAiService",
+        // Renamed services from Task 011 refactoring
+        "IOpenAiService",
+        "IWeekLetterService",
         "IChildAuditService",
         "ChildAuditService",
         "IChildRateLimiter",
