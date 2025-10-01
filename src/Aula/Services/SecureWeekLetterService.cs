@@ -19,7 +19,7 @@ public class SecureWeekLetterService : IWeekLetterService
     private readonly DataService _dataService;
     private readonly IWeekLetterRepository _weekLetterRepository;
     private readonly IMinUddannelseClient _minUddannelseClient;
-    private readonly ILogger<SecureWeekLetterService> _logger;
+    private readonly ILogger _logger;
 
     public SecureWeekLetterService(
         IChildAuditService auditService,
@@ -27,14 +27,15 @@ public class SecureWeekLetterService : IWeekLetterService
         DataService dataService,
         IWeekLetterRepository weekLetterRepository,
         IMinUddannelseClient minUddannelseClient,
-        ILogger<SecureWeekLetterService> logger)
+        ILoggerFactory loggerFactory)
     {
         _auditService = auditService ?? throw new ArgumentNullException(nameof(auditService));
         _rateLimiter = rateLimiter ?? throw new ArgumentNullException(nameof(rateLimiter));
         _dataService = dataService ?? throw new ArgumentNullException(nameof(dataService));
         _weekLetterRepository = weekLetterRepository ?? throw new ArgumentNullException(nameof(weekLetterRepository));
         _minUddannelseClient = minUddannelseClient ?? throw new ArgumentNullException(nameof(minUddannelseClient));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        _logger = loggerFactory.CreateLogger<SecureWeekLetterService>();
     }
 
     public async Task CacheWeekLetterAsync(Child child, int weekNumber, int year, JObject weekLetter)

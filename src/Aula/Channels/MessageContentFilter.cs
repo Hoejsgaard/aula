@@ -10,7 +10,7 @@ namespace Aula.Channels;
 /// </summary>
 public partial class MessageContentFilter : IMessageContentFilter
 {
-    private readonly ILogger<MessageContentFilter> _logger;
+    private readonly ILogger _logger;
 
     // Common patterns that might contain child-specific information
     private readonly List<string> _sensitivePatterns = new()
@@ -21,9 +21,10 @@ public partial class MessageContentFilter : IMessageContentFilter
 		@"Elev:\s*[A-Za-z]+\s+[A-Za-z]+", // Student references
 	};
 
-    public MessageContentFilter(ILogger<MessageContentFilter> logger)
+    public MessageContentFilter(ILoggerFactory loggerFactory)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        _logger = loggerFactory.CreateLogger<MessageContentFilter>();
     }
 
     public string FilterForChild(string message, Child child)

@@ -42,7 +42,6 @@ public class ChildAgentFactory : IChildAgentFactory
 
         // Resolve all required dependencies from the service provider
         var openAiService = _serviceProvider.GetRequiredService<IOpenAiService>();
-        var weekLetterHandlerLogger = _serviceProvider.GetRequiredService<ILogger<ChildWeekLetterHandler>>();
         var weekLetterService = _serviceProvider.GetRequiredService<IWeekLetterService>();
         var loggerFactory = _serviceProvider.GetRequiredService<ILoggerFactory>();
 
@@ -53,7 +52,6 @@ public class ChildAgentFactory : IChildAgentFactory
         return new ChildAgent(
             child,
             openAiService,
-            weekLetterHandlerLogger,
             weekLetterService,
             postWeekLettersOnStartup,
             schedulingService,

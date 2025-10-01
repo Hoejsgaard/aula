@@ -8,14 +8,17 @@ namespace Aula.Tests.Authentication;
 
 public class ChildAuditServiceTests
 {
-    private readonly Mock<ILogger<ChildAuditService>> _mockLogger;
+    private readonly Mock<ILoggerFactory> _mockLoggerFactory;
+    private readonly Mock<ILogger> _mockLogger;
     private readonly ChildAuditService _auditService;
     private readonly Child _testChild;
 
     public ChildAuditServiceTests()
     {
-        _mockLogger = new Mock<ILogger<ChildAuditService>>();
-        _auditService = new ChildAuditService(_mockLogger.Object);
+        _mockLogger = new Mock<ILogger>();
+        _mockLoggerFactory = new Mock<ILoggerFactory>();
+        _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
+        _auditService = new ChildAuditService(_mockLoggerFactory.Object);
         _testChild = new Child { FirstName = "Test", LastName = "Child" };
     }
 

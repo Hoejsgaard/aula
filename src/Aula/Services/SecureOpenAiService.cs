@@ -14,16 +14,17 @@ public class SecureOpenAiService : IOpenAiService
 {
     private readonly IWeekLetterAiService _openAiService;
     private readonly IWeekLetterService _weekLetterService;
-    private readonly ILogger<SecureOpenAiService> _logger;
+    private readonly ILogger _logger;
 
     public SecureOpenAiService(
         IWeekLetterAiService openAiService,
         IWeekLetterService weekLetterService,
-        ILogger<SecureOpenAiService> logger)
+        ILoggerFactory loggerFactory)
     {
         _openAiService = openAiService ?? throw new ArgumentNullException(nameof(openAiService));
         _weekLetterService = weekLetterService ?? throw new ArgumentNullException(nameof(weekLetterService));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        _logger = loggerFactory.CreateLogger<SecureOpenAiService>();
     }
 
     public async Task<string?> GetResponseAsync(Child child, string query)

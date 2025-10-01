@@ -8,14 +8,17 @@ namespace Aula.Tests.Services;
 
 public class ChildRateLimiterTests
 {
-    private readonly Mock<ILogger<ChildRateLimiter>> _mockLogger;
+    private readonly Mock<ILoggerFactory> _mockLoggerFactory;
+    private readonly Mock<ILogger> _mockLogger;
     private readonly ChildRateLimiter _rateLimiter;
     private readonly Child _testChild;
 
     public ChildRateLimiterTests()
     {
-        _mockLogger = new Mock<ILogger<ChildRateLimiter>>();
-        _rateLimiter = new ChildRateLimiter(_mockLogger.Object);
+        _mockLogger = new Mock<ILogger>();
+        _mockLoggerFactory = new Mock<ILoggerFactory>();
+        _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
+        _rateLimiter = new ChildRateLimiter(_mockLoggerFactory.Object);
         _testChild = new Child { FirstName = "Test", LastName = "Child" };
     }
 

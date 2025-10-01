@@ -10,12 +10,13 @@ namespace Aula.Authentication;
 /// </summary>
 public class ChildAuditService : IChildAuditService
 {
-    private readonly ILogger<ChildAuditService> _logger;
+    private readonly ILogger _logger;
     private readonly ConcurrentBag<AuditEntry> _auditTrail;
 
-    public ChildAuditService(ILogger<ChildAuditService> logger)
+    public ChildAuditService(ILoggerFactory loggerFactory)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        _logger = loggerFactory.CreateLogger<ChildAuditService>();
         _auditTrail = new ConcurrentBag<AuditEntry>();
     }
 

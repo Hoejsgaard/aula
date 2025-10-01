@@ -54,7 +54,7 @@ public class PictogramAuthenticatedClientTests
             _testChild.UniLogin!.Username,
             _pictogramSequence,
             _config,
-            _mockBaseLogger.Object,
+            
             _mockLogger.Object);
 
         // Assert
@@ -71,7 +71,7 @@ public class PictogramAuthenticatedClientTests
                 _testChild.UniLogin!.Username,
                 null!,
                 _config,
-                _mockBaseLogger.Object,
+                
                 _mockLogger.Object));
     }
 
@@ -173,7 +173,7 @@ public class PictogramAuthenticatedClientTests
             _testChild.UniLogin!.Username,
             _pictogramSequence,
             _config,
-            _mockBaseLogger.Object,
+            
             _mockLogger.Object);
 
         // Act
@@ -245,7 +245,7 @@ public class PictogramAuthenticatedClientTests
             _testChild.UniLogin!.Username,
             _pictogramSequence,
             _config,
-            _mockBaseLogger.Object,
+            
             _mockLogger.Object);
 
         // Act
@@ -265,7 +265,7 @@ public class PictogramAuthenticatedClientTests
             _testChild.UniLogin!.Username,
             _pictogramSequence,
             _config,
-            _mockBaseLogger.Object,
+            
             _mockLogger.Object);
 
         // Act

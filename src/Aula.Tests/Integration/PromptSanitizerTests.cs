@@ -8,14 +8,15 @@ namespace Aula.Tests.Integration;
 
 public class PromptSanitizerTests
 {
-    private readonly Mock<ILogger<PromptSanitizer>> _mockLogger;
+    private readonly Mock<ILoggerFactory> _mockLoggerFactory;
     private readonly PromptSanitizer _sanitizer;
     private readonly Child _testChild;
 
     public PromptSanitizerTests()
     {
-        _mockLogger = new Mock<ILogger<PromptSanitizer>>();
-        _sanitizer = new PromptSanitizer(_mockLogger.Object);
+        _mockLoggerFactory = new Mock<ILoggerFactory>();
+        _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(Mock.Of<ILogger>());
+        _sanitizer = new PromptSanitizer(_mockLoggerFactory.Object);
         _testChild = new Child { FirstName = "Test", LastName = "Child" };
     }
 

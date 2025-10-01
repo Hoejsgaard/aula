@@ -15,7 +15,7 @@ namespace Aula.Integration;
 public abstract class UniLoginAuthenticatorBase : IDisposable
 {
     private bool _disposed = false;
-    private readonly ILogger<UniLoginAuthenticatorBase> _logger;
+    private readonly ILogger _logger;
     private readonly string _loginUrl;
     private readonly string _password;
     private readonly string _username;
@@ -23,7 +23,7 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
     private readonly string _studentDataPath;
     private bool _loggedIn;
 
-    public UniLoginAuthenticatorBase(string username, string password, string loginUrl, string successUrl, ILogger<UniLoginAuthenticatorBase> logger, string apiBaseUrl = "https://www.minuddannelse.net", string studentDataPath = "/api/stamdata/elev/getElev")
+    public UniLoginAuthenticatorBase(string username, string password, string loginUrl, string successUrl, ILogger logger, string apiBaseUrl = "https://www.minuddannelse.net", string studentDataPath = "/api/stamdata/elev/getElev")
     {
         var httpClientHandler = new HttpClientHandler
         {
@@ -36,7 +36,8 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
         _password = password ?? throw new ArgumentNullException(nameof(password));
         _loginUrl = loginUrl;
         SuccessUrl = successUrl;
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
+        _logger = logger;
         _apiBaseUrl = apiBaseUrl;
         _studentDataPath = studentDataPath;
     }

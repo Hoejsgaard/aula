@@ -83,10 +83,10 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         _logger.LogInformation("🔑 Creating fresh authenticated session for {ChildName}", child.FirstName);
 
         // Choose authentication method based on config
-        var baseLogger = _loggerFactory.CreateLogger<UniLoginAuthenticatorBase>();
+        var logger = _loggerFactory.CreateLogger<PerChildMinUddannelseClient>();
         using IChildAuthenticatedClient childClient = child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null
-            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, baseLogger, _logger)
-            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, _logger);
+            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, logger)
+            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, logger);
 
         _logger.LogInformation("Using {AuthType} authentication for {ChildName}",
             child.UniLogin.AuthType == AuthenticationType.Pictogram ? "pictogram" : "standard", child.FirstName);
@@ -137,10 +137,10 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         _logger.LogInformation("Creating fresh authenticated session for {ChildName} (schedule request)", child.FirstName);
 
         // Choose authentication method based on config
-        var baseLogger = _loggerFactory.CreateLogger<UniLoginAuthenticatorBase>();
+        var logger = _loggerFactory.CreateLogger<PerChildMinUddannelseClient>();
         using IChildAuthenticatedClient childClient = child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null
-            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, baseLogger, _logger)
-            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, _logger);
+            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, logger)
+            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, logger);
 
         _logger.LogInformation("Using {AuthType} authentication for {ChildName}",
             child.UniLogin.AuthType == AuthenticationType.Pictogram ? "pictogram" : "standard", child.FirstName);
@@ -218,7 +218,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
             : base(username, password,
                 config.MinUddannelse.SamlLoginUrl,
                 config.MinUddannelse.ApiBaseUrl,
-                (ILogger<UniLoginAuthenticatorBase>)logger,
+                logger,
                 config.MinUddannelse.ApiBaseUrl,
                 config.MinUddannelse.StudentDataPath)
         {

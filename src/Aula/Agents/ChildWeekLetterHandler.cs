@@ -17,15 +17,18 @@ namespace Aula.Agents;
 public class ChildWeekLetterHandler
 {
     private readonly Child _child;
-    private readonly ILogger<ChildWeekLetterHandler> _logger;
+    private readonly ILogger _logger;
     private readonly Html2SlackMarkdownConverter _html2MarkdownConverter;
 
     public ChildWeekLetterHandler(
         Child child,
-        ILogger<ChildWeekLetterHandler> logger)
+        ILoggerFactory loggerFactory)
     {
-        _child = child ?? throw new ArgumentNullException(nameof(child));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(child);
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+
+        _child = child;
+        _logger = loggerFactory.CreateLogger<ChildWeekLetterHandler>();
         _html2MarkdownConverter = new Html2SlackMarkdownConverter();
     }
 

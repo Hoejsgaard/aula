@@ -8,14 +8,15 @@ namespace Aula.Tests.Channels;
 
 public class MessageContentFilterTests
 {
-    private readonly Mock<ILogger<MessageContentFilter>> _mockLogger;
+    private readonly Mock<ILoggerFactory> _mockLoggerFactory;
     private readonly MessageContentFilter _filter;
     private readonly Child _testChild;
 
     public MessageContentFilterTests()
     {
-        _mockLogger = new Mock<ILogger<MessageContentFilter>>();
-        _filter = new MessageContentFilter(_mockLogger.Object);
+        _mockLoggerFactory = new Mock<ILoggerFactory>();
+        _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(Mock.Of<ILogger>());
+        _filter = new MessageContentFilter(_mockLoggerFactory.Object);
         _testChild = new Child { FirstName = "Emil", LastName = "Hansen" };
     }
 

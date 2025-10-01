@@ -17,12 +17,11 @@ public class ChildAgent : IChildAgent
 {
     private readonly Child _child;
     private readonly IOpenAiService _openAiService;
-    private readonly ILogger<ChildWeekLetterHandler> _weekLetterHandlerLogger;
     private readonly IWeekLetterService _weekLetterService;
     private readonly bool _postWeekLettersOnStartup;
     private readonly ISchedulingService _schedulingService;
     private readonly ILoggerFactory _loggerFactory;
-    private readonly ILogger<ChildAgent> _logger;
+    private readonly ILogger _logger;
     private SlackInteractiveBot? _slackBot;
     private TelegramInteractiveBot? _telegramBot;
     private EventHandler<ChildWeekLetterEventArgs>? _weekLetterHandler;
@@ -30,20 +29,24 @@ public class ChildAgent : IChildAgent
     public ChildAgent(
         Child child,
         IOpenAiService openAiService,
-        ILogger<ChildWeekLetterHandler> weekLetterHandlerLogger,
         IWeekLetterService weekLetterService,
         bool postWeekLettersOnStartup,
         ISchedulingService schedulingService,
         ILoggerFactory loggerFactory)
     {
-        _child = child ?? throw new ArgumentNullException(nameof(child));
-        _openAiService = openAiService ?? throw new ArgumentNullException(nameof(openAiService));
-        _weekLetterHandlerLogger = weekLetterHandlerLogger ?? throw new ArgumentNullException(nameof(weekLetterHandlerLogger));
-        _weekLetterService = weekLetterService ?? throw new ArgumentNullException(nameof(weekLetterService));
+        ArgumentNullException.ThrowIfNull(child);
+        ArgumentNullException.ThrowIfNull(openAiService);
+        ArgumentNullException.ThrowIfNull(weekLetterService);
+        ArgumentNullException.ThrowIfNull(schedulingService);
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+
+        _child = child;
+        _openAiService = openAiService;
+        _weekLetterService = weekLetterService;
         _postWeekLettersOnStartup = postWeekLettersOnStartup;
-        _schedulingService = schedulingService ?? throw new ArgumentNullException(nameof(schedulingService));
-        _loggerFactory = loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory));
-        _logger = _loggerFactory.CreateLogger<ChildAgent>();
+        _schedulingService = schedulingService;
+        _loggerFactory = loggerFactory;
+        _logger = loggerFactory.CreateLogger<ChildAgent>();
     }
 
     public async Task StartAsync()
@@ -127,7 +130,7 @@ public class ChildAgent : IChildAgent
         {
             _weekLetterHandler = async (sender, args) =>
             {
-                var handler = new ChildWeekLetterHandler(_child, _weekLetterHandlerLogger);
+                var handler = new ChildWeekLetterHandler(_child, _loggerFactory);
                 await handler.HandleWeekLetterEventAsync(args, _slackBot, _telegramBot);
             };
             schedService.ChildWeekLetterReady += _weekLetterHandler;

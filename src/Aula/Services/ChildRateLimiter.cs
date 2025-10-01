@@ -10,13 +10,14 @@ namespace Aula.Services;
 /// </summary>
 public class ChildRateLimiter : IChildRateLimiter
 {
-    private readonly ILogger<ChildRateLimiter> _logger;
+    private readonly ILogger _logger;
     private readonly ConcurrentDictionary<string, RateLimitState> _limitStates;
     private readonly Dictionary<string, RateLimitConfig> _operationLimits;
 
-    public ChildRateLimiter(ILogger<ChildRateLimiter> logger)
+    public ChildRateLimiter(ILoggerFactory loggerFactory)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        _logger = loggerFactory.CreateLogger<ChildRateLimiter>();
         _limitStates = new ConcurrentDictionary<string, RateLimitState>();
 
         // Configure rate limits per operation type

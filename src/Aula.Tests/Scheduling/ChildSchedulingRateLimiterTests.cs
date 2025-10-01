@@ -8,15 +8,16 @@ namespace Aula.Tests.Scheduling;
 
 public class ChildSchedulingRateLimiterTests
 {
-    private readonly Mock<ILogger<ChildSchedulingRateLimiter>> _mockLogger;
+    private readonly Mock<ILoggerFactory> _mockLoggerFactory;
     private readonly ChildSchedulingRateLimiter _rateLimiter;
     private readonly Child _testChild1;
     private readonly Child _testChild2;
 
     public ChildSchedulingRateLimiterTests()
     {
-        _mockLogger = new Mock<ILogger<ChildSchedulingRateLimiter>>();
-        _rateLimiter = new ChildSchedulingRateLimiter(_mockLogger.Object);
+        _mockLoggerFactory = new Mock<ILoggerFactory>();
+        _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(Mock.Of<ILogger>());
+        _rateLimiter = new ChildSchedulingRateLimiter(_mockLoggerFactory.Object);
 
         _testChild1 = new Child { FirstName = "Child1", LastName = "Test" };
         _testChild2 = new Child { FirstName = "Child2", LastName = "Test" };

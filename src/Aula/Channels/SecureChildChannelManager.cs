@@ -16,7 +16,7 @@ public class SecureChildChannelManager : IChildChannelManager
 {
     private readonly IChannelManager _channelManager;
     private readonly IMessageContentFilter _contentFilter;
-    private readonly ILogger<SecureChildChannelManager> _logger;
+    private readonly ILogger _logger;
 
     // In-memory channel configurations (in production, this would be in database)
     private readonly Dictionary<string, List<ChildChannelConfig>> _childChannelConfigs = new();
@@ -25,11 +25,15 @@ public class SecureChildChannelManager : IChildChannelManager
     public SecureChildChannelManager(
         IChannelManager channelManager,
         IMessageContentFilter contentFilter,
-        ILogger<SecureChildChannelManager> logger)
+        ILoggerFactory loggerFactory)
     {
-        _channelManager = channelManager ?? throw new ArgumentNullException(nameof(channelManager));
-        _contentFilter = contentFilter ?? throw new ArgumentNullException(nameof(contentFilter));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(channelManager);
+        ArgumentNullException.ThrowIfNull(contentFilter);
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+
+        _channelManager = channelManager;
+        _contentFilter = contentFilter;
+        _logger = loggerFactory.CreateLogger<SecureChildChannelManager>();
 
         InitializeDefaultConfigurations();
     }

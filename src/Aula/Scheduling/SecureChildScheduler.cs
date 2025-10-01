@@ -10,7 +10,7 @@ namespace Aula.Scheduling;
 /// </summary>
 public class SecureChildScheduler : IChildScheduler
 {
-    private readonly ILogger<SecureChildScheduler> _logger;
+    private readonly ILogger _logger;
     private readonly Dictionary<string, ChildScheduledTask> _inMemoryTasks = new();
     private readonly object _lockObject = new();
 
@@ -19,9 +19,10 @@ public class SecureChildScheduler : IChildScheduler
     private const int MaxExecutionsPerHour = 60;
 
     public SecureChildScheduler(
-        ILogger<SecureChildScheduler> logger)
+        ILoggerFactory loggerFactory)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        _logger = loggerFactory.CreateLogger<SecureChildScheduler>();
     }
 
     public Task<int> ScheduleTaskAsync(Child child, string taskName, string cronExpression, string? description = null)

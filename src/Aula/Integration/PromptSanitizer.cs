@@ -9,13 +9,14 @@ namespace Aula.Integration;
 /// </summary>
 public class PromptSanitizer : IPromptSanitizer
 {
-    private readonly ILogger<PromptSanitizer> _logger;
+    private readonly ILogger _logger;
     private readonly List<string> _blockedPatterns;
     private readonly List<Regex> _dangerousPatterns;
 
-    public PromptSanitizer(ILogger<PromptSanitizer> logger)
+    public PromptSanitizer(ILoggerFactory loggerFactory)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        _logger = loggerFactory.CreateLogger<PromptSanitizer>();
 
         // Define patterns that indicate prompt injection attempts
         _blockedPatterns = new List<string>

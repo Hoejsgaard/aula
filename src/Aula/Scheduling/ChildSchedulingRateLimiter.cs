@@ -10,7 +10,7 @@ namespace Aula.Scheduling;
 /// </summary>
 public class ChildSchedulingRateLimiter : IChildSchedulingRateLimiter
 {
-    private readonly ILogger<ChildSchedulingRateLimiter> _logger;
+    private readonly ILogger _logger;
     private readonly ConcurrentDictionary<string, SchedulingRateLimitState> _rateLimitStates = new();
 
     // Configuration limits
@@ -18,9 +18,10 @@ public class ChildSchedulingRateLimiter : IChildSchedulingRateLimiter
     private const int MaxExecutionsPerHour = 60;
     private const int MaxScheduleOperationsPerDay = 20;
 
-    public ChildSchedulingRateLimiter(ILogger<ChildSchedulingRateLimiter> logger)
+    public ChildSchedulingRateLimiter(ILoggerFactory loggerFactory)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+        _logger = loggerFactory.CreateLogger<ChildSchedulingRateLimiter>();
     }
 
     public Task<bool> CanScheduleTaskAsync(Child child)

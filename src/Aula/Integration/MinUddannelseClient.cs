@@ -35,19 +35,19 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
             config.MinUddannelse.ApiBaseUrl + "/Node/",
             config.MinUddannelse.ApiBaseUrl,
             config.MinUddannelse.StudentDataPath,
-            loggerFactory.CreateLogger<UniLoginAuthenticatorBase>())
+            loggerFactory.CreateLogger<MinUddannelseClient>())
     {
         _config = config;
         _weekLetterRepository = weekLetterRepository;
-        _logger = loggerFactory.CreateLogger<MinUddannelseClient>();
     }
 
-    public MinUddannelseClient(string username, string password, string loginUrl, string successUrl, string apiBaseUrl, string studentDataPath, ILogger<UniLoginAuthenticatorBase>? logger = null)
+    public MinUddannelseClient(string username, string password, string loginUrl, string successUrl, string apiBaseUrl, string studentDataPath, ILogger? logger = null)
         : base(username, password, loginUrl, successUrl,
-            logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<UniLoginAuthenticatorBase>.Instance,
+            logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
             apiBaseUrl,
             studentDataPath)
     {
+        _logger = logger;
     }
 
     public async Task<JObject> GetWeekLetter(Child child, DateOnly date, bool allowLiveFetch = false)

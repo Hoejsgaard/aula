@@ -51,7 +51,7 @@ public class SimplePictogramAuthTests
             child.UniLogin.Username,
             child.UniLogin.PictogramSequence!,
             _config,
-            _mockBaseLogger.Object,
+            
             _mockLogger.Object
         );
 
@@ -69,7 +69,7 @@ public class SimplePictogramAuthTests
                 "username",
                 new[] { "image1", "image2" },
                 _config,
-                _mockBaseLogger.Object,
+                
                 _mockLogger.Object
             )
         );
@@ -97,7 +97,7 @@ public class SimplePictogramAuthTests
                 child.UniLogin.Username,
                 null!,
                 _config,
-                _mockBaseLogger.Object,
+                
                 _mockLogger.Object
             )
         );
@@ -125,7 +125,7 @@ public class SimplePictogramAuthTests
                 child.UniLogin.Username,
                 new string[0],
                 _config,
-                _mockBaseLogger.Object,
+                
                 _mockLogger.Object
             )
         );
