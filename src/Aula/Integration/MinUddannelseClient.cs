@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Aula.Integration;
 
-public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
+public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClient
 {
     private JObject _userProfile = new();
     private readonly IWeekLetterRepository? _weekLetterRepository;
@@ -34,16 +34,16 @@ public class MinUddannelseClient : UniLoginClient, IMinUddannelseClient
             config.MinUddannelse.ApiBaseUrl + "/Node/",
             config.MinUddannelse.ApiBaseUrl,
             config.MinUddannelse.StudentDataPath,
-            loggerFactory.CreateLogger<UniLoginClient>())
+            loggerFactory.CreateLogger<UniLoginAuthenticatorBase>())
     {
         _config = config;
         _weekLetterRepository = weekLetterRepository;
         _logger = loggerFactory.CreateLogger<MinUddannelseClient>();
     }
 
-    public MinUddannelseClient(string username, string password, string loginUrl, string successUrl, string apiBaseUrl, string studentDataPath, ILogger<UniLoginClient>? logger = null)
+    public MinUddannelseClient(string username, string password, string loginUrl, string successUrl, string apiBaseUrl, string studentDataPath, ILogger<UniLoginAuthenticatorBase>? logger = null)
         : base(username, password, loginUrl, successUrl,
-            logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<UniLoginClient>.Instance,
+            logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<UniLoginAuthenticatorBase>.Instance,
             apiBaseUrl,
             studentDataPath)
     {

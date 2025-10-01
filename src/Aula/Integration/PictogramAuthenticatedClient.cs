@@ -12,7 +12,7 @@ namespace Aula.Integration;
 /// <summary>
 /// Handles authentication for children using pictogram-based login instead of passwords
 /// </summary>
-public partial class PictogramAuthenticatedClient : UniLoginDebugClient, IChildAuthenticatedClient
+public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, IChildAuthenticatedClient
 {
     private readonly Child _child;
     private readonly ILogger _logger;
@@ -21,7 +21,7 @@ public partial class PictogramAuthenticatedClient : UniLoginDebugClient, IChildA
     private readonly string _username;
     private string? _childId;
 
-    public PictogramAuthenticatedClient(Child child, string username, string[] pictogramSequence, Config config, ILogger<UniLoginDebugClient> baseLogger, ILogger logger)
+    public PictogramAuthenticatedClient(Child child, string username, string[] pictogramSequence, Config config, ILogger<UniLoginAuthenticatorBase> baseLogger, ILogger logger)
         : base(username, "", // Empty password since we'll build it dynamically
             config.MinUddannelse.SamlLoginUrl,
             config.MinUddannelse.ApiBaseUrl,

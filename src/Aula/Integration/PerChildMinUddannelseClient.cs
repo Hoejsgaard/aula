@@ -83,7 +83,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
         // Choose authentication method based on config
         IChildAuthenticatedClient childClient;
-        var baseLogger = _loggerFactory.CreateLogger<UniLoginDebugClient>();
+        var baseLogger = _loggerFactory.CreateLogger<UniLoginAuthenticatorBase>();
         if (child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null)
         {
             _logger.LogInformation("Using pictogram authentication for {ChildName}", child.FirstName);
@@ -142,7 +142,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
         // Choose authentication method based on config
         IChildAuthenticatedClient childClient;
-        var baseLogger = _loggerFactory.CreateLogger<UniLoginDebugClient>();
+        var baseLogger = _loggerFactory.CreateLogger<UniLoginAuthenticatorBase>();
         if (child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null)
         {
             _logger.LogInformation("Using pictogram authentication for {ChildName}", child.FirstName);
@@ -242,7 +242,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
     /// <summary>
     /// Inner class that handles authentication for a specific child
     /// </summary>
-    private sealed partial class ChildAuthenticatedClient : UniLoginDebugClient, IChildAuthenticatedClient
+    private sealed partial class ChildAuthenticatedClient : UniLoginAuthenticatorBase, IChildAuthenticatedClient
     {
         private readonly Child _child;
         private readonly ILogger _childLogger;
@@ -253,7 +253,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
             : base(username, password,
                 config.MinUddannelse.SamlLoginUrl,
                 config.MinUddannelse.ApiBaseUrl,
-                (ILogger<UniLoginDebugClient>)logger,
+                (ILogger<UniLoginAuthenticatorBase>)logger,
                 config.MinUddannelse.ApiBaseUrl,
                 config.MinUddannelse.StudentDataPath)
         {

@@ -13,7 +13,7 @@ namespace Aula.Tests.Integration;
 public class PictogramAuthenticatedClientTests
 {
     private readonly Mock<ILogger<PictogramAuthenticatedClient>> _mockLogger;
-    private readonly Mock<ILogger<UniLoginDebugClient>> _mockBaseLogger;
+    private readonly Mock<ILogger<UniLoginAuthenticatorBase>> _mockBaseLogger;
     private readonly Child _testChild;
     private readonly string[] _pictogramSequence;
     private readonly Config _config;
@@ -21,7 +21,7 @@ public class PictogramAuthenticatedClientTests
     public PictogramAuthenticatedClientTests()
     {
         _mockLogger = new Mock<ILogger<PictogramAuthenticatedClient>>();
-        _mockBaseLogger = new Mock<ILogger<UniLoginDebugClient>>();
+        _mockBaseLogger = new Mock<ILogger<UniLoginAuthenticatorBase>>();
         _config = new Config
         {
             MinUddannelse = new MinUddannelse
