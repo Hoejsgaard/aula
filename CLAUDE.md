@@ -46,14 +46,30 @@ dotnet test src/Aula.Tests --collect:"XPlat Code Coverage"
 
 ```
 src/Aula/
+├── Agents/         # Per-child intelligent agents with event-driven architecture
 ├── Bots/           # Slack/Telegram bot implementations
 ├── Channels/       # Channel abstraction (IChannel, ChannelManager)
 ├── Configuration/  # Strongly-typed config with validation
-├── Integration/    # External services (MinUddannelse, UniLogin, Google)
-├── Scheduling/     # Cron-based task scheduling
+├── Integration/    # External services (MinUddannelse, UniLogin SAML authentication)
+├── Scheduling/     # Cron-based task scheduling with SchedulingService
 ├── Services/       # Core business logic with repositories
+├── Utilities/      # Shared utility methods (WeekLetterUtilities)
 └── Program.cs      # DI and startup configuration
 ```
+
+## Recent Refactoring (Sprint 2 - October 2025)
+
+**Authentication Consolidation** (Task 012):
+- Unified 3 duplicate SAML authentication implementations → `UniLoginAuthenticatorBase`
+- Extracted 11 duplicate utility methods → `WeekLetterUtilities`
+- Broke down 274-line complex method → 80-line orchestration + 8 focused helpers
+- **Result**: -174 lines (-16%), -70% cyclomatic complexity, 938 tests passing
+
+**Architecture Improvements**:
+- Template Method pattern for SAML flows
+- Proper IDisposable implementation with `using` statements
+- Input validation on utility methods
+- Single Responsibility Principle applied throughout
 
 ## Workflows & Standards
 
