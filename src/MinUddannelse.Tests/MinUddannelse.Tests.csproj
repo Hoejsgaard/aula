@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MinUddannelse\Aula.csproj" />
+    <ProjectReference Include="..\MinUddannelse\MinUddannelse.csproj" />
   </ItemGroup>
 
   <ItemGroup>
