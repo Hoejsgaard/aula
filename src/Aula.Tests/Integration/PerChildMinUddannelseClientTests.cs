@@ -7,6 +7,7 @@ using Aula.Repositories;
 using Aula.Services;
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -18,6 +19,7 @@ public class PerChildMinUddannelseClientTests
     private readonly Mock<ILogger> _mockLogger;
     private readonly Mock<IWeekLetterRepository> _mockWeekLetterRepository;
     private readonly Mock<IRetryTrackingRepository> _mockRetryTrackingRepository;
+    private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
     private readonly Config _config;
 
     public PerChildMinUddannelseClientTests()
@@ -26,9 +28,12 @@ public class PerChildMinUddannelseClientTests
         _mockLogger = new Mock<ILogger>();
         _mockWeekLetterRepository = new Mock<IWeekLetterRepository>();
         _mockRetryTrackingRepository = new Mock<IRetryTrackingRepository>();
+        _mockHttpClientFactory = new Mock<IHttpClientFactory>();
 
         _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>()))
             .Returns(_mockLogger.Object);
+        _mockHttpClientFactory.Setup(x => x.CreateClient(It.IsAny<string>()))
+            .Returns(new HttpClient());
 
         _config = new Config
         {
@@ -55,7 +60,7 @@ public class PerChildMinUddannelseClientTests
     public void Constructor_WithValidParameters_InitializesCorrectly()
     {
         // Act
-        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object);
+        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);
 
         // Assert
         Assert.NotNull(client);
@@ -65,7 +70,7 @@ public class PerChildMinUddannelseClientTests
     public async Task LoginAsync_AlwaysReturnsTrue()
     {
         // Arrange
-        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object);
+        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);
 
         // Act
         var result = await client.LoginAsync();
@@ -91,7 +96,7 @@ public class PerChildMinUddannelseClientTests
             UniLogin = null
         };
 
-        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object);
+        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);
 
         // Act
         var result = await client.GetWeekLetter(childWithoutCredentials, DateOnly.FromDateTime(DateTime.Today));
@@ -117,7 +122,7 @@ public class PerChildMinUddannelseClientTests
             UniLogin = null
         };
 
-        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object);
+        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);
 
         // Act
         var result = await client.GetWeekSchedule(childWithoutCredentials, DateOnly.FromDateTime(DateTime.Today));
@@ -161,7 +166,7 @@ public class PerChildMinUddannelseClientTests
     public async Task GetWeekLetter_LogsAuthenticationForEachRequest()
     {
         // Arrange
-        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object);
+        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);
         var child = _config.MinUddannelse.Children[0];
 
         // Note: This test verifies logging behavior but cannot test actual authentication

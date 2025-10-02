@@ -2,6 +2,7 @@ using Aula.Configuration;
 using Aula.Integration;
 using Microsoft.Extensions.Logging;
 using Moq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Xunit;
 using Newtonsoft.Json.Linq;
@@ -12,12 +13,16 @@ public class SimplePictogramAuthTests
 {
     private readonly Mock<ILogger<PictogramAuthenticatedClient>> _mockLogger;
     private readonly Mock<ILogger<UniLoginAuthenticatorBase>> _mockBaseLogger;
+    private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
     private readonly Config _config;
 
     public SimplePictogramAuthTests()
     {
         _mockLogger = new Mock<ILogger<PictogramAuthenticatedClient>>();
         _mockBaseLogger = new Mock<ILogger<UniLoginAuthenticatorBase>>();
+        _mockHttpClientFactory = new Mock<IHttpClientFactory>();
+        _mockHttpClientFactory.Setup(x => x.CreateClient(It.IsAny<string>())).Returns(new HttpClient());
+
         _config = new Config
         {
             MinUddannelse = new MinUddannelse
@@ -51,8 +56,8 @@ public class SimplePictogramAuthTests
             child.UniLogin.Username,
             child.UniLogin.PictogramSequence!,
             _config,
-            
-            _mockLogger.Object
+            _mockLogger.Object,
+            _mockHttpClientFactory.Object
         );
 
         // Assert
@@ -69,8 +74,8 @@ public class SimplePictogramAuthTests
                 "username",
                 new[] { "image1", "image2" },
                 _config,
-
-                _mockLogger.Object
+                _mockLogger.Object,
+                _mockHttpClientFactory.Object
             )
         );
     }
@@ -97,8 +102,8 @@ public class SimplePictogramAuthTests
                 child.UniLogin.Username,
                 null!,
                 _config,
-                
-                _mockLogger.Object
+                _mockLogger.Object,
+                _mockHttpClientFactory.Object
             )
         );
     }
@@ -125,8 +130,8 @@ public class SimplePictogramAuthTests
                 child.UniLogin.Username,
                 new string[0],
                 _config,
-                
-                _mockLogger.Object
+                _mockLogger.Object,
+                _mockHttpClientFactory.Object
             )
         );
     }

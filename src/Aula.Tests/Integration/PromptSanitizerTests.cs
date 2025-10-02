@@ -1,5 +1,6 @@
 using Aula.Configuration;
 using Aula.Integration;
+using Aula.Integration.Exceptions;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -89,7 +90,7 @@ public class PromptSanitizerTests
             _sanitizer.SanitizeInput(input, _testChild));
 
         Assert.Equal(_testChild.FirstName, exception.ChildName);
-        Assert.Contains("ignore previous instructions", exception.AttemptedInput);
+        Assert.Equal(input.Length, exception.InputLength);
     }
 
     [Fact]

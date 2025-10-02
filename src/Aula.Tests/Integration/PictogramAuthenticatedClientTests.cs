@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -14,6 +15,7 @@ public class PictogramAuthenticatedClientTests
 {
     private readonly Mock<ILogger<PictogramAuthenticatedClient>> _mockLogger;
     private readonly Mock<ILogger<UniLoginAuthenticatorBase>> _mockBaseLogger;
+    private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
     private readonly Child _testChild;
     private readonly string[] _pictogramSequence;
     private readonly Config _config;
@@ -22,6 +24,9 @@ public class PictogramAuthenticatedClientTests
     {
         _mockLogger = new Mock<ILogger<PictogramAuthenticatedClient>>();
         _mockBaseLogger = new Mock<ILogger<UniLoginAuthenticatorBase>>();
+        _mockHttpClientFactory = new Mock<IHttpClientFactory>();
+        _mockHttpClientFactory.Setup(x => x.CreateClient(It.IsAny<string>())).Returns(new HttpClient());
+
         _config = new Config
         {
             MinUddannelse = new MinUddannelse
@@ -54,8 +59,8 @@ public class PictogramAuthenticatedClientTests
             _testChild.UniLogin!.Username,
             _pictogramSequence,
             _config,
-            
-            _mockLogger.Object);
+            _mockLogger.Object,
+            _mockHttpClientFactory.Object);
 
         // Assert
         Assert.NotNull(client);
@@ -71,8 +76,8 @@ public class PictogramAuthenticatedClientTests
                 _testChild.UniLogin!.Username,
                 null!,
                 _config,
-                
-                _mockLogger.Object));
+                _mockLogger.Object,
+                _mockHttpClientFactory.Object));
     }
 
     [Fact]
@@ -173,8 +178,8 @@ public class PictogramAuthenticatedClientTests
             _testChild.UniLogin!.Username,
             _pictogramSequence,
             _config,
-            
-            _mockLogger.Object);
+            _mockLogger.Object,
+            _mockHttpClientFactory.Object);
 
         // Act
         // Note: This would fail in the current implementation because we can't inject the mock HttpClient
@@ -245,8 +250,8 @@ public class PictogramAuthenticatedClientTests
             _testChild.UniLogin!.Username,
             _pictogramSequence,
             _config,
-            
-            _mockLogger.Object);
+            _mockLogger.Object,
+            _mockHttpClientFactory.Object);
 
         // Act
         var result = await client.GetWeekLetter(DateOnly.FromDateTime(DateTime.Now));
@@ -265,8 +270,8 @@ public class PictogramAuthenticatedClientTests
             _testChild.UniLogin!.Username,
             _pictogramSequence,
             _config,
-            
-            _mockLogger.Object);
+            _mockLogger.Object,
+            _mockHttpClientFactory.Object);
 
         // Act
         var result = await client.GetWeekSchedule(DateOnly.FromDateTime(DateTime.Now));
