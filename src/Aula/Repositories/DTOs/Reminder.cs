@@ -1,8 +1,7 @@
 using Supabase.Postgrest.Attributes;
-using Aula.Core.Models;
 using Supabase.Postgrest.Models;
 
-namespace Aula.Core.Models;
+namespace Aula.Repositories.DTOs;
 
 [Table("reminders")]
 public class Reminder : BaseModel

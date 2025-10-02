@@ -3,7 +3,7 @@ using Aula.GoogleCalendar;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
 
-namespace Aula.Core.Security;
+namespace Aula.Security;
 
 /// <summary>
 /// Implementation of prompt sanitization to prevent injection attacks.

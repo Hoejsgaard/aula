@@ -1,6 +1,6 @@
 using Aula.Configuration;
 
-namespace Aula.Core.Security;
+namespace Aula.Security;
 
 public interface IChildAuditService
 {

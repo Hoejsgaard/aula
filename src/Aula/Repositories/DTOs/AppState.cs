@@ -1,7 +1,7 @@
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
-namespace Aula.Core.Models;
+namespace Aula.Repositories.DTOs;
 
 [Table("app_state")]
 public class AppState : BaseModel

@@ -1,6 +1,6 @@
 using Aula.Configuration;
 
-namespace Aula.Core.Security;
+namespace Aula.Security;
 
 /// <summary>
 /// Service for sanitizing user inputs to prevent prompt injection attacks.

@@ -1,10 +1,11 @@
 using Aula.Configuration;
-using Aula.Core.Models;
-using Aula.Core.Security;
+using Aula.Models;
+using Aula.Repositories.DTOs;
+using Aula.Security;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
-namespace Aula.Core.Security;
+namespace Aula.Security;
 
 public class ChildRateLimiter : IChildRateLimiter
 {

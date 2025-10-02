@@ -1,7 +1,7 @@
 using Aula.Configuration;
-using Aula.Core.Security;
+using Aula.Security;
 
-namespace Aula.Core.Security;
+namespace Aula.Security;
 
 /// <summary>
 /// Rate limiting service to prevent DoS attacks and resource exhaustion.
