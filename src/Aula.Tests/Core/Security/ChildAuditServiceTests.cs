@@ -1,10 +1,10 @@
-using Aula.Authentication;
+using Aula.Core.Security;
 using Aula.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
-namespace Aula.Tests.Authentication;
+namespace Aula.Tests.Core.Security;
 
 public class ChildAuditServiceTests
 {

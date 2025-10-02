@@ -1,4 +1,3 @@
-using Aula.Authentication;
 using Aula.Content.WeekLetters;
 using Aula.Core.Models;
 using Aula.Core.Security;
@@ -6,9 +5,7 @@ using Aula.Core.Utilities;
 using Aula.External.MinUddannelse;
 using Aula.External.Authentication;
 using Aula.Configuration;
-using Aula.External.MinUddannelse;
 using Aula.Repositories;
-using Aula.Core.Security;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 

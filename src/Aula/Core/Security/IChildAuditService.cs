@@ -1,6 +1,6 @@
 using Aula.Configuration;
 
-namespace Aula.Authentication;
+namespace Aula.Core.Security;
 
 /// <summary>
 /// Provides audit logging for child-related authentication and data access operations.

@@ -2,7 +2,7 @@ using Aula.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 
-namespace Aula.Authentication;
+namespace Aula.Core.Security;
 
 /// <summary>
 /// Implementation of audit logging for child-related operations.

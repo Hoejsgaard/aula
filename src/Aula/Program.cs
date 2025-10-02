@@ -19,9 +19,8 @@ using Aula.Configuration;
 using Aula.Content.WeekLetters;
 using Aula.Repositories;
 using Aula.Agents;
-using Aula.Authentication;
-using Aula.Communication.Channels;
 using Aula.Core.Security;
+using Aula.Communication.Channels;
 using Aula.Core.Utilities;
 using Aula.Core.Models;
 

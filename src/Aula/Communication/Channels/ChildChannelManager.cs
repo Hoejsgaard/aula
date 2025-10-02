@@ -1,4 +1,4 @@
-using Aula.Authentication;
+using Aula.Core.Security;
 using Aula.Core.Models;
 using Aula.Configuration;
 using Microsoft.Extensions.Logging;
