@@ -28,7 +28,7 @@ After creating your project, you'll need the following values for `appsettings.j
 In the Supabase SQL Editor, run this SQL to create the required tables:
 
 ```sql
--- Reminders table for manual reminder management
+-- Reminders table
 CREATE TABLE reminders (
   id SERIAL PRIMARY KEY,
   text TEXT NOT NULL,
@@ -88,10 +88,53 @@ CREATE TABLE scheduled_tasks (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Reminders table for manual reminder management
+CREATE TABLE reminders (
+  id SERIAL PRIMARY KEY,
+  text TEXT NOT NULL,
+  remind_date DATE NOT NULL,
+  remind_time TIME NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  is_sent BOOLEAN DEFAULT FALSE,
+  child_name TEXT,
+  created_by TEXT DEFAULT 'bot',
+  source VARCHAR(50) DEFAULT 'manual',
+  week_letter_id INTEGER,
+  event_type VARCHAR(50),
+  event_title VARCHAR(200),
+  extracted_date_time TIMESTAMP WITH TIME ZONE,
+  confidence_score DECIMAL(3,2),
+  CONSTRAINT fk_reminders_week_letter_id FOREIGN KEY (week_letter_id) REFERENCES posted_letters(id) ON DELETE CASCADE,
+  CONSTRAINT chk_reminders_source CHECK (source IN ('manual', 'auto_extracted', 'schedule_conflict')),
+  CONSTRAINT chk_reminders_event_type CHECK (event_type IS NULL OR event_type IN ('deadline', 'permission_form', 'event', 'supply_needed')),
+  CONSTRAINT chk_reminders_confidence_score CHECK (confidence_score IS NULL OR (confidence_score >= 0.1 AND confidence_score <= 1.0))
+);
+
+-- Posted week letters tracking to avoid duplicates
+CREATE TABLE posted_letters (
+  id SERIAL PRIMARY KEY,
+  child_name TEXT NOT NULL,
+  week_number INTEGER NOT NULL,
+  year INTEGER NOT NULL,
+  content_hash TEXT NOT NULL,
+  posted_at TIMESTAMPTZ DEFAULT NOW(),
+  posted_to_slack BOOLEAN DEFAULT FALSE,
+  posted_to_telegram BOOLEAN DEFAULT FALSE,
+  auto_reminders_extracted BOOLEAN DEFAULT FALSE,
+  auto_reminders_last_updated TIMESTAMP WITH TIME ZONE,
+  UNIQUE(child_name, week_number, year)
+);
+
 -- Insert default scheduled tasks
 INSERT INTO scheduled_tasks (name, description, cron_expression, retry_interval_hours, max_retry_hours) VALUES
 ('WeeklyLetterCheck', 'Check for new week letters every Sunday at 4 PM', '0 16 * * 0', 1, 48),
 ('MorningReminders', 'Send pending reminders every morning at 7 AM', '0 7 * * *', NULL, NULL);
+
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_posted_letters_auto_reminders ON posted_letters(child_name, auto_reminders_extracted);
+CREATE INDEX IF NOT EXISTS idx_reminders_source ON reminders(source);
+CREATE INDEX IF NOT EXISTS idx_reminders_week_letter_id ON reminders(week_letter_id);
+CREATE INDEX IF NOT EXISTS idx_reminders_event_type ON reminders(event_type);
 ```
 
 ## 4. Enable Row Level Security (REQUIRED)
@@ -188,3 +231,16 @@ Once configured, the bot will:
 - **remind_time**: 07:30:00
 - **child_name**: TestChild1
 - **is_sent**: false
+
+## 8. Testing Connection
+Once configured, the bot will:
+- Test the Supabase connection on startup
+- Create initial app state entries if needed
+- Log any connection issues
+
+## 9. Managing Reminders via Supabase Dashboard
+1. Go to your Supabase project dashboard
+2. Click "Table Editor"
+3. Select the "reminders" table
+4. Add/edit/delete reminders manually
+5. Set `is_sent` to `false` to re-send a reminder
