@@ -11,9 +11,7 @@ using MinUddannelse.Communication.Channels;
 using MinUddannelse.Client;
 using MinUddannelse.Configuration;
 using MinUddannelse.AI.Services;
-using MinUddannelse.Content.WeekLetters;
 using MinUddannelse.Repositories;
-using MinUddannelse.Content.WeekLetters;
 using MinUddannelse.Events;
 
 namespace MinUddannelse.Scheduling;
@@ -27,6 +25,7 @@ public class SchedulingService : ISchedulingService
     private readonly IRetryTrackingRepository _retryTrackingRepository;
     private readonly IAppStateRepository _appStateRepository;
     private readonly IWeekLetterService _weekLetterService;
+    private readonly IWeekLetterReminderService _weekLetterReminderService;
     private readonly IChannelManager _channelManager;
     private readonly Config _config;
     private Timer? _schedulingTimer;
@@ -50,6 +49,7 @@ public class SchedulingService : ISchedulingService
         IAppStateRepository appStateRepository,
         IWeekLetterService weekLetterService,
         IChannelManager channelManager,
+        IWeekLetterReminderService weekLetterReminderService,
         Config config)
     {
         _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<SchedulingService>();
@@ -60,6 +60,7 @@ public class SchedulingService : ISchedulingService
         _appStateRepository = appStateRepository ?? throw new ArgumentNullException(nameof(appStateRepository));
         _weekLetterService = weekLetterService ?? throw new ArgumentNullException(nameof(weekLetterService));
         _channelManager = channelManager ?? throw new ArgumentNullException(nameof(channelManager));
+        _weekLetterReminderService = weekLetterReminderService ?? throw new ArgumentNullException(nameof(weekLetterReminderService));
         _config = config ?? throw new ArgumentNullException(nameof(config));
     }
 
@@ -355,12 +356,55 @@ public class SchedulingService : ISchedulingService
             ChildWeekLetterReady?.Invoke(this, eventArgs);
             await _weekLetterRepository.MarkWeekLetterAsPostedAsync(child.FirstName, weekNumber, year, result.contentHash!);
 
+            // Extract reminders from week letter content
+            await ExtractRemindersFromWeekLetter(child.FirstName, weekNumber, year, weekLetter, result.contentHash!);
+
             _logger.LogInformation("Emitted week letter event for {ChildName}", child.FirstName);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing week letter for {ChildName}", child.FirstName);
             await _retryTrackingRepository.IncrementRetryAttemptAsync(child.FirstName, weekNumber, year);
+        }
+    }
+
+    private async Task ExtractRemindersFromWeekLetter(string childName, int weekNumber, int year, JObject weekLetter, string contentHash)
+    {
+        try
+        {
+            _logger.LogInformation("Extracting reminders from week letter for {ChildName} week {WeekNumber}/{Year}",
+                childName, weekNumber, year);
+
+            var extractionResult = await _weekLetterReminderService.ExtractAndStoreRemindersAsync(
+                childName, weekNumber, year, weekLetter, contentHash);
+
+            if (extractionResult.Success && extractionResult.RemindersCreated > 0)
+            {
+                _logger.LogInformation("Successfully created {Count} reminders for {ChildName}",
+                    extractionResult.RemindersCreated, childName);
+
+                // Send detailed success message to channels with Danish format
+                var successMessage = FormatReminderSuccessMessage(extractionResult.RemindersCreated, weekNumber, extractionResult.CreatedReminders);
+                await _channelManager.SendMessageToChildChannelsAsync(childName, successMessage);
+            }
+            else if (extractionResult.Success && extractionResult.NoRemindersFound)
+            {
+                _logger.LogInformation("No reminders found in week letter for {ChildName}", childName);
+
+                // Send no reminders message to channels
+                var noRemindersMessage = $"Ingen påmindelser blev fundet i ugebrevet for uge {weekNumber}/{year} - der er ikke oprettet nogen automatiske påmindelser for denne uge.";
+                await _channelManager.SendMessageToChildChannelsAsync(childName, noRemindersMessage);
+            }
+            else if (!extractionResult.Success)
+            {
+                _logger.LogError("Failed to extract reminders for {ChildName}: {Error}",
+                    childName, extractionResult.ErrorMessage);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during reminder extraction for {ChildName} week {WeekNumber}/{Year}",
+                childName, weekNumber, year);
         }
     }
 
@@ -467,6 +511,27 @@ public class SchedulingService : ISchedulingService
         }
 
         return Task.CompletedTask;
+    }
+
+    private string FormatReminderSuccessMessage(int reminderCount, int weekNumber, List<CreatedReminderInfo> createdReminders)
+    {
+        var message = $"Jeg har oprettet {reminderCount} påmindelser for uge {weekNumber}:";
+
+        // Group reminders by day
+        var groupedByDay = createdReminders
+            .GroupBy(r => r.Date.ToString("dddd", new System.Globalization.CultureInfo("da-DK")))
+            .OrderBy(g => createdReminders.First(r => r.Date.ToString("dddd", new System.Globalization.CultureInfo("da-DK")) == g.Key).Date);
+
+        foreach (var dayGroup in groupedByDay)
+        {
+            foreach (var reminder in dayGroup)
+            {
+                var timeInfo = !string.IsNullOrEmpty(reminder.EventTime) ? $" kl. {reminder.EventTime}" : "";
+                message += $"\n• {char.ToUpper(dayGroup.Key[0])}{dayGroup.Key.Substring(1)}: {reminder.Title}{timeInfo}";
+            }
+        }
+
+        return message;
     }
 
     private async Task CheckForMissedReminders()
