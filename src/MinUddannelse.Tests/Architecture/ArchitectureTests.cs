@@ -241,7 +241,7 @@ public class ArchitectureTests
             .Where(t => t.Namespace != null && !t.Namespace.Contains("Tests"))
             .Where(t => forbiddenPatterns.Any(pattern => t.Name.Contains(pattern)))
             .Where(t => !t.Name.Contains("Conversation")) // ConversationContext is allowed
-            .Where(t => !t.Name.StartsWith("<")) // Exclude compiler-generated types
+            .Where(t => !t.Name.StartsWith('<')) // Exclude compiler-generated types
             .ToList();
 
         foreach (var type in allTypes)

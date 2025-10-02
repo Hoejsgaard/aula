@@ -6,10 +6,7 @@ using Xunit;
 using Newtonsoft.Json.Linq;
 using MinUddannelse.Configuration;
 using MinUddannelse.Client;
-using MinUddannelse.Client;
 using MinUddannelse.GoogleCalendar;
-using MinUddannelse.Client;
-using MinUddannelse.Client;
 using MinUddannelse.Security;
 
 namespace MinUddannelse.Tests.GoogleCalendar;

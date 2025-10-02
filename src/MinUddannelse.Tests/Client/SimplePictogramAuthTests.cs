@@ -1,6 +1,5 @@
 using MinUddannelse.Configuration;
 using MinUddannelse.Client;
-using MinUddannelse.Client;
 using MinUddannelse.GoogleCalendar;
 using MinUddannelse.Security;
 using Microsoft.Extensions.Logging;

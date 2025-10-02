@@ -8,15 +8,12 @@ using Xunit;
 using MinUddannelse.AI.Services;
 using MinUddannelse.AI.Prompts;
 using MinUddannelse.Configuration;
-using MinUddannelse.AI.Services;
 using MinUddannelse.Content.WeekLetters;
 using MinUddannelse.Models;
 using MinUddannelse.Repositories.DTOs;
 using MinUddannelse.Security;
 using MinUddannelse;
-using MinUddannelse.Content.WeekLetters;
 using MinUddannelse.Content.Processing;
-using MinUddannelse;
 using System;
 
 namespace MinUddannelse.Tests.AI.Services;

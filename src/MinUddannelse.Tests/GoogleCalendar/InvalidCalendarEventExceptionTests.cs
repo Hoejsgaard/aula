@@ -233,8 +233,8 @@ public class InvalidCalendarEventExceptionTests
         // Act & Assert
         Assert.Equal("Calendar event error", outerException.Message);
         Assert.Equal(innerException, outerException.InnerException);
-        Assert.Equal("Operation failed", outerException.InnerException.Message);
-        Assert.Equal(deepInnerException, outerException.InnerException.InnerException);
-        Assert.Contains("Parameter cannot be null", outerException.InnerException.InnerException.Message);
+        Assert.Equal("Operation failed", outerException.InnerException?.Message);
+        Assert.Equal(deepInnerException, outerException.InnerException?.InnerException);
+        Assert.Contains("Parameter cannot be null", outerException.InnerException?.InnerException?.Message ?? "");
     }
 }

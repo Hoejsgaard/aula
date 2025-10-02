@@ -5,7 +5,6 @@ using Newtonsoft.Json.Linq;
 using MinUddannelse.AI.Services;
 using MinUddannelse.Repositories;
 using MinUddannelse.Configuration;
-using MinUddannelse.AI.Services;
 using MinUddannelse.Content.WeekLetters;
 using MinUddannelse.Models;
 using MinUddannelse.Repositories.DTOs;

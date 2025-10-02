@@ -8,7 +8,6 @@ using Newtonsoft.Json.Linq;
 using Xunit;
 using MinUddannelse.Configuration;
 using MinUddannelse.Client;
-using MinUddannelse.Client;
 using MinUddannelse.GoogleCalendar;
 using MinUddannelse.Security;
 

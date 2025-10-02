@@ -14,16 +14,12 @@ using Xunit;
 using MinUddannelse.Communication.Bots;
 using MinUddannelse.Configuration;
 using MinUddannelse.Client;
-using MinUddannelse.Client;
 using MinUddannelse.GoogleCalendar;
-using MinUddannelse.Client;
-using MinUddannelse.Client;
 using MinUddannelse.Security;
 using MinUddannelse.AI.Services;
 using MinUddannelse.Content.WeekLetters;
 using MinUddannelse.Models;
 using MinUddannelse.Repositories.DTOs;
-using MinUddannelse.Security;
 using MinUddannelse;
 using System.Linq;
 

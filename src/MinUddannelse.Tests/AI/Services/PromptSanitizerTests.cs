@@ -1,11 +1,7 @@
 using MinUddannelse.Configuration;
 using MinUddannelse.Client;
-using MinUddannelse.Client;
 using MinUddannelse.GoogleCalendar;
-using MinUddannelse.Client;
-using MinUddannelse.Client;
 using MinUddannelse.Security;
-using MinUddannelse.GoogleCalendar;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
