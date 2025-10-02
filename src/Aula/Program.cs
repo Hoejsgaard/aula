@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Supabase;
+using System.Net;
 using Aula.Integration;
 using Aula.Scheduling;
 using Aula.Configuration;
@@ -76,7 +77,17 @@ public class Program
     {
         var supabaseClient = serviceProvider.GetRequiredService<Client>();
 
-        // Test connection by attempting to get a simple query
+        try
+        {
+            await supabaseClient.InitializeAsync();
+            logger.LogInformation("Supabase client initialized successfully");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Supabase client initialization failed - continuing without database features");
+            return;
+        }
+
         try
         {
             await supabaseClient.From<Reminder>().Limit(1).Get();
@@ -170,6 +181,18 @@ public class Program
 
         services.AddMemoryCache();
 
+        services.AddHttpClient("UniLogin", client =>
+        {
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            AllowAutoRedirect = true,
+            UseCookies = true,
+            CookieContainer = new CookieContainer(),
+            AutomaticDecompression = System.Net.DecompressionMethods.All
+        });
+
         // Child-aware services are singletons that accept Child parameters
         services.AddSingleton<IChildAuditService, ChildAuditService>();
         services.AddSingleton<IChildRateLimiter, ChildRateLimiter>();
@@ -178,7 +201,6 @@ public class Program
         services.AddSingleton<IChildScheduler, SecureChildScheduler>();
         services.AddSingleton<IOpenAiService, SecureOpenAiService>();
 
-        // Factory for creating ChildAgent instances with proper dependency resolution
         services.AddSingleton<IChildAgentFactory, ChildAgentFactory>();
 
         services.AddScoped<DataService>();
@@ -203,14 +225,14 @@ public class Program
             return new WeekLetterAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager, conversationManager, promptBuilder, config.OpenAi.Model);
         });
 
-        // Supabase Client singleton (initialized asynchronously via factory)
+        // Supabase Client singleton (lazy initialization on first use)
         services.AddSingleton<Client>(provider =>
         {
             var config = provider.GetRequiredService<Config>();
             var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
             var logger = loggerFactory.CreateLogger("SupabaseClient");
 
-            logger.LogInformation("Initializing Supabase connection");
+            logger.LogInformation("Creating Supabase client (will initialize on first use)");
 
             var options = new SupabaseOptions
             {
@@ -219,9 +241,10 @@ public class Program
             };
 
             var client = new Client(config.Supabase.Url, config.Supabase.ServiceRoleKey, options);
-            client.InitializeAsync().GetAwaiter().GetResult();
+            // Removed blocking InitializeAsync().GetAwaiter().GetResult() call
+            // Client will be initialized on first repository use
 
-            logger.LogInformation("Supabase client initialized successfully");
+            logger.LogInformation("Supabase client created successfully");
             return client;
         });
 

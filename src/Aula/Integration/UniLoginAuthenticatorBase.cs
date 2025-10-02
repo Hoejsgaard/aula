@@ -14,6 +14,11 @@ namespace Aula.Integration;
 /// </summary>
 public abstract class UniLoginAuthenticatorBase : IDisposable
 {
+    // Authentication flow constants
+    private const int MaxAuthenticationSteps = 10;
+    private const int AuthenticationStepThreshold = 5;
+    private const int ScriptPreviewLength = 200;
+
     private bool _disposed = false;
     private readonly ILogger _logger;
     private readonly string _loginUrl;
@@ -21,17 +26,20 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
     private readonly string _username;
     private readonly string _apiBaseUrl;
     private readonly string _studentDataPath;
+    private readonly IHttpClientFactory _httpClientFactory;
     private bool _loggedIn;
 
-    public UniLoginAuthenticatorBase(string username, string password, string loginUrl, string successUrl, ILogger logger, string apiBaseUrl = "https://www.minuddannelse.net", string studentDataPath = "/api/stamdata/elev/getElev")
+    public UniLoginAuthenticatorBase(
+        IHttpClientFactory httpClientFactory,
+        string username,
+        string password,
+        string loginUrl,
+        string successUrl,
+        ILogger logger,
+        string apiBaseUrl = "https://www.minuddannelse.net",
+        string studentDataPath = "/api/stamdata/elev/getElev")
     {
-        var httpClientHandler = new HttpClientHandler
-        {
-            CookieContainer = new CookieContainer(),
-            UseCookies = true,
-            AllowAutoRedirect = true
-        };
-        HttpClient = new HttpClient(httpClientHandler);
+        _httpClientFactory = httpClientFactory ?? throw new ArgumentNullException(nameof(httpClientFactory));
         _username = username ?? throw new ArgumentNullException(nameof(username));
         _password = password ?? throw new ArgumentNullException(nameof(password));
         _loginUrl = loginUrl;
@@ -42,7 +50,7 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
         _studentDataPath = studentDataPath;
     }
 
-    protected HttpClient HttpClient { get; }
+    protected HttpClient CreateHttpClient() => _httpClientFactory.CreateClient("UniLogin");
     protected string SuccessUrl { get; }
 
     public async Task<bool> LoginAsync()
@@ -50,96 +58,156 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
         _logger.LogDebug("Starting login process for user: {Username}", _username);
         _logger.LogDebug("Initial URL: {LoginUrl}", _loginUrl);
 
-        var response = await HttpClient.GetAsync(_loginUrl);
+        using var httpClient = CreateHttpClient();
+        var response = await httpClient.GetAsync(_loginUrl);
         var content = await response.Content.ReadAsStringAsync();
 
         _logger.LogDebug("Initial response status: {StatusCode}", response.StatusCode);
         _logger.LogDebug("Response URL: {ResponseUri}", response.RequestMessage?.RequestUri);
 
-        return await ProcessLoginResponseAsync(content, response);
+        return await ProcessLoginResponseAsync(httpClient, content, response);
     }
 
-    private async Task<bool> ProcessLoginResponseAsync(string content, HttpResponseMessage initialResponse)
+    private async Task<bool> ProcessLoginResponseAsync(HttpClient httpClient, string content, HttpResponseMessage initialResponse)
     {
-        var maxSteps = 10;
-        var currentUrl = initialResponse.RequestMessage?.RequestUri?.ToString() ?? _loginUrl;
-        var hasSubmittedCredentials = false;
+        var authState = InitializeAuthenticationState(initialResponse);
 
-        for (var stepCounter = 0; stepCounter < maxSteps; stepCounter++)
+        for (var stepCounter = 0; stepCounter < MaxAuthenticationSteps; stepCounter++)
         {
-            _logger.LogDebug("===== STEP {StepCounter} =====", stepCounter);
-            _logger.LogDebug("Current URL: {CurrentUrl}", currentUrl);
-            _logger.LogDebug("Content length: {ContentLength} chars", content.Length);
+            LogAuthenticationStep(stepCounter, authState.CurrentUrl, content);
 
-            // Track if we've submitted credentials
-            if (currentUrl.Contains("broker.unilogin.dk") && content.Contains("password"))
-            {
-                hasSubmittedCredentials = true;
-                _logger.LogDebug("Credentials form detected");
-            }
+            authState.HasSubmittedCredentials = UpdateCredentialsSubmissionStatus(authState.CurrentUrl, content, authState.HasSubmittedCredentials);
 
-            // Check if we're authenticated after returning from credential submission
-            if (await TryVerifyAuthenticationAfterCredentials(currentUrl, hasSubmittedCredentials))
+            if (await TryVerifyAuthenticationAfterCredentials(httpClient, authState.CurrentUrl, authState.HasSubmittedCredentials))
             {
                 return true;
             }
 
-            try
+            var stepResult = await ProcessAuthenticationStep(httpClient, content, authState.CurrentUrl, authState.HasSubmittedCredentials, stepCounter);
+
+            if (stepResult.IsAuthenticated)
             {
-                var doc = new HtmlDocument();
-                doc.LoadHtml(content);
-
-                // Log page title
-                var title = doc.DocumentNode.SelectSingleNode("//title")?.InnerText?.Trim();
-                _logger.LogDebug("Page title: {Title}", title ?? "No title found");
-
-                // Log form structure for debugging
-                LogFormStructure(doc);
-
-                // Check for authentication success indicators
-                if (CheckForAuthenticationSuccess(doc, currentUrl, stepCounter))
-                {
-                    return true;
-                }
-
-                // Try to submit form if found
-                var (authenticated, newHasSubmittedCredentials, newContent, newUrl) =
-                    await TrySubmitForm(content, currentUrl, hasSubmittedCredentials);
-
-                if (authenticated)
-                {
-                    return true;
-                }
-
-                if (newContent != content || newUrl != currentUrl)
-                {
-                    content = newContent;
-                    currentUrl = newUrl;
-                    hasSubmittedCredentials = newHasSubmittedCredentials;
-                    continue;
-                }
-
-                // Try alternative navigation (UniLogin link)
-                var (navigated, navContent, navUrl) = await TryAlternativeNavigation(doc, currentUrl);
-                if (navigated)
-                {
-                    content = navContent;
-                    currentUrl = navUrl;
-                    continue;
-                }
-
-                // Check for errors and exit if no progress possible
-                LogErrorMessages(doc);
-                break;
+                return true;
             }
-            catch (Exception ex)
+
+            if (stepResult.ShouldContinue)
             {
-                _logger.LogError(ex, "Step {StepCounter} failed with exception", stepCounter);
+                authState.CurrentUrl = stepResult.NewUrl;
+                content = stepResult.NewContent;
+                authState.HasSubmittedCredentials = stepResult.NewHasSubmittedCredentials;
+                continue;
+            }
+
+            if (stepResult.ShouldBreak)
+            {
+                break;
             }
         }
 
-        _logger.LogWarning("Login failed after {MaxSteps} steps", maxSteps);
+        _logger.LogWarning("Login failed after {MaxSteps} steps", MaxAuthenticationSteps);
         return false;
+    }
+
+    private AuthenticationState InitializeAuthenticationState(HttpResponseMessage initialResponse)
+    {
+        return new AuthenticationState
+        {
+            CurrentUrl = initialResponse.RequestMessage?.RequestUri?.ToString() ?? _loginUrl,
+            HasSubmittedCredentials = false
+        };
+    }
+
+    private void LogAuthenticationStep(int stepCounter, string currentUrl, string content)
+    {
+        _logger.LogDebug("===== STEP {StepCounter} =====", stepCounter);
+        _logger.LogDebug("Current URL: {CurrentUrl}", currentUrl);
+        _logger.LogDebug("Content length: {ContentLength} chars", content.Length);
+    }
+
+    private bool UpdateCredentialsSubmissionStatus(string currentUrl, string content, bool hasSubmittedCredentials)
+    {
+        if (currentUrl.Contains("broker.unilogin.dk") && content.Contains("password"))
+        {
+            _logger.LogDebug("Credentials form detected");
+            return true;
+        }
+        return hasSubmittedCredentials;
+    }
+
+    private async Task<AuthenticationStepResult> ProcessAuthenticationStep(HttpClient httpClient, string content, string currentUrl, bool hasSubmittedCredentials, int stepCounter)
+    {
+        try
+        {
+            var doc = CreateHtmlDocument(content);
+            LogPageInformation(doc);
+
+            if (CheckForAuthenticationSuccess(doc, currentUrl, stepCounter))
+            {
+                return AuthenticationStepResult.Authenticated();
+            }
+
+            var (authenticated, newHasSubmittedCredentials, newContent, newUrl) =
+                await TrySubmitForm(httpClient, content, currentUrl, hasSubmittedCredentials);
+
+            if (authenticated)
+            {
+                return AuthenticationStepResult.Authenticated();
+            }
+
+            if (newContent != content || newUrl != currentUrl)
+            {
+                return AuthenticationStepResult.Continue(newContent, newUrl, newHasSubmittedCredentials);
+            }
+
+            var (navigated, navContent, navUrl) = await TryAlternativeNavigation(httpClient, doc, currentUrl);
+            if (navigated)
+            {
+                return AuthenticationStepResult.Continue(navContent, navUrl, hasSubmittedCredentials);
+            }
+
+            LogErrorMessages(doc);
+            return AuthenticationStepResult.Break();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Step {StepCounter} failed with exception", stepCounter);
+            return AuthenticationStepResult.Break();
+        }
+    }
+
+    private HtmlDocument CreateHtmlDocument(string content)
+    {
+        var doc = new HtmlDocument();
+        doc.LoadHtml(content);
+        return doc;
+    }
+
+    private void LogPageInformation(HtmlDocument doc)
+    {
+        var title = doc.DocumentNode.SelectSingleNode("//title")?.InnerText?.Trim();
+        _logger.LogDebug("Page title: {Title}", title ?? "No title found");
+        LogFormStructure(doc);
+    }
+
+    private class AuthenticationState
+    {
+        public string CurrentUrl { get; set; } = string.Empty;
+        public bool HasSubmittedCredentials { get; set; }
+    }
+
+    private class AuthenticationStepResult
+    {
+        public bool IsAuthenticated { get; private set; }
+        public bool ShouldContinue { get; private set; }
+        public bool ShouldBreak { get; private set; }
+        public string NewContent { get; private set; } = string.Empty;
+        public string NewUrl { get; private set; } = string.Empty;
+        public bool NewHasSubmittedCredentials { get; private set; }
+
+        public static AuthenticationStepResult Authenticated() => new() { IsAuthenticated = true };
+        public static AuthenticationStepResult Continue(string content, string url, bool hasSubmittedCredentials) =>
+            new() { ShouldContinue = true, NewContent = content, NewUrl = url, NewHasSubmittedCredentials = hasSubmittedCredentials };
+        public static AuthenticationStepResult Break() => new() { ShouldBreak = true };
     }
 
     private void LogFormStructure(HtmlDocument doc)
@@ -195,8 +263,8 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
                     script.InnerText.Contains("submit"))
                 {
                     _logger.LogDebug("Found potential JavaScript redirect/submit");
-                    var scriptPreview = script.InnerText.Length > 200
-                        ? script.InnerText.Substring(0, 200) + "..."
+                    var scriptPreview = script.InnerText.Length > ScriptPreviewLength
+                        ? script.InnerText.Substring(0, ScriptPreviewLength) + "..."
                         : script.InnerText;
                     _logger.LogDebug("Script preview: {ScriptPreview}", scriptPreview);
                 }
@@ -295,73 +363,121 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
 
     private Dictionary<string, string> BuildFormData(HtmlDocument document, HtmlNode formNode)
     {
-        var formData = new Dictionary<string, string>();
+        var formData = InitializeFormData(formNode);
+        if (formData == null) return new Dictionary<string, string> { { "selectedIdp", "uni_idp" } };
 
-        // Get inputs from the specific form
+        ProcessInputElements(formNode, formData);
+        ProcessSelectElements(formNode, formData);
+
+        return formData;
+    }
+
+    private Dictionary<string, string>? InitializeFormData(HtmlNode formNode)
+    {
         var inputs = formNode.SelectNodes(".//input");
         if (inputs == null)
         {
             _logger.LogDebug("No inputs found in form");
-            formData.Add("selectedIdp", "uni_idp");
-            return formData;
+            return null;
         }
+
+        return new Dictionary<string, string>();
+    }
+
+    private void ProcessInputElements(HtmlNode formNode, Dictionary<string, string> formData)
+    {
+        var inputs = formNode.SelectNodes(".//input");
+        if (inputs == null) return;
 
         foreach (var input in inputs)
         {
-            var name = input.Attributes["name"]?.Value;
-            var value = input.GetAttributeValue("value", string.Empty);
-            var type = input.GetAttributeValue("type", "text");
+            var inputData = ExtractInputData(input);
+            if (inputData == null) continue;
 
+            LogFormFieldAddition(inputData.Name, inputData.Value, inputData.Type);
+            var finalValue = DetermineInputValue(inputData);
+            formData[inputData.Name] = finalValue;
+            LogCredentialFieldAssignment(inputData.Name, finalValue);
+        }
+    }
+
+    private void ProcessSelectElements(HtmlNode formNode, Dictionary<string, string> formData)
+    {
+        var selects = formNode.SelectNodes(".//select");
+        if (selects == null) return;
+
+        foreach (var select in selects)
+        {
+            var name = select.Attributes["name"]?.Value;
             if (string.IsNullOrWhiteSpace(name)) continue;
 
-            // Log what we're adding to form data
-            if (type != "hidden")
+            var selectedValue = ExtractSelectedValue(select);
+            if (selectedValue != null)
             {
-                _logger.LogDebug("Adding to form: {FieldName} = {Value}", name,
-                    name.Contains("password", StringComparison.OrdinalIgnoreCase) ? "***" : value);
-            }
-
-            // Handle various field names for username and password
-            var lowerName = name.ToLowerInvariant();
-            if (lowerName == "username" || lowerName == "j_username" || lowerName == "user" || lowerName == "login")
-            {
-                formData[name] = _username;
-                _logger.LogDebug("Setting username field '{FieldName}' to: {Username}", name, _username);
-            }
-            else if (lowerName == "password" || lowerName == "j_password" || lowerName == "pass" || lowerName == "pwd")
-            {
-                formData[name] = _password;
-                _logger.LogDebug("Setting password field '{FieldName}' to: ***", name);
-            }
-            else
-            {
-                formData[name] = value;
+                formData[name] = selectedValue;
+                _logger.LogDebug("Adding select to form: {FieldName} = {Value}", name, selectedValue);
             }
         }
+    }
 
-        // Also check for select elements
-        var selects = formNode.SelectNodes(".//select");
-        if (selects != null)
+    private InputFieldData? ExtractInputData(HtmlNode input)
+    {
+        var name = input.Attributes["name"]?.Value;
+        if (string.IsNullOrWhiteSpace(name)) return null;
+
+        return new InputFieldData
         {
-            foreach (var select in selects)
-            {
-                var name = select.Attributes["name"]?.Value;
-                if (!string.IsNullOrWhiteSpace(name))
-                {
-                    // Get selected option or first option
-                    var selectedOption = select.SelectSingleNode(".//option[@selected]")
-                                      ?? select.SelectSingleNode(".//option");
-                    if (selectedOption != null)
-                    {
-                        var value = selectedOption.Attributes["value"]?.Value ?? "";
-                        formData[name] = value;
-                        _logger.LogDebug("Adding select to form: {FieldName} = {Value}", name, value);
-                    }
-                }
-            }
-        }
+            Name = name,
+            Value = input.GetAttributeValue("value", string.Empty),
+            Type = input.GetAttributeValue("type", "text")
+        };
+    }
 
-        return formData;
+    private void LogFormFieldAddition(string name, string value, string type)
+    {
+        if (type != "hidden")
+        {
+            var displayValue = name.Contains("password", StringComparison.OrdinalIgnoreCase) ? "***" : value;
+            _logger.LogDebug("Adding to form: {FieldName} = {Value}", name, displayValue);
+        }
+    }
+
+    private string DetermineInputValue(InputFieldData inputData)
+    {
+        var lowerName = inputData.Name.ToLowerInvariant();
+        return lowerName switch
+        {
+            "username" or "j_username" or "user" or "login" => _username,
+            "password" or "j_password" or "pass" or "pwd" => _password,
+            _ => inputData.Value
+        };
+    }
+
+    private void LogCredentialFieldAssignment(string fieldName, string value)
+    {
+        var lowerName = fieldName.ToLowerInvariant();
+        if (lowerName is "username" or "j_username" or "user" or "login")
+        {
+            _logger.LogDebug("Setting username field '{FieldName}' to: {Username}", fieldName, value);
+        }
+        else if (lowerName is "password" or "j_password" or "pass" or "pwd")
+        {
+            _logger.LogDebug("Setting password field '{FieldName}' to: ***", fieldName);
+        }
+    }
+
+    private string? ExtractSelectedValue(HtmlNode select)
+    {
+        var selectedOption = select.SelectSingleNode(".//option[@selected]")
+                          ?? select.SelectSingleNode(".//option");
+        return selectedOption?.Attributes["value"]?.Value ?? "";
+    }
+
+    private class InputFieldData
+    {
+        public string Name { get; init; } = string.Empty;
+        public string Value { get; init; } = string.Empty;
+        public string Type { get; init; } = string.Empty;
     }
 
     private bool CheckIfLoginSuccessful(HttpResponseMessage response)
@@ -380,7 +496,7 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
         return _loggedIn;
     }
 
-    private async Task<bool> VerifyAuthentication()
+    private async Task<bool> VerifyAuthentication(HttpClient httpClient)
     {
         _logger.LogDebug("Verifying authentication status");
 
@@ -399,7 +515,7 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
                 var url = endpoint + "?_=" + DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                 _logger.LogDebug("Testing endpoint: {Endpoint}", endpoint);
 
-                var response = await HttpClient.GetAsync(url);
+                var response = await httpClient.GetAsync(url);
                 _logger.LogDebug("Response: {StatusCode}", response.StatusCode);
 
                 if (response.IsSuccessStatusCode)
@@ -425,7 +541,7 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
         return false;
     }
 
-    private async Task<bool> TryVerifyAuthenticationAfterCredentials(string currentUrl, bool hasSubmittedCredentials)
+    private async Task<bool> TryVerifyAuthenticationAfterCredentials(HttpClient httpClient, string currentUrl, bool hasSubmittedCredentials)
     {
         if (!hasSubmittedCredentials || !currentUrl.Contains("minuddannelse.net") || currentUrl.Contains("Login"))
         {
@@ -433,7 +549,7 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
         }
 
         _logger.LogDebug("Back at MinUddannelse after credential submission");
-        var authenticated = await VerifyAuthentication();
+        var authenticated = await VerifyAuthentication(httpClient);
         if (authenticated)
         {
             _logger.LogInformation("Authentication confirmed via API access");
@@ -476,7 +592,7 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
             }
         }
 
-        if (stepCounter > 5 && currentUrl.Contains("minuddannelse.net"))
+        if (stepCounter > AuthenticationStepThreshold && currentUrl.Contains("minuddannelse.net"))
         {
             _logger.LogInformation("After multiple redirects, back at MinUddannelse - assuming success");
             return true;
@@ -486,7 +602,7 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
     }
 
     private async Task<(bool authenticated, bool hasSubmittedCredentials, string newContent, string newUrl)> TrySubmitForm(
-        string content, string currentUrl, bool hasSubmittedCredentials)
+        HttpClient httpClient, string content, string currentUrl, bool hasSubmittedCredentials)
     {
         var formData = ExtractFormData(content);
         if (formData == null)
@@ -507,7 +623,7 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
             hasSubmittedCredentials = true;
         }
 
-        var response = await HttpClient.PostAsync(formData.Item1, new FormUrlEncodedContent(formData.Item2));
+        var response = await httpClient.PostAsync(formData.Item1, new FormUrlEncodedContent(formData.Item2));
         var newContent = await response.Content.ReadAsStringAsync();
         var newUrl = response.RequestMessage?.RequestUri?.ToString() ?? currentUrl;
 
@@ -517,11 +633,11 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
         if (hasSubmittedCredentials && newUrl.Contains("minuddannelse.net"))
         {
             _logger.LogDebug("Returned to MinUddannelse after credentials, verifying");
-            var authenticated = await VerifyAuthentication();
+            var authenticated = await VerifyAuthentication(httpClient);
             if (authenticated)
             {
                 _logger.LogInformation("Login successful");
-                HttpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                 return (true, hasSubmittedCredentials, newContent, newUrl);
             }
         }
@@ -530,7 +646,7 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
         if (success)
         {
             _logger.LogInformation("Login successful (URL match)");
-            HttpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             return (true, hasSubmittedCredentials, newContent, newUrl);
         }
 
@@ -538,7 +654,7 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
     }
 
     private async Task<(bool navigated, string newContent, string newUrl)> TryAlternativeNavigation(
-        HtmlDocument doc, string currentUrl)
+        HttpClient httpClient, HtmlDocument doc, string currentUrl)
     {
         var uniLoginLink = doc.DocumentNode.SelectSingleNode("//a[contains(@href, 'unilogin-idp-prod')]");
         if (uniLoginLink == null)
@@ -559,7 +675,7 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
             }
 
             _logger.LogDebug("Following UniLogin link to: {Href}", href);
-            var response = await HttpClient.GetAsync(href);
+            var response = await httpClient.GetAsync(href);
             var newContent = await response.Content.ReadAsStringAsync();
             var newUrl = response.RequestMessage?.RequestUri?.ToString() ?? href;
 
@@ -582,10 +698,7 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
     {
         if (!_disposed)
         {
-            if (disposing)
-            {
-                HttpClient?.Dispose();
-            }
+            // HttpClient is managed by IHttpClientFactory, no need to dispose
             _disposed = true;
         }
     }

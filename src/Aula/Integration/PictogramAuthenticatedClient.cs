@@ -22,8 +22,8 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
     private readonly string _username;
     private string? _childId;
 
-    public PictogramAuthenticatedClient(Child child, string username, string[] pictogramSequence, Config config, ILogger logger)
-        : base(username, "", // Empty password since we'll build it dynamically
+    public PictogramAuthenticatedClient(Child child, string username, string[] pictogramSequence, Config config, ILogger logger, IHttpClientFactory httpClientFactory)
+        : base(httpClientFactory, username, "", // Empty password since we'll build it dynamically
             config.MinUddannelse.SamlLoginUrl,
             config.MinUddannelse.ApiBaseUrl,
             logger,
@@ -49,8 +49,9 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
 
         try
         {
+            using var httpClient = CreateHttpClient();
             // Navigate through the login flow to reach the pictogram page
-            var response = await HttpClient.GetAsync(_config.MinUddannelse.SamlLoginUrl);
+            var response = await httpClient.GetAsync(_config.MinUddannelse.SamlLoginUrl);
 
             var content = await response.Content.ReadAsStringAsync();
             var maxSteps = 10;
@@ -76,7 +77,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
                             action = GetAbsoluteUrl(action, response.RequestMessage?.RequestUri?.ToString() ?? "");
 
                             var formData = new Dictionary<string, string> { ["selectedIdp"] = "uni_idp" };
-                            response = await HttpClient.PostAsync(action, new FormUrlEncodedContent(formData));
+                            response = await httpClient.PostAsync(action, new FormUrlEncodedContent(formData));
                             content = await response.Content.ReadAsStringAsync();
                             hasSelectedUnilogin = true;
                             continue;
@@ -98,7 +99,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
                             action = GetAbsoluteUrl(action, response.RequestMessage?.RequestUri?.ToString() ?? "");
 
                             var formData = new Dictionary<string, string> { ["username"] = _username };
-                            response = await HttpClient.PostAsync(action, new FormUrlEncodedContent(formData));
+                            response = await httpClient.PostAsync(action, new FormUrlEncodedContent(formData));
                             content = await response.Content.ReadAsStringAsync();
                             hasSubmittedUsername = true;
                             continue;
@@ -132,17 +133,17 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
                     _logger.LogDebug("Built password from pictogram sequence");
 
                     // Submit the form with the password
-                    var authenticated = await SubmitPictogramForm(doc, response, _username, password);
+                    var authenticated = await SubmitPictogramForm(httpClient, doc, response, _username, password);
                     if (authenticated)
                     {
                         _logger.LogInformation("✅ Successfully authenticated {ChildName} with pictograms!", _child.FirstName);
 
                         // Add Accept header for JSON responses (critical for API calls!)
-                        HttpClient.DefaultRequestHeaders.Accept.Add(
+                        httpClient.DefaultRequestHeaders.Accept.Add(
                             new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 
                         // Set the child ID after successful login
-                        await SetChildIdAsync();
+                        await SetChildIdAsync(httpClient);
                         return true;
                     }
                     else
@@ -175,7 +176,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
                         }
                     }
 
-                    response = await HttpClient.PostAsync(action, new FormUrlEncodedContent(formData));
+                    response = await httpClient.PostAsync(action, new FormUrlEncodedContent(formData));
                     content = await response.Content.ReadAsStringAsync();
                 }
                 else
@@ -186,13 +187,13 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
                         _logger.LogInformation("✅ Reached MinUddannelse after authentication");
 
                         // Add Accept header for JSON responses (critical for API calls!)
-                        if (!HttpClient.DefaultRequestHeaders.Accept.Any(h => h.MediaType == "application/json"))
+                        if (!httpClient.DefaultRequestHeaders.Accept.Any(h => h.MediaType == "application/json"))
                         {
-                            HttpClient.DefaultRequestHeaders.Accept.Add(
+                            httpClient.DefaultRequestHeaders.Accept.Add(
                                 new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
                         }
 
-                        await SetChildIdAsync();
+                        await SetChildIdAsync(httpClient);
                         return true;
                     }
                 }
@@ -275,7 +276,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
         return passwordBuilder.ToString();
     }
 
-    private async Task<bool> SubmitPictogramForm(HtmlDocument doc, HttpResponseMessage lastResponse, string username, string password)
+    private async Task<bool> SubmitPictogramForm(HttpClient httpClient, HtmlDocument doc, HttpResponseMessage lastResponse, string username, string password)
     {
         // Find the form with hidden username/password fields
         var pictogramForm = doc.DocumentNode.SelectSingleNode("//input[@name='password' and @type='hidden']")?.Ancestors("form").FirstOrDefault();
@@ -296,7 +297,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
 
         _logger.LogDebug("📤 Submitting pictogram form to: {Action}", action);
 
-        var response = await HttpClient.PostAsync(action, new FormUrlEncodedContent(formData));
+        var response = await httpClient.PostAsync(action, new FormUrlEncodedContent(formData));
         var content = await response.Content.ReadAsStringAsync();
 
         // Check for error indicators first
@@ -350,7 +351,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
                 _logger.LogDebug("📤 Submitting SAML response to: {Action}", samlAction);
 
                 // Submit the SAML response
-                response = await HttpClient.PostAsync(samlAction, new FormUrlEncodedContent(samlFormData));
+                response = await httpClient.PostAsync(samlAction, new FormUrlEncodedContent(samlFormData));
                 content = await response.Content.ReadAsStringAsync();
 
                 // Continue processing any additional forms/redirects
@@ -363,9 +364,9 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
                         _logger.LogInformation("✅ Successfully reached MinUddannelse!");
 
                         // Add Accept header for JSON responses (critical for API calls!)
-                        if (!HttpClient.DefaultRequestHeaders.Accept.Any(h => h.MediaType == "application/json"))
+                        if (!httpClient.DefaultRequestHeaders.Accept.Any(h => h.MediaType == "application/json"))
                         {
-                            HttpClient.DefaultRequestHeaders.Accept.Add(
+                            httpClient.DefaultRequestHeaders.Accept.Add(
                                 new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
                         }
 
@@ -398,7 +399,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
                         }
 
                         _logger.LogDebug("Following redirect to: {Action}", nextAction);
-                        response = await HttpClient.PostAsync(nextAction, new FormUrlEncodedContent(nextFormData));
+                        response = await httpClient.PostAsync(nextAction, new FormUrlEncodedContent(nextFormData));
                         content = await response.Content.ReadAsStringAsync();
                     }
                     else
@@ -422,7 +423,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
         if (response.Headers.Location != null)
         {
             var redirectUrl = GetAbsoluteUrl(response.Headers.Location.ToString(), action);
-            var finalResponse = await HttpClient.GetAsync(redirectUrl);
+            var finalResponse = await httpClient.GetAsync(redirectUrl);
             var finalContent = await finalResponse.Content.ReadAsStringAsync();
 
             if (finalContent.Contains("MinUddannelse") ||
@@ -459,7 +460,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
         }
     }
 
-    private async Task SetChildIdAsync()
+    private async Task SetChildIdAsync(HttpClient httpClient)
     {
         try
         {
@@ -467,7 +468,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
 
             // First try: Extract from page context (same method as ChildAuthenticatedClient)
             // Navigate to any MinUddannelse page after authentication to get this
-            var response = await HttpClient.GetAsync($"{_config.MinUddannelse.ApiBaseUrl}/node/minuge");
+            var response = await httpClient.GetAsync($"{_config.MinUddannelse.ApiBaseUrl}/node/minuge");
             var content = await response.Content.ReadAsStringAsync();
 
             var personIdMatch = PersonIdRegex().Match(content);
@@ -492,7 +493,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
             _logger.LogInformation("Page context method failed, trying API...");
             var apiUrl = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.StudentDataPath}?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
-            var apiResponse = await HttpClient.GetAsync(apiUrl);
+            var apiResponse = await httpClient.GetAsync(apiUrl);
             if (apiResponse.IsSuccessStatusCode)
             {
                 var apiContent = await apiResponse.Content.ReadAsStringAsync();
@@ -532,7 +533,8 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
 
         _logger.LogDebug("📥 Fetching week letter from: {Url}", url);
 
-        var response = await HttpClient.GetAsync(url);
+        using var httpClient = CreateHttpClient();
+        var response = await httpClient.GetAsync(url);
         if (response.IsSuccessStatusCode)
         {
             var content = await response.Content.ReadAsStringAsync();
@@ -593,7 +595,8 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
 
         _logger.LogDebug("Fetching schedule from: {Url}", url);
 
-        var response = await HttpClient.GetAsync(url);
+        using var httpClient = CreateHttpClient();
+        var response = await httpClient.GetAsync(url);
         if (response.IsSuccessStatusCode)
         {
             var content = await response.Content.ReadAsStringAsync();

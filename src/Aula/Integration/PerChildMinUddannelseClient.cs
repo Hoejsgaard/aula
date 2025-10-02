@@ -21,17 +21,19 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
     private readonly IRetryTrackingRepository? _retryTrackingRepository;
     private readonly ILogger _logger;
     private readonly ILoggerFactory _loggerFactory;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly Config _config;
 
     // No longer storing authenticated clients - creating fresh instances per request
 
-    public PerChildMinUddannelseClient(Config config, IWeekLetterRepository? weekLetterRepository, IRetryTrackingRepository? retryTrackingRepository, ILoggerFactory loggerFactory)
+    public PerChildMinUddannelseClient(Config config, IWeekLetterRepository? weekLetterRepository, IRetryTrackingRepository? retryTrackingRepository, ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory)
     {
         _config = config;
         _weekLetterRepository = weekLetterRepository;
         _retryTrackingRepository = retryTrackingRepository;
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<PerChildMinUddannelseClient>();
+        _httpClientFactory = httpClientFactory;
     }
 
     public Task<bool> LoginAsync()
@@ -79,8 +81,8 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
         var logger = _loggerFactory.CreateLogger<PerChildMinUddannelseClient>();
         using IChildAuthenticatedClient childClient = child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null
-            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, logger)
-            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, logger);
+            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, logger, _httpClientFactory)
+            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, logger, _httpClientFactory);
 
         _logger.LogInformation("Using {AuthType} authentication for {ChildName}",
             child.UniLogin.AuthType == AuthenticationType.Pictogram ? "pictogram" : "standard", child.FirstName);
@@ -128,8 +130,8 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
         var logger = _loggerFactory.CreateLogger<PerChildMinUddannelseClient>();
         using IChildAuthenticatedClient childClient = child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null
-            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, logger)
-            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, logger);
+            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, logger, _httpClientFactory)
+            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, logger, _httpClientFactory);
 
         _logger.LogInformation("Using {AuthType} authentication for {ChildName}",
             child.UniLogin.AuthType == AuthenticationType.Pictogram ? "pictogram" : "standard", child.FirstName);
@@ -202,8 +204,8 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
         private readonly Config _config;
         private string? _childId;
 
-        public ChildAuthenticatedClient(Child child, string username, string password, Config config, ILogger logger)
-            : base(username, password,
+        public ChildAuthenticatedClient(Child child, string username, string password, Config config, ILogger logger, IHttpClientFactory httpClientFactory)
+            : base(httpClientFactory, username, password,
                 config.MinUddannelse.SamlLoginUrl,
                 config.MinUddannelse.ApiBaseUrl,
                 logger,
@@ -226,9 +228,6 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
 
             if (loginSuccess)
             {
-                HttpClient.DefaultRequestHeaders.Accept.Add(
-                    new MediaTypeWithQualityHeaderValue("application/json"));
-
                 _childLogger.LogInformation("Attempting to extract child ID for {ChildName}", _child.FirstName);
 
                 _childId = await ExtractChildId();
@@ -253,7 +252,8 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
             {
                 _childLogger.LogInformation("Extracting child ID for {ChildName}", _child.FirstName);
 
-                var response = await HttpClient.GetAsync($"{_config.MinUddannelse.ApiBaseUrl}/node/minuge");
+                using var httpClient = CreateHttpClient();
+                var response = await httpClient.GetAsync($"{_config.MinUddannelse.ApiBaseUrl}/node/minuge");
                 var content = await response.Content.ReadAsStringAsync();
 
                 var personIdMatch = PersonIdRegex().Match(content);
@@ -277,7 +277,7 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
                 _childLogger.LogInformation("Page context method failed, trying API");
                 var apiUrl = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.StudentDataPath}?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
-                var apiResponse = await HttpClient.GetAsync(apiUrl);
+                var apiResponse = await httpClient.GetAsync(apiUrl);
                 if (apiResponse.IsSuccessStatusCode)
                 {
                     var apiContent = await apiResponse.Content.ReadAsStringAsync();
@@ -317,7 +317,8 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
             var url = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.WeekLettersPath}?tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}" +
                      $"&elevId={_childId}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
-            var response = await HttpClient.GetAsync(url);
+            using var httpClient = CreateHttpClient();
+            var response = await httpClient.GetAsync(url);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
 
@@ -349,7 +350,8 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
             var url = $"{_config.MinUddannelse.ApiBaseUrl}/api/stamdata/aulaskema/getElevSkema?elevId={_childId}" +
                      $"&tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
-            var response = await HttpClient.GetAsync(url);
+            using var httpClient = CreateHttpClient();
+            var response = await httpClient.GetAsync(url);
             response.EnsureSuccessStatusCode();
             var json = await response.Content.ReadAsStringAsync();
             return JObject.Parse(json);

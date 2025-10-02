@@ -18,8 +18,8 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
     private readonly ILogger? _logger;
     private readonly Config? _config;
 
-    public MinUddannelseClient(Config config)
-        : this(config.UniLogin.Username, config.UniLogin.Password,
+    public MinUddannelseClient(Config config, IHttpClientFactory httpClientFactory)
+        : this(httpClientFactory, config.UniLogin.Username, config.UniLogin.Password,
             config.MinUddannelse.SamlLoginUrl,
             config.MinUddannelse.ApiBaseUrl + "/Node/",
             config.MinUddannelse.ApiBaseUrl,
@@ -29,8 +29,8 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
         _config = config;
     }
 
-    public MinUddannelseClient(Config config, IWeekLetterRepository weekLetterRepository, ILoggerFactory loggerFactory)
-        : this(config.UniLogin.Username, config.UniLogin.Password,
+    public MinUddannelseClient(Config config, IWeekLetterRepository weekLetterRepository, ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory)
+        : this(httpClientFactory, config.UniLogin.Username, config.UniLogin.Password,
             config.MinUddannelse.SamlLoginUrl,
             config.MinUddannelse.ApiBaseUrl + "/Node/",
             config.MinUddannelse.ApiBaseUrl,
@@ -41,8 +41,8 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
         _weekLetterRepository = weekLetterRepository;
     }
 
-    public MinUddannelseClient(string username, string password, string loginUrl, string successUrl, string apiBaseUrl, string studentDataPath, ILogger? logger = null)
-        : base(username, password, loginUrl, successUrl,
+    public MinUddannelseClient(IHttpClientFactory httpClientFactory, string username, string password, string loginUrl, string successUrl, string apiBaseUrl, string studentDataPath, ILogger? logger = null)
+        : base(httpClientFactory, username, password, loginUrl, successUrl,
             logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
             apiBaseUrl,
             studentDataPath)
@@ -81,7 +81,8 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
             _config?.MinUddannelse.ApiBaseUrl ?? "https://www.minuddannelse.net",
             _config?.MinUddannelse.WeekLettersPath ?? "/api/stamdata/ugeplan/getUgeBreve",
             date.Year, WeekLetterUtilities.GetIsoWeekNumber(date), GetChildId(child), DateTimeOffset.UtcNow.ToUnixTimeSeconds());
-        var response = await HttpClient.GetAsync(url);
+        using var httpClient = CreateHttpClient();
+        var response = await httpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
 
@@ -125,7 +126,8 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
             "{0}/api/stamdata/aulaskema/getElevSkema?elevId={1}&tidspunkt={2}-W{3}&_={4}",
             _config?.MinUddannelse.ApiBaseUrl ?? "https://www.minuddannelse.net",
             GetChildId(child), date.Year, WeekLetterUtilities.GetIsoWeekNumber(date), DateTimeOffset.UtcNow.ToUnixTimeSeconds());
-        var response = await HttpClient.GetAsync(url);
+        using var httpClient = CreateHttpClient();
+        var response = await httpClient.GetAsync(url);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         return JObject.Parse(json);
@@ -152,8 +154,6 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
         var login = await base.LoginAsync();
         if (login)
         {
-            HttpClient.DefaultRequestHeaders.Accept.Add(
-                new MediaTypeWithQualityHeaderValue("application/json"));
             _userProfile = await ExtractUserProfile();
             return true;
         }
@@ -163,7 +163,8 @@ public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClie
 
     private async Task<JObject> ExtractUserProfile()
     {
-        var response = await HttpClient.GetAsync(SuccessUrl);
+        using var httpClient = CreateHttpClient();
+        var response = await httpClient.GetAsync(SuccessUrl);
         var content = await response.Content.ReadAsStringAsync();
         var doc = new HtmlDocument();
         doc.LoadHtml(content);
