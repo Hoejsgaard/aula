@@ -192,7 +192,8 @@ public class ArchitectureTests
                                                t.Namespace.Contains("Scheduling")))
             .Where(t => t.Name != "DataService") // Legacy service allowed to have GetChildren
             .Where(t => t.Name != "ChannelManager") // Channel manager operates on all channels
-            .Where(t => t.Name != "SchedulingService"); // Scheduling service coordinates multiple children
+            .Where(t => t.Name != "SchedulingService") // Scheduling service coordinates multiple children
+            .Where(t => t.Name != "AgentService"); // Agent service manages multiple child agents
 
         foreach (var serviceType in serviceTypes)
         {

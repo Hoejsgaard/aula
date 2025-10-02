@@ -167,7 +167,7 @@ public class InvalidCalendarEventExceptionTests
         var exceptionType = typeof(InvalidCalendarEventException);
 
         // Act & Assert
-        Assert.Equal("Aula.Integration.Exceptions", exceptionType.Namespace);
+        Assert.Equal("Aula.External.GoogleCalendar", exceptionType.Namespace);
     }
 
     [Fact]

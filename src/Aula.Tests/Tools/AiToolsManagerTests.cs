@@ -487,7 +487,7 @@ public class AiToolsManagerTests
 
         // Set up GetAllRemindersAsync to return empty list (simulating reminder not found)
         _mockReminderRepository.Setup(s => s.GetAllRemindersAsync())
-            .ReturnsAsync(new List<Aula.Services.Reminder>());
+            .ReturnsAsync(new List<Reminder>());
 
         // Act
         var result = await _aiToolsManager.DeleteReminderAsync(999);

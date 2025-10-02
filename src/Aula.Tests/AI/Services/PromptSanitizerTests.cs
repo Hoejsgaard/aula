@@ -1,7 +1,9 @@
 using Aula.Configuration;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using Aula.External.GoogleCalendar;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using Aula.Core.Security;
 using Aula.External.GoogleCalendar;
 using Microsoft.Extensions.Logging;

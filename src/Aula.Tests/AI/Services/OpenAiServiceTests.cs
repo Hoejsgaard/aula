@@ -435,7 +435,7 @@ public class WeekLetterAiServiceTests
         var serviceType = typeof(WeekLetterAiService);
 
         // Act & Assert
-        Assert.Equal("Aula.Services", serviceType.Namespace);
+        Assert.Equal("Aula.AI.Services", serviceType.Namespace);
     }
 
     [Fact]

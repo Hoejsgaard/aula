@@ -260,7 +260,7 @@ public class WeekLetterSeederTests
         var seederType = typeof(WeekLetterSeeder);
 
         // Act & Assert
-        Assert.Equal("Aula.Utilities", seederType.Namespace);
+        Assert.Equal("Aula.Content.WeekLetters", seederType.Namespace);
     }
 
     [Fact]

@@ -5,6 +5,7 @@ using Aula.Configuration;
 using Aula.Content.WeekLetters;
 using Aula.Content.Processing;
 using Aula.Core.Utilities;
+using Aula.AI.Prompts;
 
 namespace Aula.Tests.Core.Utilities;
 

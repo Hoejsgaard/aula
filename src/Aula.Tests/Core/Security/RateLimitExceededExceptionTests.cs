@@ -4,7 +4,6 @@ using Aula.Core.Models;
 using Aula.Core.Security;
 using Aula.Core.Utilities;
 using Aula.Core.Security;
-using Aula.Services.Exceptions;
 using System;
 using Xunit;
 
@@ -225,7 +224,7 @@ public class RateLimitExceededExceptionTests
         var exceptionType = typeof(RateLimitExceededException);
 
         // Act & Assert
-        Assert.Equal("Aula.Services.Exceptions", exceptionType.Namespace);
+        Assert.Equal("Aula.Core.Security", exceptionType.Namespace);
     }
 
     [Fact]

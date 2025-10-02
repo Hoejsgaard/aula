@@ -2,8 +2,10 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using Aula.External.GoogleCalendar;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using Aula.Core.Security;
 using Aula.AI.Services;
 using Aula.Content.WeekLetters;
@@ -124,7 +126,7 @@ public class AgentServiceTests
         var serviceType = typeof(AgentService);
 
         // Act & Assert
-        Assert.Equal("Aula.Integration", serviceType.Namespace);
+        Assert.Equal("Aula.AI.Services", serviceType.Namespace);
     }
 
     [Fact]

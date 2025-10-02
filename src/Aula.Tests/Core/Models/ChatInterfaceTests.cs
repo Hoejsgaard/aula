@@ -18,7 +18,7 @@ public class ChatInterfaceTests
         // Act & Assert
         Assert.True(type.IsEnum);
         Assert.True(type.IsPublic);
-        Assert.Equal("Aula.Services", type.Namespace);
+        Assert.Equal("Aula.AI.Services", type.Namespace);
     }
 
     [Fact]

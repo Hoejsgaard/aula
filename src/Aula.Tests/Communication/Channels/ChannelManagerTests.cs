@@ -324,7 +324,7 @@ public class ChannelManagerTests
         var managerType = typeof(ChannelManager);
 
         // Act & Assert
-        Assert.Equal("Aula.Channels", managerType.Namespace);
+        Assert.Equal("Aula.Communication.Channels", managerType.Namespace);
     }
 
     [Fact]

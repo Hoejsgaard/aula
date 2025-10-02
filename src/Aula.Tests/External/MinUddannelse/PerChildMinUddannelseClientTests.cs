@@ -3,8 +3,10 @@ using Moq;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using Aula.External.GoogleCalendar;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using Aula.Core.Security;
 using Aula.Repositories;
 using Aula.AI.Services;
@@ -44,7 +46,7 @@ public class PerChildMinUddannelseClientTests
 
         _config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new Aula.Configuration.MinUddannelse
             {
                 Children = new List<Child>
                 {

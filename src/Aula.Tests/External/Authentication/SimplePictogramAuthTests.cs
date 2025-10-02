@@ -1,7 +1,9 @@
 using Aula.Configuration;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using Aula.External.GoogleCalendar;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using Aula.Core.Security;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -28,7 +30,7 @@ public class SimplePictogramAuthTests
 
         _config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new Aula.Configuration.MinUddannelse
             {
                 SamlLoginUrl = "https://test.unilogin.dk",
                 ApiBaseUrl = "https://api.test.aula.dk",

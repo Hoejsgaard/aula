@@ -6,8 +6,10 @@ using Xunit;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using Aula.External.GoogleCalendar;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using Aula.Core.Security;
 
 namespace Aula.Tests.External.GoogleCalendar;
