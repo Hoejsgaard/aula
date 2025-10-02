@@ -113,7 +113,9 @@ public class ChildWeekLetterHandler
 
         // Extract HTML content and convert to Telegram-compatible HTML
         var htmlContent = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
+        _logger.LogInformation("Original HTML content length: {Length}, content: {Content}", htmlContent.Length, htmlContent);
         var letterText = _html2TelegramConverter.Convert(htmlContent);
+        _logger.LogInformation("Converted text length: {Length}, content: {Content}", letterText.Length, letterText);
 
         // Format the title with HTML bold tags
         var title = $"<b>Ugebrev for {_child.FirstName} ({@class}) uge {week}</b>";

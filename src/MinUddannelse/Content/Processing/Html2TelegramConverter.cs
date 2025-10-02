@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 
@@ -26,8 +27,9 @@ public class Html2TelegramConverter
             // Convert to Telegram-compatible HTML
             var result = ProcessNode(htmlDoc.DocumentNode);
 
-            // Clean up extra whitespace and line breaks
-            result = Regex.Replace(result, @"\s+", " ");
+            // Clean up extra whitespace but preserve paragraph breaks
+            result = Regex.Replace(result, @"[ \t]+", " "); // Only collapse spaces and tabs, not newlines
+            result = Regex.Replace(result, @"\n{3,}", "\n\n"); // Limit consecutive newlines to max 2
             result = Regex.Replace(result, @"<br\s*/?>", "\n", RegexOptions.IgnoreCase);
             result = result.Replace("&nbsp;", " ");
 
@@ -44,10 +46,11 @@ public class Html2TelegramConverter
     {
         if (node.NodeType == HtmlNodeType.Text)
         {
-            return node.InnerText;
+            // Properly decode HTML entities like &aelig; and &oslash;
+            return WebUtility.HtmlDecode(node.InnerText);
         }
 
-        if (node.NodeType != HtmlNodeType.Element)
+        if (node.NodeType != HtmlNodeType.Element && node.NodeType != HtmlNodeType.Document)
         {
             return string.Empty;
         }
@@ -56,6 +59,9 @@ public class Html2TelegramConverter
 
         return node.Name.ToLower() switch
         {
+            "#document" => content, // Document node - just return content
+            "html" => content, // HTML root - just return content
+            "body" => content, // Body - just return content
             "b" or "strong" => $"<b>{content}</b>",
             "i" or "em" => $"<i>{content}</i>",
             "u" => $"<u>{content}</u>",

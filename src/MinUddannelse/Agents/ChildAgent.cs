@@ -16,6 +16,8 @@ namespace MinUddannelse.Agents;
 public class ChildAgent : IChildAgent
 {
     private readonly Child _child;
+
+    public Child Child => _child;
     private readonly IOpenAiService _openAiService;
     private readonly IWeekLetterService _weekLetterService;
     private readonly bool _postWeekLettersOnStartup;
@@ -173,6 +175,38 @@ public class ChildAgent : IChildAgent
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error posting week letter on startup for {ChildName}", _child.FirstName);
+        }
+    }
+
+    public async Task SendReminderMessageAsync(string message)
+    {
+        try
+        {
+            var tasks = new List<Task>();
+
+            if (_slackBot != null)
+            {
+                tasks.Add(_slackBot.SendMessageToSlack(message));
+            }
+
+            if (_telegramBot != null)
+            {
+                tasks.Add(_telegramBot.SendMessageToTelegram(message));
+            }
+
+            if (tasks.Count > 0)
+            {
+                await Task.WhenAll(tasks);
+                _logger.LogInformation("Sent reminder message to {ChildName} on {Count} platforms", _child.FirstName, tasks.Count);
+            }
+            else
+            {
+                _logger.LogWarning("No bots available to send reminder message for {ChildName}", _child.FirstName);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending reminder message for {ChildName}", _child.FirstName);
         }
     }
 }

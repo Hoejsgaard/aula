@@ -284,7 +284,7 @@ public class WeekLetterRepository : IWeekLetterRepository
         }
 
         existingRecord.AutoRemindersExtracted = false;
-        existingRecord.AutoRemindersLastUpdated = DateTime.UtcNow;
+        existingRecord.AutoRemindersLastUpdated = null;
 
         await existingRecord.Update<PostedLetter>();
 
