@@ -264,7 +264,6 @@ public class Program
         services.AddSingleton<IRetryTrackingRepository, RetryTrackingRepository>();
         services.AddSingleton<IScheduledTaskRepository, ScheduledTaskRepository>();
 
-        services.AddSingleton<IWeekLetterSeeder, WeekLetterSeeder>();
         services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
 
         services.AddSingleton<ISchedulingService, SchedulingService>();
