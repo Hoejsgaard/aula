@@ -104,6 +104,7 @@ public class WeekLetterReminderService : IWeekLetterReminderService
 
             // Store reminders
             var remindersCreated = 0;
+            var createdReminderInfos = new List<CreatedReminderInfo>();
 
             foreach (var extractedEvent in extractedEvents)
             {
@@ -118,6 +119,15 @@ public class WeekLetterReminderService : IWeekLetterReminderService
                         reminder.RemindTime,
                         reminder.ChildName);
                     remindersCreated++;
+
+                    // Track the created reminder info for channel messages
+                    var eventTime = ExtractEventTimeFromContent(extractedEvent.Title, weekLetterContent);
+                    createdReminderInfos.Add(new CreatedReminderInfo
+                    {
+                        Title = ImproveReminderTitle(extractedEvent.Title),
+                        Date = extractedEvent.EventDate,
+                        EventTime = eventTime
+                    });
 
                     _logger.LogInformation("Created reminder for {ChildName}: {ReminderText}",
                         childName, reminder.Text);
@@ -135,7 +145,12 @@ public class WeekLetterReminderService : IWeekLetterReminderService
             _logger.LogInformation("Successfully created {Count} reminders for {ChildName} week {WeekNumber}/{Year}",
                 remindersCreated, childName, weekNumber, year);
 
-            return new ReminderExtractionResult { Success = true, RemindersCreated = remindersCreated };
+            return new ReminderExtractionResult
+            {
+                Success = true,
+                RemindersCreated = remindersCreated,
+                CreatedReminders = createdReminderInfos
+            };
         }
         catch (Exception ex)
         {
@@ -253,6 +268,60 @@ public class WeekLetterReminderService : IWeekLetterReminderService
             ExtractedDateTime = DateTime.UtcNow,
             ConfidenceScore = (decimal)extractedEvent.ConfidenceScore
         };
+    }
+
+    private string? ExtractEventTimeFromContent(string eventTitle, string weekLetterContent)
+    {
+        try
+        {
+            // Look for time patterns near the event title in the content
+            var titleIndex = weekLetterContent.IndexOf(eventTitle, StringComparison.OrdinalIgnoreCase);
+            if (titleIndex == -1) return null;
+
+            // Extract a window of text around the title (100 chars before and after)
+            var start = Math.Max(0, titleIndex - 100);
+            var end = Math.Min(weekLetterContent.Length, titleIndex + eventTitle.Length + 100);
+            var contextWindow = weekLetterContent.Substring(start, end - start);
+
+            // Look for time patterns like "10:45", "kl. 10:45", "10.45-11.30"
+            var timePattern = @"(?:kl\.?\s*)?(\d{1,2}[:.]\d{2}(?:-\d{1,2}[:.]\d{2})?)";
+            var timeMatch = Regex.Match(contextWindow, timePattern, RegexOptions.IgnoreCase);
+
+            if (timeMatch.Success)
+            {
+                return timeMatch.Groups[1].Value.Replace(":", ".");
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private string ImproveReminderTitle(string originalTitle)
+    {
+        // Clean up and improve the title for better readability
+        var improved = originalTitle.Trim();
+
+        // Remove common prefixes that add no value
+        var prefixesToRemove = new[] { "Event: ", "Deadline: ", "Activity: ", "Task: " };
+        foreach (var prefix in prefixesToRemove)
+        {
+            if (improved.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                improved = improved.Substring(prefix.Length).Trim();
+            }
+        }
+
+        // Ensure first letter is capitalized
+        if (improved.Length > 0)
+        {
+            improved = char.ToUpper(improved[0]) + improved.Substring(1);
+        }
+
+        return improved;
     }
 }
 
