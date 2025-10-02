@@ -28,6 +28,9 @@ public class SchedulingService : ISchedulingService
     private readonly object _lockObject = new object();
     private bool _isRunning;
 
+    // Scheduling timing constants
+    private const int SchedulingWindowSeconds = 10;
+
     // Child-specific events
     // ChildScheduleReady event removed - not currently used
     public event EventHandler<ChildWeekLetterEventArgs>? ChildWeekLetterReady;
@@ -155,7 +158,7 @@ public class SchedulingService : ISchedulingService
             var currentSecond = DateTime.Now.Second;
 
             // Run scheduled tasks only at the top of each minute (when seconds are 0-9)
-            if (currentSecond < 10)
+            if (currentSecond < SchedulingWindowSeconds)
             {
                 _logger.LogInformation("Running scheduled tasks check at {Time}", DateTime.Now);
 
