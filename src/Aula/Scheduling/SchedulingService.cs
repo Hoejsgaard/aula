@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Aula.Communication.Channels;
-using Aula.Integration;
+using Aula.External.MinUddannelse;
 using Aula.Configuration;
 using Aula.AI.Services;
 using Aula.Content.WeekLetters;

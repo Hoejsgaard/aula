@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using Aula.Core.Models;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 using Aula.Repositories;
-using Aula.Services;
+using Aula.Core.Models;
 using Aula.Content.WeekLetters;
 
 namespace Aula.External.MinUddannelse;

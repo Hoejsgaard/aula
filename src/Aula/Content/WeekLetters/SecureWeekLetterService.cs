@@ -4,10 +4,11 @@ using Aula.Core.Models;
 using Aula.Core.Security;
 using Aula.Core.Utilities;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using Aula.Configuration;
-using Aula.Integration;
+using Aula.External.MinUddannelse;
 using Aula.Repositories;
-using Aula.Services.Exceptions;
+using Aula.Core.Security;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 

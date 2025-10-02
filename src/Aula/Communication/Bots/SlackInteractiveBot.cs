@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
-using Aula.Integration;
+using Aula.External.MinUddannelse;
 using Aula.AI.Services;
 using Aula.Content.WeekLetters;
 

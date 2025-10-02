@@ -1,6 +1,6 @@
 using Newtonsoft.Json.Linq;
 
-namespace Aula.External.MinUddannelse;
+namespace Aula.External.Authentication;
 
 /// <summary>
 /// Interface for child-authenticated clients that can fetch week letters and schedules

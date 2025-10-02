@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 
-namespace Aula.External.MinUddannelse;
+namespace Aula.External.Authentication;
 
 /// <summary>
 /// Base authenticator for UniLogin SAML-based authentication

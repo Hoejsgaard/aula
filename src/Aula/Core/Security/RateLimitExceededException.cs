@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace Aula.Services.Exceptions;
+namespace Aula.Core.Security;
 
 /// <summary>
 /// Exception thrown when a rate limit is exceeded.

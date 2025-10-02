@@ -1,5 +1,5 @@
 using Aula.Configuration;
-using Aula.Integration.Exceptions;
+using Aula.External.GoogleCalendar;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
 

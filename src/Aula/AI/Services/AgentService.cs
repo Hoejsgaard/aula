@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Aula.AI.Services;
 using Aula.Core.Utilities;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 using Aula.AI.Services;

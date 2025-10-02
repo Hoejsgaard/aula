@@ -3,7 +3,7 @@ using Aula.Core.Models;
 using Aula.Core.Utilities;
 using System.ComponentModel;
 using Aula.Configuration;
-using Aula.Services;
+using Aula.Core.Models;
 using Aula.Repositories;
 
 namespace Aula.AI.Services;

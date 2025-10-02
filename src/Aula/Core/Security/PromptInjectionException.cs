@@ -1,7 +1,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace Aula.Integration.Exceptions;
+namespace Aula.Core.Security;
 
 /// <summary>
 /// Exception thrown when prompt injection is detected.

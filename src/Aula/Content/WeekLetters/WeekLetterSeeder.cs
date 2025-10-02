@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Aula.Core.Models;
 using Newtonsoft.Json.Linq;
-using Aula.Services;
+using Aula.Core.Models;
 using Aula.Repositories;
 
 namespace Aula.Content.WeekLetters;

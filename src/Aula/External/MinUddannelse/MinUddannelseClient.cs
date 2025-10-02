@@ -1,12 +1,13 @@
 using System.IO;
 using Aula.Core.Models;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using System.Net.Http.Headers;
 using HtmlAgilityPack;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 using Aula.Repositories;
-using Aula.Services;
+using Aula.Core.Models;
 using Aula.Content.WeekLetters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

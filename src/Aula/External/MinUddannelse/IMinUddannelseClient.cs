@@ -1,9 +1,10 @@
 using System;
 using Aula.Core.Models;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
-using Aula.Services;
+using Aula.Core.Models;
 
 namespace Aula.External.MinUddannelse;
 

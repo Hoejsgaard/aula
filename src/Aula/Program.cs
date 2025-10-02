@@ -6,6 +6,7 @@ using Aula.Core.Models;
 using Aula.Core.Security;
 using Aula.Core.Utilities;
 using Aula.External.MinUddannelse;
+using Aula.External.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

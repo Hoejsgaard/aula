@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using Aula.Configuration;
 using Aula.Content.WeekLetters;
 
-namespace Aula.External.MinUddannelse;
+namespace Aula.External.Authentication;
 
 /// <summary>
 /// Handles authentication for children using pictogram-based login instead of passwords
