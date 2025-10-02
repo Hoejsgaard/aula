@@ -29,4 +29,30 @@ DESCRIPTION: [extracted description]
 DATETIME: [yyyy-MM-dd HH:mm]
 CHILD: [child name or NONE]";
     }
+
+    public static string GetWeekLetterEventExtractionPrompt(string weekLetterContent, DateTime currentTime)
+    {
+        return $@"You must respond with ONLY valid JSON. No explanations, no markdown, no text outside the JSON.
+
+Extract actionable events from this Danish school week letter. Current date: {currentTime:yyyy-MM-dd}.
+
+Week Letter: ""{weekLetterContent}""
+
+Return a JSON array of events. If no events found, return: []
+
+JSON format:
+[
+  {{
+    ""type"": ""deadline"",
+    ""title"": ""concise event title"",
+    ""description"": ""detailed description"",
+    ""date"": ""yyyy-MM-dd"",
+    ""confidence"": 0.8
+  }}
+]
+
+Event types: deadline, permission_form, event, supply_needed
+Only include events with confidence >= 0.6.
+Response must be valid JSON only.";
+    }
 }
