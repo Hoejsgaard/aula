@@ -8,7 +8,7 @@ using Xunit;
 using Aula.Configuration;
 using Aula.External.MinUddannelse;
 using Aula.External.GoogleCalendar;
-using Aula.External.Authentication;
+using Aula.External.MinUddannelse;
 using Aula.Core.Security;
 using Aula.AI.Services;
 using Aula.Content.WeekLetters;
