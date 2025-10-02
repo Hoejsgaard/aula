@@ -5,7 +5,6 @@ using MinUddannelse.Communication.Bots;
 using MinUddannelse.Communication.Channels;
 using MinUddannelse.Configuration;
 using MinUddannelse.Events;
-using MinUddannelse.Content.Processing;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
@@ -20,6 +19,7 @@ public class ChildWeekLetterHandler
     private readonly Child _child;
     private readonly ILogger _logger;
     private readonly Html2SlackMarkdownConverter _html2MarkdownConverter;
+    private readonly Html2TelegramConverter _html2TelegramConverter;
 
     public ChildWeekLetterHandler(
         Child child,
@@ -31,6 +31,7 @@ public class ChildWeekLetterHandler
         _child = child;
         _logger = loggerFactory.CreateLogger<ChildWeekLetterHandler>();
         _html2MarkdownConverter = new Html2SlackMarkdownConverter();
+        _html2TelegramConverter = new Html2TelegramConverter();
     }
 
     /// <summary>
@@ -50,20 +51,19 @@ public class ChildWeekLetterHandler
         {
             if (args.WeekLetter != null)
             {
-                // Format the week letter message
-                var message = FormatWeekLetterMessage(args.WeekLetter, args.WeekNumber, args.Year);
-
                 // Post to Slack if bot available
                 if (slackBot != null)
                 {
-                    await slackBot.SendMessageToSlack(message);
+                    var slackMessage = FormatWeekLetterMessageForSlack(args.WeekLetter, args.WeekNumber, args.Year);
+                    await slackBot.SendMessageToSlack(slackMessage);
                     _logger.LogInformation("Posted week letter to Slack for {ChildName}", args.ChildFirstName);
                 }
 
                 // Post to Telegram if bot available
                 if (telegramBot != null)
                 {
-                    await telegramBot.SendMessageToTelegram(message);
+                    var telegramMessage = FormatWeekLetterMessageForTelegram(args.WeekLetter, args.WeekNumber, args.Year);
+                    await telegramBot.SendMessageToTelegram(telegramMessage);
                     _logger.LogInformation("Posted week letter to Telegram for {ChildName}", args.ChildFirstName);
                 }
 
@@ -84,20 +84,39 @@ public class ChildWeekLetterHandler
     }
 
     /// <summary>
-    /// Formats a week letter for display in channels.
+    /// Formats a week letter for display in Slack (Markdown formatting).
     /// </summary>
-    private string FormatWeekLetterMessage(JObject weekLetter, int weekNumber, int year)
+    private string FormatWeekLetterMessageForSlack(JObject weekLetter, int weekNumber, int year)
     {
         // Extract class and week information from the JSON structure
         var @class = weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? "";
         var week = weekLetter["ugebreve"]?[0]?["uge"]?.ToString() ?? weekNumber.ToString();
 
-        // Extract HTML content and convert to readable text
+        // Extract HTML content and convert to Slack-compatible Markdown
         var htmlContent = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
         var letterText = _html2MarkdownConverter.Convert(htmlContent).Replace("**", "*");
 
         // Format the title
         var title = $"Ugebrev for {_child.FirstName} ({@class}) uge {week}";
+
+        return $"{title}\n\n{letterText}";
+    }
+
+    /// <summary>
+    /// Formats a week letter for display in Telegram (HTML formatting).
+    /// </summary>
+    private string FormatWeekLetterMessageForTelegram(JObject weekLetter, int weekNumber, int year)
+    {
+        // Extract class and week information from the JSON structure
+        var @class = weekLetter["ugebreve"]?[0]?["klasseNavn"]?.ToString() ?? "";
+        var week = weekLetter["ugebreve"]?[0]?["uge"]?.ToString() ?? weekNumber.ToString();
+
+        // Extract HTML content and convert to Telegram-compatible HTML
+        var htmlContent = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
+        var letterText = _html2TelegramConverter.Convert(htmlContent);
+
+        // Format the title with HTML bold tags
+        var title = $"<b>Ugebrev for {_child.FirstName} ({@class}) uge {week}</b>";
 
         return $"{title}\n\n{letterText}";
     }
