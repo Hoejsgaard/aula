@@ -82,7 +82,6 @@ public class ChildAgent : IChildAgent
 
     private async Task StartSlackBotAsync()
     {
-        // Start Slack bot if configured for this child
         if (_child.Channels?.Slack?.Enabled == true &&
             _child.Channels?.Slack?.EnableInteractiveBot == true &&
             !string.IsNullOrEmpty(_child.Channels?.Slack?.ApiToken))
