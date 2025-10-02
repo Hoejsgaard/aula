@@ -1,4 +1,5 @@
 using Aula.Configuration;
+using Aula.Integration.Exceptions;
 using Microsoft.Extensions.Logging;
 using System.Text.RegularExpressions;
 
@@ -80,7 +81,7 @@ public class PromptSanitizer : IPromptSanitizer
         {
             _logger.LogWarning("Prompt injection detected for {ChildName}. Input blocked.",
                 child.FirstName);
-            throw new PromptInjectionException(input, child.FirstName);
+            throw new PromptInjectionException(child.FirstName, input.Length);
         }
 
         // Remove any HTML/script tags

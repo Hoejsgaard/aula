@@ -37,23 +37,3 @@ public interface IChildRateLimiter
     /// <param name="child">The child whose limits to reset</param>
     Task ResetLimitsAsync(Child child);
 }
-
-/// <summary>
-/// Exception thrown when a rate limit is exceeded.
-/// </summary>
-public class RateLimitExceededException : Exception
-{
-    public string Operation { get; }
-    public string ChildName { get; }
-    public int LimitPerWindow { get; }
-    public TimeSpan WindowDuration { get; }
-
-    public RateLimitExceededException(string operation, string childName, int limitPerWindow, TimeSpan windowDuration)
-        : base($"Rate limit exceeded for operation '{operation}' by {childName}. Limit: {limitPerWindow} per {windowDuration.TotalMinutes} minutes")
-    {
-        Operation = operation;
-        ChildName = childName;
-        LimitPerWindow = limitPerWindow;
-        WindowDuration = windowDuration;
-    }
-}

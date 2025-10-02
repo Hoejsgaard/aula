@@ -36,19 +36,3 @@ public interface IPromptSanitizer
     /// </summary>
     IReadOnlyList<string> GetBlockedPatterns();
 }
-
-/// <summary>
-/// Exception thrown when prompt injection is detected.
-/// </summary>
-public class PromptInjectionException : Exception
-{
-    public string AttemptedInput { get; }
-    public string ChildName { get; }
-
-    public PromptInjectionException(string attemptedInput, string childName)
-        : base($"Prompt injection detected for {childName}. Input blocked.")
-    {
-        AttemptedInput = attemptedInput;
-        ChildName = childName;
-    }
-}
