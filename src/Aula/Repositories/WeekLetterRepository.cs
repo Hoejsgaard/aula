@@ -1,4 +1,6 @@
 using Aula.Services;
+using Aula.Core.Models;
+using Aula.Core.Models;
 using Microsoft.Extensions.Logging;
 using Supabase;
 using System.Collections.Generic;

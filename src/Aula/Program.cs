@@ -1,19 +1,27 @@
 using Microsoft.Extensions.Caching.Memory;
+using Aula.External.GoogleCalendar;
+using Aula.Content.WeekLetters;
+using Aula.AI.Services;
+using Aula.Core.Models;
+using Aula.Core.Security;
+using Aula.Core.Utilities;
+using Aula.External.MinUddannelse;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Supabase;
 using System.Net;
-using Aula.Integration;
+using Aula.AI.Services;
 using Aula.Scheduling;
 using Aula.Configuration;
-using Aula.Services;
+using Aula.Content.WeekLetters;
 using Aula.Repositories;
 using Aula.Agents;
 using Aula.Authentication;
-using Aula.Channels;
-using Aula.Tools;
-using Aula.Utilities;
+using Aula.Communication.Channels;
+using Aula.Core.Security;
+using Aula.Core.Utilities;
+using Aula.Core.Models;
 
 namespace Aula;
 

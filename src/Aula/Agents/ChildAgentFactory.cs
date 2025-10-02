@@ -1,8 +1,10 @@
 using System;
+using Aula.Content.WeekLetters;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Aula.Configuration;
-using Aula.Services;
+using Aula.AI.Services;
+using Aula.Content.WeekLetters;
 using Aula.Scheduling;
 
 namespace Aula.Agents;

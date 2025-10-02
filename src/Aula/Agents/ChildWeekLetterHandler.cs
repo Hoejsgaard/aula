@@ -1,10 +1,11 @@
 using System;
+using Aula.Content.Processing;
 using System.Threading.Tasks;
-using Aula.Bots;
-using Aula.Channels;
+using Aula.Communication.Bots;
+using Aula.Communication.Channels;
 using Aula.Configuration;
 using Aula.Events;
-using Aula.Utilities;
+using Aula.Content.Processing;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 

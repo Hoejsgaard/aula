@@ -1,4 +1,5 @@
 using Newtonsoft.Json.Linq;
+using Aula.Core.Models;
 
 namespace Aula.Authentication;
 

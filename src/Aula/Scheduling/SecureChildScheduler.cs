@@ -1,4 +1,5 @@
 using Aula.Configuration;
+using Aula.Core.Models;
 using Microsoft.Extensions.Logging;
 using NCrontab;
 

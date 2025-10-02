@@ -1,4 +1,5 @@
 using Aula.Services;
+using Aula.Core.Models;
 using System.Threading.Tasks;
 
 namespace Aula.Repositories;

@@ -1,12 +1,13 @@
 using System;
+using Aula.Content.WeekLetters;
 using System.Threading.Tasks;
 using Aula.Configuration;
-using Aula.Services;
+using Aula.AI.Services;
+using Aula.Content.WeekLetters;
 using Aula.Scheduling;
-using Aula.Bots;
-using Aula.Channels;
+using Aula.Communication.Bots;
+using Aula.Communication.Channels;
 using Aula.Events;
-using Aula.Integration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;

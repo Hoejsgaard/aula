@@ -1,14 +1,18 @@
 using Microsoft.Extensions.Logging;
+using Aula.Content.Processing;
+using Aula.Content.WeekLetters;
+using Aula.Core.Models;
 using NCrontab;
 using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using Aula.Channels;
+using Aula.Communication.Channels;
 using Aula.Integration;
 using Aula.Configuration;
-using Aula.Services;
+using Aula.AI.Services;
+using Aula.Content.WeekLetters;
 using Aula.Repositories;
-using Aula.Utilities;
+using Aula.Content.WeekLetters;
 using Aula.Events;
 
 namespace Aula.Scheduling;
