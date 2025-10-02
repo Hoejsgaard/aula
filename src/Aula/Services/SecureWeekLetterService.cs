@@ -2,16 +2,12 @@ using Aula.Authentication;
 using Aula.Configuration;
 using Aula.Integration;
 using Aula.Repositories;
+using Aula.Services.Exceptions;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
 namespace Aula.Services;
 
-/// <summary>
-/// Secure week letter service with defense-in-depth security layers.
-/// Provides isolated week letter operations for each child with comprehensive security controls.
-/// NOTE: Child permission validation temporarily disabled pending architecture review.
-/// </summary>
 public class SecureWeekLetterService : IWeekLetterService
 {
     private readonly IChildAuditService _auditService;
@@ -302,93 +298,129 @@ public class SecureWeekLetterService : IWeekLetterService
     {
         ArgumentNullException.ThrowIfNull(child);
 
-        // Calculate week number for the given date
+        var weekInfo = CalculateWeekInfo(date);
+        await ValidateRateLimits(child);
+
+        try
+        {
+            LogWeekLetterRequest(child, date, weekInfo);
+
+            var cachedResult = CheckMemoryCache(child, weekInfo);
+            if (cachedResult != null) return cachedResult;
+
+            var databaseResult = await CheckDatabase(child, weekInfo);
+            if (databaseResult != null) return databaseResult;
+
+            var liveResult = allowLiveFetch ? await TryLiveFetch(child, date, weekInfo) : null;
+            if (liveResult != null) return liveResult;
+
+            await LogFinalAudit(child, weekInfo, false);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            await HandleWeekLetterError(child, weekInfo, ex);
+            throw;
+        }
+    }
+
+    private WeekInfo CalculateWeekInfo(DateOnly date)
+    {
         var calendar = System.Globalization.CultureInfo.InvariantCulture.Calendar;
         var weekNumber = calendar.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue),
             System.Globalization.CalendarWeekRule.FirstFourDayWeek,
             DayOfWeek.Monday);
-        var year = date.Year;
 
-        // Layer 3: Rate limiting
+        return new WeekInfo { WeekNumber = weekNumber, Year = date.Year };
+    }
+
+    private async Task ValidateRateLimits(Child child)
+    {
         if (!await _rateLimiter.IsAllowedAsync(child, "GetOrFetchWeekLetter"))
         {
             _logger.LogWarning("Rate limit exceeded for {ChildName} getting week letter", child.FirstName);
             await _auditService.LogSecurityEventAsync(child, "RateLimitExceeded", "GetOrFetchWeekLetter", SecuritySeverity.Warning);
             throw new RateLimitExceededException("GetOrFetchWeekLetter", child.FirstName, 50, TimeSpan.FromMinutes(1));
         }
+    }
+
+    private void LogWeekLetterRequest(Child child, DateOnly date, WeekInfo weekInfo)
+    {
+        _logger.LogInformation("Getting or fetching week letter for {ChildName} date {Date} (week {WeekNumber}/{Year})",
+            child.FirstName, date, weekInfo.WeekNumber, weekInfo.Year);
+    }
+
+    private JObject? CheckMemoryCache(Child child, WeekInfo weekInfo)
+    {
+        var cached = _dataService.GetWeekLetter(child, weekInfo.WeekNumber, weekInfo.Year);
+        if (cached != null)
+        {
+            _logger.LogDebug("Week letter found in cache for {ChildName}", child.FirstName);
+        }
+        return cached;
+    }
+
+    private async Task<JObject?> CheckDatabase(Child child, WeekInfo weekInfo)
+    {
+        var storedContent = await _weekLetterRepository.GetStoredWeekLetterAsync(child.FirstName, weekInfo.WeekNumber, weekInfo.Year);
+        if (string.IsNullOrEmpty(storedContent)) return null;
 
         try
         {
-            _logger.LogInformation("Getting or fetching week letter for {ChildName} date {Date} (week {WeekNumber}/{Year})",
-                child.FirstName, date, weekNumber, year);
-
-            // Check cache first
-            var cached = _dataService.GetWeekLetter(child, weekNumber, year);
-            if (cached != null)
-            {
-                _logger.LogDebug("Week letter found in cache for {ChildName}", child.FirstName);
-                return cached;
-            }
-
-            // Check database
-            var storedContent = await _weekLetterRepository.GetStoredWeekLetterAsync(child.FirstName, weekNumber, year);
-            if (!string.IsNullOrEmpty(storedContent))
-            {
-                try
-                {
-                    var json = JObject.Parse(storedContent);
-                    // Cache it for future use
-                    _dataService.CacheWeekLetter(child, weekNumber, year, json);
-                    _logger.LogDebug("Week letter found in database for {ChildName}", child.FirstName);
-                    return json;
-                }
-                catch (Exception parseEx)
-                {
-                    _logger.LogWarning(parseEx, "Failed to parse stored week letter for {ChildName}", child.FirstName);
-                }
-            }
-
-            // Fetch from MinUddannelse if allowed
-            if (allowLiveFetch)
-            {
-                _logger.LogInformation("Fetching week letter from MinUddannelse for {ChildName}", child.FirstName);
-
-                try
-                {
-                    // Use the MinUddannelse client directly to fetch the week letter
-                    var fetchedLetter = await _minUddannelseClient.GetWeekLetter(child, date, true);
-
-                    if (fetchedLetter != null)
-                    {
-                        _logger.LogInformation("Successfully fetched week letter for {ChildName} week {WeekNumber}/{Year}",
-                            child.FirstName, weekNumber, year);
-
-                        // Cache the fetched letter for future use
-                        await CacheWeekLetterAsync(child, weekNumber, year, fetchedLetter);
-
-                        await _rateLimiter.RecordOperationAsync(child, "GetOrFetchWeekLetter");
-                        await _auditService.LogDataAccessAsync(child, "GetOrFetchWeekLetter", $"letter_{weekNumber}_{year}", true);
-
-                        return fetchedLetter;
-                    }
-                }
-                catch (Exception fetchEx)
-                {
-                    _logger.LogError(fetchEx, "Failed to fetch week letter from MinUddannelse for {ChildName}", child.FirstName);
-                }
-            }
-
-            await _rateLimiter.RecordOperationAsync(child, "GetOrFetchWeekLetter");
-            await _auditService.LogDataAccessAsync(child, "GetOrFetchWeekLetter", $"letter_{weekNumber}_{year}", false);
-
+            var json = JObject.Parse(storedContent);
+            _dataService.CacheWeekLetter(child, weekInfo.WeekNumber, weekInfo.Year, json);
+            _logger.LogDebug("Week letter found in database for {ChildName}", child.FirstName);
+            return json;
+        }
+        catch (Exception parseEx)
+        {
+            _logger.LogWarning(parseEx, "Failed to parse stored week letter for {ChildName}", child.FirstName);
             return null;
         }
-        catch (Exception ex)
+    }
+
+    private async Task<JObject?> TryLiveFetch(Child child, DateOnly date, WeekInfo weekInfo)
+    {
+        _logger.LogInformation("Fetching week letter from MinUddannelse for {ChildName}", child.FirstName);
+
+        try
         {
-            _logger.LogError(ex, "Failed to get or fetch week letter for {ChildName}", child.FirstName);
-            await _auditService.LogDataAccessAsync(child, "GetOrFetchWeekLetter", $"letter_{weekNumber}_{year}", false);
-            throw;
+            var fetchedLetter = await _minUddannelseClient.GetWeekLetter(child, date, true);
+
+            if (fetchedLetter != null)
+            {
+                _logger.LogInformation("Successfully fetched week letter for {ChildName} week {WeekNumber}/{Year}",
+                    child.FirstName, weekInfo.WeekNumber, weekInfo.Year);
+
+                await CacheWeekLetterAsync(child, weekInfo.WeekNumber, weekInfo.Year, fetchedLetter);
+                await LogFinalAudit(child, weekInfo, true);
+                return fetchedLetter;
+            }
         }
+        catch (Exception fetchEx)
+        {
+            _logger.LogError(fetchEx, "Failed to fetch week letter from MinUddannelse for {ChildName}", child.FirstName);
+        }
+
+        return null;
+    }
+
+    private async Task LogFinalAudit(Child child, WeekInfo weekInfo, bool success)
+    {
+        await _rateLimiter.RecordOperationAsync(child, "GetOrFetchWeekLetter");
+        await _auditService.LogDataAccessAsync(child, "GetOrFetchWeekLetter", $"letter_{weekInfo.WeekNumber}_{weekInfo.Year}", success);
+    }
+
+    private async Task HandleWeekLetterError(Child child, WeekInfo weekInfo, Exception ex)
+    {
+        _logger.LogError(ex, "Failed to get or fetch week letter for {ChildName}", child.FirstName);
+        await _auditService.LogDataAccessAsync(child, "GetOrFetchWeekLetter", $"letter_{weekInfo.WeekNumber}_{weekInfo.Year}", false);
+    }
+
+    private class WeekInfo
+    {
+        public int WeekNumber { get; init; }
+        public int Year { get; init; }
     }
 
     public async Task<List<JObject>> GetAllWeekLettersAsync(Child child)
