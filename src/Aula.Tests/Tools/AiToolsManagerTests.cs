@@ -2,10 +2,14 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Newtonsoft.Json.Linq;
-using Aula.Tools;
+using Aula.AI.Services;
 using Aula.Repositories;
 using Aula.Configuration;
-using Aula.Services;
+using Aula.AI.Services;
+using Aula.Content.WeekLetters;
+using Aula.Core.Models;
+using Aula.Core.Security;
+using Aula.Core.Utilities;
 
 namespace Aula.Tests.Tools;
 

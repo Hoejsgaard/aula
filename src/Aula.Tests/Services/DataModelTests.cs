@@ -1,6 +1,10 @@
 using Aula.Configuration;
 using ConfigChild = Aula.Configuration.Child;
-using Aula.Services;
+using Aula.AI.Services;
+using Aula.Content.WeekLetters;
+using Aula.Core.Models;
+using Aula.Core.Security;
+using Aula.Core.Utilities;
 
 namespace Aula.Tests.Services;
 

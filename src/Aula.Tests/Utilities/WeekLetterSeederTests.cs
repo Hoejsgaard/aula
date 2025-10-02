@@ -1,7 +1,13 @@
 using Microsoft.Extensions.Logging;
 using Moq;
-using Aula.Utilities;
-using Aula.Services;
+using Aula.Content.WeekLetters;
+using Aula.Content.Processing;
+using Aula.Core.Utilities;
+using Aula.AI.Services;
+using Aula.Content.WeekLetters;
+using Aula.Core.Models;
+using Aula.Core.Security;
+using Aula.Core.Utilities;
 using Aula.Repositories;
 using System;
 using System.Threading.Tasks;

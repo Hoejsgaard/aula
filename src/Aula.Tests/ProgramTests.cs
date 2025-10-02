@@ -6,11 +6,18 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Aula.Configuration;
-using Aula.Integration;
-using Aula.Services;
+using Aula.External.MinUddannelse;
+using Aula.External.GoogleCalendar;
+using Aula.External.Authentication;
+using Aula.Core.Security;
+using Aula.AI.Services;
+using Aula.Content.WeekLetters;
+using Aula.Core.Models;
+using Aula.Core.Security;
+using Aula.Core.Utilities;
 using Aula.Scheduling;
-using Aula.Bots;
-using Aula.Channels;
+using Aula.Communication.Bots;
+using Aula.Communication.Channels;
 
 namespace Aula.Tests;
 

@@ -1,6 +1,10 @@
 using Aula.Configuration;
-using Aula.Integration;
-using Aula.Integration.Exceptions;
+using Aula.External.MinUddannelse;
+using Aula.External.GoogleCalendar;
+using Aula.External.Authentication;
+using Aula.Core.Security;
+using Aula.Core.Security;
+using Aula.External.GoogleCalendar;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;

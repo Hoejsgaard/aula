@@ -1,5 +1,9 @@
-using Aula.Services;
-using Aula.Services.Exceptions;
+using Aula.AI.Services;
+using Aula.Content.WeekLetters;
+using Aula.Core.Models;
+using Aula.Core.Security;
+using Aula.Core.Utilities;
+using Aula.Core.Security;
 using System;
 using Xunit;
 

@@ -1,4 +1,5 @@
-using Aula.Integration.Exceptions;
+using Aula.Core.Security;
+using Aula.External.GoogleCalendar;
 using System;
 using Xunit;
 

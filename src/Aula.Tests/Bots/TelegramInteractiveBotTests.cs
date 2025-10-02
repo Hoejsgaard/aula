@@ -1,6 +1,10 @@
-using Aula.Bots;
+using Aula.Communication.Bots;
 using Aula.Configuration;
-using Aula.Services;
+using Aula.AI.Services;
+using Aula.Content.WeekLetters;
+using Aula.Core.Models;
+using Aula.Core.Security;
+using Aula.Core.Utilities;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System;

@@ -7,8 +7,12 @@ using Aula.Repositories;
 using Moq;
 using Newtonsoft.Json.Linq;
 using Xunit;
-using Aula.Services;
-using Aula.Tools;
+using Aula.AI.Services;
+using Aula.Content.WeekLetters;
+using Aula.Core.Models;
+using Aula.Core.Security;
+using Aula.Core.Utilities;
+using Aula.AI.Services;
 using Aula.Configuration;
 
 namespace Aula.Tests.Services;

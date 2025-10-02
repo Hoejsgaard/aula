@@ -2,7 +2,9 @@ using Xunit;
 using Newtonsoft.Json.Linq;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Aula.Utilities;
+using Aula.Content.WeekLetters;
+using Aula.Content.Processing;
+using Aula.Core.Utilities;
 
 namespace Aula.Tests.Utilities;
 

@@ -1,4 +1,4 @@
-using Aula.Channels;
+using Aula.Communication.Channels;
 using Aula.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;

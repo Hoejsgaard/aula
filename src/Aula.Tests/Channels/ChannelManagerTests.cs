@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Moq;
-using Aula.Channels;
+using Aula.Communication.Channels;
 using System;
 using System.Collections.Generic;
 using System.Linq;

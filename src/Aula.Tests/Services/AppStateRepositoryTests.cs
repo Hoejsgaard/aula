@@ -1,5 +1,9 @@
 using Microsoft.Extensions.Logging;
-using Aula.Services;
+using Aula.AI.Services;
+using Aula.Content.WeekLetters;
+using Aula.Core.Models;
+using Aula.Core.Security;
+using Aula.Core.Utilities;
 using Aula.Repositories;
 using System;
 using Xunit;

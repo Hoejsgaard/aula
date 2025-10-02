@@ -2,7 +2,9 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Aula.Configuration;
-using Aula.Utilities;
+using Aula.Content.WeekLetters;
+using Aula.Content.Processing;
+using Aula.Core.Utilities;
 
 namespace Aula.Tests.Utilities;
 

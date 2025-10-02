@@ -1,8 +1,15 @@
 using Microsoft.Extensions.Logging;
 using Moq;
 using Aula.Configuration;
-using Aula.Integration;
-using Aula.Services;
+using Aula.External.MinUddannelse;
+using Aula.External.GoogleCalendar;
+using Aula.External.Authentication;
+using Aula.Core.Security;
+using Aula.AI.Services;
+using Aula.Content.WeekLetters;
+using Aula.Core.Models;
+using Aula.Core.Security;
+using Aula.Core.Utilities;
 using Aula.Repositories;
 using Newtonsoft.Json.Linq;
 using System;

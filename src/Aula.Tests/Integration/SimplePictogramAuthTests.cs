@@ -1,5 +1,8 @@
 using Aula.Configuration;
-using Aula.Integration;
+using Aula.External.MinUddannelse;
+using Aula.External.GoogleCalendar;
+using Aula.External.Authentication;
+using Aula.Core.Security;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Net.Http;

@@ -1,4 +1,8 @@
-using Aula.Services;
+using Aula.AI.Services;
+using Aula.Content.WeekLetters;
+using Aula.Core.Models;
+using Aula.Core.Security;
+using Aula.Core.Utilities;
 using Xunit;
 
 namespace Aula.Tests.Services;

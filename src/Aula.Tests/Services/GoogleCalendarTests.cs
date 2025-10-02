@@ -5,7 +5,10 @@ using Moq;
 using Xunit;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
-using Aula.Integration;
+using Aula.External.MinUddannelse;
+using Aula.External.GoogleCalendar;
+using Aula.External.Authentication;
+using Aula.Core.Security;
 
 namespace Aula.Tests.Services;
 
