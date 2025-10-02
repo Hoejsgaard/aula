@@ -69,9 +69,9 @@ public class ChildAgent : IChildAgent
         _logger.LogInformation("Stopping agent for child {ChildName}", _child.FirstName);
 
         // Unsubscribe from events to prevent memory leak
-        if (_weekLetterHandler != null && _schedulingService is SchedulingService schedService)
+        if (_weekLetterHandler != null)
         {
-            schedService.ChildWeekLetterReady -= _weekLetterHandler;
+            _schedulingService.ChildWeekLetterReady -= _weekLetterHandler;
             _weekLetterHandler = null;
         }
 
@@ -126,15 +126,12 @@ public class ChildAgent : IChildAgent
 
     private void SubscribeToWeekLetterEvents()
     {
-        if (_schedulingService is SchedulingService schedService)
+        _weekLetterHandler = async (sender, args) =>
         {
-            _weekLetterHandler = async (sender, args) =>
-            {
-                var handler = new ChildWeekLetterHandler(_child, _loggerFactory);
-                await handler.HandleWeekLetterEventAsync(args, _slackBot, _telegramBot);
-            };
-            schedService.ChildWeekLetterReady += _weekLetterHandler;
-        }
+            var handler = new ChildWeekLetterHandler(_child, _loggerFactory);
+            await handler.HandleWeekLetterEventAsync(args, _slackBot, _telegramBot);
+        };
+        _schedulingService.ChildWeekLetterReady += _weekLetterHandler;
     }
 
     private async Task PostStartupWeekLetterAsync()
