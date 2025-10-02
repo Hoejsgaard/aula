@@ -32,14 +32,9 @@ public class SchedulingService : ISchedulingService
     private readonly object _lockObject = new object();
     private bool _isRunning;
 
-    // Scheduling timing constants
     private const int SchedulingWindowSeconds = 10;
 
-    // Child-specific events
-    // ChildScheduleReady event removed - not currently used
     public event EventHandler<ChildWeekLetterEventArgs>? ChildWeekLetterReady;
-
-    // Public method to trigger week letter event (used for startup posting)
     public void TriggerChildWeekLetterReady(ChildWeekLetterEventArgs args)
     {
         ChildWeekLetterReady?.Invoke(this, args);
@@ -82,12 +77,9 @@ public class SchedulingService : ISchedulingService
             _isRunning = true;
         }
 
-        // Start the timer first, then check for missed reminders in background
         var timerInterval = TimeSpan.FromSeconds(_config.Scheduling.IntervalSeconds);
         _schedulingTimer = new Timer(CheckScheduledTasksWrapper, null, TimeSpan.Zero, timerInterval);
         _logger.LogInformation("Scheduling service timer started - checking every {IntervalSeconds} seconds", _config.Scheduling.IntervalSeconds);
-
-        // Check for missed reminders in background to avoid blocking startup
         _ = Task.Run(async () =>
         {
             try
@@ -118,11 +110,7 @@ public class SchedulingService : ISchedulingService
         }
         catch (ObjectDisposedException)
         {
-            // Timer was already disposed
         }
-
-        // Wait for running tasks to complete (with timeout)
-        // await Task.WhenAny(Task.WhenAll(_runningTasks), Task.Delay(TimeSpan.FromSeconds(_config.Timers.ShutdownTimeoutSeconds)));
 
         _logger.LogInformation("Scheduling service stopped");
 
@@ -133,7 +121,6 @@ public class SchedulingService : ISchedulingService
     {
         _logger.LogInformation("TIMER FIRED - CheckScheduledTasksWrapper called at {Time}", DateTime.Now);
 
-        // Don't use async void - use Fire and Forget pattern instead
         _ = Task.Run(async () =>
         {
             try
@@ -155,13 +142,9 @@ public class SchedulingService : ISchedulingService
         {
             _logger.LogInformation("Timer fired: Checking scheduled tasks and reminders at {LocalTime} (UTC: {UtcTime})", DateTime.Now, DateTime.UtcNow);
 
-            // ALWAYS check for pending reminders every 10 seconds
             await ExecutePendingReminders();
 
-            // Only check database-driven scheduled tasks every minute (every 6th call)
             var currentSecond = DateTime.Now.Second;
-
-            // Run scheduled tasks only at the top of each minute (when seconds are 0-9)
             if (currentSecond < SchedulingWindowSeconds)
             {
                 _logger.LogInformation("Running scheduled tasks check at {Time}", DateTime.Now);
@@ -177,12 +160,9 @@ public class SchedulingService : ISchedulingService
                         {
                             _logger.LogInformation("Executing scheduled task: {TaskName}", task.Name);
 
-                            // Update last run time
                             task.LastRun = now;
                             task.NextRun = GetNextRunTime(task.CronExpression, now);
                             await _scheduledTaskRepository.UpdateScheduledTaskAsync(task);
-
-                            // Execute the task
                             await ExecuteTask(task);
                         }
                     }
@@ -196,7 +176,6 @@ public class SchedulingService : ISchedulingService
         catch (Exception ex)
         {
             _logger.LogError(ex, "CRITICAL: Error in CheckScheduledTasks - this could cause app crashes");
-            // Don't rethrow - let the timer continue
         }
     }
 
@@ -214,7 +193,6 @@ public class SchedulingService : ISchedulingService
                 ? schedule.GetNextOccurrence(task.LastRun.Value)
                 : schedule.GetNextOccurrence(now.AddMinutes(-_config.Scheduling.InitialOccurrenceOffsetMinutes));
 
-            // Allow for a window to account for timing variations
             return now >= nextRun && now <= nextRun.AddMinutes(_config.Scheduling.TaskExecutionWindowMinutes);
         }
         catch (Exception ex)
@@ -300,7 +278,6 @@ public class SchedulingService : ISchedulingService
         string childInfo = !string.IsNullOrEmpty(reminder.ChildName) ? $" ({reminder.ChildName})" : "";
         string message = $"*Reminder*{childInfo}: {reminder.Text}";
 
-        // Send to all enabled channels
         try
         {
             _logger.LogInformation("Reminder {ReminderId} sending disabled in current build", reminder.Id);
@@ -319,7 +296,6 @@ public class SchedulingService : ISchedulingService
         {
             _logger.LogInformation("Executing weekly letter check");
 
-            // Get all children from config
             var children = _config.MinUddannelse?.Children ?? new List<Child>();
             if (!children.Any())
             {
@@ -367,7 +343,6 @@ public class SchedulingService : ISchedulingService
             if (await IsContentAlreadyPosted(child, result.contentHash!, weekNumber, year))
                 return;
 
-            // Emit child-specific event instead of directly posting
             var childId = child.FirstName.ToLowerInvariant().Replace(" ", "_");
             var eventArgs = new ChildWeekLetterEventArgs(
                 childId,
@@ -377,8 +352,6 @@ public class SchedulingService : ISchedulingService
                 weekLetter);
 
             ChildWeekLetterReady?.Invoke(this, eventArgs);
-
-            // Mark as posted after emitting event (subscribers will handle the actual posting)
             await _weekLetterRepository.MarkWeekLetterAsPostedAsync(child.FirstName, weekNumber, year, result.contentHash!);
 
             _logger.LogInformation("Emitted week letter event for {ChildName}", child.FirstName);
@@ -449,7 +422,6 @@ public class SchedulingService : ISchedulingService
     {
         await PostWeekLetter(child, weekLetter, content);
 
-        // Store the complete week letter with raw content for future retrieval
         await _weekLetterRepository.StoreWeekLetterAsync(child.FirstName, weekNumber, year, contentHash, weekLetter.ToString(), true, child.Channels?.Telegram?.Enabled == true);
         await _appStateRepository.SetAppStateAsync($"last_posted_hash_{child.FirstName}", contentHash);
         await _retryTrackingRepository.MarkRetryAsSuccessfulAsync(child.FirstName, weekNumber, year);
@@ -472,7 +444,6 @@ public class SchedulingService : ISchedulingService
     {
         try
         {
-            // Extract title
             var ugebreve = weekLetter?["ugebreve"];
             var weekLetterTitle = "";
             if (ugebreve is JArray ugebreveArray && ugebreveArray.Count > 0)
@@ -482,12 +453,9 @@ public class SchedulingService : ISchedulingService
                 weekLetterTitle = $"Uge {uge} - {klasseNavn}";
             }
 
-            // Convert HTML to markdown for Slack
             var html2MarkdownConverter = new Html2SlackMarkdownConverter();
             var markdownContent = html2MarkdownConverter.Convert(content).Replace("**", "*");
 
-            // Week letter posting is complex and platform-specific (Slack uses markdown, Telegram uses JSON)
-            // For now, use channels directly until IChannel interface is enhanced with week letter capabilities
 
             _logger.LogInformation("Week letter posting disabled in current build for {ChildName}", child.FirstName);
         }
@@ -521,10 +489,7 @@ public class SchedulingService : ISchedulingService
                     string message = $"⚠️ *Missed Reminder*{childInfo}: {reminder.Text}\n" +
                                    $"_Was scheduled for {reminderLocalDateTime:HH:mm} ({missedBy.TotalMinutes:F0} minutes ago)_";
 
-                    // Send notification about missed reminder - disabled in current build
                     _logger.LogInformation("Missed reminder notification disabled in current build: {Message}", message);
-
-                    // Delete the missed reminder so it doesn't keep showing up
                     await _reminderRepository.DeleteReminderAsync(reminder.Id);
 
                     _logger.LogInformation("Notified about missed reminder: {Text}", reminder.Text);

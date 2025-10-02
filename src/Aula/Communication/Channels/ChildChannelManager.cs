@@ -15,7 +15,6 @@ public class ChildChannelManager : IChildChannelManager
     private readonly IMessageContentFilter _contentFilter;
     private readonly ILogger _logger;
 
-    // In-memory channel configurations (in production, this would be in database)
     private readonly Dictionary<string, List<ChildChannelConfig>> _childChannelConfigs = new();
     private readonly object _configLock = new();
 
@@ -222,7 +221,6 @@ public class ChildChannelManager : IChildChannelManager
 
         if (preferred == null)
         {
-            // Fall back to first enabled channel
             preferred = channels.FirstOrDefault(c => c.IsEnabled);
         }
 
@@ -237,7 +235,6 @@ public class ChildChannelManager : IChildChannelManager
         return channels.Any(c => c.IsEnabled);
     }
 
-    // Configuration management (would be in database in production)
     public void ConfigureChildChannel(Child child, ChildChannelConfig config)
     {
         lock (_configLock)
