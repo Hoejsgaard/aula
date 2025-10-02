@@ -1,0 +1,84 @@
+{
+  "review_id": "2025-10-02-002",
+  "timestamp": "2025-10-02T06:20:48.484Z",
+  "status": "needs_changes",
+  "round": 1,
+  "design_compliance": {
+    "follows_architecture": true,
+    "major_violations": []
+  },
+  "comments": [
+    {
+      "type": "specific",
+      "file": "src/Aula.Tests/External/MinUddannelse/MinUddannelseClientTests.cs",
+      "severity": "major",
+      "category": "missing_feature",
+      "comment": "Tests are missing for the NotSupportedException that should be thrown by GetWeekSchedule method. This is a critical behavior change that needs test coverage.",
+      "suggested_fix": "Add tests like:\n[Fact]\npublic async Task GetWeekSchedule_ThrowsNotSupportedException()\n{\n    var client = new MinUddannelseClient(_mockWeekLetterRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);\n    var ex = await Assert.ThrowsAsync<NotSupportedException>(() => client.GetWeekSchedule(_testChild, DateOnly.FromDateTime(DateTime.Today)));\n    Assert.Contains(\"PerChildMinUddannelseClient\", ex.Message);\n}"
+    },
+    {
+      "type": "specific",
+      "file": "src/Aula.Tests/External/MinUddannelse/MinUddannelseClientTests.cs",
+      "severity": "major",
+      "category": "missing_feature",
+      "comment": "Tests are missing for the NotSupportedException that should be thrown when GetWeekLetter is called with allowLiveFetch=true. This needs coverage to ensure the error handling works correctly.",
+      "suggested_fix": "Add test:\n[Fact]\npublic async Task GetWeekLetter_WithLiveFetch_ThrowsNotSupportedException()\n{\n    var client = new MinUddannelseClient(_mockWeekLetterRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);\n    var ex = await Assert.ThrowsAsync<NotSupportedException>(() => client.GetWeekLetter(_testChild, DateOnly.FromDateTime(DateTime.Today), allowLiveFetch: true));\n    Assert.Contains(\"PerChildMinUddannelseClient\", ex.Message);\n}"
+    },
+    {
+      "type": "specific",
+      "file": "src/Aula/AI/Services/AgentService.cs",
+      "line": 137,
+      "severity": "critical",
+      "category": "bug",
+      "comment": "AgentService.GetWeekScheduleAsync still calls _minUddannelseClient.GetWeekSchedule which will always throw NotSupportedException. This breaks the schedule functionality entirely.",
+      "suggested_fix": "Either:\n1. Update AgentService to use PerChildMinUddannelseClient instead of IMinUddannelseClient\n2. Or handle the NotSupportedException and provide appropriate fallback behavior\n3. Or remove GetWeekScheduleAsync from AgentService if it's no longer needed"
+    },
+    {
+      "type": "specific",
+      "file": "src/Aula/External/MinUddannelse/MinUddannelseClient.cs",
+      "line": 22,
+      "severity": "minor",
+      "category": "style",
+      "comment": "Constructor passes empty strings for username and password with a comment explaining they're not used. Consider making a separate constructor overload that doesn't require these parameters if they're not needed.",
+      "suggested_fix": "Create a constructor overload that doesn't require username/password parameters if they're always empty for this use case."
+    },
+    {
+      "type": "specific",
+      "file": "src/Aula/External/MinUddannelse/IMinUddannelseClient.cs",
+      "line": 11,
+      "severity": "suggestion",
+      "category": "architecture",
+      "comment": "Good use of [Obsolete] attribute to guide users toward the new approach. The deprecation message is clear and helpful.",
+      "suggested_fix": null
+    },
+    {
+      "type": "general",
+      "severity": "minor",
+      "category": "design",
+      "comment": "The removal of _userProfile dependency appears complete and clean. The MinUddannelseClient now focuses solely on stored data retrieval, which aligns with the architectural goal of separating authentication concerns.",
+      "suggested_fix": null
+    }
+  ],
+  "missing_requirements": [
+    {
+      "requirement": "AgentService needs to be updated to either handle the NotSupportedException from GetWeekSchedule or use an alternative implementation",
+      "severity": "critical"
+    }
+  ],
+  "summary": {
+    "design_violations": 0,
+    "critical_issues": 1,
+    "major_issues": 2,
+    "minor_issues": 2,
+    "suggestions": 1
+  },
+  "test_results": {
+    "passed": null,
+    "summary": "Tests were not executed due to .NET SDK not being available in the current environment. Based on the review request, 973/974 tests are passing with 1 pre-existing unrelated failure.",
+    "failing_tests": [],
+    "coverage": "Not available"
+  },
+  "overall_assessment": "needs_changes",
+  "__claudeSessionId": "7bb82a81-f1f3-4cdc-895d-e7d890af11f9",
+  "__claudeModel": "opus"
+}

@@ -63,7 +63,7 @@ public class PictogramConfigurationTests
         // Arrange & Act
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {

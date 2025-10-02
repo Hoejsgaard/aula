@@ -31,7 +31,7 @@ public class ConfigurationValidatorCoverageTests
     {
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -93,7 +93,7 @@ public class ConfigurationValidatorCoverageTests
     {
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse { Children = new List<Child>() },
+            MinUddannelse = new MinUddannelseConfig { Children = new List<Child>() },
             OpenAi = new OpenAi { ApiKey = "sk-test", Model = "gpt-3.5-turbo" },
             Supabase = new Aula.Configuration.Supabase { Url = "https://test.supabase.co", Key = "key123" }
         };
@@ -109,7 +109,7 @@ public class ConfigurationValidatorCoverageTests
     {
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -136,7 +136,7 @@ public class ConfigurationValidatorCoverageTests
     {
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -163,7 +163,7 @@ public class ConfigurationValidatorCoverageTests
     {
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -190,7 +190,7 @@ public class ConfigurationValidatorCoverageTests
     {
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -217,7 +217,7 @@ public class ConfigurationValidatorCoverageTests
     {
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -244,7 +244,7 @@ public class ConfigurationValidatorCoverageTests
     {
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -271,7 +271,7 @@ public class ConfigurationValidatorCoverageTests
     {
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -298,7 +298,7 @@ public class ConfigurationValidatorCoverageTests
     {
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -325,7 +325,7 @@ public class ConfigurationValidatorCoverageTests
     {
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -352,7 +352,7 @@ public class ConfigurationValidatorCoverageTests
     {
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -389,7 +389,7 @@ public class ConfigurationValidatorCoverageTests
     {
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -422,7 +422,7 @@ public class ConfigurationValidatorCoverageTests
     {
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -454,7 +454,7 @@ public class ConfigurationValidatorCoverageTests
     {
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {

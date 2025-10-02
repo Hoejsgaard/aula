@@ -35,7 +35,7 @@ public class AiToolsManagerTests
 
         _config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = _testChildren
             }

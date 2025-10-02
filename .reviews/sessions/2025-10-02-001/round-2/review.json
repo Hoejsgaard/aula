@@ -1,0 +1,95 @@
+{
+  "review_id": "2025-10-02-001",
+  "timestamp": "2025-10-02T06:14:44.976Z",
+  "status": "needs_changes",
+  "round": 2,
+  "design_compliance": {
+    "follows_architecture": false,
+    "major_violations": [
+      {
+        "issue": "Invalid Child ID Fallback",
+        "description": "The GetChildId method now returns child.FirstName as a fallback when _userProfile is not loaded. This is architecturally incorrect because FirstName is NOT a valid child ID for the API. The API expects a numeric/unique identifier, not a name.",
+        "impact": "critical",
+        "recommendation": "Either implement proper per-request authentication to obtain the real child ID, or throw a clear exception indicating that this client requires authentication before use. Using FirstName as ID will cause API calls to fail with invalid parameters."
+      }
+    ]
+  },
+  "comments": [
+    {
+      "type": "specific",
+      "file": "src/Aula/External/MinUddannelse/MinUddannelseClient.cs",
+      "line": 144,
+      "severity": "critical",
+      "category": "bug",
+      "comment": "Returning child.FirstName as the child ID is fundamentally wrong. The MinUddannelse API expects a proper child ID (likely a GUID or numeric identifier), not a first name. This will cause GetWeekLetter and GetWeekSchedule to fail with API errors.",
+      "suggested_fix": "Throw a clear exception: throw new InvalidOperationException(\"Authentication required before accessing child data. Use PerChildMinUddannelseClient or call LoginAsync first.\");"
+    },
+    {
+      "type": "specific",
+      "file": "src/Aula/External/MinUddannelse/MinUddannelseClient.cs",
+      "line": 138,
+      "severity": "major",
+      "category": "architecture",
+      "comment": "The check for _userProfile.HasValues is good, but the fallback strategy is incorrect. This creates a false sense of graceful degradation when it actually breaks the API contract.",
+      "suggested_fix": "Either: 1) Implement lazy authentication that calls LoginAsync when needed, 2) Require authentication in the constructor, or 3) Make this an abstract method that derived classes must implement."
+    },
+    {
+      "type": "specific",
+      "file": "src/Aula/External/MinUddannelse/MinUddannelseClient.cs",
+      "line": 77,
+      "severity": "critical",
+      "category": "bug",
+      "comment": "This line calls GetChildId(child) which can now return FirstName instead of a valid ID. The resulting URL will be malformed: '...elevId=Emma...' instead of '...elevId=12345...'",
+      "suggested_fix": "Ensure GetChildId always returns a valid ID or throws an exception. Never construct URLs with invalid data."
+    },
+    {
+      "type": "specific",
+      "file": "src/Aula/External/MinUddannelse/MinUddannelseClient.cs",
+      "line": 23,
+      "severity": "major",
+      "category": "architecture",
+      "comment": "Passing empty strings for username/password to the base constructor still violates the base class contract. The base constructor validates these as non-null but doesn't check for empty.",
+      "suggested_fix": "Either make the base class support optional credentials properly, or provide a different constructor path that doesn't require credentials."
+    },
+    {
+      "type": "general",
+      "severity": "major",
+      "category": "design",
+      "comment": "The attempt to provide graceful degradation actually makes the system fail in unpredictable ways. Using an invalid child ID will result in HTTP 400 or 404 errors from the API, which is harder to debug than a clear exception at the point of failure.",
+      "suggested_fix": "Follow the fail-fast principle: throw clear exceptions when prerequisites are not met, rather than attempting to continue with invalid data."
+    },
+    {
+      "type": "general",
+      "severity": "suggestion",
+      "category": "architecture",
+      "comment": "The TODO comment acknowledges the need for per-request authentication but the current 'fix' creates more problems than it solves.",
+      "suggested_fix": "Consider marking this constructor as internal or obsolete until per-request authentication is properly implemented."
+    }
+  ],
+  "missing_requirements": [
+    {
+      "requirement": "Proper per-request authentication implementation",
+      "severity": "critical"
+    },
+    {
+      "requirement": "Valid child ID resolution without pre-loaded user profile",
+      "severity": "critical"
+    }
+  ],
+  "summary": {
+    "design_violations": 1,
+    "critical_issues": 2,
+    "major_issues": 3,
+    "minor_issues": 0,
+    "suggestions": 1
+  },
+  "test_results": {
+    "passed": null,
+    "summary": "Tests not executed in review environment. Per PR description: 973/974 tests pass. However, the passing tests suggest the test coverage may not be adequate for the GetChildId scenarios.",
+    "failing_tests": [],
+    "coverage": "Not measured"
+  },
+  "overall_assessment": "needs_changes",
+  "__claudeSessionId": "d5d1357e-1b5a-4cb3-9016-9fdc7613ec14",
+  "__claudeModel": "opus"
+}

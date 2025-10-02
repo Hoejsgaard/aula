@@ -1,5 +1,4 @@
 namespace Aula.Core.Models;
-using Aula.Core.Models;
 
 public class StoredWeekLetter
 {

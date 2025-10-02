@@ -1,0 +1,1562 @@
+diff --git a/src/Aula.Tests/AI/Services/AgentServiceTests.cs b/src/Aula.Tests/AI/Services/AgentServiceTests.cs
+index 17fb3af..842c383 100644
+--- a/src/Aula.Tests/AI/Services/AgentServiceTests.cs
++++ b/src/Aula.Tests/AI/Services/AgentServiceTests.cs
+@@ -108,7 +108,6 @@ public class AgentServiceTests
+         var serviceType = typeof(AgentService);
+ 
+         // Act & Assert
+-        Assert.NotNull(serviceType.GetMethod("LoginAsync"));
+         Assert.NotNull(serviceType.GetMethod("GetWeekLetterAsync"));
+         Assert.NotNull(serviceType.GetMethod("GetWeekScheduleAsync"));
+         Assert.NotNull(serviceType.GetMethod("SummarizeWeekLetterAsync"));
+@@ -178,21 +177,6 @@ public class AgentServiceTests
+         Assert.Equal("loggerFactory", parameters[4].Name);
+     }
+ 
+-    [Fact]
+-    public async Task LoginAsync_AlwaysReturnsTrue()
+-    {
+-        // Arrange
+-        _mockMinUddannelseClient.Setup(x => x.LoginAsync()).ReturnsAsync(true);
+-        var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
+-            _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
+-
+-        // Act
+-        var result = await service.LoginAsync();
+-
+-        // Assert
+-        Assert.True(result);
+-        _mockMinUddannelseClient.Verify(x => x.LoginAsync(), Times.Once());
+-    }
+ 
+     [Fact]
+     public async Task GetWeekLetterAsync_WithCache_ReturnsCachedData()
+@@ -239,7 +223,7 @@ public class AgentServiceTests
+     }
+ 
+     [Fact]
+-    public async Task GetWeekLetterAsync_DoesNotCheckLoginStatus()
++    public async Task GetWeekLetterAsync_CallsMinUddannelseClientDirectly()
+     {
+         // Arrange
+         var child = new Child { FirstName = "Test", LastName = "Child" };
+@@ -250,11 +234,10 @@ public class AgentServiceTests
+         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
+             _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
+ 
+-        // Act - Call without calling LoginAsync first
++        // Act
+         await service.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), useCache: false);
+ 
+-        // Assert - Should not call LoginAsync internally
+-        _mockMinUddannelseClient.Verify(x => x.LoginAsync(), Times.Never());
++        // Assert - Should directly call GetWeekLetter
+         _mockMinUddannelseClient.Verify(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()), Times.Once());
+     }
+ 
+@@ -280,13 +263,11 @@ public class AgentServiceTests
+     }
+ 
+     [Fact]
+-    public async Task GetWeekScheduleAsync_WithoutCache_CallsMinUddannelseClient()
++    public async Task GetWeekScheduleAsync_WithoutCache_ReturnsNull()
+     {
+         // Arrange
+-        var freshSchedule = new JObject { ["schedule"] = "fresh" };
+         var child = new Child { FirstName = "Test", LastName = "Child" };
+         _mockDataService.Setup(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns((JObject?)null);
+-        _mockMinUddannelseClient.Setup(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<DateOnly>())).ReturnsAsync(freshSchedule);
+ 
+         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
+             _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
+@@ -295,9 +276,8 @@ public class AgentServiceTests
+         var result = await service.GetWeekScheduleAsync(child, DateOnly.FromDateTime(DateTime.Today), useCache: true);
+ 
+         // Assert
+-        Assert.NotNull(result);
+-        Assert.Equal("fresh", result["schedule"]?.ToString());
+-        _mockMinUddannelseClient.Verify(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<DateOnly>()), Times.Once());
+-        _mockDataService.Verify(x => x.CacheWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<JObject>()), Times.Once());
++        Assert.Null(result);
++        _mockMinUddannelseClient.Verify(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<DateOnly>()), Times.Never());
++        _mockDataService.Verify(x => x.CacheWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<JObject>()), Times.Never());
+     }
+ }
+diff --git a/src/Aula.Tests/External/Authentication/PictogramAuthenticatedClientTests.cs b/src/Aula.Tests/External/Authentication/PictogramAuthenticatedClientTests.cs
+index 3438ca7..4a9b9d9 100644
+--- a/src/Aula.Tests/External/Authentication/PictogramAuthenticatedClientTests.cs
++++ b/src/Aula.Tests/External/Authentication/PictogramAuthenticatedClientTests.cs
+@@ -23,7 +23,6 @@ public class PictogramAuthenticatedClientTests
+     private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
+     private readonly Child _testChild;
+     private readonly string[] _pictogramSequence;
+-    private readonly Config _config;
+ 
+     public PictogramAuthenticatedClientTests()
+     {
+@@ -32,15 +31,6 @@ public class PictogramAuthenticatedClientTests
+         _mockHttpClientFactory = new Mock<IHttpClientFactory>();
+         _mockHttpClientFactory.Setup(x => x.CreateClient(It.IsAny<string>())).Returns(new HttpClient());
+ 
+-        _config = new Config
+-        {
+-            MinUddannelse = new Aula.Configuration.MinUddannelse
+-            {
+-                SamlLoginUrl = "https://test.unilogin.dk",
+-                ApiBaseUrl = "https://api.test.aula.dk",
+-                StudentDataPath = "/api/v1/students"
+-            }
+-        };
+         _testChild = new Child
+         {
+             FirstName = "Test",
+@@ -63,7 +53,6 @@ public class PictogramAuthenticatedClientTests
+             _testChild,
+             _testChild.UniLogin!.Username,
+             _pictogramSequence,
+-            _config,
+             _mockLogger.Object,
+             _mockHttpClientFactory.Object);
+ 
+@@ -80,7 +69,6 @@ public class PictogramAuthenticatedClientTests
+                 _testChild,
+                 _testChild.UniLogin!.Username,
+                 null!,
+-                _config,
+                 _mockLogger.Object,
+                 _mockHttpClientFactory.Object));
+     }
+@@ -182,7 +170,6 @@ public class PictogramAuthenticatedClientTests
+             _testChild,
+             _testChild.UniLogin!.Username,
+             _pictogramSequence,
+-            _config,
+             _mockLogger.Object,
+             _mockHttpClientFactory.Object);
+ 
+@@ -254,7 +241,6 @@ public class PictogramAuthenticatedClientTests
+             _testChild,
+             _testChild.UniLogin!.Username,
+             _pictogramSequence,
+-            _config,
+             _mockLogger.Object,
+             _mockHttpClientFactory.Object);
+ 
+@@ -274,7 +260,6 @@ public class PictogramAuthenticatedClientTests
+             _testChild,
+             _testChild.UniLogin!.Username,
+             _pictogramSequence,
+-            _config,
+             _mockLogger.Object,
+             _mockHttpClientFactory.Object);
+ 
+diff --git a/src/Aula.Tests/External/Authentication/SimplePictogramAuthTests.cs b/src/Aula.Tests/External/Authentication/SimplePictogramAuthTests.cs
+index 779c405..85d6134 100644
+--- a/src/Aula.Tests/External/Authentication/SimplePictogramAuthTests.cs
++++ b/src/Aula.Tests/External/Authentication/SimplePictogramAuthTests.cs
+@@ -19,7 +19,6 @@ public class SimplePictogramAuthTests
+     private readonly Mock<ILogger<PictogramAuthenticatedClient>> _mockLogger;
+     private readonly Mock<ILogger<UniLoginAuthenticatorBase>> _mockBaseLogger;
+     private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
+-    private readonly Config _config;
+ 
+     public SimplePictogramAuthTests()
+     {
+@@ -27,16 +26,6 @@ public class SimplePictogramAuthTests
+         _mockBaseLogger = new Mock<ILogger<UniLoginAuthenticatorBase>>();
+         _mockHttpClientFactory = new Mock<IHttpClientFactory>();
+         _mockHttpClientFactory.Setup(x => x.CreateClient(It.IsAny<string>())).Returns(new HttpClient());
+-
+-        _config = new Config
+-        {
+-            MinUddannelse = new Aula.Configuration.MinUddannelse
+-            {
+-                SamlLoginUrl = "https://test.unilogin.dk",
+-                ApiBaseUrl = "https://api.test.aula.dk",
+-                StudentDataPath = "/api/v1/students"
+-            }
+-        };
+     }
+ 
+     [Fact]
+@@ -60,7 +49,6 @@ public class SimplePictogramAuthTests
+             child,
+             child.UniLogin.Username,
+             child.UniLogin.PictogramSequence!,
+-            _config,
+             _mockLogger.Object,
+             _mockHttpClientFactory.Object
+         );
+@@ -78,7 +66,6 @@ public class SimplePictogramAuthTests
+                 null!,
+                 "username",
+                 new[] { "image1", "image2" },
+-                _config,
+                 _mockLogger.Object,
+                 _mockHttpClientFactory.Object
+             )
+@@ -106,7 +93,6 @@ public class SimplePictogramAuthTests
+                 child,
+                 child.UniLogin.Username,
+                 null!,
+-                _config,
+                 _mockLogger.Object,
+                 _mockHttpClientFactory.Object
+             )
+@@ -134,7 +120,6 @@ public class SimplePictogramAuthTests
+                 child,
+                 child.UniLogin.Username,
+                 new string[0],
+-                _config,
+                 _mockLogger.Object,
+                 _mockHttpClientFactory.Object
+             )
+diff --git a/src/Aula.Tests/External/MinUddannelse/MinUddannelseClientTests.cs b/src/Aula.Tests/External/MinUddannelse/MinUddannelseClientTests.cs
+deleted file mode 100644
+index 2c4082e..0000000
+--- a/src/Aula.Tests/External/MinUddannelse/MinUddannelseClientTests.cs
++++ /dev/null
+@@ -1,139 +0,0 @@
+-using Microsoft.Extensions.Logging;
+-using Moq;
+-using Aula.Configuration;
+-using Aula.External.MinUddannelse;
+-using Aula.External.Authentication;
+-using Aula.External.GoogleCalendar;
+-using Aula.External.MinUddannelse;
+-using Aula.External.Authentication;
+-using Aula.Core.Security;
+-using Aula.AI.Services;
+-using Aula.Content.WeekLetters;
+-using Aula.Core.Models;
+-using Aula.Core.Security;
+-using Aula.Core.Utilities;
+-using Aula.Repositories;
+-using Newtonsoft.Json.Linq;
+-using System;
+-using System.Net.Http;
+-using System.Threading.Tasks;
+-using Xunit;
+-
+-namespace Aula.Tests.Services;
+-
+-public class MinUddannelseClientTests
+-{
+-    private readonly Mock<IWeekLetterRepository> _mockWeekLetterRepository;
+-    private readonly Mock<ILoggerFactory> _mockLoggerFactory;
+-    private readonly Mock<ILogger<MinUddannelseClient>> _mockLogger;
+-    private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
+-    private readonly Config _testConfig;
+-    private readonly Child _testChild;
+-
+-    public MinUddannelseClientTests()
+-    {
+-        _mockWeekLetterRepository = new Mock<IWeekLetterRepository>();
+-        _mockLoggerFactory = new Mock<ILoggerFactory>();
+-        _mockLogger = new Mock<ILogger<MinUddannelseClient>>();
+-        _mockHttpClientFactory = new Mock<IHttpClientFactory>();
+-
+-        _mockLoggerFactory.Setup(x => x.CreateLogger(typeof(MinUddannelseClient).FullName!)).Returns(_mockLogger.Object);
+-        _mockHttpClientFactory.Setup(x => x.CreateClient(It.IsAny<string>())).Returns(new HttpClient());
+-
+-        _testConfig = new Config
+-        {
+-            UniLogin = new UniLogin { Username = "testuser", Password = "testpass" },
+-            MinUddannelse = new MinUddannelse
+-            {
+-                SamlLoginUrl = "https://test.login.url",
+-                ApiBaseUrl = "https://test.api.url",
+-                StudentDataPath = "/test/path"
+-            }
+-        };
+-
+-        _testChild = new Child { FirstName = "Emma", LastName = "Test" };
+-    }
+-
+-    [Fact]
+-    public void Constructor_WithConfig_InitializesCorrectly()
+-    {
+-        var client = new MinUddannelseClient(_testConfig, _mockHttpClientFactory.Object);
+-        Assert.NotNull(client);
+-    }
+-
+-    [Fact]
+-    public void Constructor_WithConfigAndServices_InitializesCorrectly()
+-    {
+-        var client = new MinUddannelseClient(_testConfig, _mockWeekLetterRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);
+-        Assert.NotNull(client);
+-    }
+-
+-    [Fact]
+-    public async Task GetStoredWeekLetter_WithSupabaseService_CallsService()
+-    {
+-        var storedContent = "{\"stored\":\"data\"}";
+-        _mockWeekLetterRepository.Setup(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024))
+-            .ReturnsAsync(storedContent);
+-
+-        var client = new MinUddannelseClient(_testConfig, _mockWeekLetterRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);
+-
+-        var result = await client.GetStoredWeekLetter(_testChild, 25, 2024);
+-
+-        Assert.NotNull(result);
+-        Assert.Equal("data", result["stored"]?.ToString());
+-        _mockWeekLetterRepository.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
+-    }
+-
+-    [Fact]
+-    public async Task GetStoredWeekLetter_NoSupabaseService_ReturnsNull()
+-    {
+-        var client = new MinUddannelseClient(_testConfig, _mockHttpClientFactory.Object);
+-
+-        var result = await client.GetStoredWeekLetter(_testChild, 25, 2024);
+-
+-        Assert.Null(result);
+-    }
+-
+-    [Fact]
+-    public async Task GetStoredWeekLetter_SupabaseServiceThrowsException_ReturnsNull()
+-    {
+-        _mockWeekLetterRepository.Setup(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024))
+-            .ThrowsAsync(new InvalidOperationException("Database connection failed"));
+-
+-        var client = new MinUddannelseClient(_testConfig, _mockWeekLetterRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);
+-
+-        var result = await client.GetStoredWeekLetter(_testChild, 25, 2024);
+-
+-        Assert.Null(result);
+-        _mockWeekLetterRepository.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
+-    }
+-
+-    [Fact]
+-    public async Task GetStoredWeekLetter_SupabaseServiceReturnsInvalidJson_ReturnsNull()
+-    {
+-        _mockWeekLetterRepository.Setup(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024))
+-            .ReturnsAsync("invalid json content {{{");
+-
+-        var client = new MinUddannelseClient(_testConfig, _mockWeekLetterRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);
+-
+-        var result = await client.GetStoredWeekLetter(_testChild, 25, 2024);
+-
+-        Assert.Null(result);
+-        _mockWeekLetterRepository.Verify(s => s.GetStoredWeekLetterAsync(_testChild.FirstName, 25, 2024), Times.Once());
+-    }
+-
+-    [Fact]
+-    public void Constructor_WithNullConfig_ThrowsNullReferenceException()
+-    {
+-        Assert.Throws<NullReferenceException>(() => new MinUddannelseClient((Config)null!, _mockHttpClientFactory.Object));
+-    }
+-
+-    [Fact]
+-    public void Constructor_WithConfigAndServices_VerifyDependencyInjection()
+-    {
+-        var client = new MinUddannelseClient(_testConfig, _mockWeekLetterRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);
+-
+-        Assert.NotNull(client);
+-        _mockLoggerFactory.Verify(x => x.CreateLogger(typeof(MinUddannelseClient).FullName!), Times.Once());
+-    }
+-}
+diff --git a/src/Aula.Tests/External/MinUddannelse/PerChildMinUddannelseClientTests.cs b/src/Aula.Tests/External/MinUddannelse/PerChildMinUddannelseClientTests.cs
+index 3d54fe1..5b9f9f3 100644
+--- a/src/Aula.Tests/External/MinUddannelse/PerChildMinUddannelseClientTests.cs
++++ b/src/Aula.Tests/External/MinUddannelse/PerChildMinUddannelseClientTests.cs
+@@ -26,50 +26,25 @@ public class PerChildMinUddannelseClientTests
+ {
+     private readonly Mock<ILoggerFactory> _mockLoggerFactory;
+     private readonly Mock<ILogger> _mockLogger;
+-    private readonly Mock<IWeekLetterRepository> _mockWeekLetterRepository;
+-    private readonly Mock<IRetryTrackingRepository> _mockRetryTrackingRepository;
+     private readonly Mock<IHttpClientFactory> _mockHttpClientFactory;
+-    private readonly Config _config;
+ 
+     public PerChildMinUddannelseClientTests()
+     {
+         _mockLoggerFactory = new Mock<ILoggerFactory>();
+         _mockLogger = new Mock<ILogger>();
+-        _mockWeekLetterRepository = new Mock<IWeekLetterRepository>();
+-        _mockRetryTrackingRepository = new Mock<IRetryTrackingRepository>();
+         _mockHttpClientFactory = new Mock<IHttpClientFactory>();
+ 
+         _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>()))
+             .Returns(_mockLogger.Object);
+         _mockHttpClientFactory.Setup(x => x.CreateClient(It.IsAny<string>()))
+             .Returns(new HttpClient());
+-
+-        _config = new Config
+-        {
+-            MinUddannelse = new Aula.Configuration.MinUddannelse
+-            {
+-                Children = new List<Child>
+-                {
+-                    new Child
+-                    {
+-                        FirstName = "Test",
+-                        LastName = "Child",
+-                        UniLogin = new UniLogin
+-                        {
+-                            Username = "testuser",
+-                            Password = "testpass"
+-                        }
+-                    }
+-                }
+-            }
+-        };
+     }
+ 
+     [Fact]
+     public void Constructor_WithValidParameters_InitializesCorrectly()
+     {
+         // Act
+-        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);
++        var client = new PerChildMinUddannelseClient(_mockLoggerFactory.Object, _mockHttpClientFactory.Object);
+ 
+         // Assert
+         Assert.NotNull(client);
+@@ -79,7 +54,7 @@ public class PerChildMinUddannelseClientTests
+     public async Task LoginAsync_AlwaysReturnsTrue()
+     {
+         // Arrange
+-        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);
++        var client = new PerChildMinUddannelseClient(_mockLoggerFactory.Object, _mockHttpClientFactory.Object);
+ 
+         // Act
+         var result = await client.LoginAsync();
+@@ -105,7 +80,7 @@ public class PerChildMinUddannelseClientTests
+             UniLogin = null
+         };
+ 
+-        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);
++        var client = new PerChildMinUddannelseClient(_mockLoggerFactory.Object, _mockHttpClientFactory.Object);
+ 
+         // Act
+         var result = await client.GetWeekLetter(childWithoutCredentials, DateOnly.FromDateTime(DateTime.Today));
+@@ -115,7 +90,7 @@ public class PerChildMinUddannelseClientTests
+         _mockLogger.Verify(x => x.Log(
+             LogLevel.Information,
+             It.IsAny<EventId>(),
+-            It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Week letter not in database and live fetch not allowed")),
++            It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Live fetch not allowed")),
+             It.IsAny<Exception>(),
+             It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once());
+     }
+@@ -131,7 +106,7 @@ public class PerChildMinUddannelseClientTests
+             UniLogin = null
+         };
+ 
+-        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);
++        var client = new PerChildMinUddannelseClient(_mockLoggerFactory.Object, _mockHttpClientFactory.Object);
+ 
+         // Act
+         var result = await client.GetWeekSchedule(childWithoutCredentials, DateOnly.FromDateTime(DateTime.Today));
+@@ -175,29 +150,26 @@ public class PerChildMinUddannelseClientTests
+     public async Task GetWeekLetter_LogsAuthenticationForEachRequest()
+     {
+         // Arrange
+-        var client = new PerChildMinUddannelseClient(_config, _mockWeekLetterRepository.Object, _mockRetryTrackingRepository.Object, _mockLoggerFactory.Object, _mockHttpClientFactory.Object);
+-        var child = _config.MinUddannelse.Children[0];
+-
+-        // Note: This test verifies logging behavior but cannot test actual authentication
+-        // since ChildAuthenticatedClient is internal and makes real HTTP calls.
+-        // In production, each call would create a fresh authenticated session.
+-
+-        // Act - Would normally authenticate fresh for each call
+-        // but we can only test that it logs the intention
+-        try
+-        {
+-            await client.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today));
+-        }
+-        catch
++        var client = new PerChildMinUddannelseClient(_mockLoggerFactory.Object, _mockHttpClientFactory.Object);
++        var child = new Child
+         {
+-            // Expected to fail since we can't mock the internal authentication
+-        }
++            FirstName = "Test",
++            LastName = "Child",
++            UniLogin = new UniLogin
++            {
++                Username = "testuser",
++                Password = "testpass"
++            }
++        };
++
++        // Act
++        await client.GetWeekLetter(child, DateOnly.FromDateTime(DateTime.Today));
+ 
+         // Assert
+         _mockLogger.Verify(x => x.Log(
+             LogLevel.Information,
+             It.IsAny<EventId>(),
+-            It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Week letter not in database and live fetch not allowed")),
++            It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Live fetch not allowed")),
+             It.IsAny<Exception>(),
+             It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once());
+     }
+diff --git a/src/Aula/AI/Services/AgentService.cs b/src/Aula/AI/Services/AgentService.cs
+index b506880..4ef92ad 100644
+--- a/src/Aula/AI/Services/AgentService.cs
++++ b/src/Aula/AI/Services/AgentService.cs
+@@ -38,11 +38,6 @@ public class AgentService : IAgentService
+         _logger = loggerFactory.CreateLogger(nameof(AgentService));
+     }
+ 
+-    public async Task<bool> LoginAsync()
+-    {
+-        _logger.LogInformation("LoginAsync called - authentication now happens per-request");
+-        return await _minUddannelseClient.LoginAsync();
+-    }
+ 
+     public async Task<JObject?> GetWeekLetterAsync(Child child, DateOnly date, bool useCache = true, bool allowLiveFetch = false)
+     {
+@@ -126,8 +121,6 @@ public class AgentService : IAgentService
+         var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
+         var year = date.Year;
+ 
+-        // Authentication now happens per-request in MinUddannelseClient, no need to check here
+-
+         if (useCache)
+         {
+             var cachedWeekSchedule = _dataService.GetWeekSchedule(child, weekNumber, year);
+@@ -138,12 +131,9 @@ public class AgentService : IAgentService
+             }
+         }
+ 
+-        _logger.LogInformation("Getting week schedule for {ChildName} for date {Date}", child.FirstName, date);
+-        var weekSchedule = await _minUddannelseClient.GetWeekSchedule(child, date);
+-
+-        _dataService.CacheWeekSchedule(child, weekNumber, year, weekSchedule);
+-
+-        return weekSchedule;
++        // MinUddannelseClient no longer supports live fetching - only cached data is available
++        _logger.LogWarning("No cached week schedule available for {ChildName} for date {Date}. Live fetching requires PerChildMinUddannelseClient with authentication.", child.FirstName, date);
++        return null;
+     }
+ 
+     public async Task<string> SummarizeWeekLetterAsync(Child child, DateOnly date, ChatInterface chatInterface = ChatInterface.Slack)
+diff --git a/src/Aula/AI/Services/IAgentService.cs b/src/Aula/AI/Services/IAgentService.cs
+index 6302843..f71e489 100644
+--- a/src/Aula/AI/Services/IAgentService.cs
++++ b/src/Aula/AI/Services/IAgentService.cs
+@@ -1,17 +1,16 @@
+-using System;
++using System;
+ using Aula.AI.Services;
+-using Newtonsoft.Json.Linq;
+-using Aula.Configuration;
++using Newtonsoft.Json.Linq;
++using Aula.Configuration;
+ using Aula.AI.Services;
+-using Aula.Content.WeekLetters;
+-
+-namespace Aula.AI.Services;
+-
++using Aula.Content.WeekLetters;
++
++namespace Aula.AI.Services;
++
+ [Obsolete("Use IChildAgentService with IChildContext instead. This interface will be removed in the next major version. " +
+-          "For child management, use IChildServiceCoordinator. For child-specific operations, use child-aware services.")]
+-public interface IAgentService
++          "For child management, use IChildServiceCoordinator. For child-specific operations, use child-aware services.")]
++public interface IAgentService
+ {
+-    Task<bool> LoginAsync();
+     Task<JObject?> GetWeekLetterAsync(Child child, DateOnly date, bool useCache = true, bool allowLiveFetch = false);
+     Task<JObject?> GetWeekScheduleAsync(Child child, DateOnly date, bool useCache = true);
+ 
+@@ -31,5 +30,5 @@ public interface IAgentService
+     Task<string> AskQuestionAboutChildrenAsync(Dictionary<string, JObject> childrenWeekLetters, string question, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack);
+ 
+     // Process query for a specific child only - pass null to indicate no child context
+-    Task<string> ProcessQueryWithToolsAsync(string query, string contextKey, Child? specificChild, ChatInterface chatInterface = ChatInterface.Slack);
++    Task<string> ProcessQueryWithToolsAsync(string query, string contextKey, Child? specificChild, ChatInterface chatInterface = ChatInterface.Slack);
+ }
+diff --git a/src/Aula/Aula.csproj b/src/Aula/Aula.csproj
+index 1307bb1..f34b5c0 100644
+--- a/src/Aula/Aula.csproj
++++ b/src/Aula/Aula.csproj
+@@ -53,6 +53,8 @@
+     <PackageReference Include="NCrontab" Version="3.3.3" />
+     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+     <PackageReference Include="Betalgo.OpenAI" Version="8.7.2" />
++    <PackageReference Include="Polly" Version="8.5.0" />
++    <PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
+     <PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
+     <PackageReference Include="Slack.Webhooks" Version="1.1.5" />
+     <PackageReference Include="SlackAPI" Version="1.1.14" />
+diff --git a/src/Aula/External/Authentication/PictogramAuthenticatedClient.cs b/src/Aula/External/Authentication/PictogramAuthenticatedClient.cs
+index 7f5bcf0..18792f3 100644
+--- a/src/Aula/External/Authentication/PictogramAuthenticatedClient.cs
++++ b/src/Aula/External/Authentication/PictogramAuthenticatedClient.cs
+@@ -13,30 +13,30 @@ namespace Aula.External.Authentication;
+ /// <summary>
+ /// Handles authentication for children using pictogram-based login instead of passwords
+ /// </summary>
+-public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, IChildAuthenticatedClient
++public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, IChildAuthenticatedClient
+ {
+     private readonly Child _child;
+     private readonly ILogger _logger;
+-    private readonly Config _config;
+     private readonly string[] _pictogramSequence;
+     private readonly string _username;
+     private string? _childId;
+ 
+-    public PictogramAuthenticatedClient(Child child, string username, string[] pictogramSequence, Config config, ILogger logger, IHttpClientFactory httpClientFactory)
++    public PictogramAuthenticatedClient(Child child, string username, string[] pictogramSequence, ILogger logger, IHttpClientFactory httpClientFactory)
+         : base(httpClientFactory, username, "", // Empty password since we'll build it dynamically
+-            config.MinUddannelse.SamlLoginUrl,
+-            config.MinUddannelse.ApiBaseUrl,
++            "https://www.minuddannelse.net/KmdIdentity/Login?domainHint=unilogin-idp-prod&toFa=False",
++            "https://www.minuddannelse.net/Node/",
+             logger,
+-            config.MinUddannelse.ApiBaseUrl,
+-            config.MinUddannelse.StudentDataPath)
++            "https://www.minuddannelse.net",
++            "/api/stamdata/elev/getElev")
+     {
+         ArgumentNullException.ThrowIfNull(child);
+         ArgumentNullException.ThrowIfNull(pictogramSequence);
++        ArgumentNullException.ThrowIfNull(logger);
++        ArgumentNullException.ThrowIfNull(httpClientFactory);
+ 
+         _child = child;
+         _username = username;
+         _pictogramSequence = pictogramSequence;
+-        _config = config;
+         if (pictogramSequence.Length == 0)
+             throw new ArgumentException("Pictogram sequence cannot be empty", nameof(pictogramSequence));
+         _logger = logger;
+@@ -51,7 +51,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+         {
+             using var httpClient = CreateHttpClient();
+             // Navigate through the login flow to reach the pictogram page
+-            var response = await httpClient.GetAsync(_config.MinUddannelse.SamlLoginUrl);
++            var response = await httpClient.GetAsync("https://www.minuddannelse.net/KmdIdentity/Login?domainHint=unilogin-idp-prod&toFa=False");
+ 
+             var content = await response.Content.ReadAsStringAsync();
+             var maxSteps = 10;
+@@ -115,7 +115,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+                     var pictogramMapping = ParsePictogramMapping(doc);
+                     if (pictogramMapping.Count == 0)
+                     {
+-                        _logger.LogError("❌ No pictograms found on page");
++                        _logger.LogError("No pictograms found on page");
+                         return false;
+                     }
+ 
+@@ -126,7 +126,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+                     var password = BuildPasswordFromSequence(pictogramMapping, _pictogramSequence);
+                     if (string.IsNullOrEmpty(password))
+                     {
+-                        _logger.LogError("❌ Failed to build password from pictogram sequence");
++                        _logger.LogError("Failed to build password from pictogram sequence");
+                         return false;
+                     }
+ 
+@@ -136,7 +136,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+                     var authenticated = await SubmitPictogramForm(httpClient, doc, response, _username, password);
+                     if (authenticated)
+                     {
+-                        _logger.LogInformation("✅ Successfully authenticated {ChildName} with pictograms!", _child.FirstName);
++                        _logger.LogInformation("Successfully authenticated {ChildName} with pictograms!", _child.FirstName);
+ 
+                         // Add Accept header for JSON responses (critical for API calls!)
+                         httpClient.DefaultRequestHeaders.Accept.Add(
+@@ -148,7 +148,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+                     }
+                     else
+                     {
+-                        _logger.LogError("❌ Failed to complete pictogram authentication");
++                        _logger.LogError("Failed to complete pictogram authentication");
+                         return false;
+                     }
+                 }
+@@ -184,7 +184,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+                     // No more forms, check if we're authenticated
+                     if (response.RequestMessage?.RequestUri?.ToString().Contains("minuddannelse.net") ?? false)
+                     {
+-                        _logger.LogInformation("✅ Reached MinUddannelse after authentication");
++                        _logger.LogInformation("Reached MinUddannelse after authentication");
+ 
+                         // Add Accept header for JSON responses (critical for API calls!)
+                         if (!httpClient.DefaultRequestHeaders.Accept.Any(h => h.MediaType == "application/json"))
+@@ -199,12 +199,12 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+                 }
+             }
+ 
+-            _logger.LogError("❌ Failed to complete pictogram authentication after {Steps} steps", maxSteps);
++            _logger.LogError("Failed to complete pictogram authentication after {Steps} steps", maxSteps);
+             return false;
+         }
+         catch (Exception ex)
+         {
+-            _logger.LogError(ex, "❌ Exception during pictogram authentication for {ChildName}", _child.FirstName);
++            _logger.LogError(ex, "Exception during pictogram authentication for {ChildName}", _child.FirstName);
+             return false;
+         }
+     }
+@@ -282,7 +282,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+         var pictogramForm = doc.DocumentNode.SelectSingleNode("//input[@name='password' and @type='hidden']")?.Ancestors("form").FirstOrDefault();
+         if (pictogramForm == null)
+         {
+-            _logger.LogError("❌ No pictogram form found");
++            _logger.LogError("No pictogram form found");
+             return false;
+         }
+ 
+@@ -295,7 +295,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+             ["password"] = password
+         };
+ 
+-        _logger.LogDebug("📤 Submitting pictogram form to: {Action}", action);
++        _logger.LogDebug("Submitting pictogram form to: {Action}", action);
+ 
+         var response = await httpClient.PostAsync(action, new FormUrlEncodedContent(formData));
+         var content = await response.Content.ReadAsStringAsync();
+@@ -303,7 +303,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+         // Check for error indicators first
+         if (content.Contains("fejl") || content.Contains("error") || content.Contains("Der skete en fejl"))
+         {
+-            _logger.LogError("❌ Login failed - error in response");
++            _logger.LogError("Login failed - error in response");
+ 
+             // Try to extract error message
+             var errorDoc = new HtmlDocument();
+@@ -348,7 +348,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+                     }
+                 }
+ 
+-                _logger.LogDebug("📤 Submitting SAML response to: {Action}", samlAction);
++                _logger.LogDebug("Submitting SAML response to: {Action}", samlAction);
+ 
+                 // Submit the SAML response
+                 response = await httpClient.PostAsync(samlAction, new FormUrlEncodedContent(samlFormData));
+@@ -361,7 +361,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+                     // Check if we've reached MinUddannelse
+                     if (response.RequestMessage?.RequestUri?.ToString().Contains("minuddannelse.net") ?? false)
+                     {
+-                        _logger.LogInformation("✅ Successfully reached MinUddannelse!");
++                        _logger.LogInformation("Successfully reached MinUddannelse!");
+ 
+                         // Add Accept header for JSON responses (critical for API calls!)
+                         if (!httpClient.DefaultRequestHeaders.Accept.Any(h => h.MediaType == "application/json"))
+@@ -415,7 +415,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+             content.Contains("Forside") || content.Contains("Ugeplaner") ||
+             (response.RequestMessage?.RequestUri?.ToString().Contains("minuddannelse.net") ?? false))
+         {
+-            _logger.LogInformation("✅ Pictogram authentication successful!");
++            _logger.LogInformation("Pictogram authentication successful!");
+             return true;
+         }
+ 
+@@ -429,7 +429,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+             if (finalContent.Contains("MinUddannelse") ||
+                 (finalResponse.RequestMessage?.RequestUri?.ToString().Contains("minuddannelse.net") ?? false))
+             {
+-                _logger.LogInformation("✅ Pictogram authentication successful after redirect!");
++                _logger.LogInformation("Pictogram authentication successful after redirect!");
+                 return true;
+             }
+         }
+@@ -468,21 +468,21 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+ 
+             // First try: Extract from page context (same method as ChildAuthenticatedClient)
+             // Navigate to any MinUddannelse page after authentication to get this
+-            var response = await httpClient.GetAsync($"{_config.MinUddannelse.ApiBaseUrl}/node/minuge");
++            var response = await httpClient.GetAsync("https://www.minuddannelse.net/node/minuge");
+             var content = await response.Content.ReadAsStringAsync();
+ 
+             var personIdMatch = PersonIdRegex().Match(content);
+             if (personIdMatch.Success)
+             {
+                 _childId = personIdMatch.Groups[1].Value;
+-                _logger.LogInformation("✅ Extracted child ID from page context: {ChildId}", _childId);
++                _logger.LogInformation("Extracted child ID from page context: {ChildId}", _childId);
+ 
+                 var nameMatch = NameRegex().Match(content);
+                 if (nameMatch.Success)
+                 {
+                     var firstName = nameMatch.Groups[1].Value;
+                     var lastName = nameMatch.Groups[2].Value;
+-                    _logger.LogInformation("✅ Confirmed authenticated as: {FirstName} {LastName}",
++                    _logger.LogInformation("Confirmed authenticated as: {FirstName} {LastName}",
+                         firstName, lastName);
+                 }
+ 
+@@ -491,7 +491,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+ 
+             // Fallback: Try the API method (improved version)
+             _logger.LogInformation("Page context method failed, trying API...");
+-            var apiUrl = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.StudentDataPath}?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
++            var apiUrl = $"https://www.minuddannelse.net/api/stamdata/elev/getElev?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+ 
+             var apiResponse = await httpClient.GetAsync(apiUrl);
+             if (apiResponse.IsSuccessStatusCode)
+@@ -506,13 +506,13 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+ 
+                     if (!string.IsNullOrEmpty(_childId))
+                     {
+-                        _logger.LogInformation("✅ Extracted child ID from API: {ChildId}", _childId);
++                        _logger.LogInformation("Extracted child ID from API: {ChildId}", _childId);
+                         return;
+                     }
+                 }
+             }
+ 
+-            _logger.LogWarning("❌ Could not extract child ID from any source");
++            _logger.LogWarning("Could not extract child ID from any source");
+         }
+         catch (Exception ex)
+         {
+@@ -528,10 +528,10 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+             return new Newtonsoft.Json.Linq.JObject();
+         }
+ 
+-        var url = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.WeekLettersPath}?tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}" +
++        var url = $"https://www.minuddannelse.net/api/elev/ugeplan/getUgeplan?tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}" +
+                  $"&elevId={_childId}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+ 
+-        _logger.LogDebug("📥 Fetching week letter from: {Url}", url);
++        _logger.LogDebug("Fetching week letter from: {Url}", url);
+ 
+         using var httpClient = CreateHttpClient();
+         var response = await httpClient.GetAsync(url);
+@@ -542,7 +542,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+             // Check if content is HTML (error page) instead of JSON
+             if (content.TrimStart().StartsWith('<'))
+             {
+-                _logger.LogWarning("❌ Received HTML instead of JSON for week letter. Might be an authentication or session issue.");
++                _logger.LogWarning("Received HTML instead of JSON for week letter. Might be an authentication or session issue.");
+                 _logger.LogDebug("Response content starts with: {Content}", content.Substring(0, Math.Min(100, content.Length)));
+ 
+                 // Return empty week letter with appropriate message
+@@ -578,7 +578,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+             }
+         }
+ 
+-        _logger.LogError("❌ Failed to fetch week letter. Status: {Status}", response.StatusCode);
++        _logger.LogError("Failed to fetch week letter. Status: {Status}", response.StatusCode);
+         return new Newtonsoft.Json.Linq.JObject();
+     }
+ 
+@@ -590,7 +590,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+             return new Newtonsoft.Json.Linq.JObject();
+         }
+ 
+-        var url = $"{_config.MinUddannelse.ApiBaseUrl}/api/stamdata/aulaskema/getElevSkema?elevId={_childId}" +
++        var url = $"https://www.minuddannelse.net/api/stamdata/aulaskema/getElevSkema?elevId={_childId}" +
+                  $"&tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+ 
+         _logger.LogDebug("Fetching schedule from: {Url}", url);
+@@ -603,7 +603,7 @@ public partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, I
+             return Newtonsoft.Json.Linq.JObject.Parse(content);
+         }
+ 
+-        _logger.LogError("❌ Failed to fetch schedule. Status: {Status}", response.StatusCode);
++        _logger.LogError("Failed to fetch schedule. Status: {Status}", response.StatusCode);
+         return new Newtonsoft.Json.Linq.JObject();
+     }
+ 
+diff --git a/src/Aula/External/MinUddannelse/IMinUddannelseClient.cs b/src/Aula/External/MinUddannelse/IMinUddannelseClient.cs
+index 9f0d831..ae5f125 100644
+--- a/src/Aula/External/MinUddannelse/IMinUddannelseClient.cs
++++ b/src/Aula/External/MinUddannelse/IMinUddannelseClient.cs
+@@ -1,22 +1,21 @@
+-using System;
++using System;
+ using Aula.Core.Models;
+ using Aula.External.MinUddannelse;
+ using Aula.External.Authentication;
+-using Newtonsoft.Json.Linq;
+-using Aula.Configuration;
+-using Aula.Core.Models;
+-
+-namespace Aula.External.MinUddannelse;
+-
++using Newtonsoft.Json.Linq;
++using Aula.Configuration;
++using Aula.Core.Models;
++
++namespace Aula.External.MinUddannelse;
++
+ [Obsolete("Use IChildAuthenticationService with IChildContext instead. This interface will be removed in the next major version. " +
+-          "Authentication and data fetching should be done through child-aware services for proper isolation.")]
+-public interface IMinUddannelseClient
++          "Authentication and data fetching should be done through child-aware services for proper isolation.")]
++public interface IMinUddannelseClient
+ {
+-    Task<bool> LoginAsync();
+     Task<JObject> GetWeekLetter(Child child, DateOnly date, bool allowLiveFetch = false);
+     Task<JObject> GetWeekSchedule(Child child, DateOnly date);
+ 
+     // Week letter storage and retrieval methods
+     Task<JObject?> GetStoredWeekLetter(Child child, int weekNumber, int year);
+-    Task<List<StoredWeekLetter>> GetStoredWeekLetters(Child? child = null, int? year = null);
++    Task<List<StoredWeekLetter>> GetStoredWeekLetters(Child? child = null, int? year = null);
+ }
+diff --git a/src/Aula/External/MinUddannelse/MinUddannelseClient.cs b/src/Aula/External/MinUddannelse/MinUddannelseClient.cs
+deleted file mode 100644
+index fda8ad2..0000000
+--- a/src/Aula/External/MinUddannelse/MinUddannelseClient.cs
++++ /dev/null
+@@ -1,259 +0,0 @@
+-using System.IO;
+-using Aula.Core.Models;
+-using Aula.External.MinUddannelse;
+-using Aula.External.Authentication;
+-using System.Net.Http.Headers;
+-using HtmlAgilityPack;
+-using Newtonsoft.Json.Linq;
+-using Aula.Configuration;
+-using Aula.Repositories;
+-using Aula.Core.Models;
+-using Aula.Content.WeekLetters;
+-using Microsoft.Extensions.DependencyInjection;
+-using Microsoft.Extensions.Logging;
+-
+-namespace Aula.External.MinUddannelse;
+-
+-public class MinUddannelseClient : UniLoginAuthenticatorBase, IMinUddannelseClient
+-{
+-    private JObject _userProfile = new();
+-    private readonly IWeekLetterRepository? _weekLetterRepository;
+-    private readonly ILogger? _logger;
+-    private readonly Config? _config;
+-
+-    public MinUddannelseClient(Config config, IHttpClientFactory httpClientFactory)
+-        : this(httpClientFactory, config.UniLogin.Username, config.UniLogin.Password,
+-            config.MinUddannelse.SamlLoginUrl,
+-            config.MinUddannelse.ApiBaseUrl + "/Node/",
+-            config.MinUddannelse.ApiBaseUrl,
+-            config.MinUddannelse.StudentDataPath,
+-            null)
+-    {
+-        _config = config;
+-    }
+-
+-    public MinUddannelseClient(Config config, IWeekLetterRepository weekLetterRepository, ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory)
+-        : this(httpClientFactory, config.UniLogin.Username, config.UniLogin.Password,
+-            config.MinUddannelse.SamlLoginUrl,
+-            config.MinUddannelse.ApiBaseUrl + "/Node/",
+-            config.MinUddannelse.ApiBaseUrl,
+-            config.MinUddannelse.StudentDataPath,
+-            loggerFactory.CreateLogger<MinUddannelseClient>())
+-    {
+-        _config = config;
+-        _weekLetterRepository = weekLetterRepository;
+-    }
+-
+-    public MinUddannelseClient(IHttpClientFactory httpClientFactory, string username, string password, string loginUrl, string successUrl, string apiBaseUrl, string studentDataPath, ILogger? logger = null)
+-        : base(httpClientFactory, username, password, loginUrl, successUrl,
+-            logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance,
+-            apiBaseUrl,
+-            studentDataPath)
+-    {
+-        _logger = logger;
+-    }
+-
+-    public async Task<JObject> GetWeekLetter(Child child, DateOnly date, bool allowLiveFetch = false)
+-    {
+-        var weekNumber = WeekLetterUtilities.GetIsoWeekNumber(date);
+-        var year = date.Year;
+-
+-        if (_weekLetterRepository != null)
+-        {
+-            var storedLetter = await GetStoredWeekLetter(child, weekNumber, year);
+-            if (storedLetter != null)
+-            {
+-                _logger?.LogInformation("Found week letter in database for {ChildName} week {WeekNumber}/{Year}",
+-                    child.FirstName, weekNumber, year);
+-                return storedLetter;
+-            }
+-        }
+-
+-        if (!allowLiveFetch)
+-        {
+-            _logger?.LogInformation("Week letter not in database and live fetch not allowed for {ChildName} week {WeekNumber}/{Year}",
+-                child.FirstName, weekNumber, year);
+-            return WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
+-        }
+-
+-        _logger?.LogInformation("Fetching week letter from MinUddannelse for {ChildName} week {WeekNumber}/{Year}",
+-            child.FirstName, weekNumber, year);
+-
+-        var url = string.Format(
+-            "{0}{1}?tidspunkt={2}-W{3}&elevId={4}&_={5}",
+-            _config?.MinUddannelse.ApiBaseUrl ?? "https://www.minuddannelse.net",
+-            _config?.MinUddannelse.WeekLettersPath ?? "/api/stamdata/ugeplan/getUgeBreve",
+-            date.Year, WeekLetterUtilities.GetIsoWeekNumber(date), GetChildId(child), DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+-        using var httpClient = CreateHttpClient();
+-        var response = await httpClient.GetAsync(url);
+-        response.EnsureSuccessStatusCode();
+-        var json = await response.Content.ReadAsStringAsync();
+-
+-        var weekLetter = JObject.Parse(json);
+-        var weekLetterArray = weekLetter["ugebreve"] as JArray;
+-
+-        if (weekLetterArray == null || weekLetterArray.Count == 0)
+-        {
+-            var nullObject = new JObject
+-            {
+-                ["klasseNavn"] = "N/A",
+-                ["uge"] = $"{WeekLetterUtilities.GetIsoWeekNumber(date)}",
+-                ["indhold"] = "Der er ikke skrevet nogen ugenoter til denne uge",
+-            };
+-            weekLetter["ugebreve"] = new JArray(nullObject);
+-
+-        }
+-
+-        if (_weekLetterRepository != null && weekLetter != null)
+-        {
+-            try
+-            {
+-                var contentHash = WeekLetterUtilities.ComputeContentHash(weekLetter.ToString());
+-                await _weekLetterRepository.StoreWeekLetterAsync(
+-                    child.FirstName, weekNumber, year, contentHash, weekLetter.ToString());
+-                _logger?.LogInformation("Stored week letter to database for {ChildName} week {WeekNumber}/{Year}",
+-                    child.FirstName, weekNumber, year);
+-            }
+-            catch (Exception ex)
+-            {
+-                _logger?.LogWarning(ex, "Failed to store week letter to database");
+-            }
+-        }
+-
+-        return weekLetter ?? WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
+-    }
+-
+-    public async Task<JObject> GetWeekSchedule(Child child, DateOnly date)
+-    {
+-        var url = string.Format(
+-            "{0}/api/stamdata/aulaskema/getElevSkema?elevId={1}&tidspunkt={2}-W{3}&_={4}",
+-            _config?.MinUddannelse.ApiBaseUrl ?? "https://www.minuddannelse.net",
+-            GetChildId(child), date.Year, WeekLetterUtilities.GetIsoWeekNumber(date), DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+-        using var httpClient = CreateHttpClient();
+-        var response = await httpClient.GetAsync(url);
+-        response.EnsureSuccessStatusCode();
+-        var json = await response.Content.ReadAsStringAsync();
+-        return JObject.Parse(json);
+-    }
+-
+-
+-    private string? GetChildId(Child child)
+-    {
+-        if (_userProfile == null) throw new InvalidOperationException("User profile not loaded");
+-        var kids = _userProfile["boern"];
+-        if (kids == null) throw new InvalidOperationException("No children found in user profile");
+-        var id = "";
+-        foreach (var kid in kids)
+-            if (kid["fornavn"]?.ToString() == child.FirstName)
+-                id = kid["id"]?.ToString() ?? "";
+-
+-        if (id == "") throw new ArgumentException($"Child with first name '{child.FirstName}' not found in user profile");
+-
+-        return id;
+-    }
+-
+-    public new async Task<bool> LoginAsync()
+-    {
+-        var login = await base.LoginAsync();
+-        if (login)
+-        {
+-            _userProfile = await ExtractUserProfile();
+-            return true;
+-        }
+-
+-        return login;
+-    }
+-
+-    private async Task<JObject> ExtractUserProfile()
+-    {
+-        using var httpClient = CreateHttpClient();
+-        var response = await httpClient.GetAsync(SuccessUrl);
+-        var content = await response.Content.ReadAsStringAsync();
+-        var doc = new HtmlDocument();
+-        doc.LoadHtml(content);
+-
+-        // Find the script node that contains __tempcontext__5d
+-        var script = doc.DocumentNode.Descendants("script")
+-            .FirstOrDefault(n => n.InnerText.Contains("__tempcontext__"));
+-
+-        if (script == null)
+-            throw new InvalidDataException("No UserProfile script tag found in response");
+-
+-        var scriptText = script.InnerText;
+-        if (string.IsNullOrWhiteSpace(scriptText))
+-            throw new InvalidDataException("UserProfile script content is empty");
+-
+-        var contextStart = "window.__tempcontext__['currentUser'] = ";
+-        var startIndex = scriptText.IndexOf(contextStart);
+-        if (startIndex == -1)
+-            throw new InvalidDataException("UserProfile context not found in script");
+-
+-        startIndex += contextStart.Length;
+-        var endIndex = scriptText.IndexOf(';', startIndex);
+-        if (endIndex == -1 || endIndex <= startIndex)
+-            throw new InvalidDataException("Invalid UserProfile context format");
+-
+-        var jsonText = scriptText.Substring(startIndex, endIndex - startIndex).Trim();
+-        if (string.IsNullOrWhiteSpace(jsonText))
+-            throw new InvalidDataException("Extracted UserProfile JSON text is empty");
+-
+-        try
+-        {
+-            return JObject.Parse(jsonText);
+-        }
+-        catch (Exception ex)
+-        {
+-            throw new InvalidDataException($"Failed to parse UserProfile JSON: {ex.Message}", ex);
+-        }
+-    }
+-
+-    public async Task<JObject?> GetStoredWeekLetter(Child child, int weekNumber, int year)
+-    {
+-        if (_weekLetterRepository == null)
+-        {
+-            _logger?.LogWarning("Week letter repository not available - cannot retrieve stored week letter");
+-            return null;
+-        }
+-
+-        try
+-        {
+-            var storedContent = await _weekLetterRepository.GetStoredWeekLetterAsync(child.FirstName, weekNumber, year);
+-            if (string.IsNullOrEmpty(storedContent))
+-            {
+-                _logger?.LogInformation("No stored week letter found for {ChildName}, week {WeekNumber}/{Year}",
+-                    child.FirstName, weekNumber, year);
+-                return null;
+-            }
+-
+-            return JObject.Parse(storedContent);
+-        }
+-        catch (Exception ex)
+-        {
+-            _logger?.LogError(ex, "Error retrieving stored week letter for {ChildName}, week {WeekNumber}/{Year}",
+-                child.FirstName, weekNumber, year);
+-            return null;
+-        }
+-    }
+-
+-
+-    public async Task<List<StoredWeekLetter>> GetStoredWeekLetters(Child? child = null, int? year = null)
+-    {
+-        if (_weekLetterRepository == null)
+-        {
+-            _logger?.LogWarning("Week letter repository not available - cannot retrieve stored week letters");
+-            return new List<StoredWeekLetter>();
+-        }
+-
+-        try
+-        {
+-            var childName = child?.FirstName;
+-            return await _weekLetterRepository.GetStoredWeekLettersAsync(childName, year);
+-        }
+-        catch (Exception ex)
+-        {
+-            _logger?.LogError(ex, "Error retrieving stored week letters for child {ChildName}, year {Year}",
+-                child?.FirstName, year);
+-            return new List<StoredWeekLetter>();
+-        }
+-    }
+-}
+diff --git a/src/Aula/External/MinUddannelse/PerChildMinUddannelseClient.cs b/src/Aula/External/MinUddannelse/PerChildMinUddannelseClient.cs
+index e0dfc35..f1d5eb2 100644
+--- a/src/Aula/External/MinUddannelse/PerChildMinUddannelseClient.cs
++++ b/src/Aula/External/MinUddannelse/PerChildMinUddannelseClient.cs
+@@ -1,39 +1,27 @@
+-using System.Net.Http.Headers;
+-using Aula.Core.Models;
+-using Aula.External.MinUddannelse;
+-using Aula.External.Authentication;
+-using System.Text.RegularExpressions;
+-using HtmlAgilityPack;
+ using Microsoft.Extensions.Logging;
+-using Microsoft.Extensions.Logging.Abstractions;
+ using Newtonsoft.Json.Linq;
+ using Aula.Configuration;
+-using Aula.Repositories;
+ using Aula.Core.Models;
++using Aula.External.Authentication;
+ using Aula.Content.WeekLetters;
+ 
+ namespace Aula.External.MinUddannelse;
+ 
+ /// <summary>
+-/// MinUddannelse client that authenticates per-child instead of using a parent account
+-/// Each child has their own UniLogin credentials
++/// MinUddannelse client that orchestrates per-child authentication for live fetching
++/// Pure orchestration - no database access
+ /// </summary>
+-public partial class PerChildMinUddannelseClient : IMinUddannelseClient
++public class PerChildMinUddannelseClient : IMinUddannelseClient
+ {
+-    private readonly IWeekLetterRepository? _weekLetterRepository;
+-    private readonly IRetryTrackingRepository? _retryTrackingRepository;
+     private readonly ILogger _logger;
+     private readonly ILoggerFactory _loggerFactory;
+     private readonly IHttpClientFactory _httpClientFactory;
+-    private readonly Config _config;
+ 
+-    // No longer storing authenticated clients - creating fresh instances per request
+-
+-    public PerChildMinUddannelseClient(Config config, IWeekLetterRepository? weekLetterRepository, IRetryTrackingRepository? retryTrackingRepository, ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory)
++    public PerChildMinUddannelseClient(ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory)
+     {
+-        _config = config;
+-        _weekLetterRepository = weekLetterRepository;
+-        _retryTrackingRepository = retryTrackingRepository;
++        ArgumentNullException.ThrowIfNull(loggerFactory);
++        ArgumentNullException.ThrowIfNull(httpClientFactory);
++
+         _loggerFactory = loggerFactory;
+         _logger = loggerFactory.CreateLogger<PerChildMinUddannelseClient>();
+         _httpClientFactory = httpClientFactory;
+@@ -50,28 +38,16 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
+     public async Task<JObject> GetWeekLetter(Child child, DateOnly date, bool allowLiveFetch = false)
+     {
+         var weekNumber = WeekLetterUtilities.GetIsoWeekNumber(date);
+-        var year = date.Year;
+-
+-        if (_weekLetterRepository != null)
+-        {
+-            var storedLetter = await GetStoredWeekLetter(child, weekNumber, year);
+-            if (storedLetter != null)
+-            {
+-                _logger.LogInformation("Found week letter in database for {ChildName} week {WeekNumber}/{Year}",
+-                    child.FirstName, weekNumber, year);
+-                return storedLetter;
+-            }
+-        }
+ 
+         if (!allowLiveFetch)
+         {
+-            _logger.LogInformation("Week letter not in database and live fetch not allowed for {ChildName} week {WeekNumber}/{Year}",
+-                child.FirstName, weekNumber, year);
++            _logger.LogInformation("Live fetch not allowed for {ChildName} week {WeekNumber}",
++                child.FirstName, weekNumber);
+             return WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
+         }
+ 
+-        _logger.LogInformation("Fetching week letter from MinUddannelse for {ChildName} week {WeekNumber}/{Year}",
+-            child.FirstName, weekNumber, year);
++        _logger.LogInformation("Live fetching week letter from MinUddannelse for {ChildName} week {WeekNumber}",
++            child.FirstName, weekNumber);
+ 
+         if (child.UniLogin == null || string.IsNullOrEmpty(child.UniLogin.Username) ||
+             (string.IsNullOrEmpty(child.UniLogin.Password) && (child.UniLogin.PictogramSequence == null || child.UniLogin.PictogramSequence.Length == 0)))
+@@ -80,12 +56,10 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
+             return WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
+         }
+ 
+-        _logger.LogInformation("Creating fresh authenticated session for {ChildName}", child.FirstName);
+-
+         var logger = _loggerFactory.CreateLogger<PerChildMinUddannelseClient>();
+         using IChildAuthenticatedClient childClient = child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null
+-            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, logger, _httpClientFactory)
+-            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, logger, _httpClientFactory);
++            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, logger, _httpClientFactory)
++            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, logger, _httpClientFactory);
+ 
+         _logger.LogInformation("Using {AuthType} authentication for {ChildName}",
+             child.UniLogin.AuthType == AuthenticationType.Pictogram ? "pictogram" : "standard", child.FirstName);
+@@ -97,26 +71,9 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
+             return WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
+         }
+ 
+-        _logger.LogInformation("Successfully authenticated {ChildName} for this request", child.FirstName);
++        _logger.LogInformation("Successfully authenticated {ChildName} for live fetch", child.FirstName);
+ 
+         var weekLetter = await childClient.GetWeekLetter(date);
+-
+-        if (_weekLetterRepository != null && weekLetter != null)
+-        {
+-            try
+-            {
+-                var contentHash = WeekLetterUtilities.ComputeContentHash(weekLetter.ToString());
+-                await _weekLetterRepository.StoreWeekLetterAsync(
+-                    child.FirstName, weekNumber, year, contentHash, weekLetter.ToString());
+-                _logger.LogInformation("Stored week letter to database for {ChildName} week {WeekNumber}/{Year}",
+-                    child.FirstName, weekNumber, year);
+-            }
+-            catch (Exception ex)
+-            {
+-                _logger.LogWarning(ex, "Failed to store week letter to database");
+-            }
+-        }
+-
+         return weekLetter ?? WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
+     }
+ 
+@@ -129,12 +86,12 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
+             return new JObject();
+         }
+ 
+-        _logger.LogInformation("Creating fresh authenticated session for {ChildName} (schedule request)", child.FirstName);
++        _logger.LogInformation("Live fetching week schedule for {ChildName}", child.FirstName);
+ 
+         var logger = _loggerFactory.CreateLogger<PerChildMinUddannelseClient>();
+         using IChildAuthenticatedClient childClient = child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null
+-            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, _config, logger, _httpClientFactory)
+-            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, _config, logger, _httpClientFactory);
++            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, logger, _httpClientFactory)
++            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, logger, _httpClientFactory);
+ 
+         _logger.LogInformation("Using {AuthType} authentication for {ChildName}",
+             child.UniLogin.AuthType == AuthenticationType.Pictogram ? "pictogram" : "standard", child.FirstName);
+@@ -152,218 +109,16 @@ public partial class PerChildMinUddannelseClient : IMinUddannelseClient
+     }
+ 
+ 
+-    public async Task<JObject?> GetStoredWeekLetter(Child child, int weekNumber, int year)
++    public Task<JObject?> GetStoredWeekLetter(Child child, int weekNumber, int year)
+     {
+-        if (_weekLetterRepository == null)
+-        {
+-            _logger.LogWarning("Supabase service not available");
+-            return null;
+-        }
+-
+-        try
+-        {
+-            var storedContent = await _weekLetterRepository.GetStoredWeekLetterAsync(
+-                child.FirstName, weekNumber, year);
+-
+-            if (string.IsNullOrEmpty(storedContent))
+-            {
+-                return null;
+-            }
+-
+-            return JObject.Parse(storedContent);
+-        }
+-        catch (Exception ex)
+-        {
+-            _logger.LogError(ex, "Error retrieving stored week letter");
+-            return null;
+-        }
++        _logger.LogWarning("PerChildMinUddannelseClient does not support database operations. Use MinUddannelseClient for stored data access.");
++        return Task.FromResult<JObject?>(null);
+     }
+ 
+-    public async Task<List<StoredWeekLetter>> GetStoredWeekLetters(Child? child = null, int? year = null)
++    public Task<List<StoredWeekLetter>> GetStoredWeekLetters(Child? child = null, int? year = null)
+     {
+-        if (_weekLetterRepository == null)
+-        {
+-            return new List<StoredWeekLetter>();
+-        }
+-
+-        try
+-        {
+-            return await _weekLetterRepository.GetStoredWeekLettersAsync(child?.FirstName, year);
+-        }
+-        catch (Exception ex)
+-        {
+-            _logger.LogError(ex, "Error retrieving stored week letters");
+-            return new List<StoredWeekLetter>();
+-        }
++        _logger.LogWarning("PerChildMinUddannelseClient does not support database operations. Use MinUddannelseClient for stored data access.");
++        return Task.FromResult(new List<StoredWeekLetter>());
+     }
+ 
+-    /// <summary>
+-    /// Inner class that handles authentication for a specific child
+-    /// </summary>
+-    private sealed partial class ChildAuthenticatedClient : UniLoginAuthenticatorBase, IChildAuthenticatedClient
+-    {
+-        private readonly Child _child;
+-        private readonly ILogger _childLogger;
+-        private readonly Config _config;
+-        private string? _childId;
+-
+-        public ChildAuthenticatedClient(Child child, string username, string password, Config config, ILogger logger, IHttpClientFactory httpClientFactory)
+-            : base(httpClientFactory, username, password,
+-                config.MinUddannelse.SamlLoginUrl,
+-                config.MinUddannelse.ApiBaseUrl,
+-                logger,
+-                config.MinUddannelse.ApiBaseUrl,
+-                config.MinUddannelse.StudentDataPath)
+-        {
+-            _child = child;
+-            _childLogger = logger;
+-            _config = config;
+-        }
+-
+-        public new async Task<bool> LoginAsync()
+-        {
+-            _childLogger.LogInformation("Attempting to login for {ChildName} at URL: {Url}",
+-                _child.FirstName, _config.MinUddannelse.ApiBaseUrl);
+-
+-            var loginSuccess = await base.LoginAsync();
+-
+-            _childLogger.LogInformation("Base login returned: {Success}", loginSuccess);
+-
+-            if (loginSuccess)
+-            {
+-                _childLogger.LogInformation("Attempting to extract child ID for {ChildName}", _child.FirstName);
+-
+-                _childId = await ExtractChildId();
+-
+-                if (string.IsNullOrEmpty(_childId))
+-                {
+-                    _childLogger.LogError("Could not extract child ID for {ChildName}", _child.FirstName);
+-                    return false;
+-                }
+-
+-                _childLogger.LogInformation("Extracted child ID for {ChildName}: {ChildId}", _child.FirstName, _childId);
+-                return true;
+-            }
+-
+-            _childLogger.LogError("Base login failed for {ChildName}", _child.FirstName);
+-            return false;
+-        }
+-
+-        private async Task<string?> ExtractChildId()
+-        {
+-            try
+-            {
+-                _childLogger.LogInformation("Extracting child ID for {ChildName}", _child.FirstName);
+-
+-                using var httpClient = CreateHttpClient();
+-                var response = await httpClient.GetAsync($"{_config.MinUddannelse.ApiBaseUrl}/node/minuge");
+-                var content = await response.Content.ReadAsStringAsync();
+-
+-                var personIdMatch = PersonIdRegex().Match(content);
+-                if (personIdMatch.Success)
+-                {
+-                    var childId = personIdMatch.Groups[1].Value;
+-                    _childLogger.LogInformation("Extracted child ID from page context: {ChildId}", childId);
+-
+-                    var nameMatch = NameRegex().Match(content);
+-                    if (nameMatch.Success)
+-                    {
+-                        var firstName = nameMatch.Groups[1].Value;
+-                        var lastName = nameMatch.Groups[2].Value;
+-                        _childLogger.LogInformation("Confirmed authenticated as: {FirstName} {LastName}",
+-                            firstName, lastName);
+-                    }
+-
+-                    return childId;
+-                }
+-
+-                _childLogger.LogInformation("Page context method failed, trying API");
+-                var apiUrl = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.StudentDataPath}?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+-
+-                var apiResponse = await httpClient.GetAsync(apiUrl);
+-                if (apiResponse.IsSuccessStatusCode)
+-                {
+-                    var apiContent = await apiResponse.Content.ReadAsStringAsync();
+-                    if (apiContent.StartsWith('{') || apiContent.StartsWith('['))
+-                    {
+-                        var studentData = JObject.Parse(apiContent);
+-                        var childId = studentData["id"]?.ToString() ??
+-                                     studentData["elevId"]?.ToString() ??
+-                                     studentData["personid"]?.ToString();
+-
+-                        if (!string.IsNullOrEmpty(childId))
+-                        {
+-                            _childLogger.LogInformation("Extracted child ID from API: {ChildId}", childId);
+-                            return childId;
+-                        }
+-                    }
+-                }
+-
+-                _childLogger.LogWarning("Could not extract child ID from any source");
+-                return null;
+-            }
+-            catch (Exception ex)
+-            {
+-                _childLogger.LogError(ex, "Error extracting child ID");
+-                return null;
+-            }
+-        }
+-
+-        public async Task<JObject> GetWeekLetter(DateOnly date)
+-        {
+-            if (string.IsNullOrEmpty(_childId))
+-            {
+-                _childLogger.LogError("Child ID not available for {ChildName}", _child.FirstName);
+-                return new JObject();
+-            }
+-
+-            var url = $"{_config.MinUddannelse.ApiBaseUrl}{_config.MinUddannelse.WeekLettersPath}?tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}" +
+-                     $"&elevId={_childId}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+-
+-            using var httpClient = CreateHttpClient();
+-            var response = await httpClient.GetAsync(url);
+-            response.EnsureSuccessStatusCode();
+-            var json = await response.Content.ReadAsStringAsync();
+-
+-            var weekLetter = JObject.Parse(json);
+-            var weekLetterArray = weekLetter["ugebreve"] as JArray;
+-
+-            if (weekLetterArray == null || weekLetterArray.Count == 0)
+-            {
+-                var nullObject = new JObject
+-                {
+-                    ["klasseNavn"] = "N/A",
+-                    ["uge"] = $"{WeekLetterUtilities.GetIsoWeekNumber(date)}",
+-                    ["indhold"] = "Der er ikke skrevet nogen ugenoter til denne uge",
+-                };
+-                weekLetter["ugebreve"] = new JArray(nullObject);
+-            }
+-
+-            return weekLetter;
+-        }
+-
+-        public async Task<JObject> GetWeekSchedule(DateOnly date)
+-        {
+-            if (string.IsNullOrEmpty(_childId))
+-            {
+-                _childLogger.LogError("Child ID not available for {ChildName}", _child.FirstName);
+-                return new JObject();
+-            }
+-
+-            var url = $"{_config.MinUddannelse.ApiBaseUrl}/api/stamdata/aulaskema/getElevSkema?elevId={_childId}" +
+-                     $"&tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+-
+-            using var httpClient = CreateHttpClient();
+-            var response = await httpClient.GetAsync(url);
+-            response.EnsureSuccessStatusCode();
+-            var json = await response.Content.ReadAsStringAsync();
+-            return JObject.Parse(json);
+-        }
+-
+-        [GeneratedRegex(@"""personid"":(\d+)")]
+-        private static partial Regex PersonIdRegex();
+-
+-        [GeneratedRegex(@"""fornavn"":""([^""]*)"",""efternavn"":""([^""]*)""")]
+-        private static partial Regex NameRegex();
+-    }
+ }
+diff --git a/src/Aula/Program.cs b/src/Aula/Program.cs
+index 71f4a7f..a87482a 100644
+--- a/src/Aula/Program.cs
++++ b/src/Aula/Program.cs
+@@ -23,6 +23,8 @@ using Aula.Core.Security;
+ using Aula.Communication.Channels;
+ using Aula.Core.Utilities;
+ using Aula.Core.Models;
++using Polly;
++using Polly.Extensions.Http;
+ 
+ namespace Aula;
+ 
+@@ -193,6 +195,7 @@ public class Program
+         services.AddHttpClient("UniLogin", client =>
+         {
+             client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
++            client.Timeout = TimeSpan.FromMinutes(2); // Explicit timeout
+         })
+         .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+         {
+@@ -213,7 +216,7 @@ public class Program
+         services.AddSingleton<IChildAgentFactory, ChildAgentFactory>();
+ 
+         services.AddScoped<DataService>();
+-        services.AddScoped<IMinUddannelseClient, MinUddannelseClient>();
++        services.AddScoped<IMinUddannelseClient, PerChildMinUddannelseClient>();
+         services.AddScoped<IAgentService, AgentService>();
+         services.AddSingleton<IPromptSanitizer, PromptSanitizer>();
+         services.AddSingleton<IMessageContentFilter, MessageContentFilter>();

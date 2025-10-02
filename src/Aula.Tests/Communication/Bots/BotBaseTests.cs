@@ -7,11 +7,11 @@ using Aula.Content.WeekLetters;
 using Aula.Core.Models;
 using Aula.Core.Security;
 using Aula.Core.Utilities;
-using Aula.External.MinUddannelse;
-using Aula.External.Authentication;
-using Aula.External.GoogleCalendar;
-using Aula.External.MinUddannelse;
-using Aula.External.Authentication;
+using Aula.MinUddannelse;
+using Aula.MinUddannelse;
+using Aula.GoogleCalendar;
+using Aula.MinUddannelse;
+using Aula.MinUddannelse;
 using Aula.Core.Security;
 using System;
 using System.Threading.Tasks;
@@ -103,7 +103,7 @@ public class BotBaseTests
 
         _testConfig = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -148,7 +148,7 @@ public class BotBaseTests
     {
         var configWithDuplicates = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -169,7 +169,7 @@ public class BotBaseTests
     {
         var configWithDuplicates = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {
@@ -294,7 +294,7 @@ public class BotBaseTests
     {
         var singleChildConfig = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child> { new Child { FirstName = "Emma", LastName = "Doe" } }
             }
@@ -330,7 +330,7 @@ public class BotBaseTests
     {
         var configWithComplexName = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child> { new Child { FirstName = "Emma Louise", LastName = "Doe" } }
             }

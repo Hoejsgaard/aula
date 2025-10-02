@@ -10,7 +10,7 @@ public class MinUddannelseTests
     public void Constructor_InitializesEmptyChildrenList()
     {
         // Act
-        var minUddannelse = new MinUddannelse();
+        var minUddannelse = new MinUddannelseConfig();
 
         // Assert
         Assert.NotNull(minUddannelse.Children);
@@ -22,7 +22,7 @@ public class MinUddannelseTests
     public void Children_CanSetAndGetValue()
     {
         // Arrange
-        var minUddannelse = new MinUddannelse();
+        var minUddannelse = new MinUddannelseConfig();
         var children = new List<Child>
         {
             new Child { FirstName = "Emma", LastName = "Test" },
@@ -43,7 +43,7 @@ public class MinUddannelseTests
     public void Children_CanBeModifiedAfterConstruction()
     {
         // Arrange
-        var minUddannelse = new MinUddannelse();
+        var minUddannelse = new MinUddannelseConfig();
         var child = new Child { FirstName = "Emma", LastName = "Test" };
 
         // Act
@@ -58,7 +58,7 @@ public class MinUddannelseTests
     public void Children_CanBeSetToNull()
     {
         // Arrange
-        var minUddannelse = new MinUddannelse();
+        var minUddannelse = new MinUddannelseConfig();
 
         // Act
         minUddannelse.Children = null!;
@@ -71,7 +71,7 @@ public class MinUddannelseTests
     public void Children_SupportsLargeNumberOfChildren()
     {
         // Arrange
-        var minUddannelse = new MinUddannelse();
+        var minUddannelse = new MinUddannelseConfig();
         var children = new List<Child>();
         for (int i = 0; i < 100; i++)
         {
@@ -91,7 +91,7 @@ public class MinUddannelseTests
     public void MinUddannelse_HasCorrectNamespace()
     {
         // Arrange
-        var type = typeof(MinUddannelse);
+        var type = typeof(MinUddannelseConfig);
 
         // Act & Assert
         Assert.Equal("Aula.Configuration", type.Namespace);
@@ -101,7 +101,7 @@ public class MinUddannelseTests
     public void MinUddannelse_IsPublicClass()
     {
         // Arrange
-        var type = typeof(MinUddannelse);
+        var type = typeof(MinUddannelseConfig);
 
         // Act & Assert
         Assert.True(type.IsPublic);
@@ -113,7 +113,7 @@ public class MinUddannelseTests
     public void MinUddannelse_HasCorrectProperties()
     {
         // Arrange
-        var type = typeof(MinUddannelse);
+        var type = typeof(MinUddannelseConfig);
 
         // Act
         var childrenProperty = type.GetProperty("Children");
@@ -129,7 +129,7 @@ public class MinUddannelseTests
     public void MinUddannelse_HasParameterlessConstructor()
     {
         // Arrange
-        var type = typeof(MinUddannelse);
+        var type = typeof(MinUddannelseConfig);
 
         // Act
         var constructor = type.GetConstructor(System.Type.EmptyTypes);
@@ -143,7 +143,7 @@ public class MinUddannelseTests
     public void Children_ListOperationsWork()
     {
         // Arrange
-        var minUddannelse = new MinUddannelse();
+        var minUddannelse = new MinUddannelseConfig();
         var child1 = new Child { FirstName = "Emma", LastName = "Test" };
         var child2 = new Child { FirstName = "Lucas", LastName = "Test" };
 

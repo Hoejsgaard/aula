@@ -25,7 +25,7 @@ public class WeekLetterAiServiceTests
     private static WeekLetterAiService CreateTestWeekLetterAiService(string apiKey = "test-api-key")
     {
         var mockLoggerFactory = new Mock<ILoggerFactory>();
-        var config = new Config { MinUddannelse = new MinUddannelse { Children = new List<Child>() } };
+        var config = new Config { MinUddannelse = new MinUddannelseConfig { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
         var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
         var mockAiToolsManager = new Mock<AiToolsManager>(
@@ -47,7 +47,7 @@ public class WeekLetterAiServiceTests
         var mockLogger = new Mock<ILogger>();
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
-        var config = new Config { MinUddannelse = new MinUddannelse { Children = new List<Child>() } };
+        var config = new Config { MinUddannelse = new MinUddannelseConfig { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
         var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
         var mockAiToolsManager = new Mock<AiToolsManager>(
@@ -66,7 +66,7 @@ public class WeekLetterAiServiceTests
     {
         // Arrange
         var mockLoggerFactory = new Mock<ILoggerFactory>();
-        var config = new Config { MinUddannelse = new MinUddannelse { Children = new List<Child>() } };
+        var config = new Config { MinUddannelse = new MinUddannelseConfig { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
         var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
         var mockAiToolsManager = new Mock<AiToolsManager>(
@@ -89,7 +89,7 @@ public class WeekLetterAiServiceTests
         var mockLogger = new Mock<ILogger>();
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
-        var config = new Config { MinUddannelse = new MinUddannelse { Children = new List<Child>() } };
+        var config = new Config { MinUddannelse = new MinUddannelseConfig { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
         var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
         var mockAiToolsManager = new Mock<AiToolsManager>(
@@ -198,7 +198,7 @@ public class WeekLetterAiServiceTests
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
         var mockSupabaseService = new Mock<IReminderRepository>();
-        var config = new Config { MinUddannelse = new MinUddannelse { Children = new List<Child>() } };
+        var config = new Config { MinUddannelse = new MinUddannelseConfig { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
         var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
         var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockDataService.Object, config, mockLoggerFactory.Object);
@@ -227,7 +227,7 @@ public class WeekLetterAiServiceTests
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
         var mockSupabaseService = new Mock<IReminderRepository>();
-        var config = new Config { MinUddannelse = new MinUddannelse { Children = new List<Child>() } };
+        var config = new Config { MinUddannelse = new MinUddannelseConfig { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
         var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
         var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockDataService.Object, config, mockLoggerFactory.Object);
@@ -259,7 +259,7 @@ public class WeekLetterAiServiceTests
         mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(mockLogger.Object);
 
         var mockSupabaseService = new Mock<IReminderRepository>();
-        var config = new Config { MinUddannelse = new MinUddannelse { Children = new List<Child>() } };
+        var config = new Config { MinUddannelse = new MinUddannelseConfig { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
         var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
         var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockDataService.Object, config, mockLoggerFactory.Object);

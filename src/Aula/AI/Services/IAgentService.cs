@@ -11,7 +11,6 @@ namespace Aula.AI.Services;
           "For child management, use IChildServiceCoordinator. For child-specific operations, use child-aware services.")]
 public interface IAgentService
 {
-    Task<bool> LoginAsync();
     Task<JObject?> GetWeekLetterAsync(Child child, DateOnly date, bool useCache = true, bool allowLiveFetch = false);
     Task<JObject?> GetWeekScheduleAsync(Child child, DateOnly date, bool useCache = true);
 

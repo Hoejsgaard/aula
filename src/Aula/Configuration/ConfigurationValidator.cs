@@ -46,7 +46,7 @@ public class ConfigurationValidator : IConfigurationValidator
         }
     }
 
-    private void ValidateMinUddannelse(MinUddannelse minUddannelse, List<string> errors)
+    private void ValidateMinUddannelse(MinUddannelseConfig minUddannelse, List<string> errors)
     {
         if (minUddannelse == null)
         {

@@ -1,0 +1,213 @@
+{
+  "review_id": "2025-10-02-001",
+  "created_at": "2025-10-02T06:10:25.039Z",
+  "updated_at": "2025-10-02T06:14:44.997Z",
+  "status": "needs_changes",
+  "rounds": [
+    {
+      "review_id": "2025-10-02-001",
+      "timestamp": "2025-10-02T06:12:00.332Z",
+      "status": "needs_changes",
+      "round": 1,
+      "design_compliance": {
+        "follows_architecture": true,
+        "major_violations": []
+      },
+      "comments": [
+        {
+          "type": "specific",
+          "file": "src/Aula/External/MinUddannelse/MinUddannelseClient.cs",
+          "line": 23,
+          "severity": "major",
+          "category": "architecture",
+          "comment": "The constructor is passing empty strings for username and password to the base class, which violates the constructor contract of UniLoginAuthenticatorBase that expects non-null values. This appears to be a workaround for per-request authentication but creates a fragile design.",
+          "suggested_fix": "Consider refactoring UniLoginAuthenticatorBase to support optional credentials or create a separate base class for per-request authentication scenarios."
+        },
+        {
+          "type": "specific",
+          "file": "src/Aula/External/MinUddannelse/MinUddannelseClient.cs",
+          "line": 133,
+          "severity": "major",
+          "category": "bug",
+          "comment": "The GetChildId method references _userProfile which is never initialized in the new constructor path that uses IWeekLetterRepository. This will always throw InvalidOperationException when called.",
+          "suggested_fix": "Either initialize _userProfile properly in both constructor paths, or refactor to pass child identification through a different mechanism that doesn't rely on pre-loaded user profile data."
+        },
+        {
+          "type": "specific",
+          "file": "src/Aula/External/Authentication/UniLoginAuthenticatorBase.cs",
+          "line": 56,
+          "severity": "minor",
+          "category": "missing_feature",
+          "comment": "LoginAsync method is still present in the base class but the interface no longer declares it. This creates an inconsistency where the implementation has methods not in the contract.",
+          "suggested_fix": "Mark the LoginAsync method in UniLoginAuthenticatorBase as protected or remove it entirely if authentication is meant to be per-request."
+        },
+        {
+          "type": "specific",
+          "file": "src/Aula/AI/Services/AgentService.cs",
+          "line": 51,
+          "severity": "suggestion",
+          "category": "architecture",
+          "comment": "The comment mentions 'Authentication now happens per-request in MinUddannelseClient' but MinUddannelseClient doesn't appear to implement per-request authentication properly given the _userProfile issue.",
+          "suggested_fix": "Ensure the per-request authentication is fully implemented before removing the authentication checks from AgentService."
+        },
+        {
+          "type": "specific",
+          "file": "src/Aula/External/MinUddannelse/IMinUddannelseClient.cs",
+          "line": 11,
+          "severity": "minor",
+          "category": "style",
+          "comment": "The Obsolete attribute provides good migration guidance but the interface is still actively used throughout the codebase.",
+          "suggested_fix": "Consider creating the replacement IChildAuthenticationService and IChildContext interfaces before marking the current interface as obsolete."
+        },
+        {
+          "type": "specific",
+          "file": "src/Aula/Program.cs",
+          "line": 219,
+          "severity": "suggestion",
+          "category": "architecture",
+          "comment": "MinUddannelseClient is registered as Scoped but it seems to maintain state (_userProfile) that might be problematic in a scoped lifetime.",
+          "suggested_fix": "Consider whether MinUddannelseClient should be Singleton if it maintains authentication state, or ensure it's truly stateless for Scoped registration."
+        },
+        {
+          "type": "general",
+          "severity": "major",
+          "category": "architecture",
+          "comment": "The removal of LoginAsync from interfaces while keeping it in implementations creates an architectural inconsistency. The per-request authentication model is not fully realized since MinUddannelseClient still depends on pre-loaded user profile data.",
+          "suggested_fix": "Complete the authentication refactoring by either: 1) Implementing true per-request authentication that doesn't depend on _userProfile, or 2) Keeping the LoginAsync contract in the interface until the refactoring is complete."
+        },
+        {
+          "type": "general",
+          "severity": "suggestion",
+          "category": "style",
+          "comment": "Good use of ArgumentNullException.ThrowIfNull for parameter validation. This is the modern .NET pattern and improves code clarity.",
+          "suggested_fix": "Continue using this pattern throughout the codebase for consistency."
+        }
+      ],
+      "missing_requirements": [],
+      "summary": {
+        "design_violations": 0,
+        "critical_issues": 0,
+        "major_issues": 3,
+        "minor_issues": 2,
+        "suggestions": 3
+      },
+      "test_results": {
+        "passed": null,
+        "summary": "Tests were not executed due to missing .NET SDK in the environment. Based on the PR description, 973/974 tests pass with 1 pre-existing failure.",
+        "failing_tests": [],
+        "coverage": "Not measured"
+      },
+      "overall_assessment": "needs_changes",
+      "__claudeSessionId": "d5d1357e-1b5a-4cb3-9016-9fdc7613ec14",
+      "__claudeModel": "opus"
+    },
+    {
+      "review_id": "2025-10-02-001",
+      "timestamp": "2025-10-02T06:14:44.976Z",
+      "status": "needs_changes",
+      "round": 2,
+      "design_compliance": {
+        "follows_architecture": false,
+        "major_violations": [
+          {
+            "issue": "Invalid Child ID Fallback",
+            "description": "The GetChildId method now returns child.FirstName as a fallback when _userProfile is not loaded. This is architecturally incorrect because FirstName is NOT a valid child ID for the API. The API expects a numeric/unique identifier, not a name.",
+            "impact": "critical",
+            "recommendation": "Either implement proper per-request authentication to obtain the real child ID, or throw a clear exception indicating that this client requires authentication before use. Using FirstName as ID will cause API calls to fail with invalid parameters."
+          }
+        ]
+      },
+      "comments": [
+        {
+          "type": "specific",
+          "file": "src/Aula/External/MinUddannelse/MinUddannelseClient.cs",
+          "line": 144,
+          "severity": "critical",
+          "category": "bug",
+          "comment": "Returning child.FirstName as the child ID is fundamentally wrong. The MinUddannelse API expects a proper child ID (likely a GUID or numeric identifier), not a first name. This will cause GetWeekLetter and GetWeekSchedule to fail with API errors.",
+          "suggested_fix": "Throw a clear exception: throw new InvalidOperationException(\"Authentication required before accessing child data. Use PerChildMinUddannelseClient or call LoginAsync first.\");"
+        },
+        {
+          "type": "specific",
+          "file": "src/Aula/External/MinUddannelse/MinUddannelseClient.cs",
+          "line": 138,
+          "severity": "major",
+          "category": "architecture",
+          "comment": "The check for _userProfile.HasValues is good, but the fallback strategy is incorrect. This creates a false sense of graceful degradation when it actually breaks the API contract.",
+          "suggested_fix": "Either: 1) Implement lazy authentication that calls LoginAsync when needed, 2) Require authentication in the constructor, or 3) Make this an abstract method that derived classes must implement."
+        },
+        {
+          "type": "specific",
+          "file": "src/Aula/External/MinUddannelse/MinUddannelseClient.cs",
+          "line": 77,
+          "severity": "critical",
+          "category": "bug",
+          "comment": "This line calls GetChildId(child) which can now return FirstName instead of a valid ID. The resulting URL will be malformed: '...elevId=Emma...' instead of '...elevId=12345...'",
+          "suggested_fix": "Ensure GetChildId always returns a valid ID or throws an exception. Never construct URLs with invalid data."
+        },
+        {
+          "type": "specific",
+          "file": "src/Aula/External/MinUddannelse/MinUddannelseClient.cs",
+          "line": 23,
+          "severity": "major",
+          "category": "architecture",
+          "comment": "Passing empty strings for username/password to the base constructor still violates the base class contract. The base constructor validates these as non-null but doesn't check for empty.",
+          "suggested_fix": "Either make the base class support optional credentials properly, or provide a different constructor path that doesn't require credentials."
+        },
+        {
+          "type": "general",
+          "severity": "major",
+          "category": "design",
+          "comment": "The attempt to provide graceful degradation actually makes the system fail in unpredictable ways. Using an invalid child ID will result in HTTP 400 or 404 errors from the API, which is harder to debug than a clear exception at the point of failure.",
+          "suggested_fix": "Follow the fail-fast principle: throw clear exceptions when prerequisites are not met, rather than attempting to continue with invalid data."
+        },
+        {
+          "type": "general",
+          "severity": "suggestion",
+          "category": "architecture",
+          "comment": "The TODO comment acknowledges the need for per-request authentication but the current 'fix' creates more problems than it solves.",
+          "suggested_fix": "Consider marking this constructor as internal or obsolete until per-request authentication is properly implemented."
+        }
+      ],
+      "missing_requirements": [
+        {
+          "requirement": "Proper per-request authentication implementation",
+          "severity": "critical"
+        },
+        {
+          "requirement": "Valid child ID resolution without pre-loaded user profile",
+          "severity": "critical"
+        }
+      ],
+      "summary": {
+        "design_violations": 1,
+        "critical_issues": 2,
+        "major_issues": 3,
+        "minor_issues": 0,
+        "suggestions": 1
+      },
+      "test_results": {
+        "passed": null,
+        "summary": "Tests not executed in review environment. Per PR description: 973/974 tests pass. However, the passing tests suggest the test coverage may not be adequate for the GetChildId scenarios.",
+        "failing_tests": [],
+        "coverage": "Not measured"
+      },
+      "overall_assessment": "needs_changes",
+      "__claudeSessionId": "d5d1357e-1b5a-4cb3-9016-9fdc7613ec14",
+      "__claudeModel": "opus"
+    }
+  ],
+  "request": {
+    "summary": "Cleaned up MinUddannelseClient and AgentService:\n- Removed unused LoginAsync methods from interfaces and implementations\n- Updated MinUddannelseClient constructor to remove global Config dependency\n- Added proper argument validation with ArgumentNullException.ThrowIfNull\n- Synced appsettings.json between main and test projects\n- Updated test constructor calls to match new MinUddannelseClient signature\n- Added Polly package references but removed complex retry logic for now\n\nAll builds pass, 973/974 tests pass (1 pre-existing test failure unrelated to changes).",
+    "focus_areas": [
+      "Constructor validation",
+      "Interface cleanup",
+      "Test compatibility",
+      "Configuration synchronization"
+    ],
+    "test_command": "dotnet test src/Aula.Tests"
+  },
+  "claudeSessionIds": {
+    "opus": "d5d1357e-1b5a-4cb3-9016-9fdc7613ec14"
+  }
+}

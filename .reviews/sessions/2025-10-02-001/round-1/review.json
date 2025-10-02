@@ -1,0 +1,97 @@
+{
+  "review_id": "2025-10-02-001",
+  "timestamp": "2025-10-02T06:12:00.332Z",
+  "status": "needs_changes",
+  "round": 1,
+  "design_compliance": {
+    "follows_architecture": true,
+    "major_violations": []
+  },
+  "comments": [
+    {
+      "type": "specific",
+      "file": "src/Aula/External/MinUddannelse/MinUddannelseClient.cs",
+      "line": 23,
+      "severity": "major",
+      "category": "architecture",
+      "comment": "The constructor is passing empty strings for username and password to the base class, which violates the constructor contract of UniLoginAuthenticatorBase that expects non-null values. This appears to be a workaround for per-request authentication but creates a fragile design.",
+      "suggested_fix": "Consider refactoring UniLoginAuthenticatorBase to support optional credentials or create a separate base class for per-request authentication scenarios."
+    },
+    {
+      "type": "specific",
+      "file": "src/Aula/External/MinUddannelse/MinUddannelseClient.cs",
+      "line": 133,
+      "severity": "major",
+      "category": "bug",
+      "comment": "The GetChildId method references _userProfile which is never initialized in the new constructor path that uses IWeekLetterRepository. This will always throw InvalidOperationException when called.",
+      "suggested_fix": "Either initialize _userProfile properly in both constructor paths, or refactor to pass child identification through a different mechanism that doesn't rely on pre-loaded user profile data."
+    },
+    {
+      "type": "specific",
+      "file": "src/Aula/External/Authentication/UniLoginAuthenticatorBase.cs",
+      "line": 56,
+      "severity": "minor",
+      "category": "missing_feature",
+      "comment": "LoginAsync method is still present in the base class but the interface no longer declares it. This creates an inconsistency where the implementation has methods not in the contract.",
+      "suggested_fix": "Mark the LoginAsync method in UniLoginAuthenticatorBase as protected or remove it entirely if authentication is meant to be per-request."
+    },
+    {
+      "type": "specific",
+      "file": "src/Aula/AI/Services/AgentService.cs",
+      "line": 51,
+      "severity": "suggestion",
+      "category": "architecture",
+      "comment": "The comment mentions 'Authentication now happens per-request in MinUddannelseClient' but MinUddannelseClient doesn't appear to implement per-request authentication properly given the _userProfile issue.",
+      "suggested_fix": "Ensure the per-request authentication is fully implemented before removing the authentication checks from AgentService."
+    },
+    {
+      "type": "specific",
+      "file": "src/Aula/External/MinUddannelse/IMinUddannelseClient.cs",
+      "line": 11,
+      "severity": "minor",
+      "category": "style",
+      "comment": "The Obsolete attribute provides good migration guidance but the interface is still actively used throughout the codebase.",
+      "suggested_fix": "Consider creating the replacement IChildAuthenticationService and IChildContext interfaces before marking the current interface as obsolete."
+    },
+    {
+      "type": "specific",
+      "file": "src/Aula/Program.cs",
+      "line": 219,
+      "severity": "suggestion",
+      "category": "architecture",
+      "comment": "MinUddannelseClient is registered as Scoped but it seems to maintain state (_userProfile) that might be problematic in a scoped lifetime.",
+      "suggested_fix": "Consider whether MinUddannelseClient should be Singleton if it maintains authentication state, or ensure it's truly stateless for Scoped registration."
+    },
+    {
+      "type": "general",
+      "severity": "major",
+      "category": "architecture",
+      "comment": "The removal of LoginAsync from interfaces while keeping it in implementations creates an architectural inconsistency. The per-request authentication model is not fully realized since MinUddannelseClient still depends on pre-loaded user profile data.",
+      "suggested_fix": "Complete the authentication refactoring by either: 1) Implementing true per-request authentication that doesn't depend on _userProfile, or 2) Keeping the LoginAsync contract in the interface until the refactoring is complete."
+    },
+    {
+      "type": "general",
+      "severity": "suggestion",
+      "category": "style",
+      "comment": "Good use of ArgumentNullException.ThrowIfNull for parameter validation. This is the modern .NET pattern and improves code clarity.",
+      "suggested_fix": "Continue using this pattern throughout the codebase for consistency."
+    }
+  ],
+  "missing_requirements": [],
+  "summary": {
+    "design_violations": 0,
+    "critical_issues": 0,
+    "major_issues": 3,
+    "minor_issues": 2,
+    "suggestions": 3
+  },
+  "test_results": {
+    "passed": null,
+    "summary": "Tests were not executed due to missing .NET SDK in the environment. Based on the PR description, 973/974 tests pass with 1 pre-existing failure.",
+    "failing_tests": [],
+    "coverage": "Not measured"
+  },
+  "overall_assessment": "needs_changes",
+  "__claudeSessionId": "d5d1357e-1b5a-4cb3-9016-9fdc7613ec14",
+  "__claudeModel": "opus"
+}

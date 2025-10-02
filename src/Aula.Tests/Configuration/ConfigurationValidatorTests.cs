@@ -81,7 +81,7 @@ public class ConfigurationValidatorTests
         // Arrange
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>()
             },
@@ -104,7 +104,7 @@ public class ConfigurationValidatorTests
         // Arrange
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child> { new Child { FirstName = "", LastName = "Test" } }
             },
@@ -127,7 +127,7 @@ public class ConfigurationValidatorTests
         // Arrange
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child> { new Child { FirstName = "Test", LastName = "" } }
             },
@@ -150,7 +150,7 @@ public class ConfigurationValidatorTests
         // Arrange
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child> { new Child { FirstName = "Test", LastName = "Child" } }
             },
@@ -173,7 +173,7 @@ public class ConfigurationValidatorTests
         // Arrange
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child> { new Child { FirstName = "Test", LastName = "Child" } }
             },
@@ -196,7 +196,7 @@ public class ConfigurationValidatorTests
         // Arrange
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child> { new Child { FirstName = "Test", LastName = "Child" } }
             },
@@ -219,7 +219,7 @@ public class ConfigurationValidatorTests
         // Arrange
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child> { new Child { FirstName = "Test", LastName = "Child" } }
             },
@@ -242,7 +242,7 @@ public class ConfigurationValidatorTests
         // Arrange
         var config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child> { new Child { FirstName = "Test", LastName = "Child" } }
             },
@@ -318,7 +318,7 @@ public class ConfigurationValidatorTests
     {
         return new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child>
                 {

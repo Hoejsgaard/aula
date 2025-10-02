@@ -1,16 +1,13 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Aula.External.MinUddannelse;
-using Aula.External.Authentication;
-using Aula.External.GoogleCalendar;
-using Aula.External.MinUddannelse;
-using Aula.External.Authentication;
+using Aula.MinUddannelse;
+using Aula.MinUddannelse;
+using Aula.GoogleCalendar;
 using Aula.Core.Security;
 using Aula.AI.Services;
 using Aula.Content.WeekLetters;
 using Aula.Core.Models;
-using Aula.Core.Security;
 using Aula.Core.Utilities;
 using Aula.Configuration;
 using Newtonsoft.Json.Linq;
@@ -39,7 +36,7 @@ public class AgentServiceTests
 
         _config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child> { new Child { FirstName = "Test", LastName = "Child" } }
             }
@@ -108,7 +105,6 @@ public class AgentServiceTests
         var serviceType = typeof(AgentService);
 
         // Act & Assert
-        Assert.NotNull(serviceType.GetMethod("LoginAsync"));
         Assert.NotNull(serviceType.GetMethod("GetWeekLetterAsync"));
         Assert.NotNull(serviceType.GetMethod("GetWeekScheduleAsync"));
         Assert.NotNull(serviceType.GetMethod("SummarizeWeekLetterAsync"));
@@ -178,21 +174,6 @@ public class AgentServiceTests
         Assert.Equal("loggerFactory", parameters[4].Name);
     }
 
-    [Fact]
-    public async Task LoginAsync_AlwaysReturnsTrue()
-    {
-        // Arrange
-        _mockMinUddannelseClient.Setup(x => x.LoginAsync()).ReturnsAsync(true);
-        var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
-            _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
-
-        // Act
-        var result = await service.LoginAsync();
-
-        // Assert
-        Assert.True(result);
-        _mockMinUddannelseClient.Verify(x => x.LoginAsync(), Times.Once());
-    }
 
     [Fact]
     public async Task GetWeekLetterAsync_WithCache_ReturnsCachedData()
@@ -239,7 +220,7 @@ public class AgentServiceTests
     }
 
     [Fact]
-    public async Task GetWeekLetterAsync_DoesNotCheckLoginStatus()
+    public async Task GetWeekLetterAsync_CallsMinUddannelseClientDirectly()
     {
         // Arrange
         var child = new Child { FirstName = "Test", LastName = "Child" };
@@ -250,11 +231,10 @@ public class AgentServiceTests
         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
             _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
 
-        // Act - Call without calling LoginAsync first
+        // Act
         await service.GetWeekLetterAsync(child, DateOnly.FromDateTime(DateTime.Today), useCache: false);
 
-        // Assert - Should not call LoginAsync internally
-        _mockMinUddannelseClient.Verify(x => x.LoginAsync(), Times.Never());
+        // Assert - Should directly call GetWeekLetter
         _mockMinUddannelseClient.Verify(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()), Times.Once());
     }
 
@@ -280,13 +260,11 @@ public class AgentServiceTests
     }
 
     [Fact]
-    public async Task GetWeekScheduleAsync_WithoutCache_CallsMinUddannelseClient()
+    public async Task GetWeekScheduleAsync_WithoutCache_ReturnsNull()
     {
         // Arrange
-        var freshSchedule = new JObject { ["schedule"] = "fresh" };
         var child = new Child { FirstName = "Test", LastName = "Child" };
         _mockDataService.Setup(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns((JObject?)null);
-        _mockMinUddannelseClient.Setup(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<DateOnly>())).ReturnsAsync(freshSchedule);
 
         var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
             _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
@@ -295,9 +273,8 @@ public class AgentServiceTests
         var result = await service.GetWeekScheduleAsync(child, DateOnly.FromDateTime(DateTime.Today), useCache: true);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal("fresh", result["schedule"]?.ToString());
-        _mockMinUddannelseClient.Verify(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<DateOnly>()), Times.Once());
-        _mockDataService.Verify(x => x.CacheWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<JObject>()), Times.Once());
+        Assert.Null(result);
+        _mockMinUddannelseClient.Verify(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<DateOnly>()), Times.Never());
+        _mockDataService.Verify(x => x.CacheWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<JObject>()), Times.Never());
     }
 }

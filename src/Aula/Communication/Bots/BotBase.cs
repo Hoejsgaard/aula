@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using Aula.AI.Services;
 using Microsoft.Extensions.Logging;
 using Aula.Configuration;
-using Aula.External.MinUddannelse;
+using Aula.MinUddannelse;
 using Aula.Content.Processing;
 
 namespace Aula.Communication.Bots;

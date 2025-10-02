@@ -1,11 +1,10 @@
 using Microsoft.Extensions.Logging;
 using Aula.AI.Services;
 using Aula.Core.Utilities;
-using Aula.External.MinUddannelse;
-using Aula.External.Authentication;
+using Aula.MinUddannelse;
+using Aula.MinUddannelse;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
-using Aula.AI.Services;
 using Aula.Content.WeekLetters;
 
 namespace Aula.AI.Services;
@@ -38,11 +37,6 @@ public class AgentService : IAgentService
         _logger = loggerFactory.CreateLogger(nameof(AgentService));
     }
 
-    public async Task<bool> LoginAsync()
-    {
-        _logger.LogInformation("LoginAsync called - authentication now happens per-request");
-        return await _minUddannelseClient.LoginAsync();
-    }
 
     public async Task<JObject?> GetWeekLetterAsync(Child child, DateOnly date, bool useCache = true, bool allowLiveFetch = false)
     {
@@ -126,8 +120,6 @@ public class AgentService : IAgentService
         var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
         var year = date.Year;
 
-        // Authentication now happens per-request in MinUddannelseClient, no need to check here
-
         if (useCache)
         {
             var cachedWeekSchedule = _dataService.GetWeekSchedule(child, weekNumber, year);
@@ -138,12 +130,9 @@ public class AgentService : IAgentService
             }
         }
 
-        _logger.LogInformation("Getting week schedule for {ChildName} for date {Date}", child.FirstName, date);
-        var weekSchedule = await _minUddannelseClient.GetWeekSchedule(child, date);
-
-        _dataService.CacheWeekSchedule(child, weekNumber, year, weekSchedule);
-
-        return weekSchedule;
+        // MinUddannelseClient no longer supports live fetching - only cached data is available
+        _logger.LogWarning("No cached week schedule available for {ChildName} for date {Date}. Live fetching requires MinUddannelseClient with authentication.", child.FirstName, date);
+        return null;
     }
 
     public async Task<string> SummarizeWeekLetterAsync(Child child, DateOnly date, ChatInterface chatInterface = ChatInterface.Slack)

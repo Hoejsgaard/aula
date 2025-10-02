@@ -1,13 +1,13 @@
 using Microsoft.Extensions.Caching.Memory;
-using Aula.External.GoogleCalendar;
+using Aula.GoogleCalendar;
 using Aula.Content.WeekLetters;
 using Aula.AI.Services;
 using Aula.AI.Prompts;
 using Aula.Core.Models;
 using Aula.Core.Security;
 using Aula.Core.Utilities;
-using Aula.External.MinUddannelse;
-using Aula.External.Authentication;
+using Aula.MinUddannelse;
+using Aula.MinUddannelse;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -23,6 +23,8 @@ using Aula.Core.Security;
 using Aula.Communication.Channels;
 using Aula.Core.Utilities;
 using Aula.Core.Models;
+using Polly;
+using Polly.Extensions.Http;
 
 namespace Aula;
 
@@ -193,6 +195,7 @@ public class Program
         services.AddHttpClient("UniLogin", client =>
         {
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            client.Timeout = TimeSpan.FromMinutes(2); // Explicit timeout
         })
         .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
         {

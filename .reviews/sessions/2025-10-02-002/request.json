@@ -1,0 +1,10 @@
+{
+  "summary": "Completed removal of legacy _userProfile dependency from MinUddannelseClient. Removed GetChildId and ExtractUserProfile methods entirely. Updated GetWeekLetter and GetWeekSchedule to throw NotSupportedException for live fetching with clear error messages directing users to PerChildMinUddannelseClient. All stored data methods remain functional. Build passes with 973/974 tests passing (1 pre-existing unrelated failure).",
+  "test_command": "dotnet test src/Aula.Tests --nologo",
+  "focus_areas": [
+    "Legacy code removal completeness",
+    "Error message clarity",
+    "Constructor validation",
+    "Test coverage maintenance"
+  ]
+}

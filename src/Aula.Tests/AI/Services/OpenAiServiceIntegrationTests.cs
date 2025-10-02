@@ -35,7 +35,7 @@ public class OpenAiServiceIntegrationTests
 
         _config = new Config
         {
-            MinUddannelse = new MinUddannelse
+            MinUddannelse = new MinUddannelseConfig
             {
                 Children = new List<Child> { new Child { FirstName = "Test", LastName = "Child" } }
             }
