@@ -1,7 +1,8 @@
 using OpenAI.ObjectModels.RequestModels;
 using System.Collections.Generic;
+using Aula.AI.Services;
 
-namespace Aula.AI.Services;
+namespace Aula.AI.Prompts;
 
 public interface IPromptBuilder
 {

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Aula.Repositories;
 using Xunit;
 using Aula.AI.Services;
+using Aula.AI.Prompts;
 using Aula.Configuration;
 using Aula.AI.Services;
 using Aula.Content.WeekLetters;

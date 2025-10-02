@@ -8,6 +8,7 @@ using Moq;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using Aula.AI.Services;
+using Aula.AI.Prompts;
 using Aula.Content.WeekLetters;
 using Aula.Core.Models;
 using Aula.Core.Security;

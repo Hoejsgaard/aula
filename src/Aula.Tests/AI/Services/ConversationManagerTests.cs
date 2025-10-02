@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using Aula.AI.Services;
+using Aula.AI.Prompts;
 using Aula.Content.WeekLetters;
 using Aula.Core.Models;
 using Aula.Core.Security;

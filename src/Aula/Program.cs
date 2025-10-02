@@ -2,6 +2,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Aula.External.GoogleCalendar;
 using Aula.Content.WeekLetters;
 using Aula.AI.Services;
+using Aula.AI.Prompts;
 using Aula.Core.Models;
 using Aula.Core.Security;
 using Aula.Core.Utilities;
