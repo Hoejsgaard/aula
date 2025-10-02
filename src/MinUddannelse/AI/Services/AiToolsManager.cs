@@ -1,6 +1,4 @@
 using Microsoft.Extensions.Logging;
-using MinUddannelse.Models;
-using MinUddannelse.Repositories.DTOs;
 using MinUddannelse;
 using System.ComponentModel;
 using MinUddannelse.Configuration;

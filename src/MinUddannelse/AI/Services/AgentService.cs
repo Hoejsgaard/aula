@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 using MinUddannelse.AI.Services;
 using MinUddannelse;
 using MinUddannelse.Client;
-using MinUddannelse.Client;
 using Newtonsoft.Json.Linq;
 using MinUddannelse.Configuration;
 using MinUddannelse.Content.WeekLetters;
@@ -114,7 +113,7 @@ public class AgentService : IAgentService
         return weekLetter;
     }
 
-    public async Task<JObject?> GetWeekScheduleAsync(Child child, DateOnly date, bool useCache = true)
+    public Task<JObject?> GetWeekScheduleAsync(Child child, DateOnly date, bool useCache = true)
     {
         // Calculate week number and year for caching
         var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
@@ -126,13 +125,13 @@ public class AgentService : IAgentService
             if (cachedWeekSchedule != null)
             {
                 _logger.LogInformation("Returning cached week schedule for {ChildName}", child.FirstName);
-                return cachedWeekSchedule;
+                return Task.FromResult<JObject?>(cachedWeekSchedule);
             }
         }
 
         // MinUddannelseClient no longer supports live fetching - only cached data is available
         _logger.LogWarning("No cached week schedule available for {ChildName} for date {Date}. Live fetching requires MinUddannelseClient with authentication.", child.FirstName, date);
-        return null;
+        return Task.FromResult<JObject?>(null);
     }
 
     public async Task<string> SummarizeWeekLetterAsync(Child child, DateOnly date, ChatInterface chatInterface = ChatInterface.Slack)

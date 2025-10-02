@@ -40,6 +40,11 @@ public interface IChannelManager
     Task BroadcastMessageAsync(string message);
 
     /// <summary>
+    /// Sends a message to all channels configured for a specific child.
+    /// </summary>
+    Task SendMessageToChildChannelsAsync(string childName, string message);
+
+    /// <summary>
     /// Sends a message to specific channels by platform ID.
     /// </summary>
     Task SendToChannelsAsync(string message, params string[] platformIds);

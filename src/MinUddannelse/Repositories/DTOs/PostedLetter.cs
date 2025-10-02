@@ -32,4 +32,10 @@ public class PostedLetter : BaseModel
 
     [Column("raw_content")]
     public string? RawContent { get; set; }
+
+    [Column("auto_reminders_extracted")]
+    public bool AutoRemindersExtracted { get; set; } = false;
+
+    [Column("auto_reminders_last_updated")]
+    public DateTime? AutoRemindersLastUpdated { get; set; }
 }

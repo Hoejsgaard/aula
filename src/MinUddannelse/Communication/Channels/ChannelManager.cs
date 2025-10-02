@@ -100,6 +100,46 @@ public class ChannelManager : IChannelManager
         await Task.WhenAll(tasks);
     }
 
+    public async Task SendMessageToChildChannelsAsync(string childName, string message)
+    {
+        if (string.IsNullOrEmpty(childName))
+        {
+            _logger.LogWarning("Attempted to send message with empty child name");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(message))
+        {
+            _logger.LogWarning("Attempted to send empty message for child {ChildName}", childName);
+            return;
+        }
+
+        var enabledChannels = GetEnabledChannels();
+        if (enabledChannels.Count == 0)
+        {
+            _logger.LogWarning("No enabled channels available for child {ChildName}", childName);
+            return;
+        }
+
+        _logger.LogInformation("Sending message for child {ChildName} to {Count} channels", childName, enabledChannels.Count);
+
+        var tasks = enabledChannels.Select(async channel =>
+        {
+            try
+            {
+                var formattedMessage = channel.FormatMessage(message);
+                await channel.SendMessageAsync(formattedMessage);
+                _logger.LogDebug("Successfully sent message for child {ChildName} to {PlatformId}", childName, channel.PlatformId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send message for child {ChildName} to {PlatformId}", childName, channel.PlatformId);
+            }
+        });
+
+        await Task.WhenAll(tasks);
+    }
+
     public async Task SendToChannelsAsync(string message, params string[] platformIds)
     {
         if (string.IsNullOrEmpty(message))

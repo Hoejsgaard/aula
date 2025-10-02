@@ -1,9 +1,5 @@
 using MinUddannelse.Models;
 using MinUddannelse.Repositories.DTOs;
-using MinUddannelse.Models;
-using MinUddannelse.Repositories.DTOs;
-using MinUddannelse.Models;
-using MinUddannelse.Repositories.DTOs;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -18,4 +14,7 @@ public interface IWeekLetterRepository
     Task<List<StoredWeekLetter>> GetStoredWeekLettersAsync(string? childName = null, int? year = null);
     Task<StoredWeekLetter?> GetLatestStoredWeekLetterAsync(string childName);
     Task DeleteWeekLetterAsync(string childName, int weekNumber, int year);
+    Task<PostedLetter?> GetPostedLetterByHashAsync(string childName, int weekNumber, int year);
+    Task MarkAutoRemindersExtractedAsync(string childName, int weekNumber, int year);
+    Task ResetAutoRemindersExtractedAsync(string childName, int weekNumber, int year);
 }

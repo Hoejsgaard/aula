@@ -3,7 +3,6 @@ using MinUddannelse.Content.WeekLetters;
 using System.Threading.Tasks;
 using MinUddannelse.Configuration;
 using MinUddannelse.AI.Services;
-using MinUddannelse.Content.WeekLetters;
 using MinUddannelse.Scheduling;
 using MinUddannelse.Communication.Bots;
 using MinUddannelse.Communication.Channels;

@@ -1,9 +1,5 @@
 using MinUddannelse.Models;
 using MinUddannelse.Repositories.DTOs;
-using MinUddannelse.Models;
-using MinUddannelse.Repositories.DTOs;
-using MinUddannelse.Models;
-using MinUddannelse.Repositories.DTOs;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

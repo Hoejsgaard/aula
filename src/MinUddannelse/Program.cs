@@ -19,12 +19,13 @@ using MinUddannelse.Repositories;
 using MinUddannelse.Repositories.DTOs;
 using MinUddannelse.Scheduling;
 using MinUddannelse.Security;
+using MinUddannelse.Testing;
 
 namespace MinUddannelse;
 
 public class Program
 {
-    public static async Task Main()
+    public static async Task Main(string[] args)
     {
         var serviceProvider = ConfigureServices();
         var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
@@ -32,6 +33,15 @@ public class Program
 
         try
         {
+            // Check for test commands first
+            var config = serviceProvider.GetRequiredService<Config>();
+
+            if (await WeekLetterTestCommand.HandleTestCommand(args, config, serviceProvider))
+            {
+                logger.LogInformation("Test command completed");
+                return;
+            }
+
             logger.LogInformation("Starting MinUddannelse");
 
             if (!await ValidateConfigurationAsync(serviceProvider, logger))
@@ -264,6 +274,18 @@ public class Program
         services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
 
         services.AddSingleton<ISchedulingService, SchedulingService>();
+
+        services.AddSingleton<IWeekLetterReminderService>(provider =>
+        {
+            var config = provider.GetRequiredService<Config>();
+            return new WeekLetterReminderService(
+                provider.GetRequiredService<IOpenAiService>(),
+                provider.GetRequiredService<ILoggerFactory>().CreateLogger<WeekLetterReminderService>(),
+                provider.GetRequiredService<IWeekLetterRepository>(),
+                provider.GetRequiredService<IReminderRepository>(),
+                config.OpenAi.Model,
+                TimeOnly.Parse(config.Scheduling.DefaultOnDateReminderTime));
+        });
 
         return services.BuildServiceProvider();
     }

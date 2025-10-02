@@ -1,7 +1,5 @@
 using MinUddannelse.Models;
 using MinUddannelse.Repositories.DTOs;
-using MinUddannelse.Models;
-using MinUddannelse.Repositories.DTOs;
 using Microsoft.Extensions.Logging;
 using Supabase;
 using System;

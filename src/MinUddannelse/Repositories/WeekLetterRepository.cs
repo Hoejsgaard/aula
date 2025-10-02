@@ -1,9 +1,5 @@
 using MinUddannelse.Models;
 using MinUddannelse.Repositories.DTOs;
-using MinUddannelse.Models;
-using MinUddannelse.Repositories.DTOs;
-using MinUddannelse.Models;
-using MinUddannelse.Repositories.DTOs;
 using Microsoft.Extensions.Logging;
 using Supabase;
 using System.Collections.Generic;
@@ -224,6 +220,75 @@ public class WeekLetterRepository : IWeekLetterRepository
             .Delete();
 
         _logger.LogInformation("Deleted week letter for {ChildName}, week {WeekNumber}/{Year}",
+            childName, weekNumber, year);
+    }
+
+    public async Task<PostedLetter?> GetPostedLetterByHashAsync(string childName, int weekNumber, int year)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(childName);
+        ArgumentOutOfRangeException.ThrowIfLessThan(weekNumber, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(weekNumber, 53);
+        ArgumentOutOfRangeException.ThrowIfLessThan(year, 2000);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(year, 2100);
+
+        var resultQuery = await _supabase
+            .From<PostedLetter>()
+            .Where(p => p.ChildName == childName)
+            .Where(p => p.WeekNumber == weekNumber)
+            .Where(p => p.Year == year)
+            .Limit(1)
+            .Get();
+
+        return resultQuery.Models.FirstOrDefault();
+    }
+
+    public async Task MarkAutoRemindersExtractedAsync(string childName, int weekNumber, int year)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(childName);
+        ArgumentOutOfRangeException.ThrowIfLessThan(weekNumber, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(weekNumber, 53);
+        ArgumentOutOfRangeException.ThrowIfLessThan(year, 2000);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(year, 2100);
+
+        var existingRecord = await GetPostedLetterByHashAsync(childName, weekNumber, year);
+        if (existingRecord == null)
+        {
+            _logger.LogWarning("Cannot mark auto reminders extracted - no posted letter found for {ChildName} week {WeekNumber}/{Year}",
+                childName, weekNumber, year);
+            return;
+        }
+
+        existingRecord.AutoRemindersExtracted = true;
+        existingRecord.AutoRemindersLastUpdated = DateTime.UtcNow;
+
+        await existingRecord.Update<PostedLetter>();
+
+        _logger.LogInformation("Marked auto reminders extracted for {ChildName}, week {WeekNumber}/{Year}",
+            childName, weekNumber, year);
+    }
+
+    public async Task ResetAutoRemindersExtractedAsync(string childName, int weekNumber, int year)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(childName);
+        ArgumentOutOfRangeException.ThrowIfLessThan(weekNumber, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(weekNumber, 53);
+        ArgumentOutOfRangeException.ThrowIfLessThan(year, 2000);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(year, 2100);
+
+        var existingRecord = await GetPostedLetterByHashAsync(childName, weekNumber, year);
+        if (existingRecord == null)
+        {
+            _logger.LogWarning("Cannot reset auto reminders extracted - no posted letter found for {ChildName} week {WeekNumber}/{Year}",
+                childName, weekNumber, year);
+            return;
+        }
+
+        existingRecord.AutoRemindersExtracted = false;
+        existingRecord.AutoRemindersLastUpdated = DateTime.UtcNow;
+
+        await existingRecord.Update<PostedLetter>();
+
+        _logger.LogInformation("Reset auto reminders extracted flag for {ChildName}, week {WeekNumber}/{Year}",
             childName, weekNumber, year);
     }
 }

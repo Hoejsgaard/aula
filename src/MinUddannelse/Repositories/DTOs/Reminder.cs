@@ -29,4 +29,22 @@ public class Reminder : BaseModel
 
     [Column("created_by")]
     public string CreatedBy { get; set; } = "bot";
+
+    [Column("source")]
+    public string Source { get; set; } = "manual";
+
+    [Column("week_letter_id")]
+    public int? WeekLetterId { get; set; }
+
+    [Column("event_type")]
+    public string? EventType { get; set; }
+
+    [Column("event_title")]
+    public string? EventTitle { get; set; }
+
+    [Column("extracted_date_time")]
+    public DateTime? ExtractedDateTime { get; set; }
+
+    [Column("confidence_score")]
+    public decimal? ConfidenceScore { get; set; }
 }

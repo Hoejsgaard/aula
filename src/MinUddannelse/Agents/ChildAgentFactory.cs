@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MinUddannelse.Configuration;
 using MinUddannelse.AI.Services;
-using MinUddannelse.Content.WeekLetters;
 using MinUddannelse.Scheduling;
 
 namespace MinUddannelse.Agents;

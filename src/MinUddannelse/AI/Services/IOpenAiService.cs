@@ -22,4 +22,16 @@ public interface IOpenAiService
     /// Clears the conversation history for the specified child.
     /// </summary>
     Task ClearConversationHistoryAsync(Child child, string conversationId);
+
+    /// <summary>
+    /// Creates a direct completion request with the specified prompt and model.
+    /// </summary>
+    Task<CompletionResult> CreateCompletionAsync(string prompt, string model);
+}
+
+public class CompletionResult
+{
+    public bool IsSuccess { get; set; }
+    public string? Content { get; set; }
+    public string? ErrorMessage { get; set; }
 }

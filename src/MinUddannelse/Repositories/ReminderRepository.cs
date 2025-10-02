@@ -1,9 +1,5 @@
 using MinUddannelse.Models;
 using MinUddannelse.Repositories.DTOs;
-using MinUddannelse.Models;
-using MinUddannelse.Repositories.DTOs;
-using MinUddannelse.Models;
-using MinUddannelse.Repositories.DTOs;
 using Microsoft.Extensions.Logging;
 using Supabase;
 using System;
@@ -113,5 +109,56 @@ public class ReminderRepository : IReminderRepository
             .Delete();
 
         _logger.LogInformation("Deleted reminder with ID {ReminderId}", reminderId);
+    }
+
+    public async Task<int> AddAutoReminderAsync(string text, DateOnly date, TimeOnly time, string childName, int weekLetterId, string eventType, string eventTitle, decimal confidenceScore)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+        ArgumentException.ThrowIfNullOrWhiteSpace(childName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(eventType);
+        ArgumentException.ThrowIfNullOrWhiteSpace(eventTitle);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(weekLetterId, 0);
+        ArgumentOutOfRangeException.ThrowIfLessThan(confidenceScore, 0.1m);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(confidenceScore, 1.0m);
+
+        var reminder = new Reminder
+        {
+            Text = text,
+            RemindDate = date,
+            RemindTime = time,
+            CreatedAt = DateTime.UtcNow,
+            IsSent = false,
+            ChildName = childName,
+            CreatedBy = "auto_extraction",
+            Source = "auto_extracted",
+            WeekLetterId = weekLetterId,
+            EventType = eventType,
+            EventTitle = eventTitle,
+            ExtractedDateTime = DateTime.UtcNow,
+            ConfidenceScore = confidenceScore
+        };
+
+        var result = await _supabase
+            .From<Reminder>()
+            .Insert(reminder);
+
+        var insertedReminder = result.Models.First();
+
+        _logger.LogInformation("Added auto-extracted reminder {ReminderId} for {ChildName}: {Text}",
+            insertedReminder.Id, childName, text);
+
+        return insertedReminder.Id;
+    }
+
+    public async Task DeleteAutoExtractedRemindersByWeekLetterIdAsync(int weekLetterId)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(weekLetterId, 0);
+
+        await _supabase
+            .From<Reminder>()
+            .Where(r => r.WeekLetterId == weekLetterId && r.Source == "auto_extracted")
+            .Delete();
+
+        _logger.LogInformation("Deleted auto-extracted reminders for week letter {WeekLetterId}", weekLetterId);
     }
 }

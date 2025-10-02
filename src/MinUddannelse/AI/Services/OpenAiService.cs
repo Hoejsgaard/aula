@@ -144,4 +144,36 @@ Svar venligst kort og præcist på spørgsmålet baseret på information fra uge
         _openAiService.ClearConversationHistory(childConversationId);
         await Task.CompletedTask;
     }
+
+    public async Task<CompletionResult> CreateCompletionAsync(string prompt, string model)
+    {
+        try
+        {
+            var response = await _openAiService.ProcessDirectQueryAsync(prompt, ChatInterface.Slack);
+
+            if (string.IsNullOrWhiteSpace(response) || response == "FALLBACK_TO_EXISTING_SYSTEM")
+            {
+                return new CompletionResult
+                {
+                    IsSuccess = false,
+                    ErrorMessage = "Failed to get valid response from OpenAI service"
+                };
+            }
+
+            return new CompletionResult
+            {
+                IsSuccess = true,
+                Content = response
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating completion with prompt length {PromptLength}", prompt?.Length ?? 0);
+            return new CompletionResult
+            {
+                IsSuccess = false,
+                ErrorMessage = ex.Message
+            };
+        }
+    }
 }

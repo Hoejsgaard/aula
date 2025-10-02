@@ -1,7 +1,5 @@
 using MinUddannelse.Models;
 using MinUddannelse.Repositories.DTOs;
-using MinUddannelse.Models;
-using MinUddannelse.Repositories.DTOs;
 using System.Threading.Tasks;
 
 namespace MinUddannelse.Repositories;

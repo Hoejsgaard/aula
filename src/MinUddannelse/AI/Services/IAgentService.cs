@@ -2,7 +2,6 @@ using System;
 using MinUddannelse.AI.Services;
 using Newtonsoft.Json.Linq;
 using MinUddannelse.Configuration;
-using MinUddannelse.AI.Services;
 using MinUddannelse.Content.WeekLetters;
 
 namespace MinUddannelse.AI.Services;

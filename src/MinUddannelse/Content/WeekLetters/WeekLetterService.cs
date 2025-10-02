@@ -4,7 +4,6 @@ using MinUddannelse.Repositories.DTOs;
 using MinUddannelse.Security;
 using MinUddannelse;
 using MinUddannelse.Client;
-using MinUddannelse.Client;
 using MinUddannelse.Configuration;
 using MinUddannelse.Repositories;
 using Microsoft.Extensions.Logging;
@@ -421,7 +420,7 @@ public class WeekLetterService : IWeekLetterService
         await _auditService.LogDataAccessAsync(child, "GetOrFetchWeekLetter", $"letter_{weekInfo.WeekNumber}_{weekInfo.Year}", false);
     }
 
-    private class WeekInfo
+    private sealed class WeekInfo
     {
         public int WeekNumber { get; init; }
         public int Year { get; init; }

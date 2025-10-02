@@ -189,13 +189,13 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
         LogFormStructure(doc);
     }
 
-    private class AuthenticationState
+    private sealed class AuthenticationState
     {
         public string CurrentUrl { get; set; } = string.Empty;
         public bool HasSubmittedCredentials { get; set; }
     }
 
-    private class AuthenticationStepResult
+    private sealed class AuthenticationStepResult
     {
         public bool IsAuthenticated { get; private set; }
         public bool ShouldContinue { get; private set; }
@@ -473,7 +473,7 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
         return selectedOption?.Attributes["value"]?.Value ?? "";
     }
 
-    private class InputFieldData
+    private sealed class InputFieldData
     {
         public string Name { get; init; } = string.Empty;
         public string Value { get; init; } = string.Empty;
