@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Aula.Communication.Channels;
 
-public class SecureChildChannelManager : IChildChannelManager
+public class ChildChannelManager : IChildChannelManager
 {
     private readonly IChannelManager _channelManager;
     private readonly IMessageContentFilter _contentFilter;
@@ -19,7 +19,7 @@ public class SecureChildChannelManager : IChildChannelManager
     private readonly Dictionary<string, List<ChildChannelConfig>> _childChannelConfigs = new();
     private readonly object _configLock = new();
 
-    public SecureChildChannelManager(
+    public ChildChannelManager(
         IChannelManager channelManager,
         IMessageContentFilter contentFilter,
         ILoggerFactory loggerFactory)
@@ -30,7 +30,7 @@ public class SecureChildChannelManager : IChildChannelManager
 
         _channelManager = channelManager;
         _contentFilter = contentFilter;
-        _logger = loggerFactory.CreateLogger<SecureChildChannelManager>();
+        _logger = loggerFactory.CreateLogger<ChildChannelManager>();
     }
 
     public async Task<bool> SendMessageAsync(Child child, string message, MessageFormat format = MessageFormat.Auto)

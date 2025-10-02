@@ -205,10 +205,10 @@ public class Program
         // Child-aware services are singletons that accept Child parameters
         services.AddSingleton<IChildAuditService, ChildAuditService>();
         services.AddSingleton<IChildRateLimiter, ChildRateLimiter>();
-        services.AddSingleton<IWeekLetterService, SecureWeekLetterService>();
-        services.AddSingleton<IChildChannelManager, SecureChildChannelManager>();
-        services.AddSingleton<IChildScheduler, SecureChildScheduler>();
-        services.AddSingleton<IOpenAiService, SecureOpenAiService>();
+        services.AddSingleton<IWeekLetterService, WeekLetterService>();
+        services.AddSingleton<IChildChannelManager, ChildChannelManager>();
+        services.AddSingleton<IChildScheduler, ChildScheduler>();
+        services.AddSingleton<IOpenAiService, OpenAiService>();
 
         services.AddSingleton<IChildAgentFactory, ChildAgentFactory>();
 

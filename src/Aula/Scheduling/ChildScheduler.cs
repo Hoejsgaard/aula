@@ -9,7 +9,7 @@ namespace Aula.Scheduling;
 /// Secure child-aware scheduler with comprehensive security layers.
 /// Ensures complete isolation of scheduling operations per child.
 /// </summary>
-public class SecureChildScheduler : IChildScheduler
+public class ChildScheduler : IChildScheduler
 {
     private readonly ILogger _logger;
     private readonly Dictionary<string, ChildScheduledTask> _inMemoryTasks = new();
@@ -24,11 +24,11 @@ public class SecureChildScheduler : IChildScheduler
     private const int ExecutionWindowMinutes = 1;
     private const int ScheduleLookbackMinutes = 1;
 
-    public SecureChildScheduler(
+    public ChildScheduler(
         ILoggerFactory loggerFactory)
     {
         ArgumentNullException.ThrowIfNull(loggerFactory);
-        _logger = loggerFactory.CreateLogger<SecureChildScheduler>();
+        _logger = loggerFactory.CreateLogger<ChildScheduler>();
     }
 
     public Task<int> ScheduleTaskAsync(Child child, string taskName, string cronExpression, string? description = null)

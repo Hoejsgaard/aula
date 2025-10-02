@@ -18,13 +18,13 @@ public class ArchitectureTests
     {
 		// New child-aware services that accept Child parameters directly
 		"IChildDataService",
-        "SecureChildDataService",
+        "ChildDataService",
         "IChildChannelManager",
-        "SecureChildChannelManager",
+        "ChildChannelManager",
         "IChildScheduler",
-        "SecureChildScheduler",
+        "ChildScheduler",
         "IChildAwareOpenAiService",
-        "SecureChildAwareOpenAiService",
+        "ChildAwareOpenAiService",
         // Renamed services from Task 011 refactoring
         "IOpenAiService",
         "IWeekLetterService",
@@ -268,9 +268,12 @@ public class ArchitectureTests
         var assembly = typeof(Aula.Program).Assembly;
         var violations = new List<string>();
 
-        var secureServices = assembly.GetTypes()
+        var childAwareServices = assembly.GetTypes()
             .Where(t => t.IsClass && !t.IsAbstract)
-            .Where(t => t.Name.StartsWith("Secure"))
+            .Where(t => t.Name == "WeekLetterService" ||
+                       t.Name == "ChildChannelManager" ||
+                       t.Name == "ChildScheduler" ||
+                       t.Name == "OpenAiService")
             .Select(t => t.Name)
             .ToHashSet();
 
@@ -296,7 +299,7 @@ public class ArchitectureTests
                     {
                         // This is a simplified check - in production, we'd use Roslyn analyzers
                         // For now, we just check if the method name suggests instantiation
-                        if (method.Name.Contains("Create") && secureServices.Contains(method.ReturnType.Name))
+                        if (method.Name.Contains("Create") && childAwareServices.Contains(method.ReturnType.Name))
                         {
                             violations.Add($"{type.Name}.{method.Name} might be creating {method.ReturnType.Name} directly");
                         }

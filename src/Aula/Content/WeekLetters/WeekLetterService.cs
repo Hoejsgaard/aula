@@ -14,7 +14,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Aula.Content.WeekLetters;
 
-public class SecureWeekLetterService : IWeekLetterService
+public class WeekLetterService : IWeekLetterService
 {
     private readonly IChildAuditService _auditService;
     private readonly IChildRateLimiter _rateLimiter;
@@ -23,7 +23,7 @@ public class SecureWeekLetterService : IWeekLetterService
     private readonly IMinUddannelseClient _minUddannelseClient;
     private readonly ILogger _logger;
 
-    public SecureWeekLetterService(
+    public WeekLetterService(
         IChildAuditService auditService,
         IChildRateLimiter rateLimiter,
         DataService dataService,
@@ -37,7 +37,7 @@ public class SecureWeekLetterService : IWeekLetterService
         _weekLetterRepository = weekLetterRepository ?? throw new ArgumentNullException(nameof(weekLetterRepository));
         _minUddannelseClient = minUddannelseClient ?? throw new ArgumentNullException(nameof(minUddannelseClient));
         ArgumentNullException.ThrowIfNull(loggerFactory);
-        _logger = loggerFactory.CreateLogger<SecureWeekLetterService>();
+        _logger = loggerFactory.CreateLogger<WeekLetterService>();
     }
 
     public async Task CacheWeekLetterAsync(Child child, int weekNumber, int year, JObject weekLetter)
