@@ -136,7 +136,15 @@ public sealed partial class ChildAuthenticatedClient : UniLoginAuthenticatorBase
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
 
-        var weekLetter = JObject.Parse(json);
+        // Clean up smart quotes and other problematic Unicode characters that break JSON parsing
+        var cleanedJson = json
+            .Replace("\u201E", "\\\"")  // Opening smart quote „
+            .Replace("\u201C", "\\\"")  // Closing smart quote "
+            .Replace("\u201D", "\\\"")  // Another closing smart quote "
+            .Replace("\u2019", "\\'")   // Smart apostrophe '
+            .Replace("\u2018", "\\'");  // Another smart apostrophe '
+
+        var weekLetter = JObject.Parse(cleanedJson);
         var weekLetterArray = weekLetter["ugebreve"] as JArray;
 
         if (weekLetterArray == null || weekLetterArray.Count == 0)
