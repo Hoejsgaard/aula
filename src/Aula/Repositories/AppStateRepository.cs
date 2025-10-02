@@ -20,6 +20,8 @@ public class AppStateRepository : IAppStateRepository
 
     public async Task<string?> GetAppStateAsync(string key)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+
         var result = await _supabase
             .From<AppState>()
             .Select("value")
@@ -32,6 +34,9 @@ public class AppStateRepository : IAppStateRepository
 
     public async Task SetAppStateAsync(string key, string value)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentException.ThrowIfNullOrWhiteSpace(value);
+
         // First check if the key already exists
         var existing = await _supabase
             .From<AppState>()

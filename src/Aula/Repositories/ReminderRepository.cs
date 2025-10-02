@@ -21,6 +21,12 @@ public class ReminderRepository : IReminderRepository
 
     public async Task<int> AddReminderAsync(string text, DateOnly date, TimeOnly time, string? childName = null)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(text);
+        if (!string.IsNullOrEmpty(childName))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(childName);
+        }
+
         var reminder = new Reminder
         {
             Text = text,
@@ -69,6 +75,8 @@ public class ReminderRepository : IReminderRepository
 
     public async Task MarkReminderAsSentAsync(int reminderId)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(reminderId, 0);
+
         await _supabase
             .From<Reminder>()
             .Where(r => r.Id == reminderId)
@@ -92,6 +100,8 @@ public class ReminderRepository : IReminderRepository
 
     public async Task DeleteReminderAsync(int reminderId)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(reminderId, 0);
+
         await _supabase
             .From<Reminder>()
             .Where(r => r.Id == reminderId)

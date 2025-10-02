@@ -23,6 +23,12 @@ public class WeekLetterRepository : IWeekLetterRepository
 
     public async Task<bool> HasWeekLetterBeenPostedAsync(string childName, int weekNumber, int year)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(childName);
+        ArgumentOutOfRangeException.ThrowIfLessThan(weekNumber, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(weekNumber, 53);
+        ArgumentOutOfRangeException.ThrowIfLessThan(year, 2000);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(year, 2100);
+
         var result = await _supabase
             .From<PostedLetter>()
             .Select("id")
@@ -34,6 +40,13 @@ public class WeekLetterRepository : IWeekLetterRepository
 
     public async Task MarkWeekLetterAsPostedAsync(string childName, int weekNumber, int year, string contentHash, bool postedToSlack = false, bool postedToTelegram = false)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(childName);
+        ArgumentOutOfRangeException.ThrowIfLessThan(weekNumber, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(weekNumber, 53);
+        ArgumentOutOfRangeException.ThrowIfLessThan(year, 2000);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(year, 2100);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentHash);
+
         var postedLetter = new PostedLetter
         {
             ChildName = childName,
@@ -54,7 +67,14 @@ public class WeekLetterRepository : IWeekLetterRepository
 
     public async Task StoreWeekLetterAsync(string childName, int weekNumber, int year, string contentHash, string rawContent, bool postedToSlack = false, bool postedToTelegram = false)
     {
-        // Check if record already exists
+        ArgumentException.ThrowIfNullOrWhiteSpace(childName);
+        ArgumentOutOfRangeException.ThrowIfLessThan(weekNumber, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(weekNumber, 53);
+        ArgumentOutOfRangeException.ThrowIfLessThan(year, 2000);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(year, 2100);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentHash);
+        ArgumentException.ThrowIfNullOrWhiteSpace(rawContent);
+
         var existingRecordQuery = await _supabase
             .From<PostedLetter>()
             .Where(p => p.ChildName == childName)
@@ -66,7 +86,6 @@ public class WeekLetterRepository : IWeekLetterRepository
 
         if (existingRecord != null)
         {
-            // Update existing record
             existingRecord.ContentHash = contentHash;
             existingRecord.RawContent = rawContent;
             existingRecord.PostedToSlack = postedToSlack;
@@ -81,7 +100,6 @@ public class WeekLetterRepository : IWeekLetterRepository
         }
         else
         {
-            // Insert new record
             var postedLetter = new PostedLetter
             {
                 ChildName = childName,
@@ -104,6 +122,12 @@ public class WeekLetterRepository : IWeekLetterRepository
 
     public async Task<string?> GetStoredWeekLetterAsync(string childName, int weekNumber, int year)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(childName);
+        ArgumentOutOfRangeException.ThrowIfLessThan(weekNumber, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(weekNumber, 53);
+        ArgumentOutOfRangeException.ThrowIfLessThan(year, 2000);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(year, 2100);
+
         var resultQuery = await _supabase
             .From<PostedLetter>()
             .Where(p => p.ChildName == childName)
@@ -118,6 +142,16 @@ public class WeekLetterRepository : IWeekLetterRepository
 
     public async Task<List<StoredWeekLetter>> GetStoredWeekLettersAsync(string? childName = null, int? year = null)
     {
+        if (!string.IsNullOrEmpty(childName))
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(childName);
+        }
+        if (year.HasValue)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(year.Value, 2000);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(year.Value, 2100);
+        }
+
         var query = _supabase.From<PostedLetter>().Select("*");
 
         if (!string.IsNullOrEmpty(childName))
@@ -144,6 +178,8 @@ public class WeekLetterRepository : IWeekLetterRepository
 
     public async Task<StoredWeekLetter?> GetLatestStoredWeekLetterAsync(string childName)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(childName);
+
         var resultQuery = await _supabase
             .From<PostedLetter>()
             .Where(p => p.ChildName == childName)
@@ -169,6 +205,12 @@ public class WeekLetterRepository : IWeekLetterRepository
 
     public async Task DeleteWeekLetterAsync(string childName, int weekNumber, int year)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(childName);
+        ArgumentOutOfRangeException.ThrowIfLessThan(weekNumber, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(weekNumber, 53);
+        ArgumentOutOfRangeException.ThrowIfLessThan(year, 2000);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(year, 2100);
+
         await _supabase
             .From<PostedLetter>()
             .Where(p => p.ChildName == childName)
