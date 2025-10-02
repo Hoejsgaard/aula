@@ -4,10 +4,6 @@ using System.Collections.Concurrent;
 
 namespace Aula.Services;
 
-/// <summary>
-/// Rate limiting implementation that tracks and enforces operation limits per child.
-/// Uses a sliding window algorithm to prevent DoS attacks and resource exhaustion.
-/// </summary>
 public class ChildRateLimiter : IChildRateLimiter
 {
     private readonly ILogger _logger;

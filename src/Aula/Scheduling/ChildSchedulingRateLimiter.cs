@@ -4,10 +4,6 @@ using System.Collections.Concurrent;
 
 namespace Aula.Scheduling;
 
-/// <summary>
-/// Rate limiter for child scheduling operations to prevent resource exhaustion.
-/// Uses sliding window algorithm for execution tracking.
-/// </summary>
 public class ChildSchedulingRateLimiter : IChildSchedulingRateLimiter
 {
     private readonly ILogger _logger;

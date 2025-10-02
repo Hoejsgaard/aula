@@ -18,6 +18,11 @@ public class SecureChildScheduler : IChildScheduler
     private const int MaxTasksPerChild = 10;
     private const int MaxExecutionsPerHour = 60;
 
+    // Timing constants
+    private const int PlaceholderTaskDelayMs = 100;
+    private const int ExecutionWindowMinutes = 1;
+    private const int ScheduleLookbackMinutes = 1;
+
     public SecureChildScheduler(
         ILoggerFactory loggerFactory)
     {
@@ -150,7 +155,7 @@ public class SecureChildScheduler : IChildScheduler
 
             // Task execution logic here - would call appropriate service based on taskName
             // For example: await ExecuteWeeklyLetterCheck() or await ExecuteReminders()
-            await Task.Delay(100); // Placeholder for actual task execution
+            await Task.Delay(PlaceholderTaskDelayMs); // Placeholder for actual task execution
 
             // Update task execution count
             UpdateTaskExecutionStats(child, taskName, true);
@@ -178,16 +183,16 @@ public class SecureChildScheduler : IChildScheduler
             if (task.NextRun.HasValue && now >= task.NextRun.Value)
             {
                 // Allow a 1-minute window for execution
-                return Task.FromResult(now <= task.NextRun.Value.AddMinutes(1));
+                return Task.FromResult(now <= task.NextRun.Value.AddMinutes(ExecutionWindowMinutes));
             }
 
             // Calculate next run if not set
             var nextRun = task.LastRun.HasValue
                 ? schedule.GetNextOccurrence(task.LastRun.Value)
-                : schedule.GetNextOccurrence(now.AddMinutes(-1));
+                : schedule.GetNextOccurrence(now.AddMinutes(-ScheduleLookbackMinutes));
 
             task.NextRun = nextRun;
-            return Task.FromResult(now >= nextRun && now <= nextRun.AddMinutes(1));
+            return Task.FromResult(now >= nextRun && now <= nextRun.AddMinutes(ExecutionWindowMinutes));
         }
         catch (Exception ex)
         {

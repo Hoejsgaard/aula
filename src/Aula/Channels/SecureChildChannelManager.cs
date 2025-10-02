@@ -8,10 +8,6 @@ using System.Threading.Tasks;
 
 namespace Aula.Channels;
 
-/// <summary>
-/// Secure implementation of child-aware channel management with comprehensive security layers.
-/// Ensures complete isolation of messaging per child with access control and content filtering.
-/// </summary>
 public class SecureChildChannelManager : IChildChannelManager
 {
     private readonly IChannelManager _channelManager;
@@ -34,15 +30,12 @@ public class SecureChildChannelManager : IChildChannelManager
         _channelManager = channelManager;
         _contentFilter = contentFilter;
         _logger = loggerFactory.CreateLogger<SecureChildChannelManager>();
-
-        InitializeDefaultConfigurations();
     }
 
     public async Task<bool> SendMessageAsync(Child child, string message, MessageFormat format = MessageFormat.Auto)
     {
         if (child == null) throw new ArgumentNullException(nameof(child));
 
-        // Content filtering
         var filteredMessage = _contentFilter.FilterForChild(message, child);
         if (!_contentFilter.ValidateMessageSafety(filteredMessage, child))
         {
@@ -87,7 +80,6 @@ public class SecureChildChannelManager : IChildChannelManager
     {
         if (child == null) throw new ArgumentNullException(nameof(child));
 
-        // Check if child has access to this platform
         var childChannels = await GetChildChannelsAsync(child);
         var channelConfig = childChannels.FirstOrDefault(c =>
             c.PlatformId.Equals(platformId, StringComparison.OrdinalIgnoreCase));
@@ -99,7 +91,6 @@ public class SecureChildChannelManager : IChildChannelManager
             return false;
         }
 
-        // Content filtering
         var filteredMessage = _contentFilter.FilterForChild(message, child);
         if (!_contentFilter.ValidateMessageSafety(filteredMessage, child))
         {
@@ -268,7 +259,6 @@ public class SecureChildChannelManager : IChildChannelManager
         }
     }
 
-    // Helper methods
     private async Task<bool> SendToSpecificChannels(List<ChildChannelConfig> channels,
         string message, Child child)
     {
@@ -325,28 +315,4 @@ public class SecureChildChannelManager : IChildChannelManager
         };
     }
 
-    private void InitializeDefaultConfigurations()
-    {
-        // This would normally load from database
-        // For now, initialize with some default configurations for testing
-
-        // Example: Configure Slack for TestChild
-        var testChild = new Child { FirstName = "Test", LastName = "Child" };
-        var slackConfig = new ChildChannelConfig
-        {
-            PlatformId = "slack",
-            ChannelId = "test-channel",
-            IsPreferred = true,
-            IsEnabled = true,
-            Permissions = new ChannelPermissions
-            {
-                CanReceiveWeekLetters = true,
-                CanReceiveReminders = true,
-                CanReceiveAlerts = true,
-                CanReceiveAISummaries = true,
-                CanInteract = true
-            }
-        };
-        ConfigureChildChannel(testChild, slackConfig);
-    }
 }

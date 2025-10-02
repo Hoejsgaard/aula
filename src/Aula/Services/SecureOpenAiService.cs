@@ -6,10 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace Aula.Services;
 
-/// <summary>
-/// Secure OpenAI service that ensures all AI operations happen within child context.
-/// Handles week letter questions by using week letter service and current week letter data.
-/// </summary>
 public class SecureOpenAiService : IOpenAiService
 {
     private readonly IWeekLetterAiService _openAiService;
