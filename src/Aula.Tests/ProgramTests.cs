@@ -11,12 +11,13 @@ using Aula.MinUddannelse;
 using Aula.GoogleCalendar;
 using Aula.MinUddannelse;
 using Aula.MinUddannelse;
-using Aula.Core.Security;
+using Aula.Security;
 using Aula.AI.Services;
 using Aula.Content.WeekLetters;
-using Aula.Core.Models;
-using Aula.Core.Security;
-using Aula.Core.Utilities;
+using Aula.Models;
+using Aula.Repositories.DTOs;
+using Aula.Security;
+using Aula;
 using Aula.Scheduling;
 using Aula.Communication.Bots;
 using Aula.Communication.Channels;
@@ -34,7 +35,7 @@ public class ProgramTests
         // Assert - Verify core services are registered
         Assert.NotNull(serviceProvider.GetRequiredService<Config>());
         Assert.NotNull(serviceProvider.GetRequiredService<ILoggerFactory>());
-        Assert.NotNull(serviceProvider.GetRequiredService<DataService>());
+        Assert.NotNull(serviceProvider.GetRequiredService<WeekLetterCache>());
         Assert.NotNull(serviceProvider.GetRequiredService<IMinUddannelseClient>());
         Assert.NotNull(serviceProvider.GetRequiredService<IAgentService>());
         Assert.NotNull(serviceProvider.GetRequiredService<IWeekLetterAiService>());

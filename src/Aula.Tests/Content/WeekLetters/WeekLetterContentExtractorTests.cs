@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Aula.Content.WeekLetters;
 using Aula.Content.Processing;
-using Aula.Core.Utilities;
+using Aula;
 
 namespace Aula.Tests.Content.WeekLetters;
 

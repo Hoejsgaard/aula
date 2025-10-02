@@ -1,30 +1,24 @@
 using Microsoft.Extensions.Caching.Memory;
-using Aula.GoogleCalendar;
-using Aula.Content.WeekLetters;
-using Aula.AI.Services;
-using Aula.AI.Prompts;
-using Aula.Core.Models;
-using Aula.Core.Security;
-using Aula.Core.Utilities;
-using Aula.MinUddannelse;
-using Aula.MinUddannelse;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Supabase;
-using System.Net;
-using Aula.AI.Services;
-using Aula.Scheduling;
-using Aula.Configuration;
-using Aula.Content.WeekLetters;
-using Aula.Repositories;
-using Aula.Agents;
-using Aula.Core.Security;
-using Aula.Communication.Channels;
-using Aula.Core.Utilities;
-using Aula.Core.Models;
 using Polly;
 using Polly.Extensions.Http;
+using Supabase;
+using System.Net;
+using Aula.Agents;
+using Aula.AI.Prompts;
+using Aula.AI.Services;
+using Aula.Communication.Channels;
+using Aula.Configuration;
+using Aula.Content.WeekLetters;
+using Aula.GoogleCalendar;
+using Aula.MinUddannelse;
+using Aula.Models;
+using Aula.Repositories;
+using Aula.Repositories.DTOs;
+using Aula.Scheduling;
+using Aula.Security;
 
 namespace Aula;
 
@@ -215,7 +209,7 @@ public class Program
 
         services.AddSingleton<IChildAgentFactory, ChildAgentFactory>();
 
-        services.AddScoped<DataService>();
+        services.AddScoped<WeekLetterCache>();
         services.AddScoped<IMinUddannelseClient, MinUddannelseClient>();
         services.AddScoped<IAgentService, AgentService>();
         services.AddSingleton<IPromptSanitizer, PromptSanitizer>();

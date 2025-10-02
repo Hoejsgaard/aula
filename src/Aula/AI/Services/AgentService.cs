@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Aula.AI.Services;
-using Aula.Core.Utilities;
+using Aula;
 using Aula.MinUddannelse;
 using Aula.MinUddannelse;
 using Newtonsoft.Json.Linq;
@@ -12,14 +12,14 @@ namespace Aula.AI.Services;
 public class AgentService : IAgentService
 {
     private readonly IMinUddannelseClient _minUddannelseClient;
-    private readonly DataService _dataService;
+    private readonly WeekLetterCache _dataService;
     private readonly Config _config;
     private readonly IWeekLetterAiService _openAiService;
     private readonly ILogger _logger;
 
     public AgentService(
         IMinUddannelseClient minUddannelseClient,
-        DataService dataService,
+        WeekLetterCache dataService,
         Config config,
         IWeekLetterAiService openAiService,
         ILoggerFactory loggerFactory)

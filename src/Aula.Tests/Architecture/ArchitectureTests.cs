@@ -17,8 +17,8 @@ public class ArchitectureTests
     private static readonly HashSet<string> AllowedChildParameterTypes = new()
     {
 		// New child-aware services that accept Child parameters directly
-		"IChildDataService",
-        "ChildDataService",
+		"IChildWeekLetterCache",
+        "ChildWeekLetterCache",
         "IChildChannelManager",
         "ChildChannelManager",
         "IChildScheduler",
@@ -50,7 +50,7 @@ public class ArchitectureTests
     private static readonly HashSet<string> RequiredChildParameterServices = new()
     {
 		// These services MUST accept Child parameters
-		"IChildDataService",
+		"IChildWeekLetterCache",
         "IChildChannelManager",
         "IChildScheduler",
         "IChildAwareOpenAiService"
@@ -190,7 +190,7 @@ public class ArchitectureTests
             .Where(t => t.Namespace != null && (t.Namespace.Contains("Services") ||
                                                t.Namespace.Contains("Channels") ||
                                                t.Namespace.Contains("Scheduling")))
-            .Where(t => t.Name != "DataService") // Legacy service allowed to have GetChildren
+            .Where(t => t.Name != "WeekLetterCache") // Legacy service allowed to have GetChildren
             .Where(t => t.Name != "ChannelManager") // Channel manager operates on all channels
             .Where(t => t.Name != "SchedulingService") // Scheduling service coordinates multiple children
             .Where(t => t.Name != "AgentService"); // Agent service manages multiple child agents

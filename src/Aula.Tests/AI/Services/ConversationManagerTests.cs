@@ -4,9 +4,10 @@ using Xunit;
 using Aula.AI.Services;
 using Aula.AI.Prompts;
 using Aula.Content.WeekLetters;
-using Aula.Core.Models;
-using Aula.Core.Security;
-using Aula.Core.Utilities;
+using Aula.Models;
+using Aula.Repositories.DTOs;
+using Aula.Security;
+using Aula;
 using OpenAI.ObjectModels.RequestModels;
 using System.Collections.Generic;
 

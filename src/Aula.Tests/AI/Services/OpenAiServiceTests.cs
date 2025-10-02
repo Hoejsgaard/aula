@@ -10,12 +10,13 @@ using Aula.AI.Prompts;
 using Aula.Configuration;
 using Aula.AI.Services;
 using Aula.Content.WeekLetters;
-using Aula.Core.Models;
-using Aula.Core.Security;
-using Aula.Core.Utilities;
+using Aula.Models;
+using Aula.Repositories.DTOs;
+using Aula.Security;
+using Aula;
 using Aula.Content.WeekLetters;
 using Aula.Content.Processing;
-using Aula.Core.Utilities;
+using Aula;
 using System;
 
 namespace Aula.Tests.AI.Services;
@@ -27,10 +28,10 @@ public class WeekLetterAiServiceTests
         var mockLoggerFactory = new Mock<ILoggerFactory>();
         var config = new Config { MinUddannelse = new MinUddannelseConfig { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
-        var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
+        var mockWeekLetterCache = new Mock<WeekLetterCache>(mockCache.Object, config, mockLoggerFactory.Object);
         var mockAiToolsManager = new Mock<AiToolsManager>(
             Mock.Of<IReminderRepository>(),
-            mockDataService.Object,
+            mockWeekLetterCache.Object,
             config,
             mockLoggerFactory.Object);
         var mockConversationManager = new Mock<IConversationManager>();
@@ -49,10 +50,10 @@ public class WeekLetterAiServiceTests
 
         var config = new Config { MinUddannelse = new MinUddannelseConfig { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
-        var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
+        var mockWeekLetterCache = new Mock<WeekLetterCache>(mockCache.Object, config, mockLoggerFactory.Object);
         var mockAiToolsManager = new Mock<AiToolsManager>(
             Mock.Of<IReminderRepository>(),
-            mockDataService.Object,
+            mockWeekLetterCache.Object,
             config,
             mockLoggerFactory.Object);
 
@@ -68,10 +69,10 @@ public class WeekLetterAiServiceTests
         var mockLoggerFactory = new Mock<ILoggerFactory>();
         var config = new Config { MinUddannelse = new MinUddannelseConfig { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
-        var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
+        var mockWeekLetterCache = new Mock<WeekLetterCache>(mockCache.Object, config, mockLoggerFactory.Object);
         var mockAiToolsManager = new Mock<AiToolsManager>(
             Mock.Of<IReminderRepository>(),
-            mockDataService.Object,
+            mockWeekLetterCache.Object,
             config,
             mockLoggerFactory.Object);
 
@@ -91,10 +92,10 @@ public class WeekLetterAiServiceTests
 
         var config = new Config { MinUddannelse = new MinUddannelseConfig { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
-        var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
+        var mockWeekLetterCache = new Mock<WeekLetterCache>(mockCache.Object, config, mockLoggerFactory.Object);
         var mockAiToolsManager = new Mock<AiToolsManager>(
             Mock.Of<IReminderRepository>(),
-            mockDataService.Object,
+            mockWeekLetterCache.Object,
             config,
             mockLoggerFactory.Object);
 
@@ -200,8 +201,8 @@ public class WeekLetterAiServiceTests
         var mockSupabaseService = new Mock<IReminderRepository>();
         var config = new Config { MinUddannelse = new MinUddannelseConfig { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
-        var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
-        var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockDataService.Object, config, mockLoggerFactory.Object);
+        var mockWeekLetterCache = new Mock<WeekLetterCache>(mockCache.Object, config, mockLoggerFactory.Object);
+        var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockWeekLetterCache.Object, config, mockLoggerFactory.Object);
 
         var service = new WeekLetterAiService("test-api-key", mockLoggerFactory.Object, aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
 
@@ -229,8 +230,8 @@ public class WeekLetterAiServiceTests
         var mockSupabaseService = new Mock<IReminderRepository>();
         var config = new Config { MinUddannelse = new MinUddannelseConfig { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
-        var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
-        var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockDataService.Object, config, mockLoggerFactory.Object);
+        var mockWeekLetterCache = new Mock<WeekLetterCache>(mockCache.Object, config, mockLoggerFactory.Object);
+        var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockWeekLetterCache.Object, config, mockLoggerFactory.Object);
 
         var service = new WeekLetterAiService("test-api-key", mockLoggerFactory.Object, aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
         var weekLetter = CreateTestWeekLetter();
@@ -261,8 +262,8 @@ public class WeekLetterAiServiceTests
         var mockSupabaseService = new Mock<IReminderRepository>();
         var config = new Config { MinUddannelse = new MinUddannelseConfig { Children = new List<Child>() } };
         var mockCache = new Mock<IMemoryCache>();
-        var mockDataService = new Mock<DataService>(mockCache.Object, config, mockLoggerFactory.Object);
-        var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockDataService.Object, config, mockLoggerFactory.Object);
+        var mockWeekLetterCache = new Mock<WeekLetterCache>(mockCache.Object, config, mockLoggerFactory.Object);
+        var aiToolsManager = new AiToolsManager(mockSupabaseService.Object, mockWeekLetterCache.Object, config, mockLoggerFactory.Object);
 
         var service = new WeekLetterAiService("test-api-key", mockLoggerFactory.Object, aiToolsManager, new Mock<IConversationManager>().Object, new Mock<IPromptBuilder>().Object);
         var weekLetter = CreateTestWeekLetter();

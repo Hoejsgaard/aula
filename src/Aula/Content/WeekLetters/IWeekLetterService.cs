@@ -1,6 +1,7 @@
 using Aula.Configuration;
 using Aula.Content.WeekLetters;
-using Aula.Core.Models;
+using Aula.Models;
+using Aula.Repositories.DTOs;
 using Newtonsoft.Json.Linq;
 
 namespace Aula.Content.WeekLetters;

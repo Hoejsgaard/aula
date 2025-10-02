@@ -2,7 +2,8 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Aula.Configuration;
 using Aula.Content.WeekLetters;
-using Aula.Core.Models;
+using Aula.Models;
+using Aula.Repositories.DTOs;
 
 namespace Aula.MinUddannelse;
 

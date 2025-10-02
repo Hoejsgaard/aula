@@ -1,7 +1,8 @@
 using Aula.Content.WeekLetters;
-using Aula.Core.Models;
-using Aula.Core.Security;
-using Aula.Core.Utilities;
+using Aula.Models;
+using Aula.Repositories.DTOs;
+using Aula.Security;
+using Aula;
 using Aula.MinUddannelse;
 using Aula.MinUddannelse;
 using Aula.Configuration;
@@ -15,7 +16,7 @@ public class WeekLetterService : IWeekLetterService
 {
     private readonly IChildAuditService _auditService;
     private readonly IChildRateLimiter _rateLimiter;
-    private readonly DataService _dataService;
+    private readonly WeekLetterCache _dataService;
     private readonly IWeekLetterRepository _weekLetterRepository;
     private readonly IMinUddannelseClient _minUddannelseClient;
     private readonly ILogger _logger;
@@ -23,7 +24,7 @@ public class WeekLetterService : IWeekLetterService
     public WeekLetterService(
         IChildAuditService auditService,
         IChildRateLimiter rateLimiter,
-        DataService dataService,
+        WeekLetterCache dataService,
         IWeekLetterRepository weekLetterRepository,
         IMinUddannelseClient minUddannelseClient,
         ILoggerFactory loggerFactory)

@@ -1,6 +1,9 @@
-using Aula.Core.Models;
-using Aula.Core.Models;
-using Aula.Core.Models;
+using Aula.Models;
+using Aula.Repositories.DTOs;
+using Aula.Models;
+using Aula.Repositories.DTOs;
+using Aula.Models;
+using Aula.Repositories.DTOs;
 using Microsoft.Extensions.Logging;
 using Supabase;
 using System;

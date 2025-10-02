@@ -10,7 +10,7 @@ using Aula.MinUddannelse;
 using Aula.GoogleCalendar;
 using Aula.MinUddannelse;
 using Aula.MinUddannelse;
-using Aula.Core.Security;
+using Aula.Security;
 
 namespace Aula.Tests.GoogleCalendar;
 

@@ -18,12 +18,13 @@ using Aula.MinUddannelse;
 using Aula.GoogleCalendar;
 using Aula.MinUddannelse;
 using Aula.MinUddannelse;
-using Aula.Core.Security;
+using Aula.Security;
 using Aula.AI.Services;
 using Aula.Content.WeekLetters;
-using Aula.Core.Models;
-using Aula.Core.Security;
-using Aula.Core.Utilities;
+using Aula.Models;
+using Aula.Repositories.DTOs;
+using Aula.Security;
+using Aula;
 using System.Linq;
 
 namespace Aula.Tests.Communication.Bots;

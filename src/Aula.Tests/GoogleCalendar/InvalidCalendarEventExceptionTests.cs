@@ -1,4 +1,4 @@
-using Aula.Core.Security;
+using Aula.Security;
 using Aula.GoogleCalendar;
 using System;
 using Xunit;

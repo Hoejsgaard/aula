@@ -10,9 +10,10 @@ using Xunit;
 using Aula.AI.Services;
 using Aula.AI.Prompts;
 using Aula.Content.WeekLetters;
-using Aula.Core.Models;
-using Aula.Core.Security;
-using Aula.Core.Utilities;
+using Aula.Models;
+using Aula.Repositories.DTOs;
+using Aula.Security;
+using Aula;
 using Aula.AI.Services;
 using Aula.Configuration;
 
@@ -24,7 +25,7 @@ public class OpenAiServiceIntegrationTests
     private readonly Mock<ILogger> _mockLogger;
     private readonly AiToolsManager _aiToolsManager;
     private readonly Mock<IReminderRepository> _mockReminderRepository;
-    private readonly Mock<DataService> _mockDataService;
+    private readonly Mock<WeekLetterCache> _mockWeekLetterCache;
     private readonly Config _config;
 
     public OpenAiServiceIntegrationTests()
@@ -42,11 +43,11 @@ public class OpenAiServiceIntegrationTests
         };
 
         var mockCache = new Mock<IMemoryCache>();
-        _mockDataService = new Mock<DataService>(mockCache.Object, _config, _mockLoggerFactory.Object);
+        _mockWeekLetterCache = new Mock<WeekLetterCache>(mockCache.Object, _config, _mockLoggerFactory.Object);
 
         _mockLoggerFactory.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
 
-        _aiToolsManager = new AiToolsManager(_mockReminderRepository.Object, _mockDataService.Object, _config, _mockLoggerFactory.Object);
+        _aiToolsManager = new AiToolsManager(_mockReminderRepository.Object, _mockWeekLetterCache.Object, _config, _mockLoggerFactory.Object);
     }
 
     [Fact]

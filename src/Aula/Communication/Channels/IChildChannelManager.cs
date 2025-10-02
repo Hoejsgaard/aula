@@ -1,5 +1,6 @@
 using System.Collections.Generic;
-using Aula.Core.Models;
+using Aula.Models;
+using Aula.Repositories.DTOs;
 using System.Threading.Tasks;
 using Aula.Configuration;
 

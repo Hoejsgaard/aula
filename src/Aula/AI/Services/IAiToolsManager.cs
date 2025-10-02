@@ -1,5 +1,6 @@
 namespace Aula.AI.Services;
-using Aula.Core.Models;
+using Aula.Models;
+using Aula.Repositories.DTOs;
 
 public interface IAiToolsManager
 {

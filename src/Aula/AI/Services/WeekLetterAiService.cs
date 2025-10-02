@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Aula.AI.Prompts;
-using Aula.Core.Models;
+using Aula.Models;
+using Aula.Repositories.DTOs;
 using Newtonsoft.Json.Linq;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;

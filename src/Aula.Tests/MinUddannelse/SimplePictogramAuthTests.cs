@@ -2,7 +2,7 @@ using Aula.Configuration;
 using Aula.MinUddannelse;
 using Aula.MinUddannelse;
 using Aula.GoogleCalendar;
-using Aula.Core.Security;
+using Aula.Security;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Net.Http;

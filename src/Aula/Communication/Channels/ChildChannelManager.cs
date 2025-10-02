@@ -1,5 +1,6 @@
-using Aula.Core.Security;
-using Aula.Core.Models;
+using Aula.Security;
+using Aula.Models;
+using Aula.Repositories.DTOs;
 using Aula.Configuration;
 using Microsoft.Extensions.Logging;
 using System;

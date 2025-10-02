@@ -1,6 +1,9 @@
-using Aula.Core.Models;
-using Aula.Core.Models;
-using Aula.Core.Models;
+using Aula.Models;
+using Aula.Repositories.DTOs;
+using Aula.Models;
+using Aula.Repositories.DTOs;
+using Aula.Models;
+using Aula.Repositories.DTOs;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

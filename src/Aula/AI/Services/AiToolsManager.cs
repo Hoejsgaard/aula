@@ -1,9 +1,11 @@
 using Microsoft.Extensions.Logging;
-using Aula.Core.Models;
-using Aula.Core.Utilities;
+using Aula.Models;
+using Aula.Repositories.DTOs;
+using Aula;
 using System.ComponentModel;
 using Aula.Configuration;
-using Aula.Core.Models;
+using Aula.Models;
+using Aula.Repositories.DTOs;
 using Aula.Repositories;
 
 namespace Aula.AI.Services;
@@ -11,11 +13,11 @@ namespace Aula.AI.Services;
 public class AiToolsManager : IAiToolsManager
 {
     private readonly IReminderRepository _reminderRepository;
-    private readonly DataService _dataService;
+    private readonly WeekLetterCache _dataService;
     private readonly Config _config;
     private readonly ILogger _logger;
 
-    public AiToolsManager(IReminderRepository reminderRepository, DataService dataService, Config config, ILoggerFactory loggerFactory)
+    public AiToolsManager(IReminderRepository reminderRepository, WeekLetterCache dataService, Config config, ILoggerFactory loggerFactory)
     {
         _reminderRepository = reminderRepository;
         _dataService = dataService;

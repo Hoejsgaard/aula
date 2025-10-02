@@ -7,16 +7,17 @@ using Aula.Repositories;
 using Aula.Configuration;
 using Aula.AI.Services;
 using Aula.Content.WeekLetters;
-using Aula.Core.Models;
-using Aula.Core.Security;
-using Aula.Core.Utilities;
+using Aula.Models;
+using Aula.Repositories.DTOs;
+using Aula.Security;
+using Aula;
 
 namespace Aula.Tests.Tools;
 
 public class AiToolsManagerTests
 {
     private readonly Mock<IReminderRepository> _mockReminderRepository;
-    private readonly Mock<DataService> _mockDataManager;
+    private readonly Mock<WeekLetterCache> _mockDataManager;
     private readonly ILoggerFactory _loggerFactory;
     private readonly AiToolsManager _aiToolsManager;
     private readonly List<Child> _testChildren;
@@ -42,7 +43,7 @@ public class AiToolsManagerTests
         };
 
         var mockCache = new Mock<IMemoryCache>();
-        _mockDataManager = new Mock<DataService>(mockCache.Object, _config, _loggerFactory);
+        _mockDataManager = new Mock<WeekLetterCache>(mockCache.Object, _config, _loggerFactory);
 
         _aiToolsManager = new AiToolsManager(_mockReminderRepository.Object, _mockDataManager.Object, _config, _loggerFactory);
     }
@@ -606,7 +607,7 @@ public class AiToolsManagerTests
     }
 
     [Fact]
-    public void GetWeekLetters_WithDataServiceException_ReturnsError()
+    public void GetWeekLetters_WithWeekLetterCacheException_ReturnsError()
     {
         // Arrange
         _mockDataManager.Setup(d => d.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>()))

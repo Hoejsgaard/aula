@@ -1,9 +1,10 @@
 using Aula.Repositories;
 using Aula.AI.Services;
 using Aula.Content.WeekLetters;
-using Aula.Core.Models;
-using Aula.Core.Security;
-using Aula.Core.Utilities;
+using Aula.Models;
+using Aula.Repositories.DTOs;
+using Aula.Security;
+using Aula;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System;

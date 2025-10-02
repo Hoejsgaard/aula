@@ -1,6 +1,7 @@
 namespace Aula.AI.Prompts;
 using Aula.AI.Prompts;
-using Aula.Core.Models;
+using Aula.Models;
+using Aula.Repositories.DTOs;
 
 public static class ReminderExtractionPrompts
 {

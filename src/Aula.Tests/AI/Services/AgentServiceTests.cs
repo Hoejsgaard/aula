@@ -4,11 +4,12 @@ using Moq;
 using Aula.MinUddannelse;
 using Aula.MinUddannelse;
 using Aula.GoogleCalendar;
-using Aula.Core.Security;
+using Aula.Security;
 using Aula.AI.Services;
 using Aula.Content.WeekLetters;
-using Aula.Core.Models;
-using Aula.Core.Utilities;
+using Aula.Models;
+using Aula.Repositories.DTOs;
+using Aula;
 using Aula.Configuration;
 using Newtonsoft.Json.Linq;
 using System;
@@ -22,7 +23,7 @@ public class AgentServiceTests
 {
     private readonly Mock<ILoggerFactory> _mockLoggerFactory;
     private readonly Mock<ILogger> _mockLogger;
-    private readonly Mock<DataService> _mockDataService;
+    private readonly Mock<WeekLetterCache> _mockWeekLetterCache;
     private readonly Mock<IWeekLetterAiService> _mockOpenAiService;
     private readonly Mock<IMinUddannelseClient> _mockMinUddannelseClient;
     private readonly Config _config;
@@ -43,7 +44,7 @@ public class AgentServiceTests
         };
 
         var mockCache = new Mock<IMemoryCache>();
-        _mockDataService = new Mock<DataService>(mockCache.Object, _config, _mockLoggerFactory.Object);
+        _mockWeekLetterCache = new Mock<WeekLetterCache>(mockCache.Object, _config, _mockLoggerFactory.Object);
 
         _mockLoggerFactory.Setup(x => x.CreateLogger(It.IsAny<string>())).Returns(_mockLogger.Object);
     }
@@ -52,7 +53,7 @@ public class AgentServiceTests
     public void Constructor_WithValidParameters_InitializesCorrectly()
     {
         // Arrange & Act
-        var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
+        var service = new AgentService(_mockMinUddannelseClient.Object, _mockWeekLetterCache.Object,
             _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
 
         // Assert
@@ -64,11 +65,11 @@ public class AgentServiceTests
     {
         // Arrange & Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new AgentService(null!, _mockDataService.Object, _config, _mockOpenAiService.Object, _mockLoggerFactory.Object));
+            new AgentService(null!, _mockWeekLetterCache.Object, _config, _mockOpenAiService.Object, _mockLoggerFactory.Object));
     }
 
     [Fact]
-    public void Constructor_WithNullDataService_ThrowsArgumentNullException()
+    public void Constructor_WithNullWeekLetterCache_ThrowsArgumentNullException()
     {
         // Arrange & Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
@@ -80,7 +81,7 @@ public class AgentServiceTests
     {
         // Arrange & Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object, _config, null!, _mockLoggerFactory.Object));
+            new AgentService(_mockMinUddannelseClient.Object, _mockWeekLetterCache.Object, _config, null!, _mockLoggerFactory.Object));
     }
 
     [Fact]
@@ -88,7 +89,7 @@ public class AgentServiceTests
     {
         // Arrange & Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
-            new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object, _config, _mockOpenAiService.Object, null!));
+            new AgentService(_mockMinUddannelseClient.Object, _mockWeekLetterCache.Object, _config, _mockOpenAiService.Object, null!));
     }
 
     [Fact]
@@ -150,7 +151,7 @@ public class AgentServiceTests
         // Assert
         Assert.Equal(5, parameters.Length);
         Assert.Equal(typeof(IMinUddannelseClient), parameters[0].ParameterType);
-        Assert.Equal(typeof(DataService), parameters[1].ParameterType);
+        Assert.Equal(typeof(WeekLetterCache), parameters[1].ParameterType);
         Assert.Equal(typeof(Config), parameters[2].ParameterType);
         Assert.Equal(typeof(IWeekLetterAiService), parameters[3].ParameterType);
         Assert.Equal(typeof(ILoggerFactory), parameters[4].ParameterType);
@@ -181,9 +182,9 @@ public class AgentServiceTests
         // Arrange
         var cachedData = new JObject { ["cached"] = "data" };
         var child = new Child { FirstName = "Test", LastName = "Child" };
-        _mockDataService.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns(cachedData);
+        _mockWeekLetterCache.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns(cachedData);
 
-        var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
+        var service = new AgentService(_mockMinUddannelseClient.Object, _mockWeekLetterCache.Object,
             _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
 
         // Act
@@ -192,7 +193,7 @@ public class AgentServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal("data", result["cached"]?.ToString());
-        _mockDataService.Verify(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>()), Times.Once());
+        _mockWeekLetterCache.Verify(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>()), Times.Once());
         _mockMinUddannelseClient.Verify(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()), Times.Never());
     }
 
@@ -202,10 +203,10 @@ public class AgentServiceTests
         // Arrange
         var freshData = new JObject { ["fresh"] = "data" };
         var child = new Child { FirstName = "Test", LastName = "Child" };
-        _mockDataService.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns((JObject?)null);
+        _mockWeekLetterCache.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns((JObject?)null);
         _mockMinUddannelseClient.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>())).ReturnsAsync(freshData);
 
-        var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
+        var service = new AgentService(_mockMinUddannelseClient.Object, _mockWeekLetterCache.Object,
             _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
 
         // Act
@@ -216,7 +217,7 @@ public class AgentServiceTests
         Assert.Equal("data", result["fresh"]?.ToString());
         Assert.Equal("Test", result["child"]?.ToString());
         _mockMinUddannelseClient.Verify(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()), Times.Once());
-        _mockDataService.Verify(x => x.CacheWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<JObject>()), Times.Once());
+        _mockWeekLetterCache.Verify(x => x.CacheWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<JObject>()), Times.Once());
     }
 
     [Fact]
@@ -224,11 +225,11 @@ public class AgentServiceTests
     {
         // Arrange
         var child = new Child { FirstName = "Test", LastName = "Child" };
-        _mockDataService.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns((JObject?)null);
+        _mockWeekLetterCache.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns((JObject?)null);
         _mockMinUddannelseClient.Setup(x => x.GetWeekLetter(It.IsAny<Child>(), It.IsAny<DateOnly>(), It.IsAny<bool>()))
             .ReturnsAsync(new JObject());
 
-        var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
+        var service = new AgentService(_mockMinUddannelseClient.Object, _mockWeekLetterCache.Object,
             _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
 
         // Act
@@ -244,9 +245,9 @@ public class AgentServiceTests
         // Arrange
         var cachedSchedule = new JObject { ["schedule"] = "cached" };
         var child = new Child { FirstName = "Test", LastName = "Child" };
-        _mockDataService.Setup(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns(cachedSchedule);
+        _mockWeekLetterCache.Setup(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns(cachedSchedule);
 
-        var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
+        var service = new AgentService(_mockMinUddannelseClient.Object, _mockWeekLetterCache.Object,
             _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
 
         // Act
@@ -255,7 +256,7 @@ public class AgentServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal("cached", result["schedule"]?.ToString());
-        _mockDataService.Verify(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>()), Times.Once());
+        _mockWeekLetterCache.Verify(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>()), Times.Once());
         _mockMinUddannelseClient.Verify(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<DateOnly>()), Times.Never());
     }
 
@@ -264,9 +265,9 @@ public class AgentServiceTests
     {
         // Arrange
         var child = new Child { FirstName = "Test", LastName = "Child" };
-        _mockDataService.Setup(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns((JObject?)null);
+        _mockWeekLetterCache.Setup(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>())).Returns((JObject?)null);
 
-        var service = new AgentService(_mockMinUddannelseClient.Object, _mockDataService.Object,
+        var service = new AgentService(_mockMinUddannelseClient.Object, _mockWeekLetterCache.Object,
             _config, _mockOpenAiService.Object, _mockLoggerFactory.Object);
 
         // Act
@@ -275,6 +276,6 @@ public class AgentServiceTests
         // Assert
         Assert.Null(result);
         _mockMinUddannelseClient.Verify(x => x.GetWeekSchedule(It.IsAny<Child>(), It.IsAny<DateOnly>()), Times.Never());
-        _mockDataService.Verify(x => x.CacheWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<JObject>()), Times.Never());
+        _mockWeekLetterCache.Verify(x => x.CacheWeekSchedule(It.IsAny<Child>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<JObject>()), Times.Never());
     }
 }

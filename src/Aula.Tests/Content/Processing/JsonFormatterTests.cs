@@ -1,7 +1,7 @@
 using Xunit;
 using Aula.Content.WeekLetters;
 using Aula.Content.Processing;
-using Aula.Core.Utilities;
+using Aula;
 using Newtonsoft.Json;
 
 namespace Aula.Tests.Content.Processing;

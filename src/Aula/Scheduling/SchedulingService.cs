@@ -1,7 +1,8 @@
 using Microsoft.Extensions.Logging;
 using Aula.Content.Processing;
 using Aula.Content.WeekLetters;
-using Aula.Core.Models;
+using Aula.Models;
+using Aula.Repositories.DTOs;
 using NCrontab;
 using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;

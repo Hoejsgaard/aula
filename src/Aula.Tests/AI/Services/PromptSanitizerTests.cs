@@ -4,7 +4,7 @@ using Aula.MinUddannelse;
 using Aula.GoogleCalendar;
 using Aula.MinUddannelse;
 using Aula.MinUddannelse;
-using Aula.Core.Security;
+using Aula.Security;
 using Aula.GoogleCalendar;
 using Microsoft.Extensions.Logging;
 using Moq;

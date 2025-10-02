@@ -1,5 +1,6 @@
 using Aula.Configuration;
-using Aula.Core.Models;
+using Aula.Models;
+using Aula.Repositories.DTOs;
 
 namespace Aula.Scheduling;
 
