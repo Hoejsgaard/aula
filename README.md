@@ -51,11 +51,11 @@ This isn't a weekend hack. It's infrastructure that runs 24/7, authenticates wit
 
 ### Core Automation
 
-**✅ Automatic Weekly Letter Delivery**
-- Fetches new weekly letters every Sunday at 16:00 (configurable)
-- Posts formatted Danish summaries to your family's Slack/Telegram
-- Never posts duplicates (content hashing)
-- Handles authentication renewal automatically
+**✅ Automatic Weekly Letter Push**
+- Instantly delivers new week letters the moment they're published
+- AI automatically digests content and suggests smart reminders
+- Creates morning reminders for important events (field trips, homework deadlines)
+- Never miss critical school information - zero manual checking required
 
 **✅ AI-Powered Q&A in Danish/English**
 ```
@@ -230,13 +230,13 @@ info: MinUddannelse.Program[0]
 info: MinUddannelse.Repositories.SupabaseRepository[0]
       Supabase client initialized successfully
 info: MinUddannelse.Agents.ChildAgent[0]
-      Starting agent for child Søren Johannes
+      Starting agent for child Emma
 info: MinUddannelse.Bots.TelegramInteractiveBot[0]
-      Telegram bot started for child Søren Johannes (polling enabled)
+      Telegram bot started for child Emma (polling enabled)
 info: MinUddannelse.Agents.ChildAgent[0]
-      Starting agent for child Hans Martin
+      Starting agent for child Oliver
 info: MinUddannelse.Bots.SlackInteractiveBot[0]
-      Slack bot started for child Hans Martin
+      Slack bot started for child Oliver
 ```
 
 ---
@@ -630,20 +630,6 @@ Not currently, but it's planned for Phase 2. The architecture supports it (add `
 MIT License - Use this freely to make your family's life easier!
 
 See [LICENSE](LICENSE) for full details.
-
----
-
-## Acknowledgments
-
-**Built by parents, for parents.**
-
-Special thanks to:
-- **The Danish school system** for providing APIs (even if they block cloud hosting)
-- **OpenAI** for making AI accessible to small family projects
-- **Supabase** for excellent open-source backend infrastructure
-- **The .NET community** for world-class development tools
-- **Claude AI** for pair programming and code review
-- **All beta-testing Danish families** for feedback on making school communication less painful
 
 ---
 
