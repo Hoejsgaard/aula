@@ -11,7 +11,7 @@ using MinUddannelse.Configuration;
 using MinUddannelse.AI.Services;
 using MinUddannelse.Content.WeekLetters;
 
-namespace MinUddannelse.Communication.Bots;
+namespace MinUddannelse.Bots;
 
 /// <summary>
 /// Telegram interactive bot that is dedicated to a single child.

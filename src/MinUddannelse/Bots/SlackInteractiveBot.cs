@@ -14,7 +14,7 @@ using MinUddannelse.Client;
 using MinUddannelse.AI.Services;
 using MinUddannelse.Content.WeekLetters;
 
-namespace MinUddannelse.Communication.Bots;
+namespace MinUddannelse.Bots;
 
 /// <summary>
 /// Slack interactive bot that is dedicated to a single child.

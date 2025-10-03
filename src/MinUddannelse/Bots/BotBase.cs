@@ -5,7 +5,7 @@ using MinUddannelse.Configuration;
 using MinUddannelse.Client;
 using MinUddannelse.Content.Processing;
 
-namespace MinUddannelse.Communication.Bots;
+namespace MinUddannelse.Bots;
 
 /// <summary>
 /// Abstract base class for interactive bots providing shared functionality

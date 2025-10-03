@@ -11,7 +11,7 @@ using Moq.Protected;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
-using MinUddannelse.Communication.Bots;
+using MinUddannelse.Bots;
 using MinUddannelse.Configuration;
 using MinUddannelse.Client;
 using MinUddannelse.GoogleCalendar;
@@ -23,7 +23,7 @@ using MinUddannelse.Repositories.DTOs;
 using MinUddannelse;
 using System.Linq;
 
-namespace MinUddannelse.Tests.Communication.Bots;
+namespace MinUddannelse.Tests.Bots;
 
 public class SlackInteractiveBotTests : IDisposable
 {

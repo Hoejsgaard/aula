@@ -1,4 +1,4 @@
-using MinUddannelse.Communication.Bots;
+using MinUddannelse.Bots;
 using MinUddannelse.Configuration;
 using MinUddannelse.AI.Services;
 using MinUddannelse.Content.WeekLetters;
@@ -12,7 +12,7 @@ using System;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace MinUddannelse.Tests.Communication.Bots;
+namespace MinUddannelse.Tests.Bots;
 
 public class TelegramInteractiveBotTests
 {

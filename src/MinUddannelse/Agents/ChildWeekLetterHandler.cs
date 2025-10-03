@@ -1,8 +1,7 @@
 using System;
 using MinUddannelse.Content.Processing;
 using System.Threading.Tasks;
-using MinUddannelse.Communication.Bots;
-using MinUddannelse.Communication.Channels;
+using MinUddannelse.Bots;
 using MinUddannelse.Configuration;
 using MinUddannelse.Events;
 using Microsoft.Extensions.Logging;
