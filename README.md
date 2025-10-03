@@ -12,9 +12,9 @@ An intelligent Danish school communication automation system that transforms man
 
 ### The Problem Every Danish Parent Knows
 
-You have two kids in different classes. Every Sunday evening, you log into MinUddannelse (Aula) to check:
+You have two kids in different classes. Every Sunday evening, you log into MinUddannelse to check:
 - Emma's week 40 letter: Field trip on Thursday (pack lunch!)
-- Oliver's week 40 letter: Homework due Wednesday, parent meeting Friday 6 PM
+- Oliver's week 40 letter: Homework due Wednesday, parent meeting Friday 18:00
 
 By Tuesday, you've already checked twice more "just in case something changed." By Friday, you've logged in 17 times across both children's profiles.
 
@@ -52,7 +52,7 @@ This isn't a weekend hack. It's infrastructure that runs 24/7, authenticates wit
 ### Core Automation
 
 **✅ Automatic Weekly Letter Delivery**
-- Fetches new weekly letters every Sunday at 4 PM (configurable)
+- Fetches new weekly letters every Sunday at 16:00 (configurable)
 - Posts formatted Danish summaries to your family's Slack/Telegram
 - Never posts duplicates (content hashing)
 - Handles authentication renewal automatically
@@ -70,7 +70,7 @@ Bot: "✅ I'll remind you tonight at 20:00"
 ```
 
 **✅ Smart Reminders**
-- Natural language creation: *"remind me tomorrow at 8:00 that Oliver has show-and-tell"*
+- Natural language creation: *"remind me tomorrow at 08:00 that Oliver has show-and-tell"*
 - 10-second delivery precision (not minute-level cron jobs)
 - Cross-platform: Slack + Telegram simultaneously
 - Automatic retry on missed deliveries
@@ -116,7 +116,7 @@ Bot: "✅ I'll remind you tonight at 20:00"
 
 ## Critical Hosting Requirement
 
-**⚠️ MinUddannelse (Aula) blocks major cloud providers** by IP range.
+**⚠️ MinUddannelse blocks major cloud providers** by IP range.
 
 ### ✅ **Works On:**
 - **Home server/NAS** (Synology, QNAP, etc.)
@@ -350,7 +350,7 @@ Bot: "Yes, Oliver has math homework due Wednesday and reading assignment due Fri
 
 **Create Reminders:**
 ```
-Parent: "remind me tomorrow at 7:30 to pack Emma's gym clothes"
+Parent: "remind me tomorrow at 07:30 to pack Emma's gym clothes"
 Bot: "✅ Reminder set for tomorrow at 07:30"
 
 [Next day at 07:30]
@@ -359,7 +359,7 @@ Bot: "🔔 Reminder: Pack Emma's gym clothes"
 
 ### Automatic Delivery
 
-**Sunday 4 PM - Week Letters Posted Automatically:**
+**Sunday 16:00 - Week Letters Posted Automatically:**
 
 > **MinUddannelse 5.C**
 > **Ugebrev for 5C uge 40**
@@ -690,7 +690,7 @@ dotnet run
 ### Problem: Week Letters Not Posting
 
 **Symptoms:**
-- Sunday 4 PM passes, no week letter appears
+- Sunday 16:00 passes, no week letter appears
 
 **Solutions:**
 1. Check scheduled tasks in Supabase:
@@ -698,7 +698,7 @@ dotnet run
    SELECT * FROM scheduled_tasks WHERE enabled = true;
    ```
 
-2. Verify cron expression is correct (`0 16 * * 0` = Sundays 4 PM)
+2. Verify cron expression is correct (`0 16 * * 0` = Sundays 16:00)
 
 3. Check application is running at scheduled time
 
