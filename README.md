@@ -123,6 +123,7 @@ Bot: "✅ I'll remind you tonight at 20:00"
 - **Raspberry Pi** on residential internet
 - **VPS providers** (Hetzner, DigitalOcean, Linode)
 - **Dedicated servers** with business/residential IPs
+- **Windows 11 machines** as a startup service or Task Scheduler job
 
 ### ❌ **Blocked:**
 - AWS EC2
@@ -131,6 +132,8 @@ Bot: "✅ I'll remind you tonight at 20:00"
 - Most major cloud datacenter IPs
 
 **This is a hard technical requirement**—authentication will fail on blocked IPs. Test before committing to a hosting provider.
+
+For Windows deployment, see: **[Windows Deployment Guide](doc/README-Windows-Deployment.md)**
 
 ---
 
@@ -826,6 +829,7 @@ Special thanks to:
 
 - **[Architecture Guide](doc/ARCHITECTURE.md)** - Deep dive into system design, patterns, data flow
 - **[Supabase Setup](doc/SUPABASE_SETUP.md)** - Complete database configuration guide
+- **[Windows Deployment Guide](doc/README-Windows-Deployment.md)** - Deploy as Windows service or startup program
 - **[Security Assessment](doc/SECURITY.md)** - Security review and hardening (if exists)
 - **[Troubleshooting](doc/TROUBLESHOOTING.md)** - Common issues and solutions (if exists)
 
