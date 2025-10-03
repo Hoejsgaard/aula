@@ -54,8 +54,20 @@ Current context:
 
 Week Letter: ""{weekLetterContent}""
 
-IMPORTANT: When you see Danish day names like ""Torsdag"", map them to the exact dates above.
-For example: ""Torsdag"" in week {weekNumber} = {currentMonday.AddDays(3):yyyy-MM-dd}
+IMPORTANT:
+- When you see Danish day names like ""Torsdag"", map them to the exact dates above
+- Generate reminder text in DANISH using proper reminder format
+- Use ""Husk"" (Remember) for reminders
+- Include specific times when mentioned
+- Make reminders actionable and clear
+- ALWAYS use ""i dag"" (today) in reminder text, NEVER use specific weekday names like ""torsdag""
+
+For reminder text examples:
+- ""Husk der er fotograf i dag fra 10:35-11:15""
+- ""Husk der er staveprøve i dag kl 12:45. Medbring opladt computer og hovedtelefoner""
+- ""Husk at aflevere tilmeldingsblanket i dag""
+
+CRITICAL: The reminder will be sent on the actual day of the event, so use ""i dag"" not weekday names.
 
 Return a JSON array of events. If no events found, return: []
 
@@ -63,8 +75,8 @@ JSON format:
 [
   {{
     ""type"": ""deadline"",
-    ""title"": ""concise event title"",
-    ""description"": ""detailed description"",
+    ""title"": ""Kort dansk titel"",
+    ""description"": ""Husk [actionable reminder text in Danish]"",
     ""date"": ""yyyy-MM-dd"",
     ""confidence"": 0.8
   }}
