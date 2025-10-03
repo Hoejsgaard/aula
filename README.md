@@ -225,12 +225,18 @@ dotnet run
 
 **Expected Output:**
 ```
-[09:30:15 UTC] Starting MinUddannelse Family Assistant
-[09:30:16 UTC] Supabase connection verified 
-[09:30:17 UTC] Scheduled tasks loaded: WeeklyLetterCheck, MorningReminders
-[09:30:18 UTC] Starting agent for child Emma
-[09:30:19 UTC] Telegram bot started for Emma (polling)
-[09:30:20 UTC] All systems operational 
+info: MinUddannelse.Program[0]
+      Starting MinUddannelse
+info: MinUddannelse.Repositories.SupabaseRepository[0]
+      Supabase client initialized successfully
+info: MinUddannelse.Agents.ChildAgent[0]
+      Starting agent for child Søren Johannes
+info: MinUddannelse.Bots.TelegramInteractiveBot[0]
+      Telegram bot started for child Søren Johannes (polling enabled)
+info: MinUddannelse.Agents.ChildAgent[0]
+      Starting agent for child Hans Martin
+info: MinUddannelse.Bots.SlackInteractiveBot[0]
+      Slack bot started for child Hans Martin
 ```
 
 ---
@@ -574,163 +580,6 @@ Strategy:          Unit tests only (no integration tests)
 
 ---
 
-## Roadmap
-
-### Phase 1: Enhanced Intelligence (Q1 2026)
-- [x] Multi-child per-agent architecture
-- [x] Smart reminder system with natural language
-- [x] Google Calendar sync (Beta)
-- [ ] **Automatic reminder extraction** from week letters
-  - *"Field trip Thursday  Auto-remind Wednesday evening to pack light"*
-- [ ] **Homework tracking** with deadline reminders
-- [ ] **Weather-aware notifications** for outdoor activities
-
-### Phase 2: Family Ecosystem (Q2 2026)
-- [ ] **Multi-family support** in shared channels
-- [ ] **@mention activation** (respond only when mentioned)
-- [ ] **Sibling coordination** (detect schedule conflicts)
-- [ ] **Parent task assignment** with completion tracking
-- [ ] **Notification preferences** (quiet hours, urgency levels)
-
-### Phase 3: Platform Expansion (Q3 2026)
-- [ ] **WhatsApp integration** for broader family reach
-- [ ] **Discord bot** for tech-forward families
-- [ ] **Email notifications** as fallback channel
-- [ ] **Microsoft Teams** support for corporate families
-- [ ] **iOS/Android apps** with push notifications
-- [ ] **Web dashboard** for family schedule overview
-
----
-
-## Contributing
-
-MinUddannelse is a family-focused project, but contributions are welcome!
-
-### Areas Where Help Is Needed
-
-**Development:**
-- New channel integrations (WhatsApp, Discord, Email)
-- Enhanced AI prompts for better Danish/English understanding
-- Additional calendar integrations (Outlook, Apple Calendar)
-- Mobile app development (React Native, Flutter)
-
-**Testing:**
-- Multi-child testing with different school systems
-- Edge case handling (holidays, system downtime, late letters)
-- Performance testing with large families (4+ children)
-- Security testing (penetration testing welcome)
-
-**📚 Documentation:**
-- Translation to Danish
-- Video tutorials for setup
-- Best practices guides for family digital organization
-
-### Development Setup
-
-```bash
-# Clone repository
-git clone https://github.com/your-username/minuddannelse.git
-cd minuddannelse
-
-# Build and test
-dotnet build src/MinUddannelse.sln
-dotnet test src/MinUddannelse.Tests
-
-# Run with local configuration
-cd src/MinUddannelse
-dotnet run
-```
-
-**Development Guidelines:**
-- Write unit tests for new features
-- Follow existing architecture patterns
-- Use dependency injection
-- No secrets in `appsettings.json` (use user-secrets)
-- Run `dotnet format` before committing
-
----
-
-## Troubleshooting
-
-### Problem: Authentication Fails
-
-**Symptoms:**
-```
-[ERROR] Failed to authenticate for child Emma
-```
-
-**Solutions:**
-1. Verify UniLogin credentials in user-secrets:
-   ```bash
-   dotnet user-secrets list | grep UniLogin
-   ```
-
-2. Check if MinUddannelse portal is accessible:
-   ```bash
-   curl https://www.minuddannelse.net
-   ```
-
-3. Verify you're NOT hosting on blocked cloud provider (AWS, Azure, GCP)
-
-### Problem: Bot Not Responding
-
-**Symptoms:**
-- Telegram bot shows online but doesn't reply
-- Slack bot doesn't respond to mentions
-
-**Solutions:**
-1. Check bot token is correct:
-   ```bash
-   dotnet user-secrets list | grep Token
-   ```
-
-2. Verify bot has admin privileges in Telegram channel
-
-3. For Slack: Check Socket Mode is enabled
-
-4. Look for errors in console output
-
-### Problem: Week Letters Not Posting
-
-**Symptoms:**
-- Sunday 16:00 passes, no week letter appears
-
-**Solutions:**
-1. Check scheduled tasks in Supabase:
-   ```sql
-   SELECT * FROM scheduled_tasks WHERE enabled = true;
-   ```
-
-2. Verify cron expression is correct (`0 16 * * 0` = Sundays 16:00)
-
-3. Check application is running at scheduled time
-
-4. Look for authentication errors in logs
-
-### Problem: Supabase Connection Failed
-
-**Symptoms:**
-```
-[ERROR] Failed to connect to Supabase
-```
-
-**Solutions:**
-1. Verify credentials:
-   ```bash
-   dotnet user-secrets list | grep Supabase
-   ```
-
-2. Ensure you're using **service_role** key (not anon key)
-
-3. Check Row Level Security policies are set up correctly
-
-4. Test Supabase connection manually:
-   ```bash
-   curl https://your-project.supabase.co
-   ```
-
----
-
 ## FAQ
 
 ### Why .NET instead of Python/Node.js?
@@ -744,62 +593,35 @@ dotnet run
 - Mature testing frameworks (xUnit, Moq)
 - Cross-platform (runs on Linux/macOS/Windows)
 
-### Does this work with Aula (not MinUddannelse)?
-
-Yes! MinUddannelse IS Aula. The official Danish school communication platform is called "Aula", but the parent portal URL is `minuddannelse.net`. This project works with both names.
-
 ### Will this get my account banned?
 
 No. MinUddannelse uses the official MinUddannelse API with proper SAML authentication—the same flow as logging in via browser. There's no scraping or unauthorized access. However, excessive API calls could trigger rate limiting. The default schedule (weekly letter fetch once per week) is well within acceptable use.
-
-### Can I use this for non-Danish schools?
-
-The authentication system is specific to Danish UniLogin. However, the architecture is extensible—you could replace the authentication layer with your school's system while keeping the bot infrastructure, reminders, and AI features.
 
 ### How much does it cost to run?
 
 **Monthly Costs (3 children, typical usage):**
 - Supabase: **$0** (free tier: 500MB database, 2GB bandwidth)
-- OpenAI: **~$3.60** (20 AI queries/day, GPT-4o-mini: $0.0002/query)
+- OpenAI: **~$0.03** (1 AI query per child per week, GPT-4o-mini: $0.0002/query)
 - Telegram: **$0** (free forever)
 - Slack: **$0** (free tier sufficient)
 - Google Calendar: **$0** (free tier)
 
-**Total: ~$3.60/month** (just OpenAI costs)
+**Total: ~$0.03/month** (just OpenAI costs)
 
 **Hosting:** Free if running on home server, or $5-10/month for VPS.
 
 ### Is my family data secure?
 
-Yes, if configured correctly:
-- ✅ Use **user-secrets** (not appsettings.json) for sensitive data
-- ✅ Enable **Row Level Security** on Supabase (see [setup guide](doc/SUPABASE_SETUP.md))
-- ✅ Use **service_role key** (not anon key)
-- ✅ **Audit logging** tracks all authentication attempts
-- ✅ **Multi-tenant isolation** - Emma's data can't leak into Oliver's channels
+Yes, with proper configuration:
+- ✅ Use **user-secrets** for sensitive data
+- ✅ Enable **Row Level Security** on Supabase
+- ✅ Per-child data isolation
 
-MinUddannelse processes data locally, stores only what's necessary (week letters, reminders), and uses per-child isolation.
+Data is processed locally and stored minimally (week letters, reminders).
 
 ### Can I run multiple families on one instance?
 
 Not currently, but it's planned for Phase 2. The architecture supports it (add `family_id` column), but the configuration is currently single-family only.
-
----
-
-## Support
-
-### Getting Help
-
-- **GitHub Issues** - Bug reports and feature requests
-- **GitHub Discussions** - Setup help, usage questions
-- **Security Issues** - Email directly: [security@example.com](mailto:security@example.com)
-
-### Professional Support
-
-This project is maintained by Danish parents who understand the struggle of managing multiple children's school schedules. We offer:
-- **Setup assistance** for technical families
-- **Custom integrations** for specific school systems
-- **Family workflow consulting** for digital organization
 
 ---
 
