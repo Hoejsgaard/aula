@@ -259,9 +259,9 @@ public class SchedulingService : ISchedulingService
                 try
                 {
                     await SendReminderNotification(reminder);
-                    await _reminderRepository.DeleteReminderAsync(reminder.Id); // DELETE instead of mark as sent
+                    await _reminderRepository.MarkReminderAsSentAsync(reminder.Id);
 
-                    _logger.LogInformation("Sent and deleted reminder {ReminderId}: {Text}", reminder.Id, reminder.Text);
+                    _logger.LogInformation("Sent reminder {ReminderId}: {Text}", reminder.Id, reminder.Text);
                 }
                 catch (Exception ex)
                 {
@@ -556,7 +556,7 @@ public class SchedulingService : ISchedulingService
                                    $"_Was scheduled for {reminderLocalDateTime:HH:mm} ({missedBy.TotalMinutes:F0} minutes ago)_";
 
                     _logger.LogInformation("Missed reminder notification disabled in current build: {Message}", message);
-                    await _reminderRepository.DeleteReminderAsync(reminder.Id);
+                    await _reminderRepository.MarkReminderAsSentAsync(reminder.Id);
 
                     _logger.LogInformation("Notified about missed reminder: {Text}", reminder.Text);
                 }
