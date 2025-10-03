@@ -41,7 +41,7 @@ CHILD: [child name or NONE]";
 
         return $@"You must respond with ONLY valid JSON. No explanations, no markdown, no text outside the JSON.
 
-Extract actionable events from this Danish school week letter for week {weekNumber}/{year}.
+Extract ONLY actionable events that require parent/student preparation from this Danish school week letter for week {weekNumber}/{year}.
 
 Current context:
 - Today: {currentTime:yyyy-MM-dd} ({currentTime:dddd})
@@ -53,6 +53,26 @@ Current context:
   * Fredag: {currentMonday.AddDays(4):yyyy-MM-dd}
 
 Week Letter: ""{weekLetterContent}""
+
+CRITICAL FILTERING RULES - Only create reminders for events that require ACTION:
+
+✅ INCLUDE (require parent/student preparation):
+- Tests, exams, or assessments (staveprøve, matematik test, etc.)
+- Photo sessions (skolefoto, klassefoto)
+- Permission forms or deadlines (tilmeldingsblanket, betaling)
+- Required supplies or materials (medbring computer, sportsudstyr)
+- Field trips and excursions (udflugter, ekskursioner, museumsbesøg)
+- Sports events and competitions (idrætsdag, sportsstævne, løb)
+- Special events requiring presence (skoleforestilling, koncert)
+- Parent meetings or conferences (forældremøde)
+
+❌ EXCLUDE (regular classroom activities - NO reminders needed):
+- Normal curriculum work (læse bøger, matematik opgaver)
+- Regular classroom projects (billedkunst, dansk projekter)
+- General teaching activities (fortsætte med emne X)
+- Routine subjects (historie, kristendom, regular idræt/PE lessons)
+- Books being finished/started (afslutning af bog X, start på bog Y)
+- Regular sports activities (fodboldforløb, svømning generelt)
 
 IMPORTANT:
 - When you see Danish day names like ""Torsdag"", map them to the exact dates above
@@ -83,7 +103,7 @@ JSON format:
 ]
 
 Event types: deadline, permission_form, event, supply_needed
-Only include events with confidence >= 0.6.
+Only include events with confidence >= 0.8 (high confidence only for actionable items).
 Response must be valid JSON only.";
     }
 }
