@@ -1,6 +1,8 @@
-# MinUddannelse: Over-Engineered Family Automation Done Right
+# MinUddannelse: Family School Automation
 
 > **Because checking a school portal 17 times a week shouldn't be a parent's job.**
+
+**Automatic push of week letters when available. Automatic AI digestion creates reminders for when you need them (e.g., in the morning).**
 
 An intelligent Danish school communication automation system that transforms manual portal-checking chaos into seamless, multi-platform notifications with AI assistance.
 
@@ -37,7 +39,7 @@ This isn't a weekend hack. It's infrastructure that runs 24/7, authenticates wit
 | **Multi-tenant isolation** | Emma's bot crash doesn't affect Oliver |
 | **Event-driven architecture** | Adding Google Calendar took 2 hours, not 2 days |
 | **Repository pattern** | Swapped in Supabase without touching business logic |
-| **68.66% test coverage** | 1,533 automated tests catch regressions |
+| **68.66% test coverage** | 612 automated tests catch regressions |
 | **Input validation** | AI system protected against prompt injection |
 | **Audit logging** | Know exactly what happened when authentication fails |
 
@@ -134,6 +136,28 @@ Bot: "✅ I'll remind you tonight at 20:00"
 **This is a hard technical requirement**—authentication will fail on blocked IPs. Test before committing to a hosting provider.
 
 For Windows deployment, see: **[Windows Deployment Guide](doc/README-Windows-Deployment.md)**
+
+---
+
+## Authentication Reality Check
+
+**⚠️ Authentication is a bit hackish** - We jump through quite a lot of hoops to authenticate in a pretend-to-be-browser way.
+
+**What We Wish Existed:** MinUddannelse would support proper SAML machine-to-machine protocols for automated access.
+
+**What Actually Works:** Only UniLogin authentication (without 2FA) provides a path for automation.
+
+### The June 2025 Story
+
+**Until June 2025:** Parents could log in directly and access their children's data through the parent portal.
+
+**After June 2025:** MinUddannelse removed parent access entirely, forcing a complete architectural change.
+
+**Our Response:** Rewrote the entire application to be child-centric instead of parent-centric. Now you need your children's UniLogin credentials (username/password or pictogram sequence) to access the data.
+
+**Why This Works:** Children's UniLogin identities don't require 2FA, which makes sense for school systems. This is the only authentication method that enables automation.
+
+**The Hope:** We hope this stays the same for the foreseeable future, or MinUddannelse provides better machine integration. Until then, the current approach works reliably.
 
 ---
 
@@ -512,39 +536,9 @@ For detailed architecture documentation, see **[ARCHITECTURE.md](doc/ARCHITECTUR
 
 ---
 
-## Claude AI Integration
+## Development
 
-MinUddannelse was developed using **Claude Code** with a sophisticated agent-based workflow system.
-
-### Development Agents
-
-**5 Specialized Expert Agents:**
-- `@architect` - System design, patterns, architecture decisions
-- `@backend` - .NET services, APIs, business logic
-- `@infrastructure` - Terraform, hosting, CI/CD (future)
-- `@security` - Authentication, isolation, audit trails
-- `@technical-writer` - Documentation, guides (created this README!)
-
-### Development Workflow
-
-**Structured 5-Phase Development Cycle:**
-1. **Understand** - Read existing code, trace execution paths
-2. **Plan** - Design solution with agents, validate assumptions
-3. **Implement** - Write production-quality code
-4. **Validate** - Run tests, verify functionality
-5. **Review** - AI code review via `mcp__claude-reviewer`
-
-**Example Sprint 2 Achievement:**
-- Consolidated 3 duplicate authentication implementations  1 unified base class
-- Reduced complexity 70% (20  6 decision points)
-- Eliminated 174 lines (-16%)
-- All 1,533 tests passing
-
-**MCP Tools Used:**
-- `mcp__serena` - Semantic code navigation, symbol editing
-- `mcp__context7` - Real-time .NET documentation
-- `mcp__claude-reviewer` - Pre-commit AI code review
-- `mcp__github` - Repository operations
+Built using **Claude Code** with AI-powered development workflow. Features 612 automated tests, production-grade patterns, and structured development cycles.
 
 ---
 
@@ -553,7 +547,7 @@ MinUddannelse was developed using **Claude Code** with a sophisticated agent-bas
 ### Test Coverage
 ```
 Line Coverage:     68.66% (target: 75%)
-Total Tests:       1,533 automated tests
+Total Tests:       612 automated tests
 Test Framework:    xUnit with Moq
 Strategy:          Unit tests only (no integration tests)
 ```
