@@ -20,7 +20,6 @@ using MinUddannelse.Repositories;
 using MinUddannelse.Repositories.DTOs;
 using MinUddannelse.Scheduling;
 using MinUddannelse.Security;
-using MinUddannelse.Testing;
 
 namespace MinUddannelse;
 
@@ -37,17 +36,6 @@ public class Program
             // Check for test commands first
             var config = serviceProvider.GetRequiredService<Config>();
 
-            if (await WeekLetterTestCommand.HandleTestCommand(args, config, serviceProvider))
-            {
-                logger.LogInformation("Test command completed");
-                return;
-            }
-
-            if (await DatabaseResetCommand.HandleResetCommand(args, config, serviceProvider))
-            {
-                logger.LogInformation("Database reset command completed");
-                return;
-            }
 
             logger.LogInformation("Starting MinUddannelse");
 

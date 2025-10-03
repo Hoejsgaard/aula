@@ -275,21 +275,28 @@ public class SchedulingService : ISchedulingService
         }
     }
 
-    private Task SendReminderNotification(Reminder reminder)
+    private async Task SendReminderNotification(Reminder reminder)
     {
         string childInfo = !string.IsNullOrEmpty(reminder.ChildName) ? $" ({reminder.ChildName})" : "";
         string message = $"*Reminder*{childInfo}: {reminder.Text}";
 
         try
         {
-            _logger.LogInformation("Reminder {ReminderId} sending disabled in current build", reminder.Id);
+            if (!string.IsNullOrEmpty(reminder.ChildName))
+            {
+                await _channelManager.SendMessageToChildChannelsAsync(reminder.ChildName, message);
+                _logger.LogInformation("Sent reminder {ReminderId} to channels for child {ChildName}", reminder.Id, reminder.ChildName);
+            }
+            else
+            {
+                await _channelManager.BroadcastMessageAsync(message);
+                _logger.LogInformation("Broadcast reminder {ReminderId} to all channels", reminder.Id);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to send reminder {ReminderId} to channels", reminder.Id);
         }
-
-        return Task.CompletedTask;
     }
 
     private async Task ExecuteWeeklyLetterCheck(ScheduledTask task)
