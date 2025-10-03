@@ -19,8 +19,6 @@ public class ArchitectureTests
 		// New child-aware services that accept Child parameters directly
 		"IChildWeekLetterCache",
         "ChildWeekLetterCache",
-        "IChildChannelManager",
-        "ChildChannelManager",
         "IChildScheduler",
         "ChildScheduler",
         "IChildAwareOpenAiService",
@@ -51,7 +49,6 @@ public class ArchitectureTests
     {
 		// These services MUST accept Child parameters
 		"IChildWeekLetterCache",
-        "IChildChannelManager",
         "IChildScheduler",
         "IChildAwareOpenAiService"
     };

@@ -322,4 +322,102 @@ public class ChildTests
         child.Colour = "rgb(255, 87, 51)";
         Assert.Equal("rgb(255, 87, 51)", child.Colour);
     }
+
+    [Theory]
+    [InlineData("Emma", "emma")]
+    [InlineData("Søren Johannes", "søren_johannes")]
+    [InlineData("Hans Martin", "hans_martin")]
+    [InlineData("Anne-Sofie", "anne-sofie")]
+    [InlineData("UPPERCASE", "uppercase")]
+    [InlineData("MixedCase Name", "mixedcase_name")]
+    [InlineData("Multiple  Spaces", "multiple__spaces")]
+    [InlineData("", "")]
+    public void GenerateChildId_StaticMethod_TransformsCorrectly(string firstName, string expected)
+    {
+        // Act
+        var result = Child.GenerateChildId(firstName);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Theory]
+    [InlineData("Emma", "emma")]
+    [InlineData("Søren Johannes", "søren_johannes")]
+    [InlineData("Hans Martin", "hans_martin")]
+    [InlineData("Anne-Sofie", "anne-sofie")]
+    [InlineData("UPPERCASE", "uppercase")]
+    [InlineData("MixedCase Name", "mixedcase_name")]
+    public void GetChildId_InstanceMethod_TransformsCorrectly(string firstName, string expected)
+    {
+        // Arrange
+        var child = new Child { FirstName = firstName };
+
+        // Act
+        var result = child.GetChildId();
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void GetChildId_UsesFirstNameProperty()
+    {
+        // Arrange
+        var child = new Child { FirstName = "Test Child" };
+
+        // Act
+        var result = child.GetChildId();
+
+        // Assert
+        Assert.Equal("test_child", result);
+        Assert.Equal(Child.GenerateChildId(child.FirstName), result);
+    }
+
+    [Fact]
+    public void GenerateChildId_StaticAndInstanceMethods_ProduceSameResult()
+    {
+        // Arrange
+        var firstName = "Test Name";
+        var child = new Child { FirstName = firstName };
+
+        // Act
+        var staticResult = Child.GenerateChildId(firstName);
+        var instanceResult = child.GetChildId();
+
+        // Assert
+        Assert.Equal(staticResult, instanceResult);
+    }
+
+    [Fact]
+    public void GenerateChildId_HandlesDanishCharacters()
+    {
+        // Arrange
+        var firstName = "Øystein Åse";
+
+        // Act
+        var result = Child.GenerateChildId(firstName);
+
+        // Assert
+        Assert.Equal("øystein_åse", result);
+        Assert.Contains("ø", result);
+        Assert.Contains("å", result);
+    }
+
+    [Fact]
+    public void GenerateChildId_IsConsistentAcrossMultipleCalls()
+    {
+        // Arrange
+        var firstName = "Consistency Test";
+
+        // Act
+        var result1 = Child.GenerateChildId(firstName);
+        var result2 = Child.GenerateChildId(firstName);
+        var result3 = Child.GenerateChildId(firstName);
+
+        // Assert
+        Assert.Equal(result1, result2);
+        Assert.Equal(result2, result3);
+        Assert.Equal("consistency_test", result1);
+    }
 }

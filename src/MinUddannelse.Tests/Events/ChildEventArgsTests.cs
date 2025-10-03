@@ -262,3 +262,197 @@ public class ChildWeekLetterEventArgsTests
         Assert.Equal(2025, eventArgs.Year);
     }
 }
+
+public class ChildReminderEventArgsTests
+{
+    [Fact]
+    public void Constructor_WithValidReminder_InitializesCorrectly()
+    {
+        var childId = "test_child_id";
+        var childFirstName = "Emma";
+        var reminder = new MinUddannelse.Repositories.DTOs.Reminder
+        {
+            Id = 123,
+            Text = "Don't forget your lunch",
+            RemindDate = DateOnly.FromDateTime(DateTime.Today.AddDays(1)),
+            RemindTime = TimeOnly.Parse("08:30"),
+            ChildName = childFirstName
+        };
+
+        var eventArgs = new ChildReminderEventArgs(childId, childFirstName, reminder);
+
+        Assert.Equal(childId, eventArgs.ChildId);
+        Assert.Equal(childFirstName, eventArgs.ChildFirstName);
+        Assert.Equal("reminder", eventArgs.EventType);
+        Assert.Equal(reminder.Text, eventArgs.ReminderText);
+        Assert.Equal(reminder.RemindDate, eventArgs.RemindDate);
+        Assert.Equal(reminder.RemindTime, eventArgs.RemindTime);
+        Assert.Equal(reminder.Id, eventArgs.ReminderId);
+        Assert.True(eventArgs.EventTime <= DateTimeOffset.UtcNow);
+    }
+
+    [Fact]
+    public void Constructor_WithNullReminder_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+            new ChildReminderEventArgs("test_id", "Emma", null!));
+    }
+
+    [Fact]
+    public void Constructor_WithNullChildId_ThrowsArgumentNullException()
+    {
+        var reminder = new MinUddannelse.Repositories.DTOs.Reminder
+        {
+            Id = 123,
+            Text = "Test reminder",
+            RemindDate = DateOnly.FromDateTime(DateTime.Today),
+            RemindTime = TimeOnly.Parse("09:00")
+        };
+
+        Assert.Throws<ArgumentNullException>(() =>
+            new ChildReminderEventArgs(null!, "Emma", reminder));
+    }
+
+    [Fact]
+    public void Constructor_WithNullChildFirstName_ThrowsArgumentNullException()
+    {
+        var reminder = new MinUddannelse.Repositories.DTOs.Reminder
+        {
+            Id = 123,
+            Text = "Test reminder",
+            RemindDate = DateOnly.FromDateTime(DateTime.Today),
+            RemindTime = TimeOnly.Parse("09:00")
+        };
+
+        Assert.Throws<ArgumentNullException>(() =>
+            new ChildReminderEventArgs("test_id", null!, reminder));
+    }
+
+    [Fact]
+    public void ChildReminderEventArgs_InheritsFromChildEventArgs()
+    {
+        var reminder = new MinUddannelse.Repositories.DTOs.Reminder
+        {
+            Id = 123,
+            Text = "Test reminder",
+            RemindDate = DateOnly.FromDateTime(DateTime.Today),
+            RemindTime = TimeOnly.Parse("09:00")
+        };
+        var eventArgs = new ChildReminderEventArgs("test_id", "Emma", reminder);
+
+        Assert.IsAssignableFrom<ChildEventArgs>(eventArgs);
+        Assert.IsAssignableFrom<EventArgs>(eventArgs);
+    }
+
+    [Fact]
+    public void EventType_IsAlwaysReminder()
+    {
+        var reminder = new MinUddannelse.Repositories.DTOs.Reminder
+        {
+            Id = 456,
+            Text = "Another reminder",
+            RemindDate = DateOnly.FromDateTime(DateTime.Today),
+            RemindTime = TimeOnly.Parse("15:30")
+        };
+        var eventArgs = new ChildReminderEventArgs("test_id", "Emma", reminder);
+
+        Assert.Equal("reminder", eventArgs.EventType);
+    }
+
+    [Fact]
+    public void Properties_ReflectReminderData()
+    {
+        var reminder = new MinUddannelse.Repositories.DTOs.Reminder
+        {
+            Id = 789,
+            Text = "Pick up homework",
+            RemindDate = DateOnly.FromDateTime(DateTime.Today.AddDays(2)),
+            RemindTime = TimeOnly.Parse("16:00")
+        };
+        var eventArgs = new ChildReminderEventArgs("child_id", "Test Child", reminder);
+
+        Assert.Equal(789, eventArgs.ReminderId);
+        Assert.Equal("Pick up homework", eventArgs.ReminderText);
+        Assert.Equal(DateOnly.FromDateTime(DateTime.Today.AddDays(2)), eventArgs.RemindDate);
+        Assert.Equal(TimeOnly.Parse("16:00"), eventArgs.RemindTime);
+    }
+}
+
+public class ChildMessageEventArgsTests
+{
+    [Fact]
+    public void Constructor_WithValidParameters_InitializesCorrectly()
+    {
+        var childId = "test_child_id";
+        var childFirstName = "Emma";
+        var message = "AI analysis results available";
+        var messageType = "ai_analysis";
+
+        var eventArgs = new ChildMessageEventArgs(childId, childFirstName, message, messageType);
+
+        Assert.Equal(childId, eventArgs.ChildId);
+        Assert.Equal(childFirstName, eventArgs.ChildFirstName);
+        Assert.Equal("message", eventArgs.EventType);
+        Assert.Equal(message, eventArgs.Message);
+        Assert.Equal(messageType, eventArgs.MessageType);
+        Assert.True(eventArgs.EventTime <= DateTimeOffset.UtcNow);
+    }
+
+    [Fact]
+    public void Constructor_WithNullMessage_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+            new ChildMessageEventArgs("test_id", "Emma", null!, "test_type"));
+    }
+
+    [Fact]
+    public void Constructor_WithNullMessageType_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+            new ChildMessageEventArgs("test_id", "Emma", "test message", null!));
+    }
+
+    [Fact]
+    public void Constructor_WithNullChildId_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+            new ChildMessageEventArgs(null!, "Emma", "test message", "test_type"));
+    }
+
+    [Fact]
+    public void Constructor_WithNullChildFirstName_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+            new ChildMessageEventArgs("test_id", null!, "test message", "test_type"));
+    }
+
+    [Fact]
+    public void ChildMessageEventArgs_InheritsFromChildEventArgs()
+    {
+        var eventArgs = new ChildMessageEventArgs("test_id", "Emma", "test message", "test_type");
+
+        Assert.IsAssignableFrom<ChildEventArgs>(eventArgs);
+        Assert.IsAssignableFrom<EventArgs>(eventArgs);
+    }
+
+    [Fact]
+    public void EventType_IsAlwaysMessage()
+    {
+        var eventArgs = new ChildMessageEventArgs("test_id", "Emma", "test message", "reminder");
+
+        Assert.Equal("message", eventArgs.EventType);
+    }
+
+    [Fact]
+    public void Properties_StoreCorrectValues()
+    {
+        var message = "Week letter analysis complete";
+        var messageType = "ai_notification";
+        var eventArgs = new ChildMessageEventArgs("child_id", "Test Child", message, messageType);
+
+        Assert.Equal(message, eventArgs.Message);
+        Assert.Equal(messageType, eventArgs.MessageType);
+        Assert.Equal("child_id", eventArgs.ChildId);
+        Assert.Equal("Test Child", eventArgs.ChildFirstName);
+    }
+}

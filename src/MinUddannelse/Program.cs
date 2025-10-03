@@ -150,7 +150,6 @@ public class Program
             var schedulingService = serviceProvider.GetRequiredService<ISchedulingService>();
             var weekLetterReminderService = serviceProvider.GetRequiredService<IWeekLetterReminderService>();
             var weekLetterService = serviceProvider.GetRequiredService<IWeekLetterService>();
-            var channelManager = serviceProvider.GetRequiredService<IChannelManager>();
 
             var now = DateTime.Now;
             var currentDate = DateOnly.FromDateTime(now);
@@ -368,7 +367,6 @@ public class Program
         services.AddSingleton<IChildAuditService, ChildAuditService>();
         services.AddSingleton<IChildRateLimiter, ChildRateLimiter>();
         services.AddSingleton<IWeekLetterService, WeekLetterService>();
-        services.AddSingleton<IChildChannelManager, ChildChannelManager>();
         services.AddSingleton<IChildScheduler, ChildScheduler>();
         services.AddSingleton<IOpenAiService, OpenAiService>();
 
@@ -380,7 +378,6 @@ public class Program
         services.AddSingleton<IPromptSanitizer, PromptSanitizer>();
         services.AddSingleton<IMessageContentFilter, MessageContentFilter>();
 
-        services.AddSingleton<IChannelManager, ChannelManager>();
 
         services.AddSingleton<IGoogleCalendarService, GoogleCalendarService>();
         services.AddSingleton<IConversationManager, ConversationManager>();
@@ -428,7 +425,19 @@ public class Program
 
         services.AddSingleton<IConfigurationValidator, ConfigurationValidator>();
 
-        services.AddSingleton<ISchedulingService, SchedulingService>();
+        services.AddSingleton<ISchedulingService>(provider =>
+        {
+            return new SchedulingService(
+                provider.GetRequiredService<ILoggerFactory>(),
+                provider.GetRequiredService<IReminderRepository>(),
+                provider.GetRequiredService<IScheduledTaskRepository>(),
+                provider.GetRequiredService<IWeekLetterRepository>(),
+                provider.GetRequiredService<IRetryTrackingRepository>(),
+                provider.GetRequiredService<IAppStateRepository>(),
+                provider.GetRequiredService<IWeekLetterService>(),
+                provider.GetRequiredService<IWeekLetterReminderService>(),
+                provider.GetRequiredService<Config>());
+        });
 
         services.AddSingleton<IWeekLetterReminderService>(provider =>
         {

@@ -7,7 +7,6 @@ using NCrontab;
 using Newtonsoft.Json.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using MinUddannelse.Communication.Channels;
 using MinUddannelse.Client;
 using MinUddannelse.Configuration;
 using MinUddannelse.AI.Services;
@@ -26,7 +25,6 @@ public class SchedulingService : ISchedulingService
     private readonly IAppStateRepository _appStateRepository;
     private readonly IWeekLetterService _weekLetterService;
     private readonly IWeekLetterReminderService _weekLetterReminderService;
-    private readonly IChannelManager _channelManager;
     private readonly Config _config;
     private Timer? _schedulingTimer;
     private readonly object _lockObject = new object();
@@ -35,6 +33,9 @@ public class SchedulingService : ISchedulingService
     private const int SchedulingWindowSeconds = 10;
 
     public event EventHandler<ChildWeekLetterEventArgs>? ChildWeekLetterReady;
+    public event EventHandler<ChildReminderEventArgs>? ReminderReady;
+    public event EventHandler<ChildMessageEventArgs>? MessageReady;
+
     public void TriggerChildWeekLetterReady(ChildWeekLetterEventArgs args)
     {
         ChildWeekLetterReady?.Invoke(this, args);
@@ -48,7 +49,6 @@ public class SchedulingService : ISchedulingService
         IRetryTrackingRepository retryTrackingRepository,
         IAppStateRepository appStateRepository,
         IWeekLetterService weekLetterService,
-        IChannelManager channelManager,
         IWeekLetterReminderService weekLetterReminderService,
         Config config)
     {
@@ -59,7 +59,6 @@ public class SchedulingService : ISchedulingService
         _retryTrackingRepository = retryTrackingRepository ?? throw new ArgumentNullException(nameof(retryTrackingRepository));
         _appStateRepository = appStateRepository ?? throw new ArgumentNullException(nameof(appStateRepository));
         _weekLetterService = weekLetterService ?? throw new ArgumentNullException(nameof(weekLetterService));
-        _channelManager = channelManager ?? throw new ArgumentNullException(nameof(channelManager));
         _weekLetterReminderService = weekLetterReminderService ?? throw new ArgumentNullException(nameof(weekLetterReminderService));
         _config = config ?? throw new ArgumentNullException(nameof(config));
     }
@@ -258,7 +257,7 @@ public class SchedulingService : ISchedulingService
             {
                 try
                 {
-                    await SendReminderNotification(reminder);
+                    SendReminderNotification(reminder);
                     await _reminderRepository.MarkReminderAsSentAsync(reminder.Id);
 
                     _logger.LogInformation("Sent reminder {ReminderId}: {Text}", reminder.Id, reminder.Text);
@@ -275,27 +274,27 @@ public class SchedulingService : ISchedulingService
         }
     }
 
-    private async Task SendReminderNotification(Reminder reminder)
+    private void SendReminderNotification(Reminder reminder)
     {
-        string childInfo = !string.IsNullOrEmpty(reminder.ChildName) ? $" ({reminder.ChildName})" : "";
-        string message = $"*Reminder*{childInfo}: {reminder.Text}";
-
         try
         {
-            if (!string.IsNullOrEmpty(reminder.ChildName))
+            if (string.IsNullOrEmpty(reminder.ChildName))
             {
-                await _channelManager.SendMessageToChildChannelsAsync(reminder.ChildName, message);
-                _logger.LogInformation("Sent reminder {ReminderId} to channels for child {ChildName}", reminder.Id, reminder.ChildName);
+                _logger.LogWarning("Reminder {ReminderId} has no child name - skipping (all reminders should be child-specific)", reminder.Id);
+                return;
             }
-            else
-            {
-                await _channelManager.BroadcastMessageAsync(message);
-                _logger.LogInformation("Broadcast reminder {ReminderId} to all channels", reminder.Id);
-            }
+
+            // Fire event for event-driven architecture
+            var childId = Configuration.Child.GenerateChildId(reminder.ChildName);
+            var eventArgs = new ChildReminderEventArgs(childId, reminder.ChildName, reminder);
+            ReminderReady?.Invoke(this, eventArgs);
+
+            _logger.LogInformation("Fired reminder event {ReminderId} for {ChildName}",
+                reminder.Id, reminder.ChildName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send reminder {ReminderId} to channels", reminder.Id);
+            _logger.LogError(ex, "Failed to send reminder {ReminderId}", reminder.Id);
         }
     }
 
@@ -352,7 +351,7 @@ public class SchedulingService : ISchedulingService
             if (await IsContentAlreadyPosted(child, result.contentHash!, weekNumber, year))
                 return;
 
-            var childId = child.FirstName.ToLowerInvariant().Replace(" ", "_");
+            var childId = child.GetChildId();
             var eventArgs = new ChildWeekLetterEventArgs(
                 childId,
                 child.FirstName,
@@ -390,17 +389,21 @@ public class SchedulingService : ISchedulingService
                 _logger.LogInformation("Successfully created {Count} reminders for {ChildName}",
                     extractionResult.RemindersCreated, childName);
 
-                // Send detailed success message to channels with Danish format
+                // Send detailed success message via events
                 var successMessage = FormatReminderSuccessMessage(extractionResult.RemindersCreated, weekNumber, extractionResult.CreatedReminders);
-                await _channelManager.SendMessageToChildChannelsAsync(childName, successMessage);
+                var childId = Configuration.Child.GenerateChildId(childName);
+                var eventArgs = new ChildMessageEventArgs(childId, childName, successMessage, "ai_analysis_success");
+                MessageReady?.Invoke(this, eventArgs);
             }
             else if (extractionResult.Success && extractionResult.NoRemindersFound)
             {
                 _logger.LogInformation("No reminders found in week letter for {ChildName}", childName);
 
-                // Send no reminders message to channels
+                // Send no reminders message via events
                 var noRemindersMessage = $"Ingen påmindelser blev fundet i ugebrevet for uge {weekNumber}/{year} - der er ikke oprettet nogen automatiske påmindelser for denne uge.";
-                await _channelManager.SendMessageToChildChannelsAsync(childName, noRemindersMessage);
+                var childId = Configuration.Child.GenerateChildId(childName);
+                var eventArgs = new ChildMessageEventArgs(childId, childName, noRemindersMessage, "ai_analysis_no_reminders");
+                MessageReady?.Invoke(this, eventArgs);
             }
             else if (!extractionResult.Success)
             {

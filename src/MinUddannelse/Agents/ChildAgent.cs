@@ -27,6 +27,8 @@ public class ChildAgent : IChildAgent
     private SlackInteractiveBot? _slackBot;
     private TelegramInteractiveBot? _telegramBot;
     private EventHandler<ChildWeekLetterEventArgs>? _weekLetterHandler;
+    private EventHandler<ChildReminderEventArgs>? _reminderHandler;
+    private EventHandler<ChildMessageEventArgs>? _messageHandler;
 
     public ChildAgent(
         Child child,
@@ -58,6 +60,8 @@ public class ChildAgent : IChildAgent
         await StartSlackBotAsync();
         await StartTelegramBotAsync();
         SubscribeToWeekLetterEvents();
+        SubscribeToReminderEvents();
+        SubscribeToMessageEvents();
 
         if (_postWeekLettersOnStartup)
         {
@@ -74,6 +78,18 @@ public class ChildAgent : IChildAgent
         {
             _schedulingService.ChildWeekLetterReady -= _weekLetterHandler;
             _weekLetterHandler = null;
+        }
+
+        if (_reminderHandler != null)
+        {
+            _schedulingService.ReminderReady -= _reminderHandler;
+            _reminderHandler = null;
+        }
+
+        if (_messageHandler != null)
+        {
+            _schedulingService.MessageReady -= _messageHandler;
+            _messageHandler = null;
         }
 
         _slackBot?.Dispose();
@@ -135,6 +151,51 @@ public class ChildAgent : IChildAgent
         _schedulingService.ChildWeekLetterReady += _weekLetterHandler;
     }
 
+    private void SubscribeToReminderEvents()
+    {
+        _reminderHandler = async (sender, args) =>
+        {
+            if (!args.ChildId.Equals(_child.GetChildId(), StringComparison.OrdinalIgnoreCase))
+                return;
+
+            try
+            {
+                string message = $"*Reminder*: {args.ReminderText}";
+                await SendReminderMessageAsync(message);
+                _logger.LogInformation("Handled reminder {ReminderId} for {ChildName}",
+                    args.ReminderId, _child.FirstName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to handle reminder {ReminderId} for {ChildName}",
+                    args.ReminderId, _child.FirstName);
+            }
+        };
+        _schedulingService.ReminderReady += _reminderHandler;
+    }
+
+    private void SubscribeToMessageEvents()
+    {
+        _messageHandler = async (sender, args) =>
+        {
+            if (!args.ChildId.Equals(_child.GetChildId(), StringComparison.OrdinalIgnoreCase))
+                return;
+
+            try
+            {
+                await SendReminderMessageAsync(args.Message);
+                _logger.LogInformation("Handled {MessageType} message for {ChildName}",
+                    args.MessageType, _child.FirstName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to handle {MessageType} message for {ChildName}",
+                    args.MessageType, _child.FirstName);
+            }
+        };
+        _schedulingService.MessageReady += _messageHandler;
+    }
+
     private async Task PostStartupWeekLetterAsync()
     {
         if (!(_schedulingService is SchedulingService startupSchedService))
@@ -156,7 +217,7 @@ public class ChildAgent : IChildAgent
                 _logger.LogInformation("Emitting week letter event for {ChildName} (week {WeekNumber}/{Year})",
                     _child.FirstName, weekNumber, year);
 
-                var childId = _child.FirstName.ToLowerInvariant().Replace(" ", "_");
+                var childId = _child.GetChildId();
                 var eventArgs = new ChildWeekLetterEventArgs(
                     childId,
                     _child.FirstName,
