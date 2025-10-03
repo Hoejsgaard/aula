@@ -346,4 +346,30 @@ public class ChannelManager : IChannelManager
             return true;
         }).ToList();
     }
+
+    public void Dispose()
+    {
+        try
+        {
+            StopAllChannelsAsync().GetAwaiter().GetResult();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error stopping channels during disposal");
+        }
+
+        foreach (var channel in _channels.Values.OfType<IDisposable>())
+        {
+            try
+            {
+                channel?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error disposing channel {PlatformId}", channel.GetType().Name);
+            }
+        }
+
+        _channels.Clear();
+    }
 }

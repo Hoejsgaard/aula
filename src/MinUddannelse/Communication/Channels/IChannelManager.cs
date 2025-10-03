@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -7,7 +8,7 @@ namespace MinUddannelse.Communication.Channels;
 /// Manages multiple communication channels and provides unified messaging capabilities.
 /// Supports dynamic channel registration, multi-channel broadcasting, and channel coordination.
 /// </summary>
-public interface IChannelManager
+public interface IChannelManager : IDisposable
 {
     /// <summary>
     /// Gets all registered channels.
