@@ -159,8 +159,8 @@ public class ChildAgent : IChildAgent
 
             try
             {
-                string message = $"*Reminder*: {args.ReminderText}";
-                await SendReminderMessageAsync(message);
+                var formattedReminderText = FormatReminderText(args);
+                await SendReminderMessageAsync(formattedReminderText);
                 _logger.LogInformation("Handled reminder {ReminderId} for {ChildName}",
                     args.ReminderId, _child.FirstName);
             }
@@ -236,6 +236,98 @@ public class ChildAgent : IChildAgent
         {
             _logger.LogError(ex, "Error posting week letter on startup for {ChildName}", _child.FirstName);
         }
+    }
+
+    private string FormatReminderText(ChildReminderEventArgs args)
+    {
+        var reminderText = args.ReminderText;
+        var reminderDateTime = args.RemindDate.ToDateTime(args.RemindTime);
+        var now = DateTime.Now;
+
+        // Check if reminder is delayed (firing after intended time)
+        var isDelayed = now > reminderDateTime;
+
+        if (isDelayed)
+        {
+            var delay = now - reminderDateTime;
+
+            // For very late reminders (>1 hour), add delay disclaimer with day name
+            if (delay.TotalHours > 1)
+            {
+                var originalDate = reminderDateTime;
+                var danishMonths = new[] { "", "jan", "feb", "mar", "apr", "maj", "jun",
+                                         "jul", "aug", "sep", "okt", "nov", "dec" };
+                var monthName = danishMonths[originalDate.Month];
+
+                // Danish day names
+                var danishDays = new[] { "søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag" };
+                var dayName = danishDays[(int)originalDate.DayOfWeek];
+
+                var delayDisclaimer = $"Forsinket notifikation - skulle være afsendt {dayName} d. {originalDate.Day}. {monthName} kl. {originalDate:HH:mm}";
+
+                // Strip day names from reminder text for very delayed reminders
+                var cleanedReminderText = StripDayNamesFromReminderText(reminderText);
+
+                return $"{delayDisclaimer}\n\n{cleanedReminderText}";
+            }
+
+            // For slightly delayed reminders, leave text unchanged
+            return reminderText;
+        }
+
+        return reminderText;
+    }
+
+    private string StripDayNamesFromReminderText(string reminderText)
+    {
+        // Danish day names
+        var danishDays = new[] { "søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag" };
+
+        var result = reminderText;
+
+        // Remove day names in parentheses like "(torsdag)"
+        foreach (var dayName in danishDays)
+        {
+            result = result.Replace($"({dayName})", "");
+        }
+
+        // Remove specific weekday mentions like "torsdag" that appear in reminder text
+        // but be careful not to remove essential context
+        foreach (var dayName in danishDays)
+        {
+            // Remove patterns like "torsdag fra" -> "fra"
+            result = result.Replace($"{dayName} fra", "fra");
+            result = result.Replace($"{dayName} kl", "kl");
+            result = result.Replace($"på {dayName}", "i dag");
+        }
+
+        // Clean up any double spaces
+        result = result.Replace("  ", " ").Trim();
+
+        return result;
+    }
+
+    private string AddDayNameToReminderText(string reminderText, DateTime originalDateTime)
+    {
+        // Danish day names
+        var danishDays = new[] { "søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag" };
+        var dayName = danishDays[(int)originalDateTime.DayOfWeek];
+
+        // Insert day name after "i dag" if present
+        if (reminderText.Contains("i dag"))
+        {
+            return reminderText.Replace("i dag", $"i dag ({dayName})");
+        }
+
+        // If no "i dag" found, add day name at appropriate position
+        // Look for common patterns and insert day name
+        if (reminderText.StartsWith("Husk"))
+        {
+            return reminderText.Replace("Husk", $"Husk ({dayName})");
+        }
+
+        // Fallback: add day name at the beginning
+        return $"({dayName}) {reminderText}";
     }
 
     public async Task SendReminderMessageAsync(string message)

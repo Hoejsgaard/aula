@@ -207,6 +207,11 @@ public class Program
                         }
                     }
 
+                    // Reset AutoRemindersExtracted flag to force reprocessing when RunThisWeeksAIAnalysisOnStartup is enabled
+                    await weekLetterRepository.ResetAutoRemindersExtractedAsync(child.FirstName, currentWeek, currentYear);
+                    logger.LogInformation("Reset AutoRemindersExtracted flag for {ChildName} week {Week}/{Year} to enable reprocessing",
+                        child.FirstName, currentWeek, currentYear);
+
                     // Run AI analysis
                     var extractionResult = await weekLetterReminderService.ExtractAndStoreRemindersAsync(
                         child.FirstName, currentWeek, currentYear, weekLetter, contentHash);
