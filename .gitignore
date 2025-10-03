@@ -45,6 +45,9 @@ log.txt
 # MCP cache
 .serena/
 
+# Code review cache
+.reviews/
+
 # Node.js dependencies
 node_modules/
 
