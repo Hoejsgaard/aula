@@ -331,7 +331,7 @@ public class Program
         var services = new ServiceCollection();
 
         var configuration = new ConfigurationBuilder()
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .AddJsonStream(GetEmbeddedAppsettings())
             .Build();
 
         services.AddSingleton<Config>(provider =>
@@ -455,6 +455,20 @@ public class Program
         });
 
         return services.BuildServiceProvider();
+    }
+
+    private static Stream GetEmbeddedAppsettings()
+    {
+        var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+        var resourceName = "MinUddannelse.appsettings.json";
+
+        var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream == null)
+        {
+            throw new FileNotFoundException($"Embedded resource '{resourceName}' not found. Available resources: {string.Join(", ", assembly.GetManifestResourceNames())}");
+        }
+
+        return stream;
     }
 
 }
