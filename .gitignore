@@ -54,3 +54,6 @@ node_modules/
 # Diagnostic/test tools with credentials
 TestHansDirect/
 Test*/
+
+# .NET Global Tools
+tools/
