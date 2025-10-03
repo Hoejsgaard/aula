@@ -175,6 +175,10 @@ public class WeekLetterReminderService : IWeekLetterReminderService
                     // Remove HTML tags and clean up
                     var cleaned = System.Text.RegularExpressions.Regex.Replace(fieldValue, @"<[^>]+>", " ");
                     cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\s+", " ");
+
+                    // Decode HTML entities
+                    cleaned = System.Net.WebUtility.HtmlDecode(cleaned);
+
                     return cleaned.Trim();
                 }
             }
@@ -256,7 +260,7 @@ public class WeekLetterReminderService : IWeekLetterReminderService
 
         return new Reminder
         {
-            Text = $"{extractedEvent.Title} - {extractedEvent.Description}",
+            Text = extractedEvent.Description,
             RemindDate = reminderDate,
             RemindTime = _defaultReminderTime,
             ChildName = childName,
