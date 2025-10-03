@@ -100,7 +100,7 @@ public class ChildAgent : IChildAgent
     private async Task StartSlackBotAsync()
     {
         if (_child.Channels?.Slack?.Enabled == true &&
-            _child.Channels?.Slack?.EnableInteractiveBot == true &&
+            _child.Channels?.Slack?.EnableBot == true &&
             !string.IsNullOrEmpty(_child.Channels?.Slack?.ApiToken))
         {
             _logger.LogInformation("Starting SlackInteractiveBot for {ChildName} on channel {ChannelId}",
@@ -109,7 +109,8 @@ public class ChildAgent : IChildAgent
             _slackBot = new SlackInteractiveBot(
                 _child,
                 _openAiService,
-                _loggerFactory);
+                _loggerFactory,
+                _child.Channels.Slack.EnableInteractive);
 
             await _slackBot.Start();
 
@@ -120,7 +121,7 @@ public class ChildAgent : IChildAgent
     private async Task StartTelegramBotAsync()
     {
         if (_child.Channels?.Telegram?.Enabled == true &&
-            _child.Channels?.Telegram?.EnableInteractiveBot == true &&
+            _child.Channels?.Telegram?.EnableBot == true &&
             !string.IsNullOrEmpty(_child.Channels?.Telegram?.Token))
         {
             _logger.LogInformation("Starting TelegramInteractiveBot for {ChildName}", _child.FirstName);
@@ -128,7 +129,8 @@ public class ChildAgent : IChildAgent
             _telegramBot = new TelegramInteractiveBot(
                 _child,
                 _openAiService,
-                _loggerFactory);
+                _loggerFactory,
+                _child.Channels.Telegram.EnableInteractive);
 
             await _telegramBot.Start();
 

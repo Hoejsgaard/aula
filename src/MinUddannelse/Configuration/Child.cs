@@ -33,7 +33,8 @@ public class ChildSlackConfig
     public string? WebhookUrl { get; set; }
     public string? ApiToken { get; set; }
     public string? ChannelId { get; set; }
-    public bool EnableInteractiveBot { get; set; }
+    public bool EnableBot { get; set; }
+    public bool EnableInteractive { get; set; } = true;
     public int PollingIntervalSeconds { get; set; } = 5;
     public int CleanupIntervalHours { get; set; } = 1;
 }
@@ -43,7 +44,8 @@ public class ChildTelegramConfig
     public bool Enabled { get; set; }
     public string? Token { get; set; }
     public long? ChatId { get; set; }
-    public bool EnableInteractiveBot { get; set; }
+    public bool EnableBot { get; set; }
+    public bool EnableInteractive { get; set; } = true;
 }
 
 public class ChildGoogleCalendarConfig

@@ -22,6 +22,7 @@ public class TelegramInteractiveBot : IDisposable
     private readonly Child _child;
     private readonly IOpenAiService _aiService;
     private readonly ILogger _logger;
+    private readonly bool _enableInteractive;
     private ITelegramBotClient? _botClient;
     private CancellationTokenSource? _cancellationTokenSource;
 
@@ -32,11 +33,13 @@ public class TelegramInteractiveBot : IDisposable
     public TelegramInteractiveBot(
         Child child,
         IOpenAiService aiService,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        bool enableInteractive = true)
     {
         _child = child ?? throw new ArgumentNullException(nameof(child));
         _aiService = aiService ?? throw new ArgumentNullException(nameof(aiService));
         _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<TelegramInteractiveBot>();
+        _enableInteractive = enableInteractive;
     }
 
     public async Task Start()
@@ -56,22 +59,29 @@ public class TelegramInteractiveBot : IDisposable
             var me = await _botClient.GetMeAsync();
             _logger.LogInformation("Telegram bot authenticated as @{BotUsername} for child {ChildName}", me.Username, _child.FirstName);
 
-            _cancellationTokenSource = new CancellationTokenSource();
-
-            var receiverOptions = new ReceiverOptions
+            if (_enableInteractive)
             {
-                AllowedUpdates = new[] { UpdateType.Message },
-                ThrowPendingUpdates = true
-            };
+                _cancellationTokenSource = new CancellationTokenSource();
 
-            _botClient.StartReceiving(
-                updateHandler: HandleUpdateAsync,
-                pollingErrorHandler: HandlePollingErrorAsync,
-                receiverOptions: receiverOptions,
-                cancellationToken: _cancellationTokenSource.Token
-            );
+                var receiverOptions = new ReceiverOptions
+                {
+                    AllowedUpdates = new[] { UpdateType.Message },
+                    ThrowPendingUpdates = true
+                };
 
-            _logger.LogInformation("Telegram bot started successfully for {ChildName}", _child.FirstName);
+                _botClient.StartReceiving(
+                    updateHandler: HandleUpdateAsync,
+                    pollingErrorHandler: HandlePollingErrorAsync,
+                    receiverOptions: receiverOptions,
+                    cancellationToken: _cancellationTokenSource.Token
+                );
+
+                _logger.LogInformation("Telegram bot started successfully for {ChildName}", _child.FirstName);
+            }
+            else
+            {
+                _logger.LogInformation("Telegram interactive polling disabled - bot will only send messages for {ChildName}", _child.FirstName);
+            }
 
             if (_child.Channels.Telegram.ChatId.HasValue)
             {

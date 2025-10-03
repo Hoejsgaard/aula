@@ -26,6 +26,7 @@ public class SlackInteractiveBot : IDisposable
     private readonly IOpenAiService _aiService;
     private readonly ILogger _logger;
     private readonly HttpClient _httpClient;
+    private readonly bool _enableInteractive;
 
     public string AssignedChildName => _child.FirstName;
 
@@ -42,12 +43,14 @@ public class SlackInteractiveBot : IDisposable
         Child child,
         IOpenAiService aiService,
         ILoggerFactory loggerFactory,
+        bool enableInteractive = true,
         HttpClient? httpClient = null)
     {
         _child = child ?? throw new ArgumentNullException(nameof(child));
         _aiService = aiService ?? throw new ArgumentNullException(nameof(aiService));
         _logger = (loggerFactory ?? throw new ArgumentNullException(nameof(loggerFactory))).CreateLogger<SlackInteractiveBot>();
         _httpClient = httpClient ?? new HttpClient();
+        _enableInteractive = enableInteractive;
 
         if (httpClient == null)
         {
@@ -77,10 +80,16 @@ public class SlackInteractiveBot : IDisposable
 
         _logger.LogInformation("Initial timestamp set to: {Timestamp}", _lastTimestamp + ".000000");
 
-        int pollingInterval = _child.Channels.Slack.PollingIntervalSeconds * 1000;
-        _pollingTimer = new Timer(async _ => await PollForMessages(), null, pollingInterval, pollingInterval);
-
-        _logger.LogInformation("Slack polling started - checking every {Seconds} seconds", _child.Channels.Slack.PollingIntervalSeconds);
+        if (_enableInteractive)
+        {
+            int pollingInterval = _child.Channels.Slack.PollingIntervalSeconds * 1000;
+            _pollingTimer = new Timer(async _ => await PollForMessages(), null, pollingInterval, pollingInterval);
+            _logger.LogInformation("Slack polling started - checking every {Seconds} seconds", _child.Channels.Slack.PollingIntervalSeconds);
+        }
+        else
+        {
+            _logger.LogInformation("Slack interactive polling disabled - bot will only send messages");
+        }
 
         int cleanupInterval = _child.Channels.Slack.CleanupIntervalHours;
         _cleanupTimer = new Timer(_ => CleanupOldMessages(), null, TimeSpan.FromHours(cleanupInterval), TimeSpan.FromHours(cleanupInterval));

@@ -6,7 +6,8 @@
   "Slack": {
     "WebhookUrl": "https://hooks.slack.com/test",
     "ApiToken": "xoxb-test-token",
-    "EnableInteractiveBot": true,
+    "EnableBot": true,
+    "EnableInteractive": true,
     "ChannelId": "C1234567890"
   },
   "Telegram": {

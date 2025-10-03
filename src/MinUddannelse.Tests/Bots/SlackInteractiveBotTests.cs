@@ -47,7 +47,8 @@ public class SlackInteractiveBotTests : IDisposable
                 ApiToken = "test-slack-token",
                 ChannelId = "test-channel-id",
                 Enabled = true,
-                EnableInteractiveBot = true,
+                EnableBot = true,
+                EnableInteractive = true,
                 PollingIntervalSeconds = 5
             }
         }
@@ -64,7 +65,7 @@ public class SlackInteractiveBotTests : IDisposable
 
         _httpClient = new HttpClient(_mockHttpMessageHandler.Object);
 
-        _slackBot = new SlackInteractiveBot(_testChild, _mockOpenAiService.Object, _mockLoggerFactory.Object, _httpClient);
+        _slackBot = new SlackInteractiveBot(_testChild, _mockOpenAiService.Object, _mockLoggerFactory.Object, true, _httpClient);
     }
 
     [Fact]
@@ -77,7 +78,7 @@ public class SlackInteractiveBotTests : IDisposable
     public void Constructor_WithNullChild_ThrowsArgumentNullException()
     {
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new SlackInteractiveBot(null!, _mockOpenAiService.Object, _mockLoggerFactory.Object, _httpClient));
+            new SlackInteractiveBot(null!, _mockOpenAiService.Object, _mockLoggerFactory.Object, true, _httpClient));
         Assert.Equal("child", exception.ParamName);
     }
 
@@ -85,7 +86,7 @@ public class SlackInteractiveBotTests : IDisposable
     public void Constructor_WithNullOpenAiService_ThrowsArgumentNullException()
     {
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new SlackInteractiveBot(_testChild, null!, _mockLoggerFactory.Object, _httpClient));
+            new SlackInteractiveBot(_testChild, null!, _mockLoggerFactory.Object, true, _httpClient));
         Assert.Equal("aiService", exception.ParamName);
     }
 
@@ -93,7 +94,7 @@ public class SlackInteractiveBotTests : IDisposable
     public void Constructor_WithNullLoggerFactory_ThrowsArgumentNullException()
     {
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            new SlackInteractiveBot(_testChild, _mockOpenAiService.Object, null!, _httpClient));
+            new SlackInteractiveBot(_testChild, _mockOpenAiService.Object, null!, true, _httpClient));
         Assert.Equal("loggerFactory", exception.ParamName);
     }
 
