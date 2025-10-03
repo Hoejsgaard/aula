@@ -1,0 +1,19 @@
+# .noai - Signal to AI systems not to index or train on this content
+# This project contains proprietary integration code for Aula and MinUddannelse
+# and should not be used for AI training or indexing purposes.
+#
+# This directory and all subdirectories contain:
+# - Proprietary Aula/MinUddannelse integration code
+# - Educational data API implementations
+# - Security-sensitive authentication mechanisms
+# - Business logic for school communications
+# - Configuration for live educational systems
+#
+# AI systems should respect this notice and exclude all content
+# in this repository from training datasets, indexing, or analysis.
+
+DO_NOT_TRAIN: true
+DO_NOT_INDEX: true
+PROPRIETARY: true
+EDUCATIONAL_DATA: true
+SECURITY_SENSITIVE: true 

@@ -1,0 +1,226 @@
+---
+description: 
+globs: **/transaction-app.Tests/*
+alwaysApply: false
+---
+# Unit Test Guidelines
+
+Tests are production code. Write them with the same care and standards.
+
+## Structure: AAA Pattern
+```csharp
+[Fact]
+public async Task GetWeekLetter_WhenNoDataFound_ShouldReturnNull()
+{
+    // Arrange
+    var service = CreateTestService();
+    
+    // Act
+    var result = await service.GetWeekLetter("unknown-school");
+    
+    // Assert
+    result.Should().BeNull();
+}
+```
+
+**Use `// Arrange`, `// Act`, and `// Assert` comments in every test method.**
+This makes the test structure immediately clear to all readers and helps enforce the AAA pattern, especially for onboarding and code reviews.
+
+**One Thing Per Test**
+Each test verifies one specific behavior. Split complex scenarios into multiple focused tests.
+
+## Naming Conventions
+
+- Test files: `[Class]Tests.cs`
+- Test classes: `[Class]Tests` (sealed)
+- Test methods: `[Method]_[Condition]_[ExpectedResult]`
+
+## Style & Tools
+
+**Use FluentAssertions exclusively**
+```csharp
+// Good
+result.Should().NotBeNull();
+result.Status.Should().Be(HttpStatusCode.OK);
+
+// Bad - basic asserts
+Assert.NotNull(result);
+```
+
+**No Reflection in Tests**
+If you need reflection to verify results, the API design needs improvement.
+
+## Test Data
+
+**Use Builders for Complex Data**
+```csharp
+public static class TestDataBuilder
+{
+    public static MinUddannelseEnvironment CreateTestEnvironment(string schoolId = "test-school") =>
+        new MinUddannelseEnvironment 
+        { 
+            Name = "Test",
+            Schools = new Dictionary<string, MinUddannelseSchool>
+            {
+                [schoolId] = CreateTestSchool(schoolId)
+            }
+        };
+}
+```
+
+**Use Random Data for Non-Critical Values**
+Use realistic but randomized data for strings, names, etc. to avoid test coupling.
+
+**Minimal Test Data**
+Only include properties relevant to the test scenario.
+
+## Mocking
+
+**Mock External Dependencies Only**
+Don't mock the system under test or value objects.
+
+**Verify Important Interactions**
+```csharp
+// Good - verify the important interaction
+mockApiClient.Verify(x => x.GetWeekLetter(It.IsAny<string>()), Times.Once);
+
+// Bad - over-verification of logging
+mockLogger.Verify(x => x.LogInformation(It.IsAny<string>()), Times.Exactly(3));
+```
+
+## Side Effects Verification
+
+**Verify State Changes**
+Test that your code produces the expected side effects:
+```csharp
+// Verify data changes
+var savedData = await dataManager.GetDataAsync(dataId);
+savedData.Status.Should().Be(DataStatus.Updated);
+
+// Verify external API calls
+mockAulaClient.Verify(x => x.GetMessages(It.IsAny<string>()), Times.Once);
+```
+
+## Configuration Tests
+
+**Use Test Configuration Files, Not In-Memory Dictionaries**
+Create actual `appsettings.test.json` files instead of building complex in-memory configurations.
+
+```csharp
+// Good - use actual config file
+private static IConfiguration BuildTestConfiguration()
+{
+    return new ConfigurationBuilder()
+        .AddJsonFile("TestData/appsettings.test.json")
+        .Build();
+}
+
+[Fact]
+public void AulaSettings_ShouldLoadFromConfiguration()
+{
+    // Arrange
+    var configuration = BuildTestConfiguration();
+    
+    // Act
+    var settings = configuration.GetSection("Aula").Get<AulaSettings>();
+    
+    // Assert
+    settings.Should().NotBeNull();
+    settings.Schools.Should().NotBeEmpty();
+    settings.Schools.First().Should().NotBeNull();
+}
+
+// Bad - massive in-memory dictionary
+private static IConfiguration BuildConfiguration()
+{
+    var configValues = new Dictionary<string, string?>
+    {
+        {"Aula:Schools:0:Name", "Test School"},
+        {"Aula:Schools:0:Id", "test-school"},
+        // ... 50+ more lines of configuration
+    };
+    return new ConfigurationBuilder().AddInMemoryCollection(configValues).Build();
+}
+```
+
+**Test Configuration Loading, Not Data Values**
+Verify the binding works and structure is correct, not every individual configuration value.
+
+## Authentication Tests
+
+**Use Test Credentials Files**
+Create separate test credentials and load them from files, never use production credentials or hardcoded values.
+
+```csharp
+// Good - use test credential files
+public static class TestCredentials
+{
+    public static UniLoginCredentials GetTestCredentials() =>
+        new UniLoginCredentials
+        {
+            Username = "test-user",
+            Password = "REDACTED_PASSWORD"
+        };
+}
+
+[Fact]
+public void UniLoginClient_ShouldAuthenticateWithTestCredentials()
+{
+    // Arrange
+    var credentials = TestCredentials.GetTestCredentials();
+    
+    // Act
+    var client = new UniLoginClient(credentials);
+    
+    // Assert
+    client.Should().NotBeNull();
+    client.IsAuthenticated.Should().BeFalse(); // Not authenticated yet
+}
+
+// Bad - hardcoded credentials
+var client = new UniLoginClient(new UniLoginCredentials 
+{ 
+    Username = "real-username", 
+    Password = "actual-password" 
+});
+```
+
+**Store Test Credentials in TestData/Credentials/**
+Keep all test credentials in a dedicated folder structure that's clearly separate from production credentials.
+
+## Test Organization
+
+**Group by Feature**
+Organize tests in directories matching the feature structure:
+```
+Tests/
+  Services/
+    AgentServiceTests.cs
+  Clients/
+    MinUddannelseClientTests.cs
+    AulaClientTests.cs
+```
+
+**Avoid Shared State**
+Don't use fields between tests. Prefer local variables within each test method.
+
+## Coverage
+- Test both:
+  - Positive paths: valid inputs, successful results
+  - Negative paths: errors, nulls, invalid tokens
+
+## Red Flags
+
+These patterns indicate test quality issues:
+- Using `GetType()` or reflection
+- Tests over 20 lines
+- More than 3 mocks per test
+- Hardcoded JSON strings
+- Testing multiple scenarios in one method
+- Sharing fields between tests
+
+## Tips
+- Test smallest units — avoid integration unless required
+- One assert per test is a good default
+- Use descriptive variable names in tests
+- Test error messages only when they're user-facing

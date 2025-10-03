@@ -1,0 +1,30 @@
+---
+description: 
+globs: *.html,*.css
+alwaysApply: false
+---
+# Frontend Rules
+
+## Keep It Simple
+
+- Vanilla HTML/CSS/JS only - no frameworks
+- Use semantic HTML elements
+- Inline styles are fine for this POC
+- CDN dependencies over local files
+
+## Educational UI Standards
+
+- Clean, intuitive design
+- Clear error messages for users
+- Loading states for API calls
+- Accessible form controls
+
+## File Organization
+
+- Static files in `src/Aula.Api/wwwroot/`
+- Use `dotnet run` for local development
+- Keep HTML files focused and readable
+
+
+
+

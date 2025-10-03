@@ -1,0 +1,50 @@
+{
+  "mcpServers": {
+    "terraform": {
+      "type": "stdio",
+      "command": "/home/rune/.local/node_modules/.bin/terraform-mcp-server",
+      "args": [
+        "stdio"
+      ],
+      "env": {}
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/mnt/d/git/aula/node_modules/@upstash/context7-mcp/dist/index.js"
+      ],
+      "env": {}
+    },
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/mnt/d/git/aula/node_modules/@modelcontextprotocol/server-sequential-thinking/dist/index.js"
+      ],
+      "env": {}
+    },
+    "claude-reviewer": {
+      "type": "stdio",
+      "command": "bash",
+      "args": [
+        "/mnt/d/git/mcp-claude-reviewer/mcp-wrapper.sh"
+      ],
+      "env": {}
+    },
+    "serena": {
+      "type": "stdio",
+      "command": "/home/rune/.local/bin/uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena@c8a7b142598b112df6c8fc395ab3f1aa6859a529",
+        "serena-mcp-server",
+        "--context",
+        "ide-assistant",
+        "--project",
+        "."
+      ],
+      "env": {}
+    }
+  }
+}

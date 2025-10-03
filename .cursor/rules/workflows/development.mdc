@@ -1,0 +1,16 @@
+---
+description: Development workflow and build requirements
+globs: "**/*.cs"
+alwaysApply: true
+---
+
+# Development Flow
+
+- Always run:
+  - `dotnet build`
+  - `dotnet test`
+  - `dotnet format`
+
+- Do not merge or commit changes unless all of the above pass.
+- Add missing tests before introducing new logic.
+- Fix all tests when refactoring interfaces - tests are part of the change, not separate.

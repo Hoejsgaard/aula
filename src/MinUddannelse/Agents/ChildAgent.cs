@@ -1,0 +1,366 @@
+using System;
+using MinUddannelse.Content.WeekLetters;
+using System.Threading.Tasks;
+using MinUddannelse.Configuration;
+using MinUddannelse.AI.Services;
+using MinUddannelse.Scheduling;
+using MinUddannelse.Bots;
+using MinUddannelse.Events;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
+
+namespace MinUddannelse.Agents;
+
+public class ChildAgent : IChildAgent
+{
+    private readonly Child _child;
+
+    public Child Child => _child;
+    private readonly IOpenAiService _openAiService;
+    private readonly IWeekLetterService _weekLetterService;
+    private readonly bool _postWeekLettersOnStartup;
+    private readonly ISchedulingService _schedulingService;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger _logger;
+    private SlackInteractiveBot? _slackBot;
+    private TelegramInteractiveBot? _telegramBot;
+    private EventHandler<ChildWeekLetterEventArgs>? _weekLetterHandler;
+    private EventHandler<ChildReminderEventArgs>? _reminderHandler;
+    private EventHandler<ChildMessageEventArgs>? _messageHandler;
+
+    public ChildAgent(
+        Child child,
+        IOpenAiService openAiService,
+        IWeekLetterService weekLetterService,
+        bool postWeekLettersOnStartup,
+        ISchedulingService schedulingService,
+        ILoggerFactory loggerFactory)
+    {
+        ArgumentNullException.ThrowIfNull(child);
+        ArgumentNullException.ThrowIfNull(openAiService);
+        ArgumentNullException.ThrowIfNull(weekLetterService);
+        ArgumentNullException.ThrowIfNull(schedulingService);
+        ArgumentNullException.ThrowIfNull(loggerFactory);
+
+        _child = child;
+        _openAiService = openAiService;
+        _weekLetterService = weekLetterService;
+        _postWeekLettersOnStartup = postWeekLettersOnStartup;
+        _schedulingService = schedulingService;
+        _loggerFactory = loggerFactory;
+        _logger = loggerFactory.CreateLogger<ChildAgent>();
+    }
+
+    public async Task StartAsync()
+    {
+        _logger.LogInformation("Starting agent for child {ChildName}", _child.FirstName);
+
+        await StartSlackBotAsync();
+        await StartTelegramBotAsync();
+        SubscribeToWeekLetterEvents();
+        SubscribeToReminderEvents();
+        SubscribeToMessageEvents();
+
+        if (_postWeekLettersOnStartup)
+        {
+            await PostStartupWeekLetterAsync();
+        }
+    }
+
+    public async Task StopAsync()
+    {
+        _logger.LogInformation("Stopping agent for child {ChildName}", _child.FirstName);
+
+        // Unsubscribe from events to prevent memory leak
+        if (_weekLetterHandler != null)
+        {
+            _schedulingService.ChildWeekLetterReady -= _weekLetterHandler;
+            _weekLetterHandler = null;
+        }
+
+        if (_reminderHandler != null)
+        {
+            _schedulingService.ReminderReady -= _reminderHandler;
+            _reminderHandler = null;
+        }
+
+        if (_messageHandler != null)
+        {
+            _schedulingService.MessageReady -= _messageHandler;
+            _messageHandler = null;
+        }
+
+        _slackBot?.Dispose();
+        _telegramBot?.Dispose();
+
+        await Task.CompletedTask;
+    }
+
+    private async Task StartSlackBotAsync()
+    {
+        if (_child.Channels?.Slack?.Enabled == true &&
+            _child.Channels?.Slack?.EnableBot == true &&
+            !string.IsNullOrEmpty(_child.Channels?.Slack?.ApiToken))
+        {
+            _logger.LogInformation("Starting SlackInteractiveBot for {ChildName} on channel {ChannelId}",
+                _child.FirstName, _child.Channels!.Slack!.ChannelId);
+
+            _slackBot = new SlackInteractiveBot(
+                _child,
+                _openAiService,
+                _loggerFactory,
+                _child.Channels.Slack.EnableInteractive);
+
+            await _slackBot.Start();
+
+            _logger.LogInformation("SlackInteractiveBot started successfully for {ChildName}", _child.FirstName);
+        }
+    }
+
+    private async Task StartTelegramBotAsync()
+    {
+        if (_child.Channels?.Telegram?.Enabled == true &&
+            _child.Channels?.Telegram?.EnableBot == true &&
+            !string.IsNullOrEmpty(_child.Channels?.Telegram?.Token))
+        {
+            _logger.LogInformation("Starting TelegramInteractiveBot for {ChildName}", _child.FirstName);
+
+            _telegramBot = new TelegramInteractiveBot(
+                _child,
+                _openAiService,
+                _loggerFactory,
+                _child.Channels.Telegram.EnableInteractive);
+
+            await _telegramBot.Start();
+
+            _logger.LogInformation("TelegramInteractiveBot started successfully for {ChildName}", _child.FirstName);
+        }
+        else
+        {
+            _logger.LogInformation("Telegram bot disabled for {ChildName} - not configured or not enabled", _child.FirstName);
+        }
+    }
+
+    private void SubscribeToWeekLetterEvents()
+    {
+        _weekLetterHandler = async (sender, args) =>
+        {
+            var handler = new ChildWeekLetterHandler(_child, _loggerFactory);
+            await handler.HandleWeekLetterEventAsync(args, _slackBot, _telegramBot);
+        };
+        _schedulingService.ChildWeekLetterReady += _weekLetterHandler;
+    }
+
+    private void SubscribeToReminderEvents()
+    {
+        _reminderHandler = async (sender, args) =>
+        {
+            if (!args.ChildId.Equals(_child.GetChildId(), StringComparison.OrdinalIgnoreCase))
+                return;
+
+            try
+            {
+                var formattedReminderText = FormatReminderText(args);
+                await SendReminderMessageAsync(formattedReminderText);
+                _logger.LogInformation("Handled reminder {ReminderId} for {ChildName}",
+                    args.ReminderId, _child.FirstName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to handle reminder {ReminderId} for {ChildName}",
+                    args.ReminderId, _child.FirstName);
+            }
+        };
+        _schedulingService.ReminderReady += _reminderHandler;
+    }
+
+    private void SubscribeToMessageEvents()
+    {
+        _messageHandler = async (sender, args) =>
+        {
+            if (!args.ChildId.Equals(_child.GetChildId(), StringComparison.OrdinalIgnoreCase))
+                return;
+
+            try
+            {
+                await SendReminderMessageAsync(args.Message);
+                _logger.LogInformation("Handled {MessageType} message for {ChildName}",
+                    args.MessageType, _child.FirstName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to handle {MessageType} message for {ChildName}",
+                    args.MessageType, _child.FirstName);
+            }
+        };
+        _schedulingService.MessageReady += _messageHandler;
+    }
+
+    private async Task PostStartupWeekLetterAsync()
+    {
+        if (!(_schedulingService is SchedulingService startupSchedService))
+            return;
+
+        _logger.LogInformation("Posting current week letters on startup for {ChildName}", _child.FirstName);
+
+        var now = DateTime.Now;
+        var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(now);
+        var year = now.Year;
+
+        try
+        {
+            var date = DateOnly.FromDateTime(now.AddDays(-7 * (System.Globalization.ISOWeek.GetWeekOfYear(now) - weekNumber)));
+            var weekLetter = await _weekLetterService.GetOrFetchWeekLetterAsync(_child, date, true);
+
+            if (weekLetter != null)
+            {
+                _logger.LogInformation("Emitting week letter event for {ChildName} (week {WeekNumber}/{Year})",
+                    _child.FirstName, weekNumber, year);
+
+                var childId = _child.GetChildId();
+                var eventArgs = new ChildWeekLetterEventArgs(
+                    childId,
+                    _child.FirstName,
+                    weekNumber,
+                    year,
+                    weekLetter);
+
+                startupSchedService.TriggerChildWeekLetterReady(eventArgs);
+            }
+            else
+            {
+                _logger.LogWarning("No week letter found for {ChildName} (week {WeekNumber}/{Year})",
+                    _child.FirstName, weekNumber, year);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error posting week letter on startup for {ChildName}", _child.FirstName);
+        }
+    }
+
+    private string FormatReminderText(ChildReminderEventArgs args)
+    {
+        var reminderText = args.ReminderText;
+        var reminderDateTime = args.RemindDate.ToDateTime(args.RemindTime);
+        var now = DateTime.Now;
+
+        // Check if reminder is delayed (firing after intended time)
+        var isDelayed = now > reminderDateTime;
+
+        if (isDelayed)
+        {
+            var delay = now - reminderDateTime;
+
+            // For very late reminders (>1 hour), add delay disclaimer with day name
+            if (delay.TotalHours > 1)
+            {
+                var originalDate = reminderDateTime;
+                var danishMonths = new[] { "", "jan", "feb", "mar", "apr", "maj", "jun",
+                                         "jul", "aug", "sep", "okt", "nov", "dec" };
+                var monthName = danishMonths[originalDate.Month];
+
+                // Danish day names
+                var danishDays = new[] { "søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag" };
+                var dayName = danishDays[(int)originalDate.DayOfWeek];
+
+                var delayDisclaimer = $"Forsinket notifikation - skulle være afsendt {dayName} d. {originalDate.Day}. {monthName} kl. {originalDate:HH:mm}";
+
+                // Strip day names from reminder text for very delayed reminders
+                var cleanedReminderText = StripDayNamesFromReminderText(reminderText);
+
+                return $"{delayDisclaimer}\n\n{cleanedReminderText}";
+            }
+
+            // For slightly delayed reminders, leave text unchanged
+            return reminderText;
+        }
+
+        return reminderText;
+    }
+
+    private string StripDayNamesFromReminderText(string reminderText)
+    {
+        // Danish day names
+        var danishDays = new[] { "søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag" };
+
+        var result = reminderText;
+
+        // Remove day names in parentheses like "(torsdag)"
+        foreach (var dayName in danishDays)
+        {
+            result = result.Replace($"({dayName})", "");
+        }
+
+        // Remove specific weekday mentions like "torsdag" that appear in reminder text
+        // but be careful not to remove essential context
+        foreach (var dayName in danishDays)
+        {
+            // Remove patterns like "torsdag fra" -> "fra"
+            result = result.Replace($"{dayName} fra", "fra");
+            result = result.Replace($"{dayName} kl", "kl");
+            result = result.Replace($"på {dayName}", "i dag");
+        }
+
+        // Clean up any double spaces
+        result = result.Replace("  ", " ").Trim();
+
+        return result;
+    }
+
+    private string AddDayNameToReminderText(string reminderText, DateTime originalDateTime)
+    {
+        // Danish day names
+        var danishDays = new[] { "søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag" };
+        var dayName = danishDays[(int)originalDateTime.DayOfWeek];
+
+        // Insert day name after "i dag" if present
+        if (reminderText.Contains("i dag"))
+        {
+            return reminderText.Replace("i dag", $"i dag ({dayName})");
+        }
+
+        // If no "i dag" found, add day name at appropriate position
+        // Look for common patterns and insert day name
+        if (reminderText.StartsWith("Husk"))
+        {
+            return reminderText.Replace("Husk", $"Husk ({dayName})");
+        }
+
+        // Fallback: add day name at the beginning
+        return $"({dayName}) {reminderText}";
+    }
+
+    public async Task SendReminderMessageAsync(string message)
+    {
+        try
+        {
+            var tasks = new List<Task>();
+
+            if (_slackBot != null)
+            {
+                tasks.Add(_slackBot.SendMessageToSlack(message));
+            }
+
+            if (_telegramBot != null)
+            {
+                tasks.Add(_telegramBot.SendMessageToTelegram(message));
+            }
+
+            if (tasks.Count > 0)
+            {
+                await Task.WhenAll(tasks);
+                _logger.LogInformation("Sent reminder message to {ChildName} on {Count} platforms", _child.FirstName, tasks.Count);
+            }
+            else
+            {
+                _logger.LogWarning("No bots available to send reminder message for {ChildName}", _child.FirstName);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending reminder message for {ChildName}", _child.FirstName);
+        }
+    }
+}
