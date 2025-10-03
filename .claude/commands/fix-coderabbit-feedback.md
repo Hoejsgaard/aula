@@ -2,7 +2,7 @@
 
 All work must be done with careful analysis. Be critical of anything that looks non-trivial or architectural. 
 
-## 🎯 Purpose
+## Purpose
 Systematically address **ALL** CodeRabbit feedback with **QUALITY OVER SPEED** focus.
 
 ## ⚠️ CRITICAL REQUIREMENTS
@@ -12,14 +12,14 @@ Systematically address **ALL** CodeRabbit feedback with **QUALITY OVER SPEED** f
 4. **ITERATIVE COMMITS**: Commit after each category with MCP review
 5. **WORKFLOW RELOAD**: Re-read @CLAUDE.md & workflows between categories
 
-## ⚡ EXECUTION MODES
+## EXECUTION MODES
 ```bash
 ./scripts/fix-coderabbit-feedback.sh        # DEFAULT: Latest review only
 ./scripts/fix-coderabbit-feedback.sh all    # ALL: Every review in PR
 ```
 **BOTH modes are critical - preserve default/all behavior**
 
-## 📋 SCOPE: FIX ABSOLUTELY EVERYTHING
+## SCOPE: FIX ABSOLUTELY EVERYTHING
 **ZERO TOLERANCE POLICY:**
 - ✅ Actionable items → FIX THEM ALL
 - ✅ Nitpicks → FIX THEM ALL  
@@ -29,7 +29,7 @@ Systematically address **ALL** CodeRabbit feedback with **QUALITY OVER SPEED** f
 - ✅ Optional improvements → IMPLEMENT THEM
 **If CodeRabbit mentioned it, you fix it. No exceptions. No skipping. EVERYTHING.**
 
-## 📊 MANDATORY OUTPUT
+## MANDATORY OUTPUT
 ALWAYS Display this summary after running script, before solving any items:
 ```
 CodeRabbit Feedback from commit: <hash>
@@ -37,7 +37,7 @@ Claimed by CodeRabbit:  Actionable: X  Duplicate: Y  Nitpicks: Z  Total: N
 Counted by script:      Actionable: A  Duplicate: B  Nitpicks: C  Total: M  Positive: P
 ```
 
-## 🔄 ITERATIVE EXECUTION PATTERN
+## ITERATIVE EXECUTION PATTERN
 
 ### INITIALIZATION (EVERY RUN)
 1. **AUTOMATIC CACHE CLEAR**: 
@@ -79,7 +79,7 @@ For each category (Critical, Important, Nitpicks):
 - **VALIDATE EVERYTHING**: Test after every change
 - **MULTIPLE COMMITS**: One per category, all reviewed
 
-## 🔧 STRUCTURED WORKFLOW PER ITERATION
+## STRUCTURED WORKFLOW PER ITERATION
 
 ### Phase 1: UNDERSTAND & ANALYZE
 **MANDATORY RELOAD before each category:**
@@ -130,13 +130,13 @@ fix(scope): address CodeRabbit [category] feedback - <review-id>
 - Changes committed with review ID
 - ZERO remaining feedback items
 
-## 🔍 Script Details
+## Script Details
 - **Output**: `.artifacts/latest-coderabbit.json`
 - **Deduplication**: By structural keys (path, line, end_line, type, source, body prefix)
 - **Error Handling**: Graceful with clear messages
 - **Dependencies**: `gh` CLI, `jq`, `git`
 
-## 💡 Quick Troubleshooting
+## Quick Troubleshooting
 ```bash
 gh auth status                              # Check auth
 gh pr view --json number                    # Verify PR

@@ -64,7 +64,7 @@ public class SharedTelegramBotManager
 - ✅ **Workaround Applied:** Interactive polling disabled
 - ✅ **Immediate Issue Resolved:** No more 409 conflicts
 - ⚠️ **Functionality Limited:** No interactive chat support
-- 🔄 **Future Work:** Implement proper shared bot management
+- **Future Work:** Implement proper shared bot management
 
 ## Impact
 - **Notifications:** ✅ Working (reminders, week letters)

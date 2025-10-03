@@ -198,8 +198,8 @@ pgrep -af "dotnet.*MinUddannelse" || echo "No instances running"
 if (!ApplicationMutex.WaitOne(TimeSpan.Zero, true))
 {
     Console.WriteLine("❌ MinUddannelse is already running");
-    Console.WriteLine("📋 To stop existing instance: pkill -f 'dotnet.*MinUddannelse'");
-    Console.WriteLine("📋 To check status: pgrep -af 'dotnet.*MinUddannelse'");
+    Console.WriteLine("To stop existing instance: pkill -f 'dotnet.*MinUddannelse'");
+    Console.WriteLine("To check status: pgrep -af 'dotnet.*MinUddannelse'");
     Environment.Exit(1);
 }
 ```
