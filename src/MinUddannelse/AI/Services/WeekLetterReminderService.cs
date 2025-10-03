@@ -235,8 +235,8 @@ public class WeekLetterReminderService : IWeekLetterReminderService
             return jsonEvents
                 .Select(je => new ExtractedEvent
                 {
-                    Title = je["title"]?.ToString() ?? string.Empty,
-                    Description = je["description"]?.ToString() ?? string.Empty,
+                    Title = System.Net.WebUtility.HtmlDecode(je["title"]?.ToString() ?? string.Empty),
+                    Description = System.Net.WebUtility.HtmlDecode(je["description"]?.ToString() ?? string.Empty),
                     EventDate = DateTime.Parse(je["date"]?.ToString() ?? DateTime.Today.ToString("yyyy-MM-dd")),
                     EventType = je["type"]?.ToString() ?? "event",
                     ConfidenceScore = je["confidence"]?.Value<double>() ?? 0.8
@@ -260,7 +260,7 @@ public class WeekLetterReminderService : IWeekLetterReminderService
 
         return new Reminder
         {
-            Text = extractedEvent.Description,
+            Text = System.Net.WebUtility.HtmlDecode(extractedEvent.Description),
             RemindDate = reminderDate,
             RemindTime = _defaultReminderTime,
             ChildName = childName,
@@ -268,7 +268,7 @@ public class WeekLetterReminderService : IWeekLetterReminderService
             Source = "auto_extracted",
             WeekLetterId = weekLetterId,
             EventType = extractedEvent.EventType,
-            EventTitle = extractedEvent.Title,
+            EventTitle = System.Net.WebUtility.HtmlDecode(extractedEvent.Title),
             ExtractedDateTime = DateTime.UtcNow,
             ConfidenceScore = (decimal)extractedEvent.ConfidenceScore
         };
