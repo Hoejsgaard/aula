@@ -32,7 +32,6 @@ public class ArchitectureTests
         "ChildRateLimiter",
 		// Utility services that need Child parameters
 		"IPromptSanitizer",
-        "IMessageContentFilter",
         "IChildSchedulingRateLimiter",
 		// Legacy interfaces allowed to have Child parameters (marked obsolete)
         "IAgentService",

@@ -15,8 +15,7 @@ using MinUddannelse.Models;
 using MinUddannelse.Repositories.DTOs;
 using MinUddannelse;
 using MinUddannelse.Scheduling;
-using MinUddannelse.Communication.Bots;
-using MinUddannelse.Communication.Channels;
+using MinUddannelse.Bots;
 
 namespace MinUddannelse.Tests;
 
@@ -37,7 +36,6 @@ public class ProgramTests
         Assert.NotNull(serviceProvider.GetRequiredService<IWeekLetterAiService>());
         Assert.NotNull(serviceProvider.GetRequiredService<ISchedulingService>());
         Assert.NotNull(serviceProvider.GetRequiredService<IPromptSanitizer>());
-        Assert.NotNull(serviceProvider.GetRequiredService<IMessageContentFilter>());
     }
 
     [Fact]

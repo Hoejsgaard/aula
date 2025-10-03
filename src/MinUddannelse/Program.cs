@@ -10,7 +10,6 @@ using System.Net;
 using MinUddannelse.Agents;
 using MinUddannelse.AI.Prompts;
 using MinUddannelse.AI.Services;
-using MinUddannelse.Communication.Channels;
 using MinUddannelse.Configuration;
 using MinUddannelse.Content.WeekLetters;
 using MinUddannelse.GoogleCalendar;
@@ -376,7 +375,6 @@ public class Program
         services.AddScoped<IMinUddannelseClient, MinUddannelseClient>();
         services.AddScoped<IAgentService, AgentService>();
         services.AddSingleton<IPromptSanitizer, PromptSanitizer>();
-        services.AddSingleton<IMessageContentFilter, MessageContentFilter>();
 
 
         services.AddSingleton<IGoogleCalendarService, GoogleCalendarService>();
