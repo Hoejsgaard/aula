@@ -97,7 +97,7 @@ public class ChildWeekLetterHandler
         var letterText = _html2MarkdownConverter.Convert(htmlContent).Replace("**", "*");
 
         // Format the title
-        var title = $"Ugebrev for {_child.FirstName} ({@class}) uge {week}";
+        var title = $"Ugebrev for {@class} uge {week}";
 
         return $"{title}\n\n{letterText}";
     }
@@ -118,7 +118,7 @@ public class ChildWeekLetterHandler
         _logger.LogInformation("Converted text length: {Length}, content: {Content}", letterText.Length, letterText);
 
         // Format the title with HTML bold tags
-        var title = $"<b>Ugebrev for {_child.FirstName} ({@class}) uge {week}</b>";
+        var title = $"<b>Ugebrev for {@class} uge {week}</b>";
 
         return $"{title}\n\n{letterText}";
     }
