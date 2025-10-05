@@ -19,6 +19,9 @@ using MinUddannelse.Repositories;
 using MinUddannelse.Repositories.DTOs;
 using MinUddannelse.Scheduling;
 using MinUddannelse.Security;
+using Serilog;
+using Serilog.Extensions.Logging;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace MinUddannelse;
 
@@ -57,6 +60,10 @@ public class Program
         catch (Exception ex)
         {
             logger.LogError(ex, "Error starting MinUddannelse");
+        }
+        finally
+        {
+            Log.CloseAndFlush();
         }
     }
 
@@ -341,15 +348,22 @@ public class Program
             return config;
         });
 
+        // Configure Serilog for both console and file logging with rotation
+        var logPath = Path.Combine(AppContext.BaseDirectory, "logs", "minuddannelse-.log");
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .WriteTo.Console(outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .WriteTo.File(logPath,
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 30,
+                fileSizeLimitBytes: 50_000_000,
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .CreateLogger();
+
         services.AddLogging(builder =>
         {
             builder.ClearProviders();
-            builder.AddSimpleConsole(options =>
-            {
-                options.TimestampFormat = "HH:mm:ss ";
-                options.IncludeScopes = false;
-            });
-            builder.SetMinimumLevel(LogLevel.Information);
+            builder.AddSerilog();
         });
 
         services.AddMemoryCache();
