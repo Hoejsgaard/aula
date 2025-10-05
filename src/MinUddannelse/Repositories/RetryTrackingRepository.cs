@@ -3,6 +3,7 @@ using MinUddannelse.Models;
 using MinUddannelse.Repositories.DTOs;
 using Microsoft.Extensions.Logging;
 using Supabase;
+using Supabase.Postgrest;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -27,7 +28,9 @@ public class RetryTrackingRepository : IRetryTrackingRepository
         var result = await _supabase
             .From<RetryAttempt>()
             .Select("attempt_count")
-            .Where(ra => ra.ChildName == childName && ra.WeekNumber == weekNumber && ra.Year == year)
+            .Filter("child_name", Constants.Operator.Equals, childName)
+            .Filter("week_number", Constants.Operator.Equals, weekNumber)
+            .Filter("year", Constants.Operator.Equals, year)
             .Get();
 
         var retryAttempt = result.Models.FirstOrDefault();
@@ -40,7 +43,9 @@ public class RetryTrackingRepository : IRetryTrackingRepository
         var existing = await _supabase
             .From<RetryAttempt>()
             .Select("*")
-            .Where(ra => ra.ChildName == childName && ra.WeekNumber == weekNumber && ra.Year == year)
+            .Filter("child_name", Constants.Operator.Equals, childName)
+            .Filter("week_number", Constants.Operator.Equals, weekNumber)
+            .Filter("year", Constants.Operator.Equals, year)
             .Get();
 
         if (existing.Models.Count > 0)
@@ -94,7 +99,9 @@ public class RetryTrackingRepository : IRetryTrackingRepository
         // Delete the retry attempt record since it's no longer needed
         await _supabase
             .From<RetryAttempt>()
-            .Where(ra => ra.ChildName == childName && ra.WeekNumber == weekNumber && ra.Year == year)
+            .Filter("child_name", Constants.Operator.Equals, childName)
+            .Filter("week_number", Constants.Operator.Equals, weekNumber)
+            .Filter("year", Constants.Operator.Equals, year)
             .Delete();
 
         _logger.LogInformation("Marked retry as successful and removed tracking for {ChildName} week {WeekNumber}/{Year}",

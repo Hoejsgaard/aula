@@ -2,6 +2,7 @@ using MinUddannelse.Models;
 using MinUddannelse.Repositories.DTOs;
 using Microsoft.Extensions.Logging;
 using Supabase;
+using Supabase.Postgrest;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -33,7 +34,9 @@ public class WeekLetterRepository : IWeekLetterRepository
         var result = await _supabase
             .From<PostedLetter>()
             .Select("id")
-            .Where(pl => pl.ChildName == childName && pl.WeekNumber == weekNumber && pl.Year == year)
+            .Filter("child_name", Constants.Operator.Equals, childName)
+            .Filter("week_number", Constants.Operator.Equals, weekNumber)
+            .Filter("year", Constants.Operator.Equals, year)
             .Get();
 
         return result.Models.Count > 0;
@@ -78,9 +81,9 @@ public class WeekLetterRepository : IWeekLetterRepository
 
         var existingRecordQuery = await _supabase
             .From<PostedLetter>()
-            .Where(p => p.ChildName == childName)
-            .Where(p => p.WeekNumber == weekNumber)
-            .Where(p => p.Year == year)
+            .Filter("child_name", Constants.Operator.Equals, childName)
+            .Filter("week_number", Constants.Operator.Equals, weekNumber)
+            .Filter("year", Constants.Operator.Equals, year)
             .Get();
 
         var existingRecord = existingRecordQuery.Models.FirstOrDefault();
