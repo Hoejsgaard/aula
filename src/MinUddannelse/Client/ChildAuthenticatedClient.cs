@@ -128,7 +128,7 @@ public sealed partial class ChildAuthenticatedClient : UniLoginAuthenticatorBase
             return new JObject();
         }
 
-        var url = $"https://www.minuddannelse.net/api/elev/ugeplan/getUgeplan?tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}" +
+        var url = $"https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}" +
                  $"&elevId={_childId}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
         using var httpClient = CreateHttpClient();

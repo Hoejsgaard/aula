@@ -13,13 +13,14 @@ namespace MinUddannelse.Client;
 /// <summary>
 /// Handles authentication for children using pictogram-based login instead of passwords
 /// </summary>
-public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, IChildAuthenticatedClient
+public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticatorBase, IChildAuthenticatedClient, IDisposable
 {
     private readonly Child _child;
     private readonly ILogger _logger;
     private readonly string[] _pictogramSequence;
     private readonly string _username;
     private string? _childId;
+    private HttpClient? _authenticatedHttpClient;
 
     public PictogramAuthenticatedClient(Child child, string username, string[] pictogramSequence, ILogger logger, IHttpClientFactory httpClientFactory)
         : base(httpClientFactory, username, "", // Empty password since we'll build it dynamically
@@ -49,7 +50,11 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
 
         try
         {
-            using var httpClient = CreateHttpClient();
+            // Dispose any existing authenticated client
+            _authenticatedHttpClient?.Dispose();
+
+            var httpClient = CreateHttpClient();
+            HttpClient? clientToDispose = httpClient; // Track for disposal if auth fails
             // Navigate through the login flow to reach the pictogram page
             var response = await httpClient.GetAsync("https://www.minuddannelse.net/KmdIdentity/Login?domainHint=unilogin-idp-prod&toFa=False");
 
@@ -144,6 +149,9 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
 
                         // Set the child ID after successful login
                         await SetChildIdAsync(httpClient);
+
+                        // Store the authenticated client for later API calls
+                        _authenticatedHttpClient = httpClient;
                         return true;
                     }
                     else
@@ -194,6 +202,9 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
                         }
 
                         await SetChildIdAsync(httpClient);
+
+                        // Store the authenticated client for later API calls
+                        _authenticatedHttpClient = httpClient;
                         return true;
                     }
                 }
@@ -205,6 +216,13 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception during pictogram authentication for {ChildName}", _child.FirstName);
+
+            // If authentication failed and we haven't stored the client, dispose it
+            if (_authenticatedHttpClient == null)
+            {
+                // httpClient will be disposed by the disposal logic below
+            }
+
             return false;
         }
     }
@@ -370,6 +388,8 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
                                 new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
                         }
 
+                        // Store the authenticated client for later API calls
+                        _authenticatedHttpClient = httpClient;
                         return true;
                     }
 
@@ -416,6 +436,9 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
             (response.RequestMessage?.RequestUri?.ToString().Contains("minuddannelse.net") ?? false))
         {
             _logger.LogInformation("Pictogram authentication successful!");
+
+            // Store the authenticated client for later API calls
+            _authenticatedHttpClient = httpClient;
             return true;
         }
 
@@ -430,6 +453,9 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
                 (finalResponse.RequestMessage?.RequestUri?.ToString().Contains("minuddannelse.net") ?? false))
             {
                 _logger.LogInformation("Pictogram authentication successful after redirect!");
+
+                // Store the authenticated client for later API calls
+                _authenticatedHttpClient = httpClient;
                 return true;
             }
         }
@@ -528,13 +554,22 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
             return new Newtonsoft.Json.Linq.JObject();
         }
 
-        var url = $"https://www.minuddannelse.net/api/elev/ugeplan/getUgeplan?tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}" +
+        var url = $"https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}" +
                  $"&elevId={_childId}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
         _logger.LogDebug("Fetching week letter from: {Url}", url);
 
-        using var httpClient = CreateHttpClient();
-        var response = await httpClient.GetAsync(url);
+        if (_authenticatedHttpClient == null)
+        {
+            _logger.LogError("No authenticated HTTP client available. Please call LoginAsync first.");
+            return new Newtonsoft.Json.Linq.JObject
+            {
+                ["errorMessage"] = "Authentication required",
+                ["ugebreve"] = new Newtonsoft.Json.Linq.JArray()
+            };
+        }
+
+        var response = await _authenticatedHttpClient.GetAsync(url);
         if (response.IsSuccessStatusCode)
         {
             var content = await response.Content.ReadAsStringAsync();
@@ -557,11 +592,7 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
             {
                 var json = Newtonsoft.Json.Linq.JObject.Parse(content);
 
-                // Extract the actual content similar to ChildAuthenticatedClient
-                if (json["UgePlan"] != null && json["UgePlan"]?["UgeBrevContent"] != null)
-                {
-                    return (Newtonsoft.Json.Linq.JObject)(json["UgePlan"] ?? new Newtonsoft.Json.Linq.JObject());
-                }
+                // Response structure has ugebreve array directly at root level
                 return json;
             }
             catch (Newtonsoft.Json.JsonException ex)
@@ -579,7 +610,11 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
         }
 
         _logger.LogError("Failed to fetch week letter. Status: {Status}", response.StatusCode);
-        return new Newtonsoft.Json.Linq.JObject();
+        return new Newtonsoft.Json.Linq.JObject
+        {
+            ["errorMessage"] = "Failed to fetch week letter",
+            ["ugebreve"] = new Newtonsoft.Json.Linq.JArray()
+        };
     }
 
     public async Task<Newtonsoft.Json.Linq.JObject> GetWeekSchedule(DateOnly date)
@@ -595,8 +630,13 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
 
         _logger.LogDebug("Fetching schedule from: {Url}", url);
 
-        using var httpClient = CreateHttpClient();
-        var response = await httpClient.GetAsync(url);
+        if (_authenticatedHttpClient == null)
+        {
+            _logger.LogError("No authenticated HTTP client available. Please call LoginAsync first.");
+            return new Newtonsoft.Json.Linq.JObject();
+        }
+
+        var response = await _authenticatedHttpClient.GetAsync(url);
         if (response.IsSuccessStatusCode)
         {
             var content = await response.Content.ReadAsStringAsync();
@@ -612,4 +652,10 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
 
     [GeneratedRegex(@"""fornavn"":""([^""]*)"",""efternavn"":""([^""]*)""")]
     private static partial Regex NameRegex();
+
+    public new void Dispose()
+    {
+        _authenticatedHttpClient?.Dispose();
+        base.Dispose();
+    }
 }

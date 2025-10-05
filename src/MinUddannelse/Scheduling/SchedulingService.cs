@@ -5,6 +5,7 @@ using MinUddannelse.Models;
 using MinUddannelse.Repositories.DTOs;
 using NCrontab;
 using Newtonsoft.Json.Linq;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using MinUddannelse.Client;
@@ -182,19 +183,42 @@ public class SchedulingService : ISchedulingService
 
     private bool ShouldRunTask(ScheduledTask task, DateTime now)
     {
+        _logger.LogInformation("ShouldRunTask check for {TaskName}: Enabled={Enabled}, LastRun={LastRun}, NextRun={NextRun}, Now={Now}",
+            task.Name, task.Enabled, task.LastRun, task.NextRun, now);
+
         if (!task.Enabled)
         {
+            _logger.LogInformation("Task {TaskName} is disabled", task.Name);
             return false;
         }
 
         try
         {
-            var schedule = CrontabSchedule.Parse(task.CronExpression);
-            var nextRun = task.LastRun != null
-                ? schedule.GetNextOccurrence(task.LastRun.Value)
-                : schedule.GetNextOccurrence(now.AddMinutes(-_config.Scheduling.InitialOccurrenceOffsetMinutes));
+            DateTime nextRun;
 
-            return now >= nextRun && now <= nextRun.AddMinutes(_config.Scheduling.TaskExecutionWindowMinutes);
+            // Use database NextRun if set, otherwise calculate from cron
+            if (task.NextRun.HasValue)
+            {
+                nextRun = task.NextRun.Value;
+                _logger.LogInformation("Task {TaskName} using database NextRun: {NextRun}", task.Name, nextRun);
+            }
+            else
+            {
+                var schedule = CrontabSchedule.Parse(task.CronExpression);
+                nextRun = task.LastRun != null
+                    ? schedule.GetNextOccurrence(task.LastRun.Value)
+                    : schedule.GetNextOccurrence(now.AddMinutes(-_config.Scheduling.InitialOccurrenceOffsetMinutes));
+                _logger.LogInformation("Task {TaskName} calculated NextRun from cron: {NextRun}", task.Name, nextRun);
+            }
+
+            _logger.LogInformation("Task {TaskName} cron analysis: CronExpression={CronExpression}, FinalNextRun={FinalNextRun}, Now={Now}, WindowMinutes={WindowMinutes}",
+                task.Name, task.CronExpression, nextRun, now, _config.Scheduling.TaskExecutionWindowMinutes);
+
+            var shouldRun = now >= nextRun && now <= nextRun.AddMinutes(_config.Scheduling.TaskExecutionWindowMinutes);
+            _logger.LogInformation("Task {TaskName} should run: {ShouldRun} (now >= nextRun: {IsAfterNext}, now <= window: {IsInWindow})",
+                task.Name, shouldRun, now >= nextRun, now <= nextRun.AddMinutes(_config.Scheduling.TaskExecutionWindowMinutes));
+
+            return shouldRun;
         }
         catch (Exception ex)
         {
@@ -333,6 +357,14 @@ public class SchedulingService : ISchedulingService
     {
         var (weekNumber, year) = GetCurrentWeekAndYear();
 
+        // On Sundays, look for next week's letter
+        if (DateTime.Now.DayOfWeek == DayOfWeek.Sunday)
+        {
+            var nextWeek = DateTime.Now.AddDays(7);
+            weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(nextWeek);
+            year = nextWeek.Year;
+        }
+
         try
         {
             _logger.LogInformation("Checking week letter for {ChildName}", child.FirstName);
@@ -345,10 +377,10 @@ public class SchedulingService : ISchedulingService
                 return;
 
             var result = await ValidateAndProcessWeekLetterContent(weekLetter, child.FirstName, weekNumber, year);
-            if (result.content == null)
+            if (result.Item1 == null)
                 return;
 
-            if (await IsContentAlreadyPosted(child, result.contentHash!, weekNumber, year))
+            if (await IsContentAlreadyPosted(child, result.Item2!, weekNumber, year))
                 return;
 
             var childId = child.GetChildId();
@@ -360,17 +392,17 @@ public class SchedulingService : ISchedulingService
                 weekLetter);
 
             ChildWeekLetterReady?.Invoke(this, eventArgs);
-            await _weekLetterRepository.MarkWeekLetterAsPostedAsync(child.FirstName, weekNumber, year, result.contentHash!);
+            await _weekLetterRepository.MarkWeekLetterAsPostedAsync(child.FirstName, weekNumber, year, result.Item2!);
 
             // Extract reminders from week letter content
-            await ExtractRemindersFromWeekLetter(child.FirstName, weekNumber, year, weekLetter, result.contentHash!);
+            await ExtractRemindersFromWeekLetter(child.FirstName, weekNumber, year, weekLetter, result.Item2!);
 
             _logger.LogInformation("Emitted week letter event for {ChildName}", child.FirstName);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing week letter for {ChildName}", child.FirstName);
-            await _retryTrackingRepository.IncrementRetryAttemptAsync(child.FirstName, weekNumber, year);
+            var _ = await _retryTrackingRepository.IncrementRetryAttemptAsync(child.FirstName, weekNumber, year);
         }
     }
 
@@ -437,14 +469,78 @@ public class SchedulingService : ISchedulingService
 
     private async Task<dynamic?> TryGetWeekLetter(Child child, int weekNumber, int year)
     {
-        var date = DateOnly.FromDateTime(DateTime.Now);
+        // Convert week/year back to date for the live fetch method
+        var firstDayOfWeek = ISOWeek.ToDateTime(year, weekNumber, DayOfWeek.Monday);
+        var date = DateOnly.FromDateTime(firstDayOfWeek);
+
         var weekLetter = await _weekLetterService.GetOrFetchWeekLetterAsync(child, date, true);
-        if (weekLetter == null)
+        if (weekLetter == null || IsWeekLetterEffectivelyEmpty(weekLetter))
         {
             _logger.LogWarning("No week letter available for {ChildName}, will retry later", child.FirstName);
-            await _retryTrackingRepository.IncrementRetryAttemptAsync(child.FirstName, weekNumber, year);
+            var isFirstAttempt = await _retryTrackingRepository.IncrementRetryAttemptAsync(child.FirstName, weekNumber, year);
+
+            if (isFirstAttempt)
+            {
+                // Send notification about retry schedule - only for the first attempt
+                var retryHours = _config.WeekLetter.RetryIntervalHours;
+                var maxRetryHours = _config.WeekLetter.MaxRetryDurationHours;
+                var totalAttempts = maxRetryHours / retryHours;
+
+                var retryMessage = $"⚠️ Ugebrev for uge {weekNumber}/{year} er endnu ikke tilgængeligt.\n\n" +
+                                 $"Jeg vil automatisk prøve igen hver {retryHours}. time i de næste {maxRetryHours} timer " +
+                                 $"(op til {totalAttempts} forsøg).\n\n" +
+                                 $"Du vil få besked, så snart ugebrevet bliver tilgængeligt! ✅";
+
+                var childId = Configuration.Child.GenerateChildId(child.FirstName);
+                var eventArgs = new ChildMessageEventArgs(childId, child.FirstName, retryMessage, "week_letter_retry_started");
+                MessageReady?.Invoke(this, eventArgs);
+
+                _logger.LogInformation("Sent retry notification for {ChildName} week {WeekNumber}/{Year}",
+                    child.FirstName, weekNumber, year);
+            }
+
+            // Return null when week letter is null or effectively empty to prevent posting and AI analysis
+            return null;
         }
         return weekLetter;
+    }
+
+    private static bool IsWeekLetterEffectivelyEmpty(dynamic? weekLetter)
+    {
+        if (weekLetter == null)
+            return true;
+
+        try
+        {
+            // Check if ugebreve array exists and has content
+            if (weekLetter.ugebreve != null)
+            {
+                foreach (var ugeBrev in weekLetter.ugebreve)
+                {
+                    if (ugeBrev?.indhold != null)
+                    {
+                        string content = ugeBrev.indhold.ToString().Trim();
+                        // Check for common empty/placeholder messages
+                        if (content.Contains("Der er ikke skrevet nogen ugenoter til denne uge") ||
+                            content.Contains("Ingen ugenoter") ||
+                            string.IsNullOrWhiteSpace(content))
+                        {
+                            continue; // This entry is empty, check others
+                        }
+                        // Found non-empty content
+                        return false;
+                    }
+                }
+            }
+
+            // No meaningful content found
+            return true;
+        }
+        catch
+        {
+            // If we can't parse the structure, treat as empty
+            return true;
+        }
     }
 
     private async Task<(string? content, string? contentHash)> ValidateAndProcessWeekLetterContent(dynamic weekLetter, string childName, int weekNumber, int year)
@@ -453,7 +549,7 @@ public class SchedulingService : ISchedulingService
         if (string.IsNullOrEmpty(content))
         {
             _logger.LogWarning("Week letter content is empty for {ChildName}", childName);
-            await _retryTrackingRepository.IncrementRetryAttemptAsync(childName, weekNumber, year);
+            var _ = await _retryTrackingRepository.IncrementRetryAttemptAsync(childName, weekNumber, year);
             return (null, null);
         }
 

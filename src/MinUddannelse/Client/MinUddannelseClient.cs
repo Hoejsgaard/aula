@@ -11,11 +11,15 @@ namespace MinUddannelse.Client;
 /// MinUddannelse client that orchestrates per-child authentication for live fetching
 /// Pure orchestration - no database access
 /// </summary>
-public class MinUddannelseClient : IMinUddannelseClient
+public class MinUddannelseClient : IMinUddannelseClient, IDisposable
 {
     private readonly ILogger _logger;
     private readonly ILoggerFactory _loggerFactory;
     private readonly IHttpClientFactory _httpClientFactory;
+
+    // Client caching with expiration
+    private readonly Dictionary<string, (IChildAuthenticatedClient Client, DateTime ExpiresAt)> _clientCache = new();
+    private readonly TimeSpan _sessionTimeout = TimeSpan.FromMinutes(25); // Expire before 30min server timeout
 
     public MinUddannelseClient(ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory)
     {
@@ -25,6 +29,58 @@ public class MinUddannelseClient : IMinUddannelseClient
         _loggerFactory = loggerFactory;
         _logger = loggerFactory.CreateLogger<MinUddannelseClient>();
         _httpClientFactory = httpClientFactory;
+    }
+
+    private async Task<IChildAuthenticatedClient> GetOrCreateClientAsync(Child child)
+    {
+        var cacheKey = $"{child.FirstName}_{child.LastName}";
+        var now = DateTime.UtcNow;
+
+        // Check cache
+        if (_clientCache.TryGetValue(cacheKey, out var cached))
+        {
+            if (cached.ExpiresAt > now)
+            {
+                _logger.LogDebug("Using cached authenticated client for {ChildName}", child.FirstName);
+                return cached.Client;
+            }
+            else
+            {
+                _logger.LogDebug("Cached client expired for {ChildName}, disposing and recreating", child.FirstName);
+                cached.Client.Dispose();
+                _clientCache.Remove(cacheKey);
+            }
+        }
+
+        // Create new client
+        if (child.UniLogin == null || string.IsNullOrEmpty(child.UniLogin.Username) ||
+            (string.IsNullOrEmpty(child.UniLogin.Password) && (child.UniLogin.PictogramSequence == null || child.UniLogin.PictogramSequence.Length == 0)))
+        {
+            throw new InvalidOperationException($"No credentials available for {child.FirstName}");
+        }
+
+        var logger = _loggerFactory.CreateLogger<MinUddannelseClient>();
+        IChildAuthenticatedClient client = child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null
+            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, logger, _httpClientFactory)
+            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, logger, _httpClientFactory);
+
+        _logger.LogInformation("Using {AuthType} authentication for {ChildName}",
+            child.UniLogin.AuthType == AuthenticationType.Pictogram ? "pictogram" : "standard", child.FirstName);
+
+        var loginSuccess = await client.LoginAsync();
+        if (!loginSuccess)
+        {
+            client.Dispose();
+            throw new InvalidOperationException($"Failed to authenticate {child.FirstName}");
+        }
+
+        _logger.LogInformation("Successfully authenticated {ChildName}", child.FirstName);
+
+        // Cache the authenticated client
+        var expiresAt = now.Add(_sessionTimeout);
+        _clientCache[cacheKey] = (client, expiresAt);
+
+        return client;
     }
 
     public Task<bool> LoginAsync()
@@ -49,62 +105,41 @@ public class MinUddannelseClient : IMinUddannelseClient
         _logger.LogInformation("Live fetching week letter from MinUddannelse for {ChildName} week {WeekNumber}",
             child.FirstName, weekNumber);
 
-        if (child.UniLogin == null || string.IsNullOrEmpty(child.UniLogin.Username) ||
-            (string.IsNullOrEmpty(child.UniLogin.Password) && (child.UniLogin.PictogramSequence == null || child.UniLogin.PictogramSequence.Length == 0)))
+        try
         {
-            _logger.LogError("No credentials available for {ChildName}", child.FirstName);
+            var client = await GetOrCreateClientAsync(child);
+            var weekLetter = await client.GetWeekLetter(date);
+            return weekLetter ?? WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get week letter for {ChildName}", child.FirstName);
             return WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
         }
-
-        var logger = _loggerFactory.CreateLogger<MinUddannelseClient>();
-        using IChildAuthenticatedClient childClient = child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null
-            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, logger, _httpClientFactory)
-            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, logger, _httpClientFactory);
-
-        _logger.LogInformation("Using {AuthType} authentication for {ChildName}",
-            child.UniLogin.AuthType == AuthenticationType.Pictogram ? "pictogram" : "standard", child.FirstName);
-
-        var loginSuccess = await childClient.LoginAsync();
-        if (!loginSuccess)
-        {
-            _logger.LogError("Failed to authenticate {ChildName}", child.FirstName);
-            return WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
-        }
-
-        _logger.LogInformation("Successfully authenticated {ChildName} for live fetch", child.FirstName);
-
-        var weekLetter = await childClient.GetWeekLetter(date);
-        return weekLetter ?? WeekLetterUtilities.CreateEmptyWeekLetter(weekNumber);
     }
 
     public async Task<JObject> GetWeekSchedule(Child child, DateOnly date)
     {
-        if (child.UniLogin == null || string.IsNullOrEmpty(child.UniLogin.Username) ||
-            (string.IsNullOrEmpty(child.UniLogin.Password) && (child.UniLogin.PictogramSequence == null || child.UniLogin.PictogramSequence.Length == 0)))
-        {
-            _logger.LogError("No credentials available for {ChildName}", child.FirstName);
-            return new JObject();
-        }
-
         _logger.LogInformation("Live fetching week schedule for {ChildName}", child.FirstName);
 
-        var logger = _loggerFactory.CreateLogger<MinUddannelseClient>();
-        using IChildAuthenticatedClient childClient = child.UniLogin.AuthType == AuthenticationType.Pictogram && child.UniLogin.PictogramSequence != null
-            ? new PictogramAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.PictogramSequence, logger, _httpClientFactory)
-            : new ChildAuthenticatedClient(child, child.UniLogin.Username, child.UniLogin.Password, logger, _httpClientFactory);
-
-        _logger.LogInformation("Using {AuthType} authentication for {ChildName}",
-            child.UniLogin.AuthType == AuthenticationType.Pictogram ? "pictogram" : "standard", child.FirstName);
-
-        var loginSuccess = await childClient.LoginAsync();
-        if (!loginSuccess)
+        try
         {
-            _logger.LogError("Failed to authenticate {ChildName} for schedule request", child.FirstName);
+            var client = await GetOrCreateClientAsync(child);
+            return await client.GetWeekSchedule(date);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get week schedule for {ChildName}", child.FirstName);
             return new JObject();
         }
+    }
 
-        _logger.LogInformation("Successfully authenticated {ChildName} for schedule request", child.FirstName);
-
-        return await childClient.GetWeekSchedule(date);
+    public void Dispose()
+    {
+        foreach (var (client, _) in _clientCache.Values)
+        {
+            client?.Dispose();
+        }
+        _clientCache.Clear();
     }
 }

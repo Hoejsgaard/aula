@@ -76,18 +76,26 @@ CRITICAL FILTERING RULES - Only create reminders for events that require ACTION:
 
 IMPORTANT:
 - When you see Danish day names like ""Torsdag"", map them to the exact dates above
-- Generate reminder text in DANISH using proper reminder format
-- Use ""Husk"" (Remember) for reminders
-- Include specific times when mentioned
-- Make reminders actionable and clear
-- ALWAYS use ""i dag"" (today) in reminder text, NEVER use specific weekday names like ""torsdag""
+- Generate comprehensive reminder descriptions in DANISH
+- Include event name, time, and any preparation details in the description
+- Extract full context and specifics from the week letter
+- Make descriptions rich and informative
+- DO NOT use ""Husk"" or ""i dag"" in descriptions - just the activity details
+- Include times when mentioned (use ""kl."" format)
+- Add preparation details when mentioned in the letter
 
-For reminder text examples:
-- ""Husk der er fotograf i dag fra 10:35-11:15""
-- ""Husk der er staveprøve i dag kl 12:45. Medbring opladt computer og hovedtelefoner""
-- ""Husk at aflevere tilmeldingsblanket i dag""
+For description examples:
+- ""Motionsdag kl. 8.00 - husk turtaske med 10-bid, drikkedunk, madpakke og tøj der passer til vejret""
+- ""Staveprøve kl. 12.45 - medbring opladt computer og hovedtelefoner""
+- ""Fotograf fra 10.35-11.15 - alle børn skal være til stede""
+- ""Skolefoto kl. 9.00 - børn skal være pænt påklædt""
+- ""Udflugter til Experimentarium kl. 9.30 - medbring madpakke og drikkedunk""
 
-CRITICAL: The reminder will be sent on the actual day of the event, so use ""i dag"" not weekday names.
+CRITICAL:
+- The description should be a complete, standalone reminder text
+- Include all relevant details from the week letter
+- Use natural Danish phrasing
+- Focus on what parents/students need to know and prepare
 
 Return a JSON array of events. If no events found, return: []
 

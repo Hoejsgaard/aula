@@ -37,7 +37,7 @@ public class RetryTrackingRepository : IRetryTrackingRepository
         return retryAttempt?.AttemptCount ?? 0;
     }
 
-    public async Task IncrementRetryAttemptAsync(string childName, int weekNumber, int year)
+    public async Task<bool> IncrementRetryAttemptAsync(string childName, int weekNumber, int year)
     {
         // First, try to get existing retry attempt
         var existing = await _supabase
@@ -65,6 +65,8 @@ public class RetryTrackingRepository : IRetryTrackingRepository
 
             _logger.LogInformation("Incremented retry attempt for {ChildName} week {WeekNumber}/{Year} to {Count}",
                 childName, weekNumber, year, retryAttempt.AttemptCount);
+
+            return false; // Not the first attempt
         }
         else
         {
@@ -91,6 +93,8 @@ public class RetryTrackingRepository : IRetryTrackingRepository
 
             _logger.LogInformation("Created first retry attempt for {ChildName} week {WeekNumber}/{Year}",
                 childName, weekNumber, year);
+
+            return true; // This is the first attempt
         }
     }
 

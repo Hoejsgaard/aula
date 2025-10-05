@@ -110,27 +110,29 @@ public class WeekLetterReminderService : IWeekLetterReminderService
             {
                 try
                 {
-                    var reminder = CreateReminderFromExtractedEvent(
-                        extractedEvent, childName, weekLetterId);
-
-                    await _reminderRepository.AddReminderAsync(
-                        reminder.Text,
-                        reminder.RemindDate,
-                        reminder.RemindTime,
-                        reminder.ChildName);
+                    // Use the rich AI-generated description directly
+                    var reminderText = extractedEvent.Description;
+                    await _reminderRepository.AddAutoReminderAsync(
+                        reminderText,
+                        DateOnly.FromDateTime(extractedEvent.EventDate),
+                        _defaultReminderTime,
+                        childName,
+                        weekLetterId ?? 0,
+                        extractedEvent.EventType,
+                        extractedEvent.Title,
+                        (decimal)extractedEvent.ConfidenceScore);
                     remindersCreated++;
 
-                    // Track the created reminder info for channel messages
-                    var eventTime = ExtractEventTimeFromContent(extractedEvent.Title, weekLetterContent);
+                    // Track the created reminder info for channel messages - use same rich text
                     createdReminderInfos.Add(new CreatedReminderInfo
                     {
-                        Title = ImproveReminderTitle(extractedEvent.Title),
+                        Title = reminderText,
                         Date = extractedEvent.EventDate,
-                        EventTime = eventTime
+                        EventTime = null // Time is already included in the rich description
                     });
 
-                    _logger.LogInformation("Created reminder for {ChildName}: {ReminderText}",
-                        childName, reminder.Text);
+                    _logger.LogInformation("Created auto-extracted reminder for {ChildName}: {ReminderText}",
+                        childName, reminderText);
                 }
                 catch (Exception ex)
                 {
@@ -253,26 +255,6 @@ public class WeekLetterReminderService : IWeekLetterReminderService
 
 
 
-    private Reminder CreateReminderFromExtractedEvent(
-        ExtractedEvent extractedEvent, string childName, int? weekLetterId)
-    {
-        var reminderDate = DateOnly.FromDateTime(extractedEvent.EventDate);
-
-        return new Reminder
-        {
-            Text = System.Net.WebUtility.HtmlDecode(extractedEvent.Description),
-            RemindDate = reminderDate,
-            RemindTime = _defaultReminderTime,
-            ChildName = childName,
-            CreatedBy = "ai_extraction",
-            Source = "auto_extracted",
-            WeekLetterId = weekLetterId,
-            EventType = extractedEvent.EventType,
-            EventTitle = System.Net.WebUtility.HtmlDecode(extractedEvent.Title),
-            ExtractedDateTime = DateTime.UtcNow,
-            ConfidenceScore = (decimal)extractedEvent.ConfidenceScore
-        };
-    }
 
     private string? ExtractEventTimeFromContent(string eventTitle, string weekLetterContent)
     {
