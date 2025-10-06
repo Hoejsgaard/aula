@@ -53,7 +53,7 @@ public class ReminderExtractionPromptsTests
 
         // Assert
         Assert.Contains("You must respond with ONLY valid JSON", result);
-        Assert.Contains("Extract actionable events from this Danish school week letter", result);
+        Assert.Contains("Extract ONLY actionable events that require parent/student preparation from this Danish school week letter", result);
         Assert.Contains(weekLetterContent, result);
         Assert.Contains("2025-10-15", result);
         Assert.Contains("JSON format:", result);
@@ -93,8 +93,8 @@ public class ReminderExtractionPromptsTests
         var result = ReminderExtractionPrompts.GetWeekLetterEventExtractionPrompt(weekLetterContent, currentTime);
 
         // Assert
-        Assert.Contains("Extract actionable events", result);
-        Assert.Contains("Only include events with confidence >= 0.6", result);
+        Assert.Contains("Extract ONLY actionable events", result);
+        Assert.Contains("Only include events with confidence >= 0.8", result);
         Assert.Contains("Event types: deadline, permission_form, event, supply_needed", result);
         Assert.Contains("You must respond with ONLY valid JSON", result);
         Assert.Contains("No explanations, no markdown", result);

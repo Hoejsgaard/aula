@@ -114,7 +114,7 @@ public class MinUddannelseClientTests
         _mockLogger.Verify(x => x.Log(
             LogLevel.Error,
             It.IsAny<EventId>(),
-            It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("No credentials available")),
+            It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains("Failed to get week schedule for")),
             It.IsAny<Exception>(),
             It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once());
     }
