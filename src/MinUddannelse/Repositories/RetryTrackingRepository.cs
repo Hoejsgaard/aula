@@ -115,7 +115,7 @@ public class RetryTrackingRepository : IRetryTrackingRepository
 
     public async Task<List<RetryAttempt>> GetPendingRetriesAsync()
     {
-        var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", System.Globalization.CultureInfo.InvariantCulture);
+        var now = DateTime.UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", System.Globalization.CultureInfo.InvariantCulture);
         var result = await _supabase
             .From<RetryAttempt>()
             .Select("*")
