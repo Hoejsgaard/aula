@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Supabase;
 using Supabase.Postgrest;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -110,5 +111,19 @@ public class RetryTrackingRepository : IRetryTrackingRepository
 
         _logger.LogInformation("Marked retry as successful and removed tracking for {ChildName} week {WeekNumber}/{Year}",
             childName, weekNumber, year);
+    }
+
+    public async Task<List<RetryAttempt>> GetPendingRetriesAsync()
+    {
+        var now = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", System.Globalization.CultureInfo.InvariantCulture);
+        var result = await _supabase
+            .From<RetryAttempt>()
+            .Select("*")
+            .Filter("next_attempt", Constants.Operator.LessThanOrEqual, now)
+            .Filter("attempt_count", Constants.Operator.LessThan, 24) // Use MaxAttempts from config
+            .Get();
+
+        _logger.LogInformation("Found {Count} pending retries", result.Models.Count);
+        return result.Models;
     }
 }

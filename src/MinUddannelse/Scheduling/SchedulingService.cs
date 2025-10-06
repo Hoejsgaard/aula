@@ -145,6 +145,7 @@ public class SchedulingService : ISchedulingService
             _logger.LogInformation("Timer fired: Checking scheduled tasks and reminders at {LocalTime} (UTC: {UtcTime})", DateTime.Now, DateTime.UtcNow);
 
             await ExecutePendingReminders();
+            await ExecutePendingRetries();
 
             var currentSecond = DateTime.Now.Second;
             if (currentSecond < SchedulingWindowSeconds)
@@ -675,6 +676,81 @@ public class SchedulingService : ISchedulingService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error checking for missed reminders");
+        }
+    }
+
+    private async Task ExecutePendingRetries()
+    {
+        try
+        {
+            var pendingRetries = await _retryTrackingRepository.GetPendingRetriesAsync();
+
+            if (pendingRetries.Count == 0)
+                return;
+
+            _logger.LogInformation("Processing {Count} pending retries", pendingRetries.Count);
+
+            foreach (var retry in pendingRetries)
+            {
+                try
+                {
+                    // Find child config by name
+                    var child = _config.MinUddannelse?.Children?.FirstOrDefault(c => c.FirstName == retry.ChildName);
+                    if (child == null)
+                    {
+                        _logger.LogWarning("Child {ChildName} not found in config, skipping retry", retry.ChildName);
+                        continue;
+                    }
+
+                    // Convert week/year back to date for TryGetWeekLetter method
+                    var firstDayOfWeek = ISOWeek.ToDateTime(retry.Year, retry.WeekNumber, DayOfWeek.Monday);
+                    var date = DateOnly.FromDateTime(firstDayOfWeek);
+
+                    _logger.LogInformation("Retry attempt {AttemptCount} for {ChildName} week {WeekNumber}/{Year}",
+                        retry.AttemptCount, retry.ChildName, retry.WeekNumber, retry.Year);
+
+                    // Try to get week letter for this specific child
+                    var weekLetter = await _weekLetterService.GetOrFetchWeekLetterAsync(child, date, true);
+
+                    if (weekLetter != null && !IsWeekLetterEffectivelyEmpty(weekLetter))
+                    {
+                        // Success! Week letter now available
+                        await _retryTrackingRepository.MarkRetryAsSuccessfulAsync(retry.ChildName, retry.WeekNumber, retry.Year);
+
+                        _logger.LogInformation("Week letter now available for {ChildName} week {WeekNumber}/{Year} after {AttemptCount} attempts",
+                            retry.ChildName, retry.WeekNumber, retry.Year, retry.AttemptCount);
+
+                        // Send success notification
+                        var successMessage = $"✅ Ugebrev for uge {retry.WeekNumber}/{retry.Year} er nu tilgængeligt!\n\n" +
+                                           $"Jeg processer det nu og sender dig detaljerne om lidt.";
+                        var childId = Configuration.Child.GenerateChildId(retry.ChildName);
+                        var eventArgs = new ChildMessageEventArgs(childId, retry.ChildName, successMessage, "week_letter_retry_success");
+                        MessageReady?.Invoke(this, eventArgs);
+
+                        // Process the week letter normally (trigger full week letter processing)
+                        await CheckAndPostWeekLetter(child, new ScheduledTask
+                        {
+                            Name = "RetryProcessing",
+                            NextRun = DateTime.UtcNow
+                        });
+                    }
+                    else
+                    {
+                        // Still empty, increment will be handled by TryGetWeekLetter if needed
+                        _logger.LogInformation("Week letter still not available for {ChildName} week {WeekNumber}/{Year}, attempt {AttemptCount}",
+                            retry.ChildName, retry.WeekNumber, retry.Year, retry.AttemptCount);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing retry for {ChildName} week {WeekNumber}/{Year}",
+                        retry.ChildName, retry.WeekNumber, retry.Year);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error executing pending retries");
         }
     }
 }
