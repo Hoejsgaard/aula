@@ -736,7 +736,8 @@ public class SchedulingService : ISchedulingService
                     }
                     else
                     {
-                        // Still empty, increment will be handled by TryGetWeekLetter if needed
+                        // Still empty, increment retry attempt count and schedule next retry
+                        await _retryTrackingRepository.IncrementRetryAttemptAsync(retry.ChildName, retry.WeekNumber, retry.Year);
                         _logger.LogInformation("Week letter still not available for {ChildName} week {WeekNumber}/{Year}, attempt {AttemptCount}",
                             retry.ChildName, retry.WeekNumber, retry.Year, retry.AttemptCount);
                     }
