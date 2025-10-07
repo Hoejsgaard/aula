@@ -247,8 +247,7 @@ public class SchedulingService : ISchedulingService
     {
         switch (task.Name)
         {
-            case "MorningReminders": // Keep backwards compatibility
-            case "ReminderCheck": // Better name
+            case "ReminderCheck":
                 await ExecutePendingReminders();
                 break;
 
