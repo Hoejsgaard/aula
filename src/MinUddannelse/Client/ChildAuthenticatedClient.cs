@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using MinUddannelse.Configuration;
 using MinUddannelse.Content.WeekLetters;
@@ -129,7 +130,7 @@ public sealed partial class ChildAuthenticatedClient : UniLoginAuthenticatorBase
         }
 
         var url = $"https://www.minuddannelse.net/api/stamdata/ugeplan/getUgeBreve?tidspunkt={date.Year}-W{WeekLetterUtilities.GetIsoWeekNumber(date)}" +
-                 $"&elevId={_childId}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+                 $"&elevId={_childId}&_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}&format=json";
 
         using var httpClient = CreateHttpClient();
         var response = await httpClient.GetAsync(url);
@@ -144,7 +145,68 @@ public sealed partial class ChildAuthenticatedClient : UniLoginAuthenticatorBase
             .Replace("\u2019", "\\'")   // Smart apostrophe '
             .Replace("\u2018", "\\'");  // Another smart apostrophe '
 
-        var weekLetter = JObject.Parse(cleanedJson);
+        JObject weekLetter;
+        try
+        {
+            weekLetter = JObject.Parse(cleanedJson);
+        }
+        catch (JsonReaderException ex) when (ex.Message.Contains("Unexpected character encountered while parsing value: <"))
+        {
+            // The API returned HTML instead of JSON - try to extract JSON from HTML response
+            _logger.LogWarning("API returned HTML instead of JSON for {ChildName}, attempting to extract JSON", _child.FirstName);
+
+            // Log the complete raw response to understand what we're dealing with
+            _logger.LogWarning("COMPLETE API response for debugging: {Response}", cleanedJson);
+
+            // Try multiple patterns to extract JSON from HTML
+            var patterns = new[]
+            {
+                @"\{.*?""ugebreve"".*?\}",                    // Original pattern, non-greedy
+                @"\{[^{}]*""ugebreve""[^{}]*\}",             // Simple non-nested JSON
+                @"(?s)\{.*?""ugebreve"".*?\}",               // Single-line mode
+                @"\{.*?\}",                                  // Any JSON object
+                @"ugebreve""?\s*:\s*\[.*?\]"                 // Just the ugebreve array
+            };
+
+            JObject? extractedJson = null;
+            foreach (var pattern in patterns)
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(cleanedJson, pattern, System.Text.RegularExpressions.RegexOptions.Singleline);
+                if (match.Success)
+                {
+                    try
+                    {
+                        var jsonText = match.Value;
+                        _logger.LogInformation("Trying to parse extracted JSON: {JsonText}", jsonText.Substring(0, Math.Min(200, jsonText.Length)));
+
+                        // If we only got the array part, wrap it in a proper object
+                        if (jsonText.StartsWith("ugebreve"))
+                        {
+                            jsonText = "{\"" + jsonText + "}";
+                        }
+
+                        extractedJson = JObject.Parse(jsonText);
+                        _logger.LogInformation("Successfully extracted JSON from HTML response using pattern {PatternIndex} for {ChildName}", Array.IndexOf(patterns, pattern), _child.FirstName);
+                        break;
+                    }
+                    catch (JsonReaderException parseEx)
+                    {
+                        _logger.LogDebug("Pattern {PatternIndex} failed: {Error}", Array.IndexOf(patterns, pattern), parseEx.Message);
+                        continue;
+                    }
+                }
+            }
+
+            if (extractedJson != null)
+            {
+                weekLetter = extractedJson;
+            }
+            else
+            {
+                _logger.LogWarning("All extraction patterns failed for {ChildName}, returning empty week letter", _child.FirstName);
+                weekLetter = new JObject { ["ugebreve"] = new JArray() };
+            }
+        }
         var weekLetterArray = weekLetter["ugebreve"] as JArray;
 
         if (weekLetterArray == null || weekLetterArray.Count == 0)
