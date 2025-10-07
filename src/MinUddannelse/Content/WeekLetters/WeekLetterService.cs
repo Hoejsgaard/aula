@@ -41,7 +41,6 @@ public class WeekLetterService : IWeekLetterService
     {
         ArgumentNullException.ThrowIfNull(child);
 
-        // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "CacheWeekLetter"))
         {
             _logger.LogWarning("Rate limit exceeded for {ChildName} caching week letter", child.FirstName);
@@ -51,14 +50,11 @@ public class WeekLetterService : IWeekLetterService
 
         try
         {
-            // Layer 4: Audit logging (pre-operation)
             _logger.LogInformation("Caching week letter for {ChildName} week {WeekNumber}/{Year}",
                 child.FirstName, weekNumber, year);
 
-            // Layer 5: Secure operation with child-prefixed caching
             _dataService.CacheWeekLetter(child, weekNumber, year, weekLetter);
 
-            // Record successful operation
             await _rateLimiter.RecordOperationAsync(child, "CacheWeekLetter");
             await _auditService.LogDataAccessAsync(child, "CacheWeekLetter", $"week_{weekNumber}_{year}", true);
         }
@@ -74,7 +70,6 @@ public class WeekLetterService : IWeekLetterService
     {
         ArgumentNullException.ThrowIfNull(child);
 
-        // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "GetWeekLetter"))
         {
             _logger.LogWarning("Rate limit exceeded for {ChildName} reading week letter", child.FirstName);
@@ -84,14 +79,11 @@ public class WeekLetterService : IWeekLetterService
 
         try
         {
-            // Layer 4: Audit logging (pre-operation)
             _logger.LogInformation("Retrieving week letter for {ChildName} week {WeekNumber}/{Year}",
                 child.FirstName, weekNumber, year);
 
-            // Layer 5: Secure operation with child-prefixed caching
             var result = _dataService.GetWeekLetter(child, weekNumber, year);
 
-            // Record successful operation
             await _rateLimiter.RecordOperationAsync(child, "GetWeekLetter");
             await _auditService.LogDataAccessAsync(child, "GetWeekLetter", $"week_{weekNumber}_{year}", result != null);
 
@@ -109,7 +101,6 @@ public class WeekLetterService : IWeekLetterService
     {
         ArgumentNullException.ThrowIfNull(child);
 
-        // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "CacheWeekSchedule"))
         {
             _logger.LogWarning("Rate limit exceeded for {ChildName} caching week schedule", child.FirstName);
@@ -119,11 +110,9 @@ public class WeekLetterService : IWeekLetterService
 
         try
         {
-            // Layer 4: Audit logging
             _logger.LogInformation("Caching week schedule for {ChildName} week {WeekNumber}/{Year}",
                 child.FirstName, weekNumber, year);
 
-            // Layer 5: Secure operation
             _dataService.CacheWeekSchedule(child, weekNumber, year, weekSchedule);
 
             await _rateLimiter.RecordOperationAsync(child, "CacheWeekSchedule");
@@ -141,7 +130,6 @@ public class WeekLetterService : IWeekLetterService
     {
         ArgumentNullException.ThrowIfNull(child);
 
-        // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "GetWeekSchedule"))
         {
             _logger.LogWarning("Rate limit exceeded for {ChildName} reading week schedule", child.FirstName);
@@ -151,11 +139,9 @@ public class WeekLetterService : IWeekLetterService
 
         try
         {
-            // Layer 4: Audit logging
             _logger.LogInformation("Retrieving week schedule for {ChildName} week {WeekNumber}/{Year}",
                 child.FirstName, weekNumber, year);
 
-            // Layer 5: Secure operation
             var result = _dataService.GetWeekSchedule(child, weekNumber, year);
 
             await _rateLimiter.RecordOperationAsync(child, "GetWeekSchedule");
@@ -175,7 +161,6 @@ public class WeekLetterService : IWeekLetterService
     {
         ArgumentNullException.ThrowIfNull(child);
 
-        // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "StoreWeekLetter"))
         {
             _logger.LogWarning("Rate limit exceeded for {ChildName} storing week letter", child.FirstName);
@@ -185,11 +170,9 @@ public class WeekLetterService : IWeekLetterService
 
         try
         {
-            // Layer 4: Audit logging
             _logger.LogInformation("Storing week letter for {ChildName} week {WeekNumber}/{Year} in database",
                 child.FirstName, weekNumber, year);
 
-            // Layer 5: Secure database operation (parameterized query in SupabaseService)
             var contentHash = ComputeHash(weekLetter.ToString());
             await _weekLetterRepository.StoreWeekLetterAsync(
                 child.FirstName,
@@ -215,7 +198,6 @@ public class WeekLetterService : IWeekLetterService
     {
         ArgumentNullException.ThrowIfNull(child);
 
-        // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "DeleteWeekLetter"))
         {
             _logger.LogWarning("Rate limit exceeded for {ChildName} deleting week letter", child.FirstName);
@@ -225,12 +207,10 @@ public class WeekLetterService : IWeekLetterService
 
         try
         {
-            // Layer 4: Audit logging (critical operation)
             _logger.LogWarning("Deleting week letter for {ChildName} week {WeekNumber}/{Year} from database",
                 child.FirstName, weekNumber, year);
             await _auditService.LogSecurityEventAsync(child, "DataDeletion", $"week_{weekNumber}_{year}", SecuritySeverity.Warning);
 
-            // Layer 5: Secure database operation
             await _weekLetterRepository.DeleteWeekLetterAsync(child.FirstName, weekNumber, year);
 
             await _rateLimiter.RecordOperationAsync(child, "DeleteWeekLetter");
@@ -250,7 +230,6 @@ public class WeekLetterService : IWeekLetterService
     {
         ArgumentNullException.ThrowIfNull(child);
 
-        // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "GetStoredWeekLetters"))
         {
             _logger.LogWarning("Rate limit exceeded for {ChildName} reading stored week letters", child.FirstName);
@@ -260,11 +239,9 @@ public class WeekLetterService : IWeekLetterService
 
         try
         {
-            // Layer 4: Audit logging
             _logger.LogInformation("Retrieving stored week letters for {ChildName} year {Year}",
                 child.FirstName, year?.ToString() ?? "all");
 
-            // Layer 5: Secure database operation (filtered by child)
             var letters = await _weekLetterRepository.GetStoredWeekLettersAsync(child.FirstName, year);
 
             var results = new List<JObject>();
@@ -430,7 +407,6 @@ public class WeekLetterService : IWeekLetterService
     {
         ArgumentNullException.ThrowIfNull(child);
 
-        // Layer 3: Rate limiting
         if (!await _rateLimiter.IsAllowedAsync(child, "GetAllWeekLetters"))
         {
             _logger.LogWarning("Rate limit exceeded for {ChildName} getting all week letters", child.FirstName);
@@ -442,7 +418,6 @@ public class WeekLetterService : IWeekLetterService
         {
             _logger.LogInformation("Getting all week letters for {ChildName}", child.FirstName);
 
-            // Get all stored week letters from database
             var letters = await GetStoredWeekLettersAsync(child);
 
             await _rateLimiter.RecordOperationAsync(child, "GetAllWeekLetters");

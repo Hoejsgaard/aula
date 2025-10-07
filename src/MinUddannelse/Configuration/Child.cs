@@ -8,14 +8,8 @@ public class Child
     public UniLogin? UniLogin { get; set; }
     public ChildChannels? Channels { get; set; }
 
-    /// <summary>
-    /// Generates a consistent child ID from the first name for use in events and routing.
-    /// </summary>
     public string GetChildId() => GenerateChildId(FirstName);
 
-    /// <summary>
-    /// Generates a consistent child ID from a first name for use in events and routing.
-    /// </summary>
     public static string GenerateChildId(string firstName) =>
         firstName.ToLowerInvariant().Replace(" ", "_");
 }

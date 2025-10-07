@@ -17,9 +17,8 @@ public class MinUddannelseClient : IMinUddannelseClient, IDisposable
     private readonly ILoggerFactory _loggerFactory;
     private readonly IHttpClientFactory _httpClientFactory;
 
-    // Client caching with expiration
     private readonly Dictionary<string, (IChildAuthenticatedClient Client, DateTime ExpiresAt)> _clientCache = new();
-    private readonly TimeSpan _sessionTimeout = TimeSpan.FromMinutes(25); // Expire before 30min server timeout
+    private readonly TimeSpan _sessionTimeout = TimeSpan.FromMinutes(25);
 
     public MinUddannelseClient(ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory)
     {
@@ -36,7 +35,6 @@ public class MinUddannelseClient : IMinUddannelseClient, IDisposable
         var cacheKey = $"{child.FirstName}_{child.LastName}";
         var now = DateTime.UtcNow;
 
-        // Check cache
         if (_clientCache.TryGetValue(cacheKey, out var cached))
         {
             if (cached.ExpiresAt > now)
@@ -52,7 +50,6 @@ public class MinUddannelseClient : IMinUddannelseClient, IDisposable
             }
         }
 
-        // Create new client
         if (child.UniLogin == null || string.IsNullOrEmpty(child.UniLogin.Username) ||
             (string.IsNullOrEmpty(child.UniLogin.Password) && (child.UniLogin.PictogramSequence == null || child.UniLogin.PictogramSequence.Length == 0)))
         {
@@ -76,7 +73,6 @@ public class MinUddannelseClient : IMinUddannelseClient, IDisposable
 
         _logger.LogInformation("Successfully authenticated {ChildName}", child.FirstName);
 
-        // Cache the authenticated client
         var expiresAt = now.Add(_sessionTimeout);
         _clientCache[cacheKey] = (client, expiresAt);
 
@@ -85,8 +81,6 @@ public class MinUddannelseClient : IMinUddannelseClient, IDisposable
 
     public Task<bool> LoginAsync()
     {
-        // This method is now a no-op since we authenticate per-request
-        // Keeping it for backward compatibility with IMinUddannelseClient interface
         _logger.LogInformation("LoginAsync called - authentication will happen per-request");
         return Task.FromResult(true);
     }

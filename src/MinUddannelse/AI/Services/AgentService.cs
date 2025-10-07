@@ -42,11 +42,8 @@ public class AgentService : IAgentService
         _logger.LogInformation("MONITOR: GetWeekLetterAsync for {ChildName} for date {Date}, useCache: {UseCache}, allowLiveFetch: {AllowLiveFetch}",
             child.FirstName, date, useCache, allowLiveFetch);
 
-        // Calculate week number and year for caching
         var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
         var year = date.Year;
-
-        // Authentication now happens per-request in MinUddannelseClient, no need to check here
 
         if (useCache)
         {
@@ -55,7 +52,6 @@ public class AgentService : IAgentService
             {
                 _logger.LogInformation("MONITOR: Returning cached week letter for {ChildName}", child.FirstName);
 
-                // Log the content of the cached week letter
                 var cachedContent = cachedWeekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
                 _logger.LogInformation("MONITOR: Cached week letter content length for {ChildName}: {Length} characters",
                     child.FirstName, cachedContent.Length);
@@ -65,7 +61,6 @@ public class AgentService : IAgentService
                     _logger.LogWarning("MONITOR: Cached week letter content is empty for {ChildName}", child.FirstName);
                 }
 
-                // Add child name to the week letter object if not already present
                 if (cachedWeekLetter["child"] == null)
                 {
                     cachedWeekLetter["child"] = child.FirstName;
@@ -79,7 +74,6 @@ public class AgentService : IAgentService
         _logger.LogInformation("MONITOR: Fetching fresh week letter for {ChildName} for date {Date}, allowLiveFetch: {AllowLiveFetch}", child.FirstName, date, allowLiveFetch);
         var weekLetter = await _minUddannelseClient.GetWeekLetter(child, date, allowLiveFetch);
 
-        // Log the raw week letter structure
         _logger.LogInformation("MONITOR: Raw week letter structure for {ChildName}: {Keys}",
             child.FirstName, string.Join(", ", weekLetter.Properties().Select(p => p.Name)));
 
@@ -115,7 +109,6 @@ public class AgentService : IAgentService
 
     public Task<JObject?> GetWeekScheduleAsync(Child child, DateOnly date, bool useCache = true)
     {
-        // Calculate week number and year for caching
         var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(date.ToDateTime(TimeOnly.MinValue));
         var year = date.Year;
 
@@ -129,7 +122,6 @@ public class AgentService : IAgentService
             }
         }
 
-        // MinUddannelseClient no longer supports live fetching - only cached data is available
         _logger.LogWarning("No cached week schedule available for {ChildName} for date {Date}. Live fetching requires MinUddannelseClient with authentication.", child.FirstName, date);
         return Task.FromResult<JObject?>(null);
     }
@@ -171,7 +163,6 @@ public class AgentService : IAgentService
             return "No week letter available for the specified date.";
         }
 
-        // Extract and log the content to ensure it's being passed correctly
         var content = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
         _logger.LogInformation("MONITOR: Week letter content being passed to OpenAiService: {Length} characters", content.Length);
 
@@ -234,15 +225,12 @@ public class AgentService : IAgentService
     {
         _logger.LogInformation("Processing query with tools: {Query}, SpecificChild: {ChildName}", query, specificChild?.FirstName ?? "None");
 
-        // Let the OpenAI service analyze intent first
         var response = await _openAiService.ProcessQueryWithToolsAsync(query, contextKey, chatInterface);
 
-        // If it's a fallback to existing system, handle it here
         if (response == "FALLBACK_TO_EXISTING_SYSTEM")
         {
             _logger.LogInformation("Falling back to existing week letter system for query: {Query}", query);
 
-            // SECURITY: Require a specific child to be provided
             if (specificChild == null)
             {
                 _logger.LogWarning("No specific child provided for query processing - this is a security violation");
@@ -252,7 +240,6 @@ public class AgentService : IAgentService
             _logger.LogInformation("Using specific child data for: {ChildName}", specificChild.FirstName);
             var childrenToProcess = new[] { specificChild };
 
-            // Collect week letters for the selected children
             var childrenWeekLetters = new Dictionary<string, JObject>();
             foreach (var child in childrenToProcess)
             {
@@ -293,7 +280,6 @@ public class AgentService : IAgentService
                 enhancedQuery = $"{enhancedQuery} (CRITICAL: Respond in Danish - the user asked in Danish)";
             }
 
-            // Use the existing method for week letter questions
             return await _openAiService.AskQuestionAboutChildrenAsync(childrenWeekLetters, enhancedQuery, contextKey, chatInterface);
         }
 

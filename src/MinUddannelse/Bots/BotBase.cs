@@ -7,10 +7,6 @@ using MinUddannelse.Content.Processing;
 
 namespace MinUddannelse.Bots;
 
-/// <summary>
-/// Abstract base class for interactive bots providing shared functionality
-/// like week letter hash tracking, child management, and common initialization.
-/// </summary>
 public abstract class BotBase
 {
     protected IAgentService AgentService { get; }

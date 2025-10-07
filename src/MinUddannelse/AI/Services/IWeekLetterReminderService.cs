@@ -26,5 +26,5 @@ public class CreatedReminderInfo
 {
     public string Title { get; set; } = string.Empty;
     public DateTime Date { get; set; }
-    public string? EventTime { get; set; }  // Time from original content, if found
+    public string? EventTime { get; set; }
 }

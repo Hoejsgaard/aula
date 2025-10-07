@@ -19,22 +19,18 @@ public class ChildRateLimiter : IChildRateLimiter
         _logger = loggerFactory.CreateLogger<ChildRateLimiter>();
         _limitStates = new ConcurrentDictionary<string, RateLimitState>();
 
-        // Configure rate limits per operation type
         _operationLimits = new Dictionary<string, RateLimitConfig>
         {
-			// Cache operations - higher limits as they're lightweight
-			{ "CacheWeekLetter", new RateLimitConfig(100, TimeSpan.FromMinutes(1)) },
+            { "CacheWeekLetter", new RateLimitConfig(100, TimeSpan.FromMinutes(1)) },
             { "GetWeekLetter", new RateLimitConfig(100, TimeSpan.FromMinutes(1)) },
             { "CacheWeekSchedule", new RateLimitConfig(100, TimeSpan.FromMinutes(1)) },
             { "GetWeekSchedule", new RateLimitConfig(100, TimeSpan.FromMinutes(1)) },
 
-			// Database operations - lower limits as they're more expensive
-			{ "StoreWeekLetter", new RateLimitConfig(10, TimeSpan.FromMinutes(1)) },
-            { "DeleteWeekLetter", new RateLimitConfig(5, TimeSpan.FromMinutes(10)) }, // Destructive operation
-			{ "GetStoredWeekLetters", new RateLimitConfig(20, TimeSpan.FromMinutes(1)) },
+            { "StoreWeekLetter", new RateLimitConfig(10, TimeSpan.FromMinutes(1)) },
+            { "DeleteWeekLetter", new RateLimitConfig(5, TimeSpan.FromMinutes(10)) },
+            { "GetStoredWeekLetters", new RateLimitConfig(20, TimeSpan.FromMinutes(1)) },
 
-			// Default for unknown operations
-			{ "default", new RateLimitConfig(50, TimeSpan.FromMinutes(1)) }
+            { "default", new RateLimitConfig(50, TimeSpan.FromMinutes(1)) }
         };
     }
 
@@ -52,10 +48,8 @@ public class ChildRateLimiter : IChildRateLimiter
 
         lock (state)
         {
-            // Remove expired operations outside the window
             state.RemoveExpiredOperations(now);
 
-            // Check if limit would be exceeded
             if (state.OperationCount >= config.LimitPerWindow)
             {
                 _logger.LogWarning("Rate limit exceeded for {ChildName} operation {Operation}: {Count}/{Limit}",

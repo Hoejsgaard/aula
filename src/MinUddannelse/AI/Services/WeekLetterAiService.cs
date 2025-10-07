@@ -27,7 +27,6 @@ public class WeekLetterAiService : IWeekLetterAiService
     private readonly IPromptBuilder _promptBuilder;
     private readonly string _aiModel;
 
-    // Constants
     private const int MaxConversationHistoryWeekLetter = 20;
     private const int ConversationTrimAmount = 4;
     private const string FallbackToExistingSystem = "FALLBACK_TO_EXISTING_SYSTEM";
@@ -52,22 +51,18 @@ public class WeekLetterAiService : IWeekLetterAiService
         _promptBuilder = promptBuilder;
     }
 
-    // Legacy internal constructor removed
-
     private static (string childName, string className, string weekNumber) ExtractWeekLetterMetadata(JObject weekLetter)
     {
         string childName = "unknown";
         string className = "unknown";
         string weekNumber = "unknown";
 
-        // Try to get metadata from the ugebreve array
         if (weekLetter["ugebreve"] != null && weekLetter["ugebreve"] is JArray ugebreve && ugebreve.Count > 0)
         {
             className = ugebreve[0]?["klasseNavn"]?.ToString() ?? "unknown";
             weekNumber = ugebreve[0]?["uge"]?.ToString() ?? "unknown";
         }
 
-        // Fallback to old format if needed
         if (weekLetter["child"] != null) childName = weekLetter["child"]?.ToString() ?? "unknown";
 
         return (childName, className, weekNumber);
@@ -110,7 +105,6 @@ public class WeekLetterAiService : IWeekLetterAiService
     public async Task<string> AskQuestionAboutWeekLetterAsync(JObject weekLetter, string question, string childName, string? contextKey, ChatInterface chatInterface = ChatInterface.Slack)
     {
         var weekLetterContent = ExtractWeekLetterContent(weekLetter);
-        // Use the passed childName parameter instead of trying to extract from weekLetter
         contextKey = _conversationManager.EnsureContextKey(contextKey, childName);
 
         _conversationManager.EnsureConversationHistory(contextKey, childName, weekLetterContent, chatInterface);
@@ -216,7 +210,6 @@ public class WeekLetterAiService : IWeekLetterAiService
     {
         _logger.LogInformation("Asking question about multiple children: {Question} for {ChatInterface}", question, chatInterface);
 
-        // Extract content for each child
         var childrenContent = new Dictionary<string, string>();
         foreach (var (childName, weekLetter) in childrenWeekLetters)
         {
@@ -308,19 +301,16 @@ public class WeekLetterAiService : IWeekLetterAiService
         {
             _logger.LogInformation("Processing query with intelligent tool selection: {Query}", query);
 
-            // First, let the LLM analyze the intent and decide what to do
             var analysisResponse = await AnalyzeUserIntentAsync(query, chatInterface);
 
             _logger.LogInformation("Intent analysis result: {Analysis}", analysisResponse);
 
-            // Check if this needs a tool call
             if (analysisResponse.Contains("TOOL_CALL:"))
             {
                 return await HandleToolBasedQuery(query, analysisResponse, contextKey, chatInterface);
             }
             else
             {
-                // Handle as normal Aula question about week letters
                 return await HandleRegularAulaQuery(query, contextKey, chatInterface);
             }
         }
@@ -375,7 +365,6 @@ public class WeekLetterAiService : IWeekLetterAiService
     {
         try
         {
-            // Extract the tool type
             var toolType = analysis.Replace("TOOL_CALL:", "").Trim();
 
             _logger.LogInformation("Handling tool-based query with tool: {ToolType}", toolType);
@@ -399,7 +388,6 @@ public class WeekLetterAiService : IWeekLetterAiService
 
     private async Task<string> HandleCreateReminderQuery(string query)
     {
-        // Use LLM to extract reminder details from natural language
         var extractionPrompt = ReminderExtractionPrompts.GetExtractionPrompt(query, DateTime.Now);
 
         var chatRequest = new ChatCompletionCreateRequest
@@ -422,13 +410,11 @@ public class WeekLetterAiService : IWeekLetterAiService
                 var content = response.Choices.First().Message.Content ?? "";
                 _logger.LogInformation("Reminder extraction completed successfully");
 
-                // Parse the structured response with validation
                 var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
                 var description = ExtractValue(lines, "DESCRIPTION") ?? "Reminder";
                 var dateTimeStr = ExtractValue(lines, "DATETIME") ?? DateTime.Now.AddHours(1).ToString("yyyy-MM-dd HH:mm");
                 var childName = ExtractValue(lines, "CHILD");
 
-                // Validate datetime format
                 if (!DateTime.TryParseExact(dateTimeStr, "yyyy-MM-dd HH:mm", null, System.Globalization.DateTimeStyles.None, out _))
                 {
                     _logger.LogWarning("Invalid datetime format from AI: {DateTime}", dateTimeStr);
@@ -454,7 +440,6 @@ public class WeekLetterAiService : IWeekLetterAiService
 
     private async Task<string> HandleDeleteReminderQuery(string query)
     {
-        // Extract reminder number from query
         var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         foreach (var word in words)
         {
@@ -469,7 +454,6 @@ public class WeekLetterAiService : IWeekLetterAiService
 
     private Task<string> HandleRegularAulaQuery(string query, string contextKey, ChatInterface chatInterface)
     {
-        // Analyze the query to provide more specific guidance
         var lowerQuery = query.ToLowerInvariant();
 
         if (lowerQuery.Contains("activity") || lowerQuery.Contains("aktivitet"))
@@ -482,10 +466,6 @@ public class WeekLetterAiService : IWeekLetterAiService
             return Task.FromResult("To create reminders, try: 'Remind me to pick up [child] at 3pm tomorrow' or 'Mind mig om at hente [child] kl 15 i morgen'");
         }
 
-        // For general information queries, delegate to the existing week letter system
-        // CRITICAL: Must return "FALLBACK_TO_EXISTING_SYSTEM" to trigger AgentService fallback logic
-        // DO NOT return generic help text here - it causes language mismatch (Danish->English) 
-        // and prevents proper week letter processing
         _logger.LogInformation("Delegating Aula query to existing system: {Query}", query);
         return Task.FromResult(FallbackToExistingSystem);
     }

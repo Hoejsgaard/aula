@@ -11,7 +11,6 @@ public class ChildSchedulingRateLimiter : IChildSchedulingRateLimiter
     private readonly ILogger _logger;
     private readonly ConcurrentDictionary<string, SchedulingRateLimitState> _rateLimitStates = new();
 
-    // Configuration limits
     private const int MaxScheduledTasksPerChild = 10;
     private const int MaxExecutionsPerHour = 60;
     private const int MaxScheduleOperationsPerDay = 20;
@@ -27,7 +26,6 @@ public class ChildSchedulingRateLimiter : IChildSchedulingRateLimiter
         var key = GetChildKey(child);
         var state = _rateLimitStates.GetOrAdd(key, _ => new SchedulingRateLimitState());
 
-        // Check daily schedule operations limit
         var dailyOps = GetOperationsInWindow(state.ScheduleOperations, TimeSpan.FromDays(1));
         if (dailyOps >= MaxScheduleOperationsPerDay)
         {
@@ -36,7 +34,6 @@ public class ChildSchedulingRateLimiter : IChildSchedulingRateLimiter
             return Task.FromResult(false);
         }
 
-        // Check total task count
         if (state.TotalScheduledTasks >= MaxScheduledTasksPerChild)
         {
             _logger.LogWarning("Child {ChildName} reached maximum scheduled tasks: {Count}/{Max}",
@@ -52,7 +49,6 @@ public class ChildSchedulingRateLimiter : IChildSchedulingRateLimiter
         var key = GetChildKey(child);
         var state = _rateLimitStates.GetOrAdd(key, _ => new SchedulingRateLimitState());
 
-        // Check hourly execution limit
         var hourlyExecutions = GetOperationsInWindow(state.ExecutionTimestamps, TimeSpan.FromHours(1));
         if (hourlyExecutions >= MaxExecutionsPerHour)
         {
@@ -85,7 +81,6 @@ public class ChildSchedulingRateLimiter : IChildSchedulingRateLimiter
         state.ScheduleOperations.Enqueue(DateTime.UtcNow);
         state.TotalScheduledTasks++;
 
-        // Clean old entries
         CleanOldOperations(state.ScheduleOperations, TimeSpan.FromDays(2));
 
         _logger.LogDebug("Recorded task scheduled for {ChildName}. Total tasks: {Count}",
@@ -105,7 +100,6 @@ public class ChildSchedulingRateLimiter : IChildSchedulingRateLimiter
         var taskKey = $"{key}:{taskName}";
         state.LastTaskExecution[taskKey] = now;
 
-        // Clean old entries
         CleanOldOperations(state.ExecutionTimestamps, TimeSpan.FromHours(2));
 
         _logger.LogDebug("Recorded task {TaskName} executed for {ChildName}",
@@ -135,7 +129,6 @@ public class ChildSchedulingRateLimiter : IChildSchedulingRateLimiter
         return Task.FromResult(0);
     }
 
-    // Helper methods
     private string GetChildKey(Child child)
     {
         return $"{child.FirstName}_{child.LastName}".ToLowerInvariant();
@@ -156,7 +149,6 @@ public class ChildSchedulingRateLimiter : IChildSchedulingRateLimiter
         }
     }
 
-    // Internal state class
     private sealed class SchedulingRateLimitState
     {
         public int TotalScheduledTasks { get; set; }

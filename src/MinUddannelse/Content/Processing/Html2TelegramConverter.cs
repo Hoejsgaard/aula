@@ -15,7 +15,6 @@ public class Html2TelegramConverter
 
         try
         {
-            // Load the HTML document
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(html);
 
@@ -24,12 +23,10 @@ public class Html2TelegramConverter
                 return CleanupFallback(html);
             }
 
-            // Convert to Telegram-compatible HTML
             var result = ProcessNode(htmlDoc.DocumentNode);
 
-            // Clean up extra whitespace but preserve paragraph breaks
-            result = Regex.Replace(result, @"[ \t]+", " "); // Only collapse spaces and tabs, not newlines
-            result = Regex.Replace(result, @"\n{3,}", "\n\n"); // Limit consecutive newlines to max 2
+            result = Regex.Replace(result, @"[ \t]+", " ");
+            result = Regex.Replace(result, @"\n{3,}", "\n\n");
             result = Regex.Replace(result, @"<br\s*/?>", "\n", RegexOptions.IgnoreCase);
             result = result.Replace("&nbsp;", " ");
 
@@ -37,7 +34,6 @@ public class Html2TelegramConverter
         }
         catch (Exception)
         {
-            // If HTML parsing fails, return cleaned text
             return CleanupFallback(html);
         }
     }
@@ -46,7 +42,6 @@ public class Html2TelegramConverter
     {
         if (node.NodeType == HtmlNodeType.Text)
         {
-            // Properly decode HTML entities like &aelig; and &oslash;
             return WebUtility.HtmlDecode(node.InnerText);
         }
 
@@ -59,9 +54,9 @@ public class Html2TelegramConverter
 
         return node.Name.ToLower() switch
         {
-            "#document" => content, // Document node - just return content
-            "html" => content, // HTML root - just return content
-            "body" => content, // Body - just return content
+            "#document" => content,
+            "html" => content,
+            "body" => content,
             "b" or "strong" => $"<b>{content}</b>",
             "i" or "em" => $"<i>{content}</i>",
             "u" => $"<u>{content}</u>",
@@ -75,7 +70,6 @@ public class Html2TelegramConverter
 
     private string CleanupFallback(string html)
     {
-        // Strip all HTML tags and clean up text
         var text = Regex.Replace(html, @"<[^>]+>", " ");
         text = Regex.Replace(text, @"\s+", " ");
         text = text.Replace("&nbsp;", " ");

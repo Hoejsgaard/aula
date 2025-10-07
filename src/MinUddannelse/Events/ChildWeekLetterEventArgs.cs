@@ -2,9 +2,6 @@ using Newtonsoft.Json.Linq;
 
 namespace MinUddannelse.Events;
 
-/// <summary>
-/// Event arguments for child week letter events.
-/// </summary>
 public class ChildWeekLetterEventArgs : ChildEventArgs
 {
     public int WeekNumber { get; init; }

@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using MinUddannelse.Content.Processing;
 using Html2Markdown;
 using HtmlAgilityPack;
+using System.Linq;
 
 namespace MinUddannelse.Content.Processing;
 
@@ -22,26 +23,25 @@ public class Html2SlackMarkdownConverter
 
         try
         {
-            // behold the horrors of brittle replacements and hope we get something good out of it. 
             var markdown = _converter.Convert(html).Replace("**", "*").Replace("\u00A0", " ").Replace("*   ", "- ");
 
-
-            // You'd think the above would be enough, but more often than not, the input is of so poor quality that Html2Markdown will leave artefacts.
-
-            // Let's strip what we know can go wrong before returning the markdown. 
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(markdown);
 
-            // Clean the document
             CleanHtmlDocument(htmlDoc);
 
-            // Get the cleaned HTML as a string
-            return htmlDoc.DocumentNode?.InnerHtml ?? string.Empty;
+            var result = htmlDoc.DocumentNode?.InnerText ?? string.Empty;
+
+            if (string.IsNullOrEmpty(result) || result.Trim().All(c => c == '<' || c == '>'))
+            {
+                return StripHtmlTags(html);
+            }
+
+            return result;
         }
         catch (Exception)
         {
-            // If HTML parsing fails, return the original input stripped of HTML tags
-            return Regex.Replace(html, "<.*?>", string.Empty);
+            return StripHtmlTags(html);
         }
     }
     private void CleanHtmlDocument(HtmlDocument htmlDoc)
@@ -49,13 +49,9 @@ public class Html2SlackMarkdownConverter
         if (htmlDoc?.DocumentNode == null)
             return;
 
-        // Remove <span> and <div> tags entirely, keeping their inner content
         RemoveNodesButKeepContent(htmlDoc, new[] { "span", "div" });
-
-        // Remove all other unnecessary tags and inline styles
         RemoveNodes(htmlDoc, new[] { "style", "br" });
 
-        // Remove any remaining <div> tags that were not empty
         var divNodes = htmlDoc.DocumentNode.SelectNodes("//div");
         if (divNodes != null)
         {
@@ -63,7 +59,6 @@ public class Html2SlackMarkdownConverter
             {
                 if (divNode.ParentNode == null) continue;
 
-                // Replace the div node with its inner text, effectively removing the tag but keeping the content
                 var parentNode = divNode.ParentNode;
                 var textNode = htmlDoc.CreateTextNode(divNode.InnerText ?? string.Empty);
                 parentNode.ReplaceChild(textNode, divNode);
@@ -120,5 +115,44 @@ public class Html2SlackMarkdownConverter
                 }
             }
         }
+    }
+
+    private static string StripHtmlTags(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html))
+            return string.Empty;
+
+        var result = html;
+
+        var match = Regex.Match(result, @"<+(.+?)>+", RegexOptions.Singleline);
+        if (match.Success)
+        {
+            result = match.Groups[1].Value;
+        }
+
+        result = Regex.Replace(result, @"<script[^>]*>.*?</script>", string.Empty, RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        result = Regex.Replace(result, @"<style[^>]*>.*?</style>", string.Empty, RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        result = Regex.Replace(result, @"<!--.*?-->", string.Empty, RegexOptions.Multiline | RegexOptions.Singleline);
+
+        result = Regex.Replace(result, @"<[^>]*>", string.Empty, RegexOptions.Multiline | RegexOptions.IgnoreCase);
+
+        result = result.Replace("&nbsp;", " ")
+                    .Replace("&amp;", "&")
+                    .Replace("&lt;", "<")
+                    .Replace("&gt;", ">")
+                    .Replace("&quot;", "\"")
+                    .Replace("&#39;", "'")
+                    .Replace("&apos;", "'")
+                    .Replace("&copy;", "©")
+                    .Replace("&reg;", "®")
+                    .Replace("&trade;", "™");
+
+        result = Regex.Replace(result, @"&[a-zA-Z0-9#]+;", string.Empty);
+
+        result = Regex.Replace(result, @"\s+", " ");
+
+        result = result.Trim();
+
+        return result;
     }
 }

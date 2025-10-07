@@ -35,9 +35,7 @@ public class Program
 
         try
         {
-            // Check for test commands first
             var config = serviceProvider.GetRequiredService<Config>();
-
 
             logger.LogInformation("Starting MinUddannelse");
 
@@ -184,7 +182,6 @@ public class Program
             return config;
         });
 
-        // Configure Serilog for both console and file logging with rotation
         var logPath = Path.Combine(AppContext.BaseDirectory, "logs", "minuddannelse-.log");
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
@@ -207,7 +204,7 @@ public class Program
         services.AddHttpClient("UniLogin", client =>
         {
             client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-            client.Timeout = TimeSpan.FromMinutes(2); // Explicit timeout
+            client.Timeout = TimeSpan.FromMinutes(2);
         })
         .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
         {
@@ -217,7 +214,6 @@ public class Program
             AutomaticDecompression = System.Net.DecompressionMethods.All
         });
 
-        // Child-aware services are singletons that accept Child parameters
         services.AddSingleton<IChildAuditService, ChildAuditService>();
         services.AddSingleton<IChildRateLimiter, ChildRateLimiter>();
         services.AddSingleton<IWeekLetterService, WeekLetterService>();
@@ -246,7 +242,6 @@ public class Program
             return new WeekLetterAiService(config.OpenAi.ApiKey, loggerFactory, aiToolsManager, conversationManager, promptBuilder, config.OpenAi.Model);
         });
 
-        // Supabase Client singleton (lazy initialization on first use)
         services.AddSingleton<Supabase.Client>(provider =>
         {
             var config = provider.GetRequiredService<Config>();
@@ -257,19 +252,16 @@ public class Program
 
             var options = new SupabaseOptions
             {
-                AutoConnectRealtime = false, // We don't need realtime for this use case
-                AutoRefreshToken = false     // We're using service role key
+                AutoConnectRealtime = false,
+                AutoRefreshToken = false
             };
 
             var client = new Supabase.Client(config.Supabase.Url, config.Supabase.ServiceRoleKey, options);
-            // Removed blocking InitializeAsync().GetAwaiter().GetResult() call
-            // Client will be initialized on first repository use
 
             logger.LogInformation("Supabase client created successfully");
             return client;
         });
 
-        // Repository singletons (no state, all parameters passed as method arguments)
         services.AddSingleton<IReminderRepository, ReminderRepository>();
         services.AddSingleton<IWeekLetterRepository, WeekLetterRepository>();
         services.AddSingleton<IAppStateRepository, AppStateRepository>();

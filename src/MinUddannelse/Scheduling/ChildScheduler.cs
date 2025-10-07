@@ -16,11 +16,9 @@ public class ChildScheduler : IChildScheduler
     private readonly Dictionary<string, ChildScheduledTask> _inMemoryTasks = new();
     private readonly object _lockObject = new();
 
-    // Configuration limits
     private const int MaxTasksPerChild = 10;
     private const int MaxExecutionsPerHour = 60;
 
-    // Timing constants
     private const int PlaceholderTaskDelayMs = 100;
     private const int ExecutionWindowMinutes = 1;
     private const int ScheduleLookbackMinutes = 1;
@@ -36,14 +34,12 @@ public class ChildScheduler : IChildScheduler
     {
         if (child == null) throw new ArgumentNullException(nameof(child));
 
-        // Validate cron expression
         if (!IsValidCronExpression(cronExpression))
         {
             _logger.LogWarning("Invalid cron expression provided by {ChildName}: {Cron}", child.FirstName, cronExpression);
             throw new ArgumentException($"Invalid cron expression: {cronExpression}");
         }
 
-        // Check task count limit
         var currentCount = GetScheduledTasksCountForChild(child);
         if (currentCount >= MaxTasksPerChild)
         {
@@ -52,7 +48,6 @@ public class ChildScheduler : IChildScheduler
             throw new InvalidOperationException($"Maximum number of scheduled tasks ({MaxTasksPerChild}) exceeded for {child.FirstName}");
         }
 
-        // Create and store the task
         var task = new ChildScheduledTask
         {
             Id = GenerateTaskId(),
@@ -82,7 +77,6 @@ public class ChildScheduler : IChildScheduler
     {
         if (child == null) throw new ArgumentNullException(nameof(child));
 
-        // Find and validate task ownership
         var key = GetTaskKey(child, taskId);
         bool taskExists;
         lock (_lockObject)
@@ -108,7 +102,6 @@ public class ChildScheduler : IChildScheduler
     {
         if (child == null) throw new ArgumentNullException(nameof(child));
 
-        // Get tasks for this child only
         var tasks = new List<ChildScheduledTask>();
         lock (_lockObject)
         {
@@ -127,7 +120,6 @@ public class ChildScheduler : IChildScheduler
     {
         if (child == null) throw new ArgumentNullException(nameof(child));
 
-        // Find and update task
         var key = GetTaskKey(child, taskId);
         lock (_lockObject)
         {
@@ -150,23 +142,20 @@ public class ChildScheduler : IChildScheduler
     {
         if (child == null) throw new ArgumentNullException(nameof(child));
 
-        // Execute task
         try
         {
             _logger.LogInformation("Executing task {TaskName} for {ChildName}", taskName, child.FirstName);
 
             // Task execution logic here - would call appropriate service based on taskName
             // For example: await ExecuteWeeklyLetterCheck() or await ExecuteReminders()
-            await Task.Delay(PlaceholderTaskDelayMs); // Placeholder for actual task execution
+            await Task.Delay(PlaceholderTaskDelayMs);
 
-            // Update task execution count
             UpdateTaskExecutionStats(child, taskName, true);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to execute task {TaskName} for {ChildName}", taskName, child.FirstName);
 
-            // Update failure count
             UpdateTaskExecutionStats(child, taskName, false);
             throw;
         }
@@ -188,7 +177,6 @@ public class ChildScheduler : IChildScheduler
                 return Task.FromResult(now <= task.NextRun.Value.AddMinutes(ExecutionWindowMinutes));
             }
 
-            // Calculate next run if not set
             var nextRun = task.LastRun.HasValue
                 ? schedule.GetNextOccurrence(task.LastRun.Value)
                 : schedule.GetNextOccurrence(now.AddMinutes(-ScheduleLookbackMinutes));
@@ -207,7 +195,6 @@ public class ChildScheduler : IChildScheduler
     {
         if (child == null) throw new ArgumentNullException(nameof(child));
 
-        // Get tasks for this child
         var tasks = await GetScheduledTasksAsync(child);
 
         _logger.LogDebug("Processing {Count} potential tasks for {ChildName}", tasks.Count, child.FirstName);
@@ -220,10 +207,8 @@ public class ChildScheduler : IChildScheduler
                 {
                     _logger.LogInformation("Task {TaskName} is due for {ChildName}", task.TaskName, child.FirstName);
 
-                    // Execute the task
                     await ExecuteTaskAsync(child, task.TaskName);
 
-                    // Update last run time
                     UpdateTaskLastRun(child, task.Id);
                 }
             }
@@ -235,7 +220,6 @@ public class ChildScheduler : IChildScheduler
         }
     }
 
-    // Helper methods
     private bool IsValidCronExpression(string cronExpression)
     {
         try
@@ -265,7 +249,6 @@ public class ChildScheduler : IChildScheduler
     private int GetScheduledTasksCountForChild(Child child)
     {
         // Don't call GetScheduledTasksAsync which validates context again
-        // Just count directly from the dictionary
         lock (_lockObject)
         {
             var prefix = GetChildKeyPrefix(child);
@@ -285,7 +268,7 @@ public class ChildScheduler : IChildScheduler
 
     private int GenerateTaskId()
     {
-        // Simple ID generation - in production, use database sequence
+        // In production, use database sequence
         return Math.Abs(Guid.NewGuid().GetHashCode());
     }
 

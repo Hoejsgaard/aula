@@ -3,10 +3,6 @@ using Newtonsoft.Json.Linq;
 
 namespace MinUddannelse.Events;
 
-/// <summary>
-/// Event arguments for child-specific events.
-/// Ensures events are properly scoped to individual children.
-/// </summary>
 public class ChildEventArgs : EventArgs
 {
     public string ChildId { get; init; } = string.Empty;

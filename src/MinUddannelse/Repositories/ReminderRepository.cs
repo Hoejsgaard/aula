@@ -57,7 +57,6 @@ public class ReminderRepository : IReminderRepository
         var currentDate = DateOnly.FromDateTime(now);
         var currentTime = TimeOnly.FromDateTime(now);
 
-        // Get reminders for today that haven't been sent yet and are due now or in the past
         var reminders = await _supabase
             .From<Reminder>()
             .Select("*")

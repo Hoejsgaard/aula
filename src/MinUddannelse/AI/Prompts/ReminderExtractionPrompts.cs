@@ -36,7 +36,6 @@ CHILD: [child name or NONE]";
         var weekNumber = ISOWeek.GetWeekOfYear(currentTime);
         var year = currentTime.Year;
 
-        // Calculate the Monday of the current week to provide exact date context
         var currentMonday = currentTime.Date.AddDays(-(int)currentTime.DayOfWeek + (int)DayOfWeek.Monday);
 
         return $@"You must respond with ONLY valid JSON. No explanations, no markdown, no text outside the JSON.

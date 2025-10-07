@@ -30,14 +30,12 @@ public class OpenAiService : IOpenAiService
 
         _logger.LogInformation("Getting AI response for child {ChildName}: {Query}", child.FirstName, query);
 
-        // Check if this looks like a week letter question about days of the week
         if (IsWeekLetterQuery(query))
         {
             _logger.LogInformation("Detected week letter query for {ChildName}, processing with week letter data", child.FirstName);
             return await ProcessWeekLetterQuery(child, query);
         }
 
-        // For non-week letter queries, use the standard OpenAI service
         var contextualQuery = $"[Context: Child {child.FirstName}] {query}";
         return await _openAiService.ProcessQueryWithToolsAsync(contextualQuery,
             $"child_{child.FirstName}",
@@ -50,7 +48,6 @@ public class OpenAiService : IOpenAiService
 
         var lowerQuery = query.ToLowerInvariant();
 
-        // Check for Danish day names and common week letter question patterns
         var weekLetterIndicators = new[]
         {
             "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag",
@@ -66,7 +63,6 @@ public class OpenAiService : IOpenAiService
     {
         try
         {
-            // Get current week letter (default to current week)
             var currentDate = DateOnly.FromDateTime(DateTime.Now);
             var weekLetter = await _weekLetterService.GetOrFetchWeekLetterAsync(child, currentDate);
 
@@ -76,7 +72,6 @@ public class OpenAiService : IOpenAiService
                 return "Jeg kan ikke finde ugekrevset for denne uge.";
             }
 
-            // Extract week letter content
             var content = weekLetter["ugebreve"]?[0]?["indhold"]?.ToString() ?? "";
             if (string.IsNullOrEmpty(content))
             {
@@ -87,7 +82,6 @@ public class OpenAiService : IOpenAiService
             _logger.LogInformation("Processing week letter query for {ChildName}, content length: {Length} characters",
                 child.FirstName, content.Length);
 
-            // Create a direct query with week letter context to avoid conversation management duplicates
             var contextualQuery = $@"Du er en hjælpsom assistent for {child.FirstName}.
 
 Her er ugebrevet for denne uge:
@@ -122,7 +116,6 @@ Svar venligst kort og præcist på spørgsmålet baseret på information fra uge
         _logger.LogInformation("Getting AI response with context for child {ChildName}, conversation {ConversationId}",
             child.FirstName, conversationId);
 
-        // Create child-specific conversation ID
         var childConversationId = $"{child.FirstName}_{conversationId}";
 
         return await _openAiService.ProcessQueryWithToolsAsync(query,
@@ -137,10 +130,8 @@ Svar venligst kort og præcist på spørgsmålet baseret på information fra uge
         _logger.LogInformation("Clearing conversation history for child {ChildName}, conversation {ConversationId}",
             child.FirstName, conversationId);
 
-        // Create child-specific conversation ID
         var childConversationId = $"{child.FirstName}_{conversationId}";
 
-        // Use the ClearConversationHistory method from IOpenAiService
         _openAiService.ClearConversationHistory(childConversationId);
         await Task.CompletedTask;
     }

@@ -322,7 +322,6 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
             var doc = new HtmlDocument();
             doc.LoadHtml(htmlContent);
 
-            // Try to find a login form specifically
             var formNode = doc.DocumentNode.SelectSingleNode("//form[contains(@action, 'login') or contains(@action, 'Login') or contains(@action, 'auth')]")
                           ?? doc.DocumentNode.SelectSingleNode("//form");
 
@@ -344,7 +343,6 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
             HttpUtility.HtmlDecode(actionUrl, writer);
             var decodedUrl = writer.ToString();
 
-            // Make URL absolute if needed
             if (!decodedUrl.StartsWith("http"))
             {
                 var baseUri = new Uri(_loginUrl);
@@ -500,7 +498,6 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
     {
         _logger.LogDebug("Verifying authentication status");
 
-        // Try multiple endpoints to verify authentication
         var endpoints = new[]
         {
             $"{_apiBaseUrl}{_studentDataPath}",
@@ -523,7 +520,6 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
                     var content = await response.Content.ReadAsStringAsync();
                     _logger.LogDebug("Content length: {ContentLength} chars", content.Length);
 
-                    // Check if we got actual JSON data (not error page)
                     if (content.StartsWith('{') || content.StartsWith('['))
                     {
                         _logger.LogDebug("Valid JSON response received");
@@ -698,7 +694,6 @@ public abstract class UniLoginAuthenticatorBase : IDisposable
     {
         if (!_disposed)
         {
-            // HttpClient is managed by IHttpClientFactory, no need to dispose
             _disposed = true;
         }
     }

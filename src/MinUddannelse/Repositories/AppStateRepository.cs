@@ -38,7 +38,6 @@ public class AppStateRepository : IAppStateRepository
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentException.ThrowIfNullOrWhiteSpace(value);
 
-        // First check if the key already exists
         var existing = await _supabase
             .From<AppState>()
             .Select("*")
@@ -47,7 +46,6 @@ public class AppStateRepository : IAppStateRepository
 
         if (existing.Models.Count > 0)
         {
-            // Update existing value
             await _supabase
                 .From<AppState>()
                 .Where(a => a.Key == key)
@@ -58,7 +56,6 @@ public class AppStateRepository : IAppStateRepository
         }
         else
         {
-            // Insert new key-value pair
             var appState = new AppState
             {
                 Key = key,

@@ -137,13 +137,12 @@ public sealed partial class ChildAuthenticatedClient : UniLoginAuthenticatorBase
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
 
-        // Clean up smart quotes and other problematic Unicode characters that break JSON parsing
         var cleanedJson = json
-            .Replace("\u201E", "\\\"")  // Opening smart quote „
-            .Replace("\u201C", "\\\"")  // Closing smart quote "
-            .Replace("\u201D", "\\\"")  // Another closing smart quote "
-            .Replace("\u2019", "\\'")   // Smart apostrophe '
-            .Replace("\u2018", "\\'");  // Another smart apostrophe '
+            .Replace("\u201E", "\\\"")
+            .Replace("\u201C", "\\\"")
+            .Replace("\u201D", "\\\"")
+            .Replace("\u2019", "\\'")
+            .Replace("\u2018", "\\'");
 
         JObject weekLetter;
         try
@@ -152,20 +151,17 @@ public sealed partial class ChildAuthenticatedClient : UniLoginAuthenticatorBase
         }
         catch (JsonReaderException ex) when (ex.Message.Contains("Unexpected character encountered while parsing value: <"))
         {
-            // The API returned HTML instead of JSON - try to extract JSON from HTML response
             _logger.LogWarning("API returned HTML instead of JSON for {ChildName}, attempting to extract JSON", _child.FirstName);
 
-            // Log the complete raw response to understand what we're dealing with
             _logger.LogWarning("COMPLETE API response for debugging: {Response}", cleanedJson);
 
-            // Try multiple patterns to extract JSON from HTML
             var patterns = new[]
             {
-                @"\{.*?""ugebreve"".*?\}",                    // Original pattern, non-greedy
-                @"\{[^{}]*""ugebreve""[^{}]*\}",             // Simple non-nested JSON
-                @"(?s)\{.*?""ugebreve"".*?\}",               // Single-line mode
-                @"\{.*?\}",                                  // Any JSON object
-                @"ugebreve""?\s*:\s*\[.*?\]"                 // Just the ugebreve array
+                @"\{.*?""ugebreve"".*?\}",
+                @"\{[^{}]*""ugebreve""[^{}]*\}",
+                @"(?s)\{.*?""ugebreve"".*?\}",
+                @"\{.*?\}",
+                @"ugebreve""?\s*:\s*\[.*?\]"
             };
 
             JObject? extractedJson = null;
@@ -179,7 +175,6 @@ public sealed partial class ChildAuthenticatedClient : UniLoginAuthenticatorBase
                         var jsonText = match.Value;
                         _logger.LogInformation("Trying to parse extracted JSON: {JsonText}", jsonText.Substring(0, Math.Min(200, jsonText.Length)));
 
-                        // If we only got the array part, wrap it in a proper object
                         if (jsonText.StartsWith("ugebreve"))
                         {
                             jsonText = "{\"" + jsonText + "}";

@@ -19,7 +19,6 @@ public class PromptSanitizer : IPromptSanitizer
         ArgumentNullException.ThrowIfNull(loggerFactory);
         _logger = loggerFactory.CreateLogger<PromptSanitizer>();
 
-        // Define patterns that indicate prompt injection attempts
         _blockedPatterns = new List<string>
         {
             "ignore previous instructions",
@@ -54,7 +53,6 @@ public class PromptSanitizer : IPromptSanitizer
             "exec("
         };
 
-        // Compile regex patterns for more complex injection detection
         _dangerousPatterns = new List<Regex>
         {
             new Regex(@"\bsystem\s*[:=]\s*", RegexOptions.IgnoreCase),
@@ -76,7 +74,6 @@ public class PromptSanitizer : IPromptSanitizer
         _logger.LogDebug("Sanitizing input for {ChildName}, length: {Length}",
             child.FirstName, input.Length);
 
-        // Check for prompt injection attempts
         if (!IsInputSafe(input))
         {
             _logger.LogWarning("Prompt injection detected for {ChildName}. Input blocked.",
@@ -84,19 +81,14 @@ public class PromptSanitizer : IPromptSanitizer
             throw new PromptInjectionException(child.FirstName, input.Length);
         }
 
-        // Remove any HTML/script tags
         var sanitized = Regex.Replace(input, @"<[^>]+>", string.Empty);
-
-        // Remove multiple spaces and normalize whitespace
         sanitized = Regex.Replace(sanitized, @"\s+", " ").Trim();
 
-        // Escape special characters that might be interpreted as commands
         sanitized = sanitized
             .Replace("\\", "\\\\")
             .Replace("`", "\\`")
             .Replace("$", "\\$");
 
-        // Limit input length to prevent resource exhaustion
         const int maxLength = 2000;
         if (sanitized.Length > maxLength)
         {
@@ -118,7 +110,6 @@ public class PromptSanitizer : IPromptSanitizer
 
         var lowerInput = input.ToLowerInvariant();
 
-        // Check for blocked phrases
         foreach (var pattern in _blockedPatterns)
         {
             if (lowerInput.Contains(pattern))
@@ -128,7 +119,6 @@ public class PromptSanitizer : IPromptSanitizer
             }
         }
 
-        // Check for dangerous regex patterns
         foreach (var regex in _dangerousPatterns)
         {
             if (regex.IsMatch(input))
@@ -138,7 +128,6 @@ public class PromptSanitizer : IPromptSanitizer
             }
         }
 
-        // Check for excessive special characters (potential code injection)
         var specialCharCount = input.Count(c => !char.IsLetterOrDigit(c) && !char.IsWhiteSpace(c));
         var specialCharRatio = (double)specialCharCount / input.Length;
 
@@ -148,7 +137,6 @@ public class PromptSanitizer : IPromptSanitizer
             return false;
         }
 
-        // Check for repeated patterns (potential attack)
         if (HasRepeatedPatterns(input))
         {
             _logger.LogWarning("Repeated patterns detected in input");
@@ -165,22 +153,11 @@ public class PromptSanitizer : IPromptSanitizer
 
         _logger.LogDebug("Filtering response for {ChildName}", child.FirstName);
 
-        // Remove any potentially sensitive information
         var filtered = response;
-
-        // Remove email addresses
         filtered = Regex.Replace(filtered, @"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "[email removed]");
-
-        // Remove phone numbers (Danish format)
         filtered = Regex.Replace(filtered, @"\b\d{8}\b|\+45\s\d{8}\b|\+45\s?\d{2}\s?\d{2}\s?\d{2}\s?\d{2}\b", "[phone removed]");
-
-        // Remove personal identification numbers
         filtered = Regex.Replace(filtered, @"\b\d{6}-?\d{4}\b", "[CPR removed]");
-
-        // Remove URLs that might contain sensitive data
         filtered = Regex.Replace(filtered, @"https?://[^\s]+", "[URL removed]");
-
-        // Ensure response is child-appropriate (no profanity)
         filtered = RemoveProfanity(filtered);
 
         _logger.LogDebug("Response filtered for {ChildName}", child.FirstName);
@@ -195,7 +172,6 @@ public class PromptSanitizer : IPromptSanitizer
 
     private bool HasRepeatedPatterns(string input)
     {
-        // Check for repeated substrings (potential attack pattern)
         if (input.Length < 50)
             return false;
 
@@ -203,7 +179,6 @@ public class PromptSanitizer : IPromptSanitizer
         if (words.Length < 10)
             return false;
 
-        // Check if the same word appears too many times
         var wordCounts = words.GroupBy(w => w.ToLowerInvariant())
             .Select(g => new { Word = g.Key, Count = g.Count() })
             .Where(x => x.Word.Length > 3) // Ignore short words
@@ -212,7 +187,7 @@ public class PromptSanitizer : IPromptSanitizer
         foreach (var wc in wordCounts)
         {
             var ratio = (double)wc.Count / words.Length;
-            if (ratio > 0.2) // Same word is more than 20% of content
+            if (ratio > 0.2)
             {
                 return true;
             }
@@ -223,8 +198,7 @@ public class PromptSanitizer : IPromptSanitizer
 
     private string RemoveProfanity(string text)
     {
-        // Basic profanity filter - in production, use a comprehensive list
-        var profanityList = new[] { "damn", "hell" }; // Minimal list for family-friendly content
+        var profanityList = new[] { "damn", "hell" };
 
         foreach (var word in profanityList)
         {

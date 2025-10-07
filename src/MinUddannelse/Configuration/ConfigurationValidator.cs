@@ -20,18 +20,15 @@ public class ConfigurationValidator : IConfigurationValidator
         var errors = new List<string>();
         var warnings = new List<string>();
 
-        // Validate required sections
         ValidateMinUddannelse(config.MinUddannelse, errors);
         ValidateUniLogin(config.UniLogin, errors);
         ValidateOpenAi(config.OpenAi, errors);
         ValidateSupabase(config.Supabase, errors);
 
-        // Optional features - validate if enabled
         ValidateGoogleServiceAccount(config.GoogleServiceAccount, errors, warnings);
         ValidateScheduling(config.Scheduling, errors, warnings);
         ValidateWeekLetter(config.WeekLetter, errors, warnings);
 
-        // Simulate async work if needed in future
         await Task.CompletedTask;
 
         if (errors.Count == 0)

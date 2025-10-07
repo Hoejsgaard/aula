@@ -13,10 +13,6 @@ using MinUddannelse.Content.WeekLetters;
 
 namespace MinUddannelse.Bots;
 
-/// <summary>
-/// Telegram interactive bot that is dedicated to a single child.
-/// This bot instance handles Telegram interactions for one specific child.
-/// </summary>
 public class TelegramInteractiveBot : IDisposable
 {
     private readonly Child _child;
@@ -85,7 +81,7 @@ public class TelegramInteractiveBot : IDisposable
 
             if (_child.Channels.Telegram.ChatId.HasValue)
             {
-                //await SendMessageToTelegram($"Bot for {_child.FirstName} is now online and ready to help!");
+                await SendMessageToTelegram($"Bot for {_child.FirstName} is now online and ready to help!");
             }
         }
         catch (Exception ex)

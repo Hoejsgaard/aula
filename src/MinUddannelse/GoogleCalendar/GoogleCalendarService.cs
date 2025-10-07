@@ -55,12 +55,11 @@ public class GoogleCalendarService : IGoogleCalendarService
 
     private async Task<Google.Apis.Calendar.v3.Data.Events> GetEventsForCurrentWeek(string calendarId)
     {
-        // Calculate the start and end dates of the current week
         var currentDate = DateTime.UtcNow;
         var currentDayOfWeek = (int)currentDate.DayOfWeek;
         var difference = currentDayOfWeek - (int)CultureInfo.InvariantCulture.DateTimeFormat.FirstDayOfWeek;
         var firstDayOfWeek = currentDate.AddDays(-difference).Date;
-        var lastDayOfWeek = firstDayOfWeek.AddDays(7).AddTicks(-1); // End of Sunday
+        var lastDayOfWeek = firstDayOfWeek.AddDays(7).AddTicks(-1);
 
         var request = _calendarService.Events.List(calendarId);
         request.TimeMaxDateTimeOffset = lastDayOfWeek;
@@ -81,7 +80,6 @@ public class GoogleCalendarService : IGoogleCalendarService
 
     public async Task<bool> SynchronizeWeek(string googleCalendarId, DateOnly dateInWeek, JObject jsonEvents)
     {
-        // Calculate start and end of the week
         var weekStart = DateOnly.FromDateTime(dateInWeek.ToDateTime(TimeOnly.MinValue)
             .AddDays(-(int)dateInWeek.DayOfWeek + (int)CultureInfo.InvariantCulture.DateTimeFormat.FirstDayOfWeek));
         var weekEnd = weekStart.AddDays(7);

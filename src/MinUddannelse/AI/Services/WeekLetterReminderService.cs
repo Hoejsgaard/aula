@@ -56,7 +56,6 @@ public class WeekLetterReminderService : IWeekLetterReminderService
             _logger.LogInformation("Starting reminder extraction for {ChildName} week {WeekNumber}/{Year}",
                 childName, weekNumber, year);
 
-            // Check if we already processed this week letter
             var postedLetter = await _weekLetterRepository.GetPostedLetterByHashAsync(childName, weekNumber, year);
             if (postedLetter == null)
             {
@@ -72,7 +71,6 @@ public class WeekLetterReminderService : IWeekLetterReminderService
                 return new ReminderExtractionResult { Success = true, RemindersCreated = 0, AlreadyProcessed = true };
             }
 
-            // Extract content from week letter JObject
             var weekLetterContent = ExtractContentFromWeekLetter(weekLetter);
             if (string.IsNullOrWhiteSpace(weekLetterContent))
             {
@@ -81,7 +79,6 @@ public class WeekLetterReminderService : IWeekLetterReminderService
                 return new ReminderExtractionResult { Success = true, RemindersCreated = 0, NoRemindersFound = true };
             }
 
-            // Extract events using AI
             var extractedEvents = await ExtractEventsFromWeekLetterAsync(weekLetterContent);
 
             if (!extractedEvents.Any())
@@ -89,20 +86,17 @@ public class WeekLetterReminderService : IWeekLetterReminderService
                 _logger.LogInformation("No actionable events found in week letter for {ChildName} week {WeekNumber}/{Year}",
                     childName, weekNumber, year);
 
-                // Mark as processed even if no reminders found
                 await _weekLetterRepository.MarkAutoRemindersExtractedAsync(childName, weekNumber, year);
 
                 return new ReminderExtractionResult { Success = true, RemindersCreated = 0, NoRemindersFound = true };
             }
 
-            // Delete existing auto-extracted reminders for this week letter (delete/recreate pattern)
             var weekLetterId = postedLetter?.Id;
             if (weekLetterId.HasValue)
             {
                 await _reminderRepository.DeleteAutoExtractedRemindersByWeekLetterIdAsync(weekLetterId.Value);
             }
 
-            // Store reminders
             var remindersCreated = 0;
             var createdReminderInfos = new List<CreatedReminderInfo>();
 
@@ -110,7 +104,6 @@ public class WeekLetterReminderService : IWeekLetterReminderService
             {
                 try
                 {
-                    // Use the rich AI-generated description directly
                     var reminderText = extractedEvent.Description;
                     await _reminderRepository.AddAutoReminderAsync(
                         reminderText,
@@ -123,12 +116,11 @@ public class WeekLetterReminderService : IWeekLetterReminderService
                         (decimal)extractedEvent.ConfidenceScore);
                     remindersCreated++;
 
-                    // Track the created reminder info for channel messages - use same rich text
                     createdReminderInfos.Add(new CreatedReminderInfo
                     {
                         Title = reminderText,
                         Date = extractedEvent.EventDate,
-                        EventTime = null // Time is already included in the rich description
+                        EventTime = null
                     });
 
                     _logger.LogInformation("Created auto-extracted reminder for {ChildName}: {ReminderText}",
@@ -141,7 +133,6 @@ public class WeekLetterReminderService : IWeekLetterReminderService
                 }
             }
 
-            // Mark week letter as processed
             await _weekLetterRepository.MarkAutoRemindersExtractedAsync(childName, weekNumber, year);
 
             _logger.LogInformation("Successfully created {Count} reminders for {ChildName} week {WeekNumber}/{Year}",
@@ -166,7 +157,6 @@ public class WeekLetterReminderService : IWeekLetterReminderService
     {
         try
         {
-            // Try multiple possible content field names
             var contentFields = new[] { "content", "Content", "text", "Text", "body", "Body", "html", "Html" };
 
             foreach (var field in contentFields)
@@ -174,18 +164,15 @@ public class WeekLetterReminderService : IWeekLetterReminderService
                 var fieldValue = weekLetter[field]?.ToString();
                 if (!string.IsNullOrWhiteSpace(fieldValue))
                 {
-                    // Remove HTML tags and clean up
                     var cleaned = System.Text.RegularExpressions.Regex.Replace(fieldValue, @"<[^>]+>", " ");
                     cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"\s+", " ");
 
-                    // Decode HTML entities
                     cleaned = System.Net.WebUtility.HtmlDecode(cleaned);
 
                     return cleaned.Trim();
                 }
             }
 
-            // Fallback: convert entire JObject to string
             return weekLetter.ToString();
         }
         catch
@@ -221,7 +208,6 @@ public class WeekLetterReminderService : IWeekLetterReminderService
     {
         try
         {
-            // Clean response - remove potential markdown formatting
             var cleanedResponse = aiResponse.Trim();
             if (cleanedResponse.StartsWith("```json"))
             {
@@ -260,16 +246,13 @@ public class WeekLetterReminderService : IWeekLetterReminderService
     {
         try
         {
-            // Look for time patterns near the event title in the content
             var titleIndex = weekLetterContent.IndexOf(eventTitle, StringComparison.OrdinalIgnoreCase);
             if (titleIndex == -1) return null;
 
-            // Extract a window of text around the title (100 chars before and after)
             var start = Math.Max(0, titleIndex - 100);
             var end = Math.Min(weekLetterContent.Length, titleIndex + eventTitle.Length + 100);
             var contextWindow = weekLetterContent.Substring(start, end - start);
 
-            // Look for time patterns like "10:45", "kl. 10:45", "10.45-11.30"
             var timePattern = @"(?:kl\.?\s*)?(\d{1,2}[:.]\d{2}(?:-\d{1,2}[:.]\d{2})?)";
             var timeMatch = Regex.Match(contextWindow, timePattern, RegexOptions.IgnoreCase);
 
@@ -288,10 +271,8 @@ public class WeekLetterReminderService : IWeekLetterReminderService
 
     private string ImproveReminderTitle(string originalTitle)
     {
-        // Clean up and improve the title for better readability
         var improved = originalTitle.Trim();
 
-        // Remove common prefixes that add no value
         var prefixesToRemove = new[] { "Event: ", "Deadline: ", "Activity: ", "Task: " };
         foreach (var prefix in prefixesToRemove)
         {
@@ -301,7 +282,6 @@ public class WeekLetterReminderService : IWeekLetterReminderService
             }
         }
 
-        // Ensure first letter is capitalized
         if (improved.Length > 0)
         {
             improved = char.ToUpper(improved[0]) + improved.Substring(1);

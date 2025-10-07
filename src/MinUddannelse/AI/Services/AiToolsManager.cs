@@ -123,7 +123,6 @@ public class AiToolsManager : IAiToolsManager
                 return $"❌ No children found matching '{childName}'.";
             }
 
-            // Get current week number and year
             var now = DateTime.Now;
             var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(now);
             var year = now.Year;
@@ -169,7 +168,6 @@ public class AiToolsManager : IAiToolsManager
                 return $"❌ Child '{childName}' not found.";
             }
 
-            // Get week number and year for the target date
             var weekNumber = System.Globalization.ISOWeek.GetWeekOfYear(targetDate);
             var year = targetDate.Year;
 
@@ -179,7 +177,6 @@ public class AiToolsManager : IAiToolsManager
                 return $"No week letter available for {child.FirstName} {child.LastName}.";
             }
 
-            // Extract activities for the specific date from the week letter
             var dayOfWeek = targetDate.DayOfWeek;
             var dayName = dayOfWeek.ToString();
 
@@ -235,7 +232,6 @@ Just ask me naturally and I'll help you!";
 
     private string ExtractSummaryFromWeekLetter(Newtonsoft.Json.Linq.JObject weekLetter)
     {
-        // Try to extract a summary or use the first part of content
         if (weekLetter["summary"] != null)
         {
             return weekLetter["summary"]?.ToString() ?? "";
@@ -247,13 +243,11 @@ Just ask me naturally and I'll help you!";
 
     private string ExtractContentFromWeekLetter(Newtonsoft.Json.Linq.JObject weekLetter)
     {
-        // Extract content from the week letter structure
         if (weekLetter["content"] != null)
         {
             return weekLetter["content"]?.ToString() ?? "";
         }
 
-        // Fallback to other possible content fields
         if (weekLetter["text"] != null)
         {
             return weekLetter["text"]?.ToString() ?? "";

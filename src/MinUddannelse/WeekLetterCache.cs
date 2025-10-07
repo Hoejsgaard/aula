@@ -10,7 +10,7 @@ public class WeekLetterCache
     private readonly IMemoryCache _cache;
     private readonly ILogger _logger;
     private readonly Config _config;
-    private readonly TimeSpan _cacheExpiration = TimeSpan.FromDays(365); // Week letters never change once published
+    private readonly TimeSpan _cacheExpiration = TimeSpan.FromDays(365);
 
     public WeekLetterCache(IMemoryCache cache, Config config, ILoggerFactory loggerFactory)
     {

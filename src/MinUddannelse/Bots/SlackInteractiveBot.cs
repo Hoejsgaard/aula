@@ -16,10 +16,6 @@ using MinUddannelse.Content.WeekLetters;
 
 namespace MinUddannelse.Bots;
 
-/// <summary>
-/// Slack interactive bot that is dedicated to a single child.
-/// This bot instance handles Slack interactions for one specific child.
-/// </summary>
 public class SlackInteractiveBot : IDisposable
 {
     private readonly Child _child;

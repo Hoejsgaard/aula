@@ -40,7 +40,6 @@ public class RetryTrackingRepository : IRetryTrackingRepository
 
     public async Task<bool> IncrementRetryAttemptAsync(string childName, int weekNumber, int year)
     {
-        // First, try to get existing retry attempt
         var existing = await _supabase
             .From<RetryAttempt>()
             .Select("*")
@@ -51,12 +50,10 @@ public class RetryTrackingRepository : IRetryTrackingRepository
 
         if (existing.Models.Count > 0)
         {
-            // Increment existing attempt count
             var retryAttempt = existing.Models.First();
             retryAttempt.AttemptCount += 1;
             retryAttempt.LastAttempt = DateTime.UtcNow;
 
-            // Use configured retry hours
             var retryHours = _config.WeekLetter.RetryIntervalHours;
             retryAttempt.NextAttempt = DateTime.UtcNow.AddHours(retryHours);
 
@@ -67,16 +64,14 @@ public class RetryTrackingRepository : IRetryTrackingRepository
             _logger.LogInformation("Incremented retry attempt for {ChildName} week {WeekNumber}/{Year} to {Count}",
                 childName, weekNumber, year, retryAttempt.AttemptCount);
 
-            return false; // Not the first attempt
+            return false;
         }
         else
         {
-            // Use configured retry settings
             var retryHours = _config.WeekLetter.RetryIntervalHours;
             var maxRetryHours = _config.WeekLetter.MaxRetryDurationHours;
-            var maxAttempts = maxRetryHours / retryHours; // Calculate max attempts based on retry duration
+            var maxAttempts = maxRetryHours / retryHours;
 
-            // Create new retry attempt record
             var newRetryAttempt = new RetryAttempt
             {
                 ChildName = childName,
@@ -95,13 +90,12 @@ public class RetryTrackingRepository : IRetryTrackingRepository
             _logger.LogInformation("Created first retry attempt for {ChildName} week {WeekNumber}/{Year}",
                 childName, weekNumber, year);
 
-            return true; // This is the first attempt
+            return true;
         }
     }
 
     public async Task MarkRetryAsSuccessfulAsync(string childName, int weekNumber, int year)
     {
-        // Delete the retry attempt record since it's no longer needed
         await _supabase
             .From<RetryAttempt>()
             .Filter("child_name", Constants.Operator.Equals, childName)

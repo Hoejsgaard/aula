@@ -15,7 +15,6 @@ public class ConversationManager : IConversationManager
     private readonly ConcurrentDictionary<string, List<ChatMessage>> _conversationHistory = new();
     private readonly ConcurrentDictionary<string, string> _currentChildContext = new();
 
-    // Constants for conversation history management
     private const int MaxConversationHistoryRegular = 12;
     private const int MaxConversationHistoryWeekLetter = 20;
     private const int ConversationTrimAmount = 4;
@@ -56,8 +55,6 @@ public class ConversationManager : IConversationManager
     public void AddUserQuestionToHistory(string contextKey, string question)
     {
         _logger.LogInformation("🔎 TRACE: Adding user question to conversation history: {Question}", question);
-
-        // Ensure conversation history exists for this context
         if (!_conversationHistory.ContainsKey(contextKey))
         {
             _logger.LogWarning("Conversation history not found for context {ContextKey}, initializing empty history", contextKey);
@@ -69,7 +66,6 @@ public class ConversationManager : IConversationManager
 
     public void AddAssistantResponseToHistory(string contextKey, string response)
     {
-        // Ensure conversation history exists for this context
         if (!_conversationHistory.ContainsKey(contextKey))
         {
             _logger.LogWarning("Conversation history not found for context {ContextKey}, initializing empty history", contextKey);

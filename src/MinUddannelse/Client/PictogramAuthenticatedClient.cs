@@ -50,12 +50,10 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
 
         try
         {
-            // Dispose any existing authenticated client
             _authenticatedHttpClient?.Dispose();
 
             var httpClient = CreateHttpClient();
-            HttpClient? clientToDispose = httpClient; // Track for disposal if auth fails
-            // Navigate through the login flow to reach the pictogram page
+            HttpClient? clientToDispose = httpClient;
             var response = await httpClient.GetAsync("https://www.minuddannelse.net/KmdIdentity/Login?domainHint=unilogin-idp-prod&toFa=False");
 
             var content = await response.Content.ReadAsStringAsync();
@@ -116,7 +114,6 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
                 {
                     _logger.LogInformation("Reached pictogram authentication page");
 
-                    // Parse the dynamic pictogram mapping
                     var pictogramMapping = ParsePictogramMapping(doc);
                     if (pictogramMapping.Count == 0)
                     {
@@ -127,7 +124,6 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
                     _logger.LogDebug("Found {Count} pictograms: {Pictograms}",
                         pictogramMapping.Count, string.Join(", ", pictogramMapping.Keys));
 
-                    // Build password from sequence
                     var password = BuildPasswordFromSequence(pictogramMapping, _pictogramSequence);
                     if (string.IsNullOrEmpty(password))
                     {
@@ -137,20 +133,16 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
 
                     _logger.LogDebug("Built password from pictogram sequence");
 
-                    // Submit the form with the password
                     var authenticated = await SubmitPictogramForm(httpClient, doc, response, _username, password);
                     if (authenticated)
                     {
                         _logger.LogInformation("Successfully authenticated {ChildName} with pictograms!", _child.FirstName);
 
-                        // Add Accept header for JSON responses (critical for API calls!)
                         httpClient.DefaultRequestHeaders.Accept.Add(
                             new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 
-                        // Set the child ID after successful login
                         await SetChildIdAsync(httpClient);
 
-                        // Store the authenticated client for later API calls
                         _authenticatedHttpClient = httpClient;
                         return true;
                     }
@@ -161,14 +153,12 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
                     }
                 }
 
-                // Continue with next form if present
                 var nextForm = doc.DocumentNode.SelectSingleNode("//form");
                 if (nextForm != null)
                 {
                     var action = HttpUtility.HtmlDecode(nextForm.GetAttributeValue("action", ""));
                     action = GetAbsoluteUrl(action, response.RequestMessage?.RequestUri?.ToString() ?? "");
 
-                    // Extract all hidden fields
                     var formData = new Dictionary<string, string>();
                     var inputs = nextForm.SelectNodes(".//input");
                     if (inputs != null)
@@ -189,12 +179,10 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
                 }
                 else
                 {
-                    // No more forms, check if we're authenticated
                     if (response.RequestMessage?.RequestUri?.ToString().Contains("minuddannelse.net") ?? false)
                     {
                         _logger.LogInformation("Reached MinUddannelse after authentication");
 
-                        // Add Accept header for JSON responses (critical for API calls!)
                         if (!httpClient.DefaultRequestHeaders.Accept.Any(h => h.MediaType == "application/json"))
                         {
                             httpClient.DefaultRequestHeaders.Accept.Add(
@@ -203,7 +191,6 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
 
                         await SetChildIdAsync(httpClient);
 
-                        // Store the authenticated client for later API calls
                         _authenticatedHttpClient = httpClient;
                         return true;
                     }
@@ -217,25 +204,16 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
         {
             _logger.LogError(ex, "Exception during pictogram authentication for {ChildName}", _child.FirstName);
 
-            // If authentication failed and we haven't stored the client, dispose it
-            if (_authenticatedHttpClient == null)
-            {
-                // httpClient will be disposed by the disposal logic below
-            }
-
             return false;
         }
     }
 
     private bool IsPictogramPage(HtmlDocument doc)
     {
-        // Check for pictogram elements with data-passw attributes
         var pictograms = doc.DocumentNode.SelectNodes("//div[contains(@class, 'js-icon') and @data-passw]");
 
-        // Check for hidden password field (not regular password input)
         var hiddenPasswordField = doc.DocumentNode.SelectSingleNode("//input[@name='password' and @type='hidden']");
 
-        // Check for visual selection slots
         var selectionSlots = doc.DocumentNode.SelectSingleNode("//div[contains(@class, 'js-set-passw')]");
 
         return pictograms?.Count > 0 && hiddenPasswordField != null && selectionSlots != null;
@@ -245,11 +223,9 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
     {
         var mapping = new Dictionary<string, string>();
 
-        // Find all pictogram elements - they have dynamic values!
         var pictograms = doc.DocumentNode.SelectNodes("//div[contains(@class, 'js-icon') and @data-passw]");
         if (pictograms == null)
         {
-            // Try alternative selector
             pictograms = doc.DocumentNode.SelectNodes("//div[@class='password mb-4']//div[contains(@class, 'js-icon')]");
         }
 
@@ -296,7 +272,6 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
 
     private async Task<bool> SubmitPictogramForm(HttpClient httpClient, HtmlDocument doc, HttpResponseMessage lastResponse, string username, string password)
     {
-        // Find the form with hidden username/password fields
         var pictogramForm = doc.DocumentNode.SelectSingleNode("//input[@name='password' and @type='hidden']")?.Ancestors("form").FirstOrDefault();
         if (pictogramForm == null)
         {
@@ -318,12 +293,10 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
         var response = await httpClient.PostAsync(action, new FormUrlEncodedContent(formData));
         var content = await response.Content.ReadAsStringAsync();
 
-        // Check for error indicators first
         if (content.Contains("fejl") || content.Contains("error") || content.Contains("Der skete en fejl"))
         {
             _logger.LogError("Login failed - error in response");
 
-            // Try to extract error message
             var errorDoc = new HtmlDocument();
             errorDoc.LoadHtml(content);
             var errorMsg = errorDoc.DocumentNode.SelectSingleNode("//div[contains(@class, 'alert-error')]")?.InnerText?.Trim();
@@ -335,7 +308,6 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
             return false;
         }
 
-        // Handle SAML response form if present
         if (content.Contains("SAMLResponse"))
         {
             _logger.LogDebug("Found SAML response, processing...");
@@ -343,14 +315,12 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
             var samlDoc = new HtmlDocument();
             samlDoc.LoadHtml(content);
 
-            // Look for the SAML response form
             var samlForm = samlDoc.DocumentNode.SelectSingleNode("//input[@name='SAMLResponse']")?.Ancestors("form").FirstOrDefault();
             if (samlForm != null)
             {
                 var samlAction = HttpUtility.HtmlDecode(samlForm.GetAttributeValue("action", ""));
                 samlAction = GetAbsoluteUrl(samlAction, response.RequestMessage?.RequestUri?.ToString() ?? "");
 
-                // Extract all form fields for SAML submission
                 var samlFormData = new Dictionary<string, string>();
                 var inputs = samlForm.SelectNodes(".//input");
                 if (inputs != null)
@@ -368,32 +338,26 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
 
                 _logger.LogDebug("Submitting SAML response to: {Action}", samlAction);
 
-                // Submit the SAML response
                 response = await httpClient.PostAsync(samlAction, new FormUrlEncodedContent(samlFormData));
                 content = await response.Content.ReadAsStringAsync();
 
-                // Continue processing any additional forms/redirects
                 var maxRedirects = 5;
                 for (int i = 0; i < maxRedirects; i++)
                 {
-                    // Check if we've reached MinUddannelse
                     if (response.RequestMessage?.RequestUri?.ToString().Contains("minuddannelse.net") ?? false)
                     {
                         _logger.LogInformation("Successfully reached MinUddannelse!");
 
-                        // Add Accept header for JSON responses (critical for API calls!)
                         if (!httpClient.DefaultRequestHeaders.Accept.Any(h => h.MediaType == "application/json"))
                         {
                             httpClient.DefaultRequestHeaders.Accept.Add(
                                 new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
                         }
 
-                        // Store the authenticated client for later API calls
                         _authenticatedHttpClient = httpClient;
                         return true;
                     }
 
-                    // Check for additional forms to submit
                     var nextDoc = new HtmlDocument();
                     nextDoc.LoadHtml(content);
                     var nextForm = nextDoc.DocumentNode.SelectSingleNode("//form");
@@ -430,19 +394,16 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
             }
         }
 
-        // Check for success after all processing
         if (content.Contains("MinUddannelse") || content.Contains("Dashboard") ||
             content.Contains("Forside") || content.Contains("Ugeplaner") ||
             (response.RequestMessage?.RequestUri?.ToString().Contains("minuddannelse.net") ?? false))
         {
             _logger.LogInformation("Pictogram authentication successful!");
 
-            // Store the authenticated client for later API calls
             _authenticatedHttpClient = httpClient;
             return true;
         }
 
-        // Handle Location header redirects
         if (response.Headers.Location != null)
         {
             var redirectUrl = GetAbsoluteUrl(response.Headers.Location.ToString(), action);
@@ -454,7 +415,6 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
             {
                 _logger.LogInformation("Pictogram authentication successful after redirect!");
 
-                // Store the authenticated client for later API calls
                 _authenticatedHttpClient = httpClient;
                 return true;
             }
@@ -492,8 +452,6 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
         {
             _logger.LogInformation("Extracting child ID for {ChildName}...", _child.FirstName);
 
-            // First try: Extract from page context (same method as ChildAuthenticatedClient)
-            // Navigate to any MinUddannelse page after authentication to get this
             var response = await httpClient.GetAsync("https://www.minuddannelse.net/node/minuge");
             var content = await response.Content.ReadAsStringAsync();
 
@@ -515,7 +473,6 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
                 return;
             }
 
-            // Fallback: Try the API method (improved version)
             _logger.LogInformation("Page context method failed, trying API...");
             var apiUrl = $"https://www.minuddannelse.net/api/stamdata/elev/getElev?_={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
 
@@ -574,13 +531,11 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
         {
             var content = await response.Content.ReadAsStringAsync();
 
-            // Check if content is HTML (error page) instead of JSON
             if (content.TrimStart().StartsWith('<'))
             {
                 _logger.LogWarning("Received HTML instead of JSON for week letter. Might be an authentication or session issue.");
                 _logger.LogDebug("Response content starts with: {Content}", content.Substring(0, Math.Min(100, content.Length)));
 
-                // Return empty week letter with appropriate message
                 return new Newtonsoft.Json.Linq.JObject
                 {
                     ["errorMessage"] = "No week letter available",
@@ -592,7 +547,6 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
             {
                 var json = Newtonsoft.Json.Linq.JObject.Parse(content);
 
-                // Response structure has ugebreve array directly at root level
                 return json;
             }
             catch (Newtonsoft.Json.JsonException ex)
@@ -600,7 +554,6 @@ public sealed partial class PictogramAuthenticatedClient : UniLoginAuthenticator
                 _logger.LogError(ex, "Failed to parse JSON response for week letter");
                 _logger.LogDebug("Response content: {Content}", content.Substring(0, Math.Min(500, content.Length)));
 
-                // Return empty week letter
                 return new Newtonsoft.Json.Linq.JObject
                 {
                     ["errorMessage"] = "Failed to parse week letter response",

@@ -82,6 +82,7 @@ public class SchedulingService : ISchedulingService
         var timerInterval = TimeSpan.FromSeconds(_config.Scheduling.IntervalSeconds);
         _schedulingTimer = new Timer(CheckScheduledTasksWrapper, null, TimeSpan.Zero, timerInterval);
         _logger.LogInformation("Scheduling service timer started - checking every {IntervalSeconds} seconds", _config.Scheduling.IntervalSeconds);
+
         _ = Task.Run(async () =>
         {
             try
@@ -197,7 +198,6 @@ public class SchedulingService : ISchedulingService
         {
             DateTime nextRun;
 
-            // Use database NextRun if set, otherwise calculate from cron
             if (task.NextRun.HasValue)
             {
                 nextRun = task.NextRun.Value;
@@ -309,7 +309,6 @@ public class SchedulingService : ISchedulingService
                 return;
             }
 
-            // Fire event for event-driven architecture
             var childId = Configuration.Child.GenerateChildId(reminder.ChildName);
             var eventArgs = new ChildReminderEventArgs(childId, reminder.ChildName, reminder);
             ReminderReady?.Invoke(this, eventArgs);
@@ -358,7 +357,6 @@ public class SchedulingService : ISchedulingService
     {
         var (weekNumber, year) = GetCurrentWeekAndYear();
 
-        // On Sundays, look for next week's letter
         if (DateTime.Now.DayOfWeek == DayOfWeek.Sunday)
         {
             var nextWeek = DateTime.Now.AddDays(7);
@@ -395,7 +393,6 @@ public class SchedulingService : ISchedulingService
             ChildWeekLetterReady?.Invoke(this, eventArgs);
             await _weekLetterRepository.MarkWeekLetterAsPostedAsync(child.FirstName, weekNumber, year, result.Item2!);
 
-            // Extract reminders from week letter content
             await ExtractRemindersFromWeekLetter(child.FirstName, weekNumber, year, weekLetter, result.Item2!);
 
             _logger.LogInformation("Emitted week letter event for {ChildName}", child.FirstName);
@@ -422,7 +419,6 @@ public class SchedulingService : ISchedulingService
                 _logger.LogInformation("Successfully created {Count} reminders for {ChildName}",
                     extractionResult.RemindersCreated, childName);
 
-                // Send detailed success message via events
                 var successMessage = FormatReminderSuccessMessage(extractionResult.RemindersCreated, weekNumber, extractionResult.CreatedReminders);
                 var childId = Configuration.Child.GenerateChildId(childName);
                 var eventArgs = new ChildMessageEventArgs(childId, childName, successMessage, "ai_analysis_success");
@@ -432,7 +428,6 @@ public class SchedulingService : ISchedulingService
             {
                 _logger.LogInformation("No reminders found in week letter for {ChildName}", childName);
 
-                // Send no reminders message via events
                 var noRemindersMessage = $"Ingen påmindelser blev fundet i ugebrevet for uge {weekNumber}/{year} - der er ikke oprettet nogen automatiske påmindelser for denne uge.";
                 var childId = Configuration.Child.GenerateChildId(childName);
                 var eventArgs = new ChildMessageEventArgs(childId, childName, noRemindersMessage, "ai_analysis_no_reminders");
@@ -482,7 +477,6 @@ public class SchedulingService : ISchedulingService
 
             if (isFirstAttempt)
             {
-                // Send notification about retry schedule - only for the first attempt
                 var retryHours = _config.WeekLetter.RetryIntervalHours;
                 var maxRetryHours = _config.WeekLetter.MaxRetryDurationHours;
                 var totalAttempts = maxRetryHours / retryHours;
@@ -500,7 +494,6 @@ public class SchedulingService : ISchedulingService
                     child.FirstName, weekNumber, year);
             }
 
-            // Return null when week letter is null or effectively empty to prevent posting and AI analysis
             return null;
         }
         return weekLetter;
@@ -513,7 +506,6 @@ public class SchedulingService : ISchedulingService
 
         try
         {
-            // Check if ugebreve array exists and has content
             if (weekLetter.ugebreve != null)
             {
                 foreach (var ugeBrev in weekLetter.ugebreve)
@@ -521,25 +513,21 @@ public class SchedulingService : ISchedulingService
                     if (ugeBrev?.indhold != null)
                     {
                         string content = ugeBrev.indhold.ToString().Trim();
-                        // Check for common empty/placeholder messages
                         if (content.Contains("Der er ikke skrevet nogen ugenoter til denne uge") ||
                             content.Contains("Ingen ugenoter") ||
                             string.IsNullOrWhiteSpace(content))
                         {
-                            continue; // This entry is empty, check others
+                            continue;
                         }
-                        // Found non-empty content
                         return false;
                     }
                 }
             }
 
-            // No meaningful content found
             return true;
         }
         catch
         {
-            // If we can't parse the structure, treat as empty
             return true;
         }
     }
@@ -624,7 +612,6 @@ public class SchedulingService : ISchedulingService
     {
         var message = $"Jeg har oprettet {reminderCount} påmindelser for uge {weekNumber}:";
 
-        // Group reminders by day
         var groupedByDay = createdReminders
             .GroupBy(r => r.Date.ToString("dddd", new System.Globalization.CultureInfo("da-DK")))
             .OrderBy(g => createdReminders.First(r => r.Date.ToString("dddd", new System.Globalization.CultureInfo("da-DK")) == g.Key).Date);
@@ -716,14 +703,12 @@ public class SchedulingService : ISchedulingService
                         _logger.LogInformation("Week letter now available for {ChildName} week {WeekNumber}/{Year} after {AttemptCount} attempts",
                             retry.ChildName, retry.WeekNumber, retry.Year, retry.AttemptCount);
 
-                        // Send success notification
                         var successMessage = $"✅ Ugebrev for uge {retry.WeekNumber}/{retry.Year} er nu tilgængeligt!\n\n" +
                                            $"Jeg processer det nu og sender dig detaljerne om lidt.";
                         var childId = Configuration.Child.GenerateChildId(retry.ChildName);
                         var eventArgs = new ChildMessageEventArgs(childId, retry.ChildName, successMessage, "week_letter_retry_success");
                         MessageReady?.Invoke(this, eventArgs);
 
-                        // Process the week letter normally (trigger full week letter processing)
                         await CheckAndPostWeekLetter(child, new ScheduledTask
                         {
                             Name = "RetryProcessing",
@@ -732,7 +717,6 @@ public class SchedulingService : ISchedulingService
                     }
                     else
                     {
-                        // Still empty, increment retry attempt count and schedule next retry
                         await _retryTrackingRepository.IncrementRetryAttemptAsync(retry.ChildName, retry.WeekNumber, retry.Year);
                         _logger.LogInformation("Week letter still not available for {ChildName} week {WeekNumber}/{Year}, attempt {AttemptCount}",
                             retry.ChildName, retry.WeekNumber, retry.Year, retry.AttemptCount);
