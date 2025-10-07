@@ -246,8 +246,8 @@ CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_enabled ON scheduled_tasks(enable
 -- ----------------------------------------------------------------------------
 INSERT INTO scheduled_tasks (name, description, cron_expression, retry_interval_hours, max_retry_hours)
 VALUES
-  ('WeeklyLetterCheck', 'Check for new week letters every Sunday at 4 PM', '0 16 * * 0', 1, 48),
-  ('MorningReminders', 'Send pending reminders every morning at 7 AM', '0 7 * * *', NULL, NULL)
+  ('WeeklyLetterCheck', 'Check for new week letters every Sunday at 2 PM', '0 14 * * 0', 1, 48),
+  ('ReminderCheck', 'Check for pending reminders and send notifications', '45 6 * * *', 1, 48)
 ON CONFLICT (name) DO NOTHING;
 
 -- ============================================================================
@@ -263,7 +263,7 @@ Success. No rows returned.
 **What Just Happened:**
 - ✅ Created 5 tables: `app_state`, `posted_letters`, `reminders`, `retry_attempts`, `scheduled_tasks`
 - ✅ Added indexes for query performance
-- ✅ Inserted default scheduled tasks (weekly letter check, morning reminders)
+- ✅ Inserted default scheduled tasks (weekly letter check, reminder check)
 - ✅ Applied constraints for data integrity
 
 ---
@@ -482,11 +482,11 @@ dotnet run
 
 **Expected Output:**
 ```
-[09:30:15 UTC] Starting MinUddannelse Family Assistant
-[09:30:16 UTC] Supabase connection verified 
-[09:30:16 UTC] Scheduled tasks loaded: 2 tasks
-[09:30:17 UTC] Starting agent for child Emma
-[09:30:18 UTC] All agents started successfully
+[09:30:15 UTC] Starting MinUddannelse
+[09:30:16 UTC] Supabase client initialized successfully
+[09:30:16 UTC] Supabase connection test successful
+[09:30:17 UTC] Starting agent for child: Emma
+[09:30:18 UTC] Started 1 child agents
 ```
 
 **If Connection Fails:**
@@ -500,8 +500,8 @@ In Supabase dashboard, go to **Table Editor**:
 
 1. Select **scheduled_tasks** table
 2. You should see 2 rows:
-   - `WeeklyLetterCheck` (Sundays 4 PM)
-   - `MorningReminders` (Daily 7 AM)
+   - `WeeklyLetterCheck` (Sundays 2 PM)
+   - `ReminderCheck` (Daily 6:45 AM)
 
 3. Try adding a test reminder manually:
 
