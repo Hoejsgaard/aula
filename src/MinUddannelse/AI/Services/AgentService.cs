@@ -11,7 +11,7 @@ namespace MinUddannelse.AI.Services;
 public class AgentService : IAgentService
 {
     private readonly IMinUddannelseClient _minUddannelseClient;
-    private readonly WeekLetterCache _dataService;
+    private readonly WeekLetterCache _weekLetterCache;
     private readonly Config _config;
     private readonly IWeekLetterAiService _openAiService;
     private readonly ILogger _logger;
@@ -30,7 +30,7 @@ public class AgentService : IAgentService
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
         _minUddannelseClient = minUddannelseClient;
-        _dataService = dataService;
+        _weekLetterCache = dataService;
         _config = config;
         _openAiService = openAiService;
         _logger = loggerFactory.CreateLogger(nameof(AgentService));
@@ -50,7 +50,7 @@ public class AgentService : IAgentService
 
         if (useCache)
         {
-            var cachedWeekLetter = _dataService.GetWeekLetter(child, weekNumber, year);
+            var cachedWeekLetter = _weekLetterCache.GetWeekLetter(child, weekNumber, year);
             if (cachedWeekLetter != null)
             {
                 _logger.LogInformation("MONITOR: Returning cached week letter for {ChildName}", child.FirstName);
@@ -107,7 +107,7 @@ public class AgentService : IAgentService
         weekLetter["child"] = child.FirstName;
         _logger.LogInformation("MONITOR: Added child name to week letter: {ChildName}", child.FirstName);
 
-        _dataService.CacheWeekLetter(child, weekNumber, year, weekLetter);
+        _weekLetterCache.CacheWeekLetter(child, weekNumber, year, weekLetter);
         _logger.LogInformation("MONITOR: Cached week letter for {ChildName}", child.FirstName);
 
         return weekLetter;
@@ -121,7 +121,7 @@ public class AgentService : IAgentService
 
         if (useCache)
         {
-            var cachedWeekSchedule = _dataService.GetWeekSchedule(child, weekNumber, year);
+            var cachedWeekSchedule = _weekLetterCache.GetWeekSchedule(child, weekNumber, year);
             if (cachedWeekSchedule != null)
             {
                 _logger.LogInformation("Returning cached week schedule for {ChildName}", child.FirstName);

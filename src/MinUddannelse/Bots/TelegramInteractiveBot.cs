@@ -85,7 +85,7 @@ public class TelegramInteractiveBot : IDisposable
 
             if (_child.Channels.Telegram.ChatId.HasValue)
             {
-                await SendMessageToTelegram($"Bot for {_child.FirstName} is now online and ready to help!");
+                //await SendMessageToTelegram($"Bot for {_child.FirstName} is now online and ready to help!");
             }
         }
         catch (Exception ex)

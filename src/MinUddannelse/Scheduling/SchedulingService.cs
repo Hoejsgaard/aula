@@ -694,7 +694,6 @@ public class SchedulingService : ISchedulingService
             {
                 try
                 {
-                    // Find child config by name
                     var child = _config.MinUddannelse?.Children?.FirstOrDefault(c => c.FirstName == retry.ChildName);
                     if (child == null)
                     {
@@ -702,19 +701,16 @@ public class SchedulingService : ISchedulingService
                         continue;
                     }
 
-                    // Convert week/year back to date for TryGetWeekLetter method
                     var firstDayOfWeek = ISOWeek.ToDateTime(retry.Year, retry.WeekNumber, DayOfWeek.Monday);
                     var date = DateOnly.FromDateTime(firstDayOfWeek);
 
                     _logger.LogInformation("Retry attempt {AttemptCount} for {ChildName} week {WeekNumber}/{Year}",
                         retry.AttemptCount, retry.ChildName, retry.WeekNumber, retry.Year);
 
-                    // Try to get week letter for this specific child
                     var weekLetter = await _weekLetterService.GetOrFetchWeekLetterAsync(child, date, true);
 
                     if (weekLetter != null && !IsWeekLetterEffectivelyEmpty(weekLetter))
                     {
-                        // Success! Week letter now available
                         await _retryTrackingRepository.MarkRetryAsSuccessfulAsync(retry.ChildName, retry.WeekNumber, retry.Year);
 
                         _logger.LogInformation("Week letter now available for {ChildName} week {WeekNumber}/{Year} after {AttemptCount} attempts",
